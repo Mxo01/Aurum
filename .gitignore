@@ -1,0 +1,9 @@
+# Node
+/node_modules/
+
+# System
+.DS_Store
+
+# Husky
+.husky/_
+
