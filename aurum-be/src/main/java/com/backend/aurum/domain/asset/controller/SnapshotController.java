@@ -5,6 +5,7 @@ import com.backend.aurum.domain.asset.mapper.SnapshotMapper;
 import com.backend.aurum.domain.asset.model.Snapshot;
 import com.backend.aurum.domain.asset.service.SnapshotService;
 import com.backend.aurum.domain.asset.validation.SnapshotValidationService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -15,6 +16,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/snapshots")
 @RequiredArgsConstructor
+@Tag(name = "Snapshots", description = "Asset value snapshots over time")
 public class SnapshotController {
 
     private final SnapshotService snapshotService;

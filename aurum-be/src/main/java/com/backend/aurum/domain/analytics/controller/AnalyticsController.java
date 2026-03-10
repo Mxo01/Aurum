@@ -3,6 +3,7 @@ package com.backend.aurum.domain.analytics.controller;
 import com.backend.aurum.domain.analytics.dto.AnalyticsSummaryDTO;
 import com.backend.aurum.domain.analytics.dto.ChartDataDTO;
 import com.backend.aurum.domain.analytics.service.AnalyticsService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -18,6 +19,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/analytics")
 @RequiredArgsConstructor
+@Tag(name = "Analytics", description = "Performance metrics, allocation and projections")
 public class AnalyticsController {
 
     private final AnalyticsService analyticsService;

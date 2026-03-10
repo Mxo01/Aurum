@@ -5,6 +5,7 @@ import com.backend.aurum.domain.asset.mapper.AssetMapper;
 import com.backend.aurum.domain.asset.model.Asset;
 import com.backend.aurum.domain.asset.service.AssetService;
 import com.backend.aurum.domain.asset.validation.AssetValidationService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -15,6 +16,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/assets")
 @RequiredArgsConstructor
+@Tag(name = "Assets", description = "Management of user assets")
 public class AssetController {
 
     private final AssetService assetService;

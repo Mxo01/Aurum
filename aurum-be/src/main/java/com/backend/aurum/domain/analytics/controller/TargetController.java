@@ -6,6 +6,7 @@ import com.backend.aurum.domain.analytics.model.Target;
 import com.backend.aurum.domain.analytics.service.AnalyticsService;
 import com.backend.aurum.domain.analytics.service.TargetService;
 import com.backend.aurum.domain.analytics.validation.TargetValidationService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -17,6 +18,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/targets")
 @RequiredArgsConstructor
+@Tag(name = "Targets", description = "Financial goals tracking")
 public class TargetController {
 
     private final TargetService targetService;

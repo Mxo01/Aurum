@@ -5,6 +5,7 @@ import com.backend.aurum.domain.asset.mapper.AssetCategoryMapper;
 import com.backend.aurum.domain.asset.model.AssetCategory;
 import com.backend.aurum.domain.asset.service.AssetCategoryService;
 import com.backend.aurum.domain.asset.validation.AssetCategoryValidationService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -15,6 +16,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/categories")
 @RequiredArgsConstructor
+@Tag(name = "Categories", description = "Asset classification management")
 public class AssetCategoryController {
 
     private final AssetCategoryService categoryService;
