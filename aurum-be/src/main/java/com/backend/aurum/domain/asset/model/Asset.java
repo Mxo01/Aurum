@@ -1,5 +1,6 @@
 package com.backend.aurum.domain.asset.model;
 
+import com.backend.aurum.domain.user.model.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -27,6 +28,10 @@ public class Asset {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
+    @ManyToOne(optional = false)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
+
     @Column(nullable = false)
     private String name;
 
@@ -39,6 +44,9 @@ public class Asset {
 
     @Column(nullable = false)
     private Boolean isActive = true;
+
+    @Column(nullable = false)
+    private Boolean isFavorite = false;
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
