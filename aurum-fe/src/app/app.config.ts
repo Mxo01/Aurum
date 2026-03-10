@@ -4,11 +4,14 @@ import {
 	provideZonelessChangeDetection
 } from "@angular/core";
 import { provideRouter } from "@angular/router";
+import { provideHttpClient, withInterceptors } from "@angular/common/http";
+import { provideAuth, LogLevel } from "angular-auth-oidc-client";
 
 import { routes } from "./app.routes";
 import { providePrimeNG } from "primeng/config";
 import Aura from "@primeuix/themes/aura";
 import { definePreset } from "@primeuix/themes";
+import { authInterceptor } from "./core/auth/auth.interceptor";
 
 const primengPreset = definePreset(Aura, {
 	semantic: {
@@ -33,6 +36,20 @@ export const appConfig: ApplicationConfig = {
 		provideZonelessChangeDetection(),
 		provideBrowserGlobalErrorListeners(),
 		provideRouter(routes),
+		provideHttpClient(withInterceptors([authInterceptor])),
+		provideAuth({
+			config: {
+				authority: "https://AUTHENTIK_URL/application/o/APPLICATION_SLUG/", // Replace with your Authentik URL
+				redirectUrl: window.location.origin,
+				postLogoutRedirectUri: window.location.origin,
+				clientId: "YOUR_CLIENT_ID", // Replace with your Authentik Client ID
+				scope: "openid profile email offline_access",
+				responseType: "code",
+				silentRenew: true,
+				useRefreshToken: true,
+				logLevel: LogLevel.Debug
+			}
+		}),
 		providePrimeNG({
 			theme: {
 				preset: primengPreset,

@@ -1,0 +1,14 @@
+{
+	"configurations": [
+		{
+			"type": "java",
+			"name": "Spring Boot-AurumApplication<aurum-be>",
+			"request": "launch",
+			"cwd": "${workspaceFolder}",
+			"mainClass": "com.backend.aurum.AurumApplication",
+			"projectName": "aurum-be",
+			"args": "",
+			"envFile": "${workspaceFolder}/.env"
+		}
+	]
+}
