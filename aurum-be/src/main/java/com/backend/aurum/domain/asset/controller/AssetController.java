@@ -20,47 +20,47 @@ import java.util.UUID;
 @Tag(name = "Assets", description = "Management of user assets")
 public class AssetController {
 
-    private final AssetService assetService;
-    private final AssetValidationService validationService;
-    private final AssetMapper mapper;
-    private final SecurityUtils securityUtils;
+	private final AssetService assetService;
+	private final AssetValidationService validationService;
+	private final AssetMapper mapper;
+	private final SecurityUtils securityUtils;
 
-    @GetMapping
-    public ResponseEntity<List<AssetDTO>> getAllAssets() {
-        UUID userId = securityUtils.getCurrentUserId();
-        List<AssetDTO> assets = assetService.findAll(userId).stream()
-            .map(mapper::toDto)
-            .toList();
-        return ResponseEntity.ok(assets);
-    }
+	@GetMapping
+	public ResponseEntity<List<AssetDTO>> getAllAssets() {
+		UUID userId = securityUtils.getCurrentUserId();
+		List<AssetDTO> assets = assetService.findAll(userId).stream()
+				.map(mapper::toDto)
+				.toList();
+		return ResponseEntity.ok(assets);
+	}
 
-    @GetMapping("/{id}")
-    public ResponseEntity<AssetDTO> getAssetById(@PathVariable UUID id) {
-        Asset asset = assetService.findById(id);
-        return ResponseEntity.ok(mapper.toDto(asset));
-    }
+	@GetMapping("/{id}")
+	public ResponseEntity<AssetDTO> getAssetById(@PathVariable UUID id) {
+		Asset asset = assetService.findById(id);
+		return ResponseEntity.ok(mapper.toDto(asset));
+	}
 
-    @PostMapping
-    public ResponseEntity<AssetDTO> createAsset(@RequestBody AssetDTO assetDto) {
-        UUID userId = securityUtils.getCurrentUserId();
-        validationService.validate(assetDto);
-        Asset asset = mapper.toEntity(assetDto, userId);
-        Asset savedAsset = assetService.save(asset);
-        return ResponseEntity.ok(mapper.toDto(savedAsset));
-    }
+	@PostMapping
+	public ResponseEntity<AssetDTO> createAsset(@RequestBody AssetDTO assetDto) {
+		UUID userId = securityUtils.getCurrentUserId();
+		validationService.validate(assetDto);
+		Asset asset = mapper.toEntity(assetDto, userId);
+		Asset savedAsset = assetService.save(asset);
+		return ResponseEntity.ok(mapper.toDto(savedAsset));
+	}
 
-    @PutMapping("/{id}")
-    public ResponseEntity<AssetDTO> updateAsset(@PathVariable UUID id, @RequestBody AssetDTO assetDto) {
-        UUID userId = securityUtils.getCurrentUserId();
-        validationService.validate(assetDto);
-        Asset assetDetails = mapper.toEntity(assetDto, userId);
-        Asset updatedAsset = assetService.update(id, assetDetails);
-        return ResponseEntity.ok(mapper.toDto(updatedAsset));
-    }
+	@PutMapping("/{id}")
+	public ResponseEntity<AssetDTO> updateAsset(@PathVariable UUID id, @RequestBody AssetDTO assetDto) {
+		UUID userId = securityUtils.getCurrentUserId();
+		validationService.validate(assetDto);
+		Asset assetDetails = mapper.toEntity(assetDto, userId);
+		Asset updatedAsset = assetService.update(id, assetDetails);
+		return ResponseEntity.ok(mapper.toDto(updatedAsset));
+	}
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteAsset(@PathVariable UUID id) {
-        assetService.delete(id);
-        return ResponseEntity.noContent().build();
-    }
+	@DeleteMapping("/{id}")
+	public ResponseEntity<Void> deleteAsset(@PathVariable UUID id) {
+		assetService.delete(id);
+		return ResponseEntity.noContent().build();
+	}
 }

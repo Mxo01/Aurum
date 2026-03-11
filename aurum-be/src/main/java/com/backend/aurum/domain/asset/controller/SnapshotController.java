@@ -21,47 +21,48 @@ import java.util.UUID;
 @Tag(name = "Snapshots", description = "Asset value snapshots over time")
 public class SnapshotController {
 
-    private final SnapshotService snapshotService;
-    private final SnapshotValidationService validationService;
-    private final SnapshotMapper mapper;
-    private final SecurityUtils securityUtils;
+	private final SnapshotService snapshotService;
+	private final SnapshotValidationService validationService;
+	private final SnapshotMapper mapper;
+	private final SecurityUtils securityUtils;
 
-    @GetMapping
-    public ResponseEntity<List<SnapshotDTO>> getAllSnapshots() {
-        UUID userId = securityUtils.getCurrentUserId();
-        List<SnapshotDTO> snapshots = snapshotService.findAll(userId).stream()
-            .map(mapper::toDto)
-            .toList();
-        return ResponseEntity.ok(snapshots);
-    }
+	@GetMapping
+	public ResponseEntity<List<SnapshotDTO>> getAllSnapshots() {
+		UUID userId = securityUtils.getCurrentUserId();
+		List<SnapshotDTO> snapshots = snapshotService.findAll(userId).stream()
+				.map(mapper::toDto)
+				.toList();
+		return ResponseEntity.ok(snapshots);
+	}
 
-    @PostMapping
-    public ResponseEntity<SnapshotDTO> createSnapshot(@RequestBody SnapshotDTO snapshotDto) {
-        UUID userId = securityUtils.getCurrentUserId();
-        validationService.validate(snapshotDto, userId);
-        
-        Optional<Snapshot> existingOpt = snapshotService.findExistingForMonth(snapshotDto.getAssetId(), snapshotDto.getReferenceDate());
-        
-        Snapshot snapshotToSave;
-		
-        if (existingOpt.isPresent()) {
-            snapshotToSave = existingOpt.get();
-            snapshotToSave.setAmountOriginalCurrency(snapshotDto.getAmountOriginalCurrency());
-            snapshotToSave.setReferenceDate(snapshotDto.getReferenceDate());
-            if (snapshotDto.getExchangeRateToBase() != null) {
-                snapshotToSave.setExchangeRateToBase(snapshotDto.getExchangeRateToBase());
-            }
-        } else {
-            snapshotToSave = mapper.toEntity(snapshotDto, userId);
-        }
-        
-        Snapshot savedSnapshot = snapshotService.save(snapshotToSave);
-        return ResponseEntity.ok(mapper.toDto(savedSnapshot));
-    }
+	@PostMapping
+	public ResponseEntity<SnapshotDTO> createSnapshot(@RequestBody SnapshotDTO snapshotDto) {
+		UUID userId = securityUtils.getCurrentUserId();
+		validationService.validate(snapshotDto, userId);
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteSnapshot(@PathVariable UUID id) {
-        snapshotService.delete(id);
-        return ResponseEntity.noContent().build();
-    }
+		Optional<Snapshot> existingOpt = snapshotService.findExistingForMonth(snapshotDto.getAssetId(),
+				snapshotDto.getReferenceDate());
+
+		Snapshot snapshotToSave;
+
+		if (existingOpt.isPresent()) {
+			snapshotToSave = existingOpt.get();
+			snapshotToSave.setAmountOriginalCurrency(snapshotDto.getAmountOriginalCurrency());
+			snapshotToSave.setReferenceDate(snapshotDto.getReferenceDate());
+			if (snapshotDto.getExchangeRateToBase() != null) {
+				snapshotToSave.setExchangeRateToBase(snapshotDto.getExchangeRateToBase());
+			}
+		} else {
+			snapshotToSave = mapper.toEntity(snapshotDto, userId);
+		}
+
+		Snapshot savedSnapshot = snapshotService.save(snapshotToSave);
+		return ResponseEntity.ok(mapper.toDto(savedSnapshot));
+	}
+
+	@DeleteMapping("/{id}")
+	public ResponseEntity<Void> deleteSnapshot(@PathVariable UUID id) {
+		snapshotService.delete(id);
+		return ResponseEntity.noContent().build();
+	}
 }

@@ -19,16 +19,17 @@ import java.util.UUID;
 @NoArgsConstructor
 public class User {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private UUID id;
+	@Id
+	@GeneratedValue(strategy = GenerationType.UUID)
+	private UUID id;
 
-    @Column(nullable = false, unique = true)
-    private String email;
+	@Column(nullable = false, unique = true)
+	private String jwtId;
 
-    @Column(nullable = false)
-    private String firstName;
+	@Column(unique = true)
+	private String email;
 
-    @Column(nullable = false)
-    private String lastName;
+	private String firstName;
+
+	private String lastName;
 }

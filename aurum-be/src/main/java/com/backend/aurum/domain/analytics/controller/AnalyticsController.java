@@ -19,24 +19,24 @@ import java.util.UUID;
 @Tag(name = "Analytics", description = "Performance metrics, allocation and projections")
 public class AnalyticsController {
 
-    private final AnalyticsService analyticsService;
-    private final SecurityUtils securityUtils;
+	private final AnalyticsService analyticsService;
+	private final SecurityUtils securityUtils;
 
-    @GetMapping("/summary")
-    public ResponseEntity<AnalyticsSummaryDTO> getSummary() {
-        UUID userId = securityUtils.getCurrentUserId();
-        return ResponseEntity.ok(analyticsService.getSummary(userId));
-    }
+	@GetMapping("/summary")
+	public ResponseEntity<AnalyticsSummaryDTO> getSummary() {
+		UUID userId = securityUtils.getCurrentUserId();
+		return ResponseEntity.ok(analyticsService.getSummary(userId));
+	}
 
-    @GetMapping("/chart")
-    public ResponseEntity<ChartDataDTO> getChartData() {
-        UUID userId = securityUtils.getCurrentUserId();
-        return ResponseEntity.ok(analyticsService.getChartData(userId));
-    }
+	@GetMapping("/chart")
+	public ResponseEntity<ChartDataDTO> getChartData() {
+		UUID userId = securityUtils.getCurrentUserId();
+		return ResponseEntity.ok(analyticsService.getChartData(userId));
+	}
 
-    @GetMapping("/projections")
-    public ResponseEntity<Map<Integer, BigDecimal>> getProjections(@RequestParam(defaultValue = "10") int years) {
-        UUID userId = securityUtils.getCurrentUserId();
-        return ResponseEntity.ok(analyticsService.getProjections(userId, years));
-    }
+	@GetMapping("/projections")
+	public ResponseEntity<Map<Integer, BigDecimal>> getProjections(@RequestParam(defaultValue = "10") int years) {
+		UUID userId = securityUtils.getCurrentUserId();
+		return ResponseEntity.ok(analyticsService.getProjections(userId, years));
+	}
 }
