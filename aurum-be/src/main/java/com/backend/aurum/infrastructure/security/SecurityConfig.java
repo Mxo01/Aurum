@@ -28,7 +28,6 @@ import java.util.List;
 @EnableWebSecurity
 @EnableMethodSecurity
 public class SecurityConfig {
-
 	@Value("${spring.security.oauth2.resourceserver.jwt.issuer-uri}")
 	private String issuerUri;
 
@@ -36,7 +35,7 @@ public class SecurityConfig {
 	private String audience;
 
 	@Bean
-	public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+	public SecurityFilterChain filterChain(HttpSecurity http, JwtConverter jwtConverter) throws Exception {
 		http
 				.csrf(AbstractHttpConfigurer::disable)
 				.cors(cors -> cors.configurationSource(corsConfigurationSource()))
@@ -49,7 +48,9 @@ public class SecurityConfig {
 						.permitAll()
 						.anyRequest().authenticated())
 				.oauth2ResourceServer(oauth2 -> oauth2
-						.jwt(jwt -> jwt.decoder(jwtDecoder())));
+						.jwt(jwt -> jwt
+								.decoder(jwtDecoder())
+								.jwtAuthenticationConverter(jwtConverter)));
 
 		return http.build();
 	}
