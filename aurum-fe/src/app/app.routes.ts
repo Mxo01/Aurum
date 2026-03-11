@@ -9,6 +9,11 @@ export const routes: Routes = [
 			import("./domain/dashboard/dashboard.component").then(m => m.DashboardComponent)
 	},
 	{
+		path: "profile",
+		canActivate: [authGuardFn],
+		loadComponent: () => import("./domain/profile/profile.component").then(m => m.ProfileComponent)
+	},
+	{
 		path: "",
 		redirectTo: "dashboard",
 		pathMatch: "full"

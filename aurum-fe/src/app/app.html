@@ -1,1 +1,53 @@
-<router-outlet />
+<main class="flex flex-col w-screen h-screen">
+	<div class="flex w-full h-full">
+		<aside class="h-full bg-surface-50 flex flex-col justify-between p-3">
+			<p-menu
+				styleClass="border-none! rounded-none! bg-surface-50!"
+				[model]="sidebarMenuItems()"
+			/>
+
+			<div>
+				<p-divider />
+
+				<p-button
+					severity="secondary"
+					[text]="true"
+					[fluid]="true"
+					(onClick)="logout()"
+				>
+					<div class="flex items-start w-full text-red-500">
+						<span class="flex items-center gap-2">
+							<i class="pi pi-sign-out"></i>
+							<span>Logout</span>
+						</span>
+					</div>
+				</p-button>
+
+				<a
+					pButton
+					routerLink="/profile"
+					severity="secondary"
+					[text]="true"
+					[fluid]="true"
+				>
+					<div class="flex items-start gap-2 w-full">
+						<p-avatar
+							shape="circle"
+							[image]="user()?.picture"
+						/>
+						<span
+							pButtonLabel
+							class="flex flex-col items-start"
+						>
+							<span class="text-black text-xs">{{ user()?.name }}</span>
+							<span class="text-gray-600 text-xs">{{ user()?.email }}</span>
+						</span>
+					</div>
+				</a>
+			</div>
+		</aside>
+		<section class="w-full h-full p-3">
+			<router-outlet />
+		</section>
+	</div>
+</main>
