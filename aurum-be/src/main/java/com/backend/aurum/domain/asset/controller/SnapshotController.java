@@ -12,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @RestController
@@ -37,9 +38,24 @@ public class SnapshotController {
     @PostMapping
     public ResponseEntity<SnapshotDTO> createSnapshot(@RequestBody SnapshotDTO snapshotDto) {
         UUID userId = securityUtils.getCurrentUserId();
-        validationService.validate(snapshotDto);
-        Snapshot snapshot = mapper.toEntity(snapshotDto, userId);
-        Snapshot savedSnapshot = snapshotService.save(snapshot);
+        validationService.validate(snapshotDto, userId);
+        
+        Optional<Snapshot> existingOpt = snapshotService.findExistingForMonth(snapshotDto.getAssetId(), snapshotDto.getReferenceDate());
+        
+        Snapshot snapshotToSave;
+		
+        if (existingOpt.isPresent()) {
+            snapshotToSave = existingOpt.get();
+            snapshotToSave.setAmountOriginalCurrency(snapshotDto.getAmountOriginalCurrency());
+            snapshotToSave.setReferenceDate(snapshotDto.getReferenceDate());
+            if (snapshotDto.getExchangeRateToBase() != null) {
+                snapshotToSave.setExchangeRateToBase(snapshotDto.getExchangeRateToBase());
+            }
+        } else {
+            snapshotToSave = mapper.toEntity(snapshotDto, userId);
+        }
+        
+        Snapshot savedSnapshot = snapshotService.save(snapshotToSave);
         return ResponseEntity.ok(mapper.toDto(savedSnapshot));
     }
 

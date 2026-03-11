@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -28,6 +29,12 @@ public class SnapshotService {
         return snapshotRepository.findByAssetUserId(userId).stream()
             .filter(s -> !s.getReferenceDate().isBefore(start) && !s.getReferenceDate().isAfter(end))
             .toList();
+    }
+
+    public Optional<Snapshot> findExistingForMonth(UUID assetId, LocalDate referenceDate) {
+        LocalDate startOfMonth = referenceDate.withDayOfMonth(1);
+        LocalDate endOfMonth = referenceDate.withDayOfMonth(referenceDate.lengthOfMonth());
+        return snapshotRepository.findFirstByAssetIdAndReferenceDateBetween(assetId, startOfMonth, endOfMonth);
     }
 
     @Transactional
