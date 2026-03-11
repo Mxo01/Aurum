@@ -15,8 +15,8 @@ public class AssetCategoryService {
 
     private final AssetCategoryRepository categoryRepository;
 
-    public List<AssetCategory> findAll() {
-        return categoryRepository.findAll();
+    public List<AssetCategory> findAll(UUID userId) {
+        return categoryRepository.findByUserIdOrUserIsNull(userId);
     }
 
     public AssetCategory findById(UUID id) {
@@ -34,6 +34,7 @@ public class AssetCategoryService {
         AssetCategory category = findById(id);
         category.setName(categoryDetails.getName());
         category.setType(categoryDetails.getType());
+        category.setUser(categoryDetails.getUser());
         return categoryRepository.save(category);
     }
 

@@ -2,17 +2,32 @@ package com.backend.aurum.domain.asset.mapper;
 
 import com.backend.aurum.domain.asset.dto.AssetCategoryDTO;
 import com.backend.aurum.domain.asset.model.AssetCategory;
+import com.backend.aurum.domain.user.model.User;
+import com.backend.aurum.domain.user.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+import java.util.UUID;
+
 @Component
+@RequiredArgsConstructor
 public class AssetCategoryMapper {
 
-    public AssetCategory toEntity(AssetCategoryDTO dto) {
+    private final UserRepository userRepository;
+
+    public AssetCategory toEntity(AssetCategoryDTO dto, UUID userId) {
         if (dto == null) return null;
         AssetCategory category = new AssetCategory();
         category.setId(dto.getId());
         category.setName(dto.getName());
         category.setType(dto.getType());
+
+        if (userId != null) {
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+            category.setUser(user);
+        }
+
         return category;
     }
 

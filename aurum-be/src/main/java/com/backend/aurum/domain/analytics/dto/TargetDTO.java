@@ -9,7 +9,6 @@ import java.util.UUID;
 @Data
 public class TargetDTO {
     private UUID id;
-    private UUID userId;
     private String name;
     private BigDecimal targetAmount;
     private BigDecimal currentAmount;

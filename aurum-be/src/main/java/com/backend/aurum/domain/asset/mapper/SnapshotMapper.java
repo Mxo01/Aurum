@@ -9,13 +9,15 @@ import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 
+import java.util.UUID;
+
 @Component
 @RequiredArgsConstructor
 public class SnapshotMapper {
 
     private final AssetRepository assetRepository;
 
-    public Snapshot toEntity(SnapshotDTO dto) {
+    public Snapshot toEntity(SnapshotDTO dto, UUID userId) {
         if (dto == null) return null;
         Snapshot snapshot = new Snapshot();
         snapshot.setId(dto.getId());
@@ -26,6 +28,10 @@ public class SnapshotMapper {
         if (dto.getAssetId() != null) {
             Asset asset = assetRepository.findById(dto.getAssetId())
                 .orElseThrow(() -> new RuntimeException("Asset not found"));
+            
+            if (userId != null && !asset.getUser().getId().equals(userId)) {
+                throw new RuntimeException("Asset does not belong to the user");
+            }
             snapshot.setAsset(asset);
         }
         

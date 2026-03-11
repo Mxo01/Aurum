@@ -5,6 +5,7 @@ import com.backend.aurum.domain.asset.mapper.SnapshotMapper;
 import com.backend.aurum.domain.asset.model.Snapshot;
 import com.backend.aurum.domain.asset.service.SnapshotService;
 import com.backend.aurum.domain.asset.validation.SnapshotValidationService;
+import com.backend.aurum.infrastructure.security.SecurityUtils;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -22,9 +23,11 @@ public class SnapshotController {
     private final SnapshotService snapshotService;
     private final SnapshotValidationService validationService;
     private final SnapshotMapper mapper;
+    private final SecurityUtils securityUtils;
 
     @GetMapping
-    public ResponseEntity<List<SnapshotDTO>> getAllSnapshots(@RequestHeader("X-User-Id") UUID userId) {
+    public ResponseEntity<List<SnapshotDTO>> getAllSnapshots() {
+        UUID userId = securityUtils.getCurrentUserId();
         List<SnapshotDTO> snapshots = snapshotService.findAll(userId).stream()
             .map(mapper::toDto)
             .toList();
@@ -33,8 +36,9 @@ public class SnapshotController {
 
     @PostMapping
     public ResponseEntity<SnapshotDTO> createSnapshot(@RequestBody SnapshotDTO snapshotDto) {
+        UUID userId = securityUtils.getCurrentUserId();
         validationService.validate(snapshotDto);
-        Snapshot snapshot = mapper.toEntity(snapshotDto);
+        Snapshot snapshot = mapper.toEntity(snapshotDto, userId);
         Snapshot savedSnapshot = snapshotService.save(snapshot);
         return ResponseEntity.ok(mapper.toDto(savedSnapshot));
     }

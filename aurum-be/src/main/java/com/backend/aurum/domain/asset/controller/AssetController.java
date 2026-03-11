@@ -5,6 +5,7 @@ import com.backend.aurum.domain.asset.mapper.AssetMapper;
 import com.backend.aurum.domain.asset.model.Asset;
 import com.backend.aurum.domain.asset.service.AssetService;
 import com.backend.aurum.domain.asset.validation.AssetValidationService;
+import com.backend.aurum.infrastructure.security.SecurityUtils;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -22,9 +23,11 @@ public class AssetController {
     private final AssetService assetService;
     private final AssetValidationService validationService;
     private final AssetMapper mapper;
+    private final SecurityUtils securityUtils;
 
     @GetMapping
-    public ResponseEntity<List<AssetDTO>> getAllAssets(@RequestHeader("X-User-Id") UUID userId) {
+    public ResponseEntity<List<AssetDTO>> getAllAssets() {
+        UUID userId = securityUtils.getCurrentUserId();
         List<AssetDTO> assets = assetService.findAll(userId).stream()
             .map(mapper::toDto)
             .toList();
@@ -39,16 +42,18 @@ public class AssetController {
 
     @PostMapping
     public ResponseEntity<AssetDTO> createAsset(@RequestBody AssetDTO assetDto) {
+        UUID userId = securityUtils.getCurrentUserId();
         validationService.validate(assetDto);
-        Asset asset = mapper.toEntity(assetDto);
+        Asset asset = mapper.toEntity(assetDto, userId);
         Asset savedAsset = assetService.save(asset);
         return ResponseEntity.ok(mapper.toDto(savedAsset));
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<AssetDTO> updateAsset(@PathVariable UUID id, @RequestBody AssetDTO assetDto) {
+        UUID userId = securityUtils.getCurrentUserId();
         validationService.validate(assetDto);
-        Asset assetDetails = mapper.toEntity(assetDto);
+        Asset assetDetails = mapper.toEntity(assetDto, userId);
         Asset updatedAsset = assetService.update(id, assetDetails);
         return ResponseEntity.ok(mapper.toDto(updatedAsset));
     }

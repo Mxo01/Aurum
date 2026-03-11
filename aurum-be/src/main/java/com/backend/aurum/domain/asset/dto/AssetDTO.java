@@ -8,7 +8,6 @@ import java.util.UUID;
 @Data
 public class AssetDTO {
     private UUID id;
-    private UUID userId;
     private String name;
     private UUID categoryId;
     private String categoryName;

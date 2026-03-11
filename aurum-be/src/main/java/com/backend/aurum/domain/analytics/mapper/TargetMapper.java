@@ -10,19 +10,21 @@ import org.springframework.stereotype.Component;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 
+import java.util.UUID;
+
 @Component
 @RequiredArgsConstructor
 public class TargetMapper {
 
     private final UserRepository userRepository;
 
-    public Target toEntity(TargetDTO dto) {
+    public Target toEntity(TargetDTO dto, UUID userId) {
         if (dto == null) return null;
         Target target = new Target();
         target.setId(dto.getId());
         
-        if (dto.getUserId() != null) {
-            User user = userRepository.findById(dto.getUserId())
+        if (userId != null) {
+            User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
             target.setUser(user);
         }
@@ -38,7 +40,6 @@ public class TargetMapper {
         if (entity == null) return null;
         TargetDTO dto = new TargetDTO();
         dto.setId(entity.getId());
-        dto.setUserId(entity.getUser() != null ? entity.getUser().getId() : null);
         dto.setName(entity.getName());
         dto.setTargetAmount(entity.getTargetAmount());
         dto.setCurrentAmount(currentAmount);

@@ -9,6 +9,8 @@ import com.backend.aurum.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+import java.util.UUID;
+
 @Component
 @RequiredArgsConstructor
 public class AssetMapper {
@@ -16,7 +18,7 @@ public class AssetMapper {
     private final AssetCategoryRepository categoryRepository;
     private final UserRepository userRepository;
 
-    public Asset toEntity(AssetDTO dto) {
+    public Asset toEntity(AssetDTO dto, UUID userId) {
         if (dto == null) return null;
         Asset asset = new Asset();
         asset.setId(dto.getId());
@@ -25,8 +27,8 @@ public class AssetMapper {
         asset.setIsFavorite(dto.getIsFavorite() != null ? dto.getIsFavorite() : false);
         asset.setOriginalCurrency(dto.getOriginalCurrency() != null ? dto.getOriginalCurrency() : "EUR");
         
-        if (dto.getUserId() != null) {
-            User user = userRepository.findById(dto.getUserId())
+        if (userId != null) {
+            User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
             asset.setUser(user);
         }
@@ -34,6 +36,11 @@ public class AssetMapper {
         if (dto.getCategoryId() != null) {
             AssetCategory category = categoryRepository.findById(dto.getCategoryId())
                 .orElseThrow(() -> new RuntimeException("Category not found"));
+            
+            if (category.getUser() != null && (userId == null || !category.getUser().getId().equals(userId))) {
+                throw new RuntimeException("Category does not belong to the user");
+            }
+            
             asset.setCategory(category);
         }
         
@@ -44,7 +51,6 @@ public class AssetMapper {
         if (entity == null) return null;
         AssetDTO dto = new AssetDTO();
         dto.setId(entity.getId());
-        dto.setUserId(entity.getUser() != null ? entity.getUser().getId() : null);
         dto.setName(entity.getName());
         dto.setIsActive(entity.getIsActive());
         dto.setIsFavorite(entity.getIsFavorite());
