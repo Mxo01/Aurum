@@ -1,0 +1,7 @@
+databaseChangeLog:
+    - include:
+          relativeToChangelogFile: true
+          file: alter-users.sql
+    - include:
+          relativeToChangelogFile: true
+          file: drop-external-id-users.sql

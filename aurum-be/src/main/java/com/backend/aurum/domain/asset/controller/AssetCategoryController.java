@@ -5,10 +5,12 @@ import com.backend.aurum.domain.asset.mapper.AssetCategoryMapper;
 import com.backend.aurum.domain.asset.model.AssetCategory;
 import com.backend.aurum.domain.asset.service.AssetCategoryService;
 import com.backend.aurum.domain.asset.validation.AssetCategoryValidationService;
-import com.backend.aurum.infrastructure.security.SecurityUtils;
+import com.backend.aurum.domain.user.dto.UserPrincipal;
+
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -23,11 +25,10 @@ public class AssetCategoryController {
 	private final AssetCategoryService categoryService;
 	private final AssetCategoryValidationService validationService;
 	private final AssetCategoryMapper mapper;
-	private final SecurityUtils securityUtils;
 
 	@GetMapping
-	public ResponseEntity<List<AssetCategoryDTO>> getAllCategories() {
-		UUID userId = securityUtils.getCurrentUserId();
+	public ResponseEntity<List<AssetCategoryDTO>> getAllCategories(@AuthenticationPrincipal UserPrincipal principal) {
+		UUID userId = principal.user().getId();
 		List<AssetCategoryDTO> categories = categoryService.findAll(userId).stream()
 				.map(mapper::toDto)
 				.toList();
@@ -35,8 +36,9 @@ public class AssetCategoryController {
 	}
 
 	@PostMapping
-	public ResponseEntity<AssetCategoryDTO> createCategory(@RequestBody AssetCategoryDTO categoryDto) {
-		UUID userId = securityUtils.getCurrentUserId();
+	public ResponseEntity<AssetCategoryDTO> createCategory(@RequestBody AssetCategoryDTO categoryDto,
+			@AuthenticationPrincipal UserPrincipal principal) {
+		UUID userId = principal.user().getId();
 		validationService.validate(categoryDto);
 		AssetCategory category = mapper.toEntity(categoryDto, userId);
 		AssetCategory savedCategory = categoryService.save(category);
@@ -46,8 +48,9 @@ public class AssetCategoryController {
 	@PutMapping("/{id}")
 	public ResponseEntity<AssetCategoryDTO> updateCategory(
 			@PathVariable UUID id,
-			@RequestBody AssetCategoryDTO categoryDto) {
-		UUID userId = securityUtils.getCurrentUserId();
+			@RequestBody AssetCategoryDTO categoryDto,
+			@AuthenticationPrincipal UserPrincipal principal) {
+		UUID userId = principal.user().getId();
 		validationService.validate(categoryDto);
 		AssetCategory categoryDetails = mapper.toEntity(categoryDto, userId);
 		AssetCategory updatedCategory = categoryService.update(id, categoryDetails);

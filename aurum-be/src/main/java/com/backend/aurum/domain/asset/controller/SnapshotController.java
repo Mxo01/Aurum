@@ -5,10 +5,12 @@ import com.backend.aurum.domain.asset.mapper.SnapshotMapper;
 import com.backend.aurum.domain.asset.model.Snapshot;
 import com.backend.aurum.domain.asset.service.SnapshotService;
 import com.backend.aurum.domain.asset.validation.SnapshotValidationService;
-import com.backend.aurum.infrastructure.security.SecurityUtils;
+import com.backend.aurum.domain.user.dto.UserPrincipal;
+
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -24,11 +26,10 @@ public class SnapshotController {
 	private final SnapshotService snapshotService;
 	private final SnapshotValidationService validationService;
 	private final SnapshotMapper mapper;
-	private final SecurityUtils securityUtils;
 
 	@GetMapping
-	public ResponseEntity<List<SnapshotDTO>> getAllSnapshots() {
-		UUID userId = securityUtils.getCurrentUserId();
+	public ResponseEntity<List<SnapshotDTO>> getAllSnapshots(@AuthenticationPrincipal UserPrincipal principal) {
+		UUID userId = principal.user().getId();
 		List<SnapshotDTO> snapshots = snapshotService.findAll(userId).stream()
 				.map(mapper::toDto)
 				.toList();
@@ -36,8 +37,9 @@ public class SnapshotController {
 	}
 
 	@PostMapping
-	public ResponseEntity<SnapshotDTO> createSnapshot(@RequestBody SnapshotDTO snapshotDto) {
-		UUID userId = securityUtils.getCurrentUserId();
+	public ResponseEntity<SnapshotDTO> createSnapshot(@RequestBody SnapshotDTO snapshotDto,
+			@AuthenticationPrincipal UserPrincipal principal) {
+		UUID userId = principal.user().getId();
 		validationService.validate(snapshotDto, userId);
 
 		Optional<Snapshot> existingOpt = snapshotService.findExistingForMonth(snapshotDto.getAssetId(),

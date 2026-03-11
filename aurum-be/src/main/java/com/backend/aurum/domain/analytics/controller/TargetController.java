@@ -6,10 +6,12 @@ import com.backend.aurum.domain.analytics.model.Target;
 import com.backend.aurum.domain.analytics.service.AnalyticsService;
 import com.backend.aurum.domain.analytics.service.TargetService;
 import com.backend.aurum.domain.analytics.validation.TargetValidationService;
-import com.backend.aurum.infrastructure.security.SecurityUtils;
+import com.backend.aurum.domain.user.dto.UserPrincipal;
+
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -26,11 +28,10 @@ public class TargetController {
 	private final AnalyticsService analyticsService;
 	private final TargetValidationService validationService;
 	private final TargetMapper mapper;
-	private final SecurityUtils securityUtils;
 
 	@GetMapping
-	public ResponseEntity<List<TargetDTO>> getAllTargets() {
-		UUID userId = securityUtils.getCurrentUserId();
+	public ResponseEntity<List<TargetDTO>> getAllTargets(@AuthenticationPrincipal UserPrincipal principal) {
+		UUID userId = principal.user().getId();
 		BigDecimal currentNetWorth = analyticsService.getSummary(userId).getTotalNetWorth();
 		List<TargetDTO> targets = targetService.findAll(userId).stream()
 				.map(t -> mapper.toDto(t, currentNetWorth))
@@ -39,8 +40,9 @@ public class TargetController {
 	}
 
 	@PostMapping
-	public ResponseEntity<TargetDTO> createTarget(@RequestBody TargetDTO targetDto) {
-		UUID userId = securityUtils.getCurrentUserId();
+	public ResponseEntity<TargetDTO> createTarget(@RequestBody TargetDTO targetDto,
+			@AuthenticationPrincipal UserPrincipal principal) {
+		UUID userId = principal.user().getId();
 		validationService.validate(targetDto);
 		Target target = mapper.toEntity(targetDto, userId);
 		Target savedTarget = targetService.save(target);
@@ -48,8 +50,9 @@ public class TargetController {
 	}
 
 	@PutMapping("/{id}")
-	public ResponseEntity<TargetDTO> updateTarget(@PathVariable UUID id, @RequestBody TargetDTO targetDto) {
-		UUID userId = securityUtils.getCurrentUserId();
+	public ResponseEntity<TargetDTO> updateTarget(@PathVariable UUID id, @RequestBody TargetDTO targetDto,
+			@AuthenticationPrincipal UserPrincipal principal) {
+		UUID userId = principal.user().getId();
 		validationService.validate(targetDto);
 		Target targetDetails = mapper.toEntity(targetDto, userId);
 		Target updatedTarget = targetService.update(id, targetDetails);

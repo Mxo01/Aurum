@@ -6,7 +6,7 @@ export const routes: Routes = [
 		path: "dashboard",
 		canActivate: [authGuardFn],
 		loadComponent: () =>
-			import("./features/dashboard/dashboard.component").then(m => m.DashboardComponent)
+			import("./domain/dashboard/dashboard.component").then(m => m.DashboardComponent)
 	},
 	{
 		path: "",
