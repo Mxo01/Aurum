@@ -3,14 +3,10 @@ import { authGuardFn } from "@auth0/auth0-angular";
 
 export const routes: Routes = [
 	{
-		path: "login",
-		loadComponent: () => import("./features/login/login.component").then(m => m.LoginComponent)
-	},
-	{
 		path: "dashboard",
 		canActivate: [authGuardFn],
 		loadComponent: () =>
-			import("./features/dashboard/dashboard.component").then(m => m.DashboardComponent)
+			import("./domain/dashboard/dashboard.component").then(m => m.DashboardComponent)
 	},
 	{
 		path: "",
@@ -19,7 +15,6 @@ export const routes: Routes = [
 	},
 	{
 		path: "**",
-		redirectTo: "dashboard",
-		pathMatch: "full"
+		redirectTo: "dashboard"
 	}
 ];

@@ -1,7 +1,7 @@
 import { ApplicationConfig, provideZonelessChangeDetection } from "@angular/core";
 import { provideRouter } from "@angular/router";
 import { provideHttpClient, withInterceptors } from "@angular/common/http";
-import { provideAuth0, authHttpInterceptorFn } from "@auth0/auth0-angular";
+import { provideAuth0, authHttpInterceptorFn, AuthConfig } from "@auth0/auth0-angular";
 
 import { routes } from "./app.routes";
 import { providePrimeNG } from "primeng/config";
@@ -26,20 +26,33 @@ const primengPreset = definePreset(Aura, {
 	}
 });
 
+const auth0Config: AuthConfig = {
+	domain: "aurum-api.eu.auth0.com",
+	clientId: "ZHikUaUM2UOqcOHtTzdPephPVMWifRPj",
+	authorizationParams: {
+		redirect_uri: window.location.origin,
+		audience: "https://api.aurum.com"
+	},
+	httpInterceptor: {
+		allowedList: [
+			{
+				uri: "http://localhost:8080/api/*",
+				tokenOptions: {
+					authorizationParams: {
+						audience: "https://api.aurum.com"
+					}
+				}
+			}
+		]
+	}
+};
+
 export const appConfig: ApplicationConfig = {
 	providers: [
 		provideZonelessChangeDetection(),
 		provideRouter(routes),
 		provideHttpClient(withInterceptors([authHttpInterceptorFn])),
-		provideAuth0({
-			domain: "aurum-api.eu.auth0.com",
-			clientId: "ZHikUaUM2UOqcOHtTzdPephPVMWifRPj",
-			authorizationParams: {
-				redirect_uri: window.location.origin,
-				audience: "https://api.aurum.com",
-				scope: "openid profile email"
-			}
-		}),
+		provideAuth0(auth0Config),
 		providePrimeNG({
 			theme: {
 				preset: primengPreset,

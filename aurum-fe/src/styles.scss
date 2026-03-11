@@ -1,1 +1,7 @@
-@use "./tailwind.css";
+@import "primeicons/primeicons.css";
+
+html,
+body {
+	margin: 0;
+	font-family: "Poppins", sans-serif;
+}
