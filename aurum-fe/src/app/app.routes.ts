@@ -14,6 +14,11 @@ export const routes: Routes = [
 		loadComponent: () => import("./domain/profile/profile.component").then(m => m.ProfileComponent)
 	},
 	{
+		path: "assets",
+		canActivate: [authGuardFn],
+		loadComponent: () => import("./domain/asset/asset.component").then(m => m.AssetComponent)
+	},
+	{
 		path: "",
 		redirectTo: "dashboard",
 		pathMatch: "full"

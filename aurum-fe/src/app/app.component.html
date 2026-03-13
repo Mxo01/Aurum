@@ -1,0 +1,56 @@
+<p-toast />
+<p-confirmdialog />
+
+<main class="flex flex-col w-screen h-screen">
+	<p-toolbar class="rounded-none!">
+		<ng-template #start>
+			<a
+				routerLink="/dashboard"
+				routerLinkActive="text-primary! font-bold"
+				[routerLinkActiveOptions]="{ exact: true }"
+				[text]="true"
+				severity="secondary"
+				pButton
+			>
+				Dashboard
+			</a>
+			<a
+				routerLink="/assets"
+				routerLinkActive="text-primary! font-bold"
+				[routerLinkActiveOptions]="{ exact: true }"
+				[text]="true"
+				severity="secondary"
+				pButton
+			>
+				Assets
+			</a>
+		</ng-template>
+		<ng-template #end>
+			<p-button
+				severity="secondary"
+				[text]="true"
+				routerLink="/profile"
+			>
+				<div class="flex flex-col items-end">
+					<span class="text-primary text-sm font-bold">{{ user()?.name }}</span>
+					<span class="text-xs">{{ user()?.email }}</span>
+				</div>
+				<p-avatar
+					[image]="user()?.picture"
+					shape="circle"
+				/>
+			</p-button>
+
+			<p-button
+				severity="danger"
+				icon="pi pi-sign-out"
+				[rounded]="true"
+				[text]="true"
+				(onClick)="logout()"
+			/>
+		</ng-template>
+	</p-toolbar>
+	<section class="w-full h-full p-3">
+		<router-outlet />
+	</section>
+</main>

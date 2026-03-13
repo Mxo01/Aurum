@@ -139,16 +139,28 @@ public class AnalyticsService {
 
     private Map<String, BigDecimal> calculateAssetAllocation(UUID userId) {
         List<Asset> assets = assetRepository.findByUserIdAndIsActiveTrue(userId);
-        Map<String, BigDecimal> allocation = new HashMap<>();
-        
+        Map<String, BigDecimal> categoryValues = new HashMap<>();
+        BigDecimal totalValue = BigDecimal.ZERO;
+
         for (Asset asset : assets) {
             Optional<Snapshot> latestSnapshot = snapshotRepository.findByAssetId(asset.getId()).stream()
                     .max(Comparator.comparing(Snapshot::getReferenceDate));
-            
+
             if (latestSnapshot.isPresent()) {
-                String category = asset.getCategory().getName();
+                String category = asset.getCategory() != null ? asset.getCategory().getName() : "Other";
                 BigDecimal value = latestSnapshot.get().getAmountInBaseCurrency();
-                allocation.put(category, allocation.getOrDefault(category, BigDecimal.ZERO).add(value));
+                categoryValues.put(category, categoryValues.getOrDefault(category, BigDecimal.ZERO).add(value));
+                totalValue = totalValue.add(value);
+            }
+        }
+
+        Map<String, BigDecimal> allocation = new HashMap<>();
+        if (totalValue.compareTo(BigDecimal.ZERO) > 0) {
+            for (Map.Entry<String, BigDecimal> entry : categoryValues.entrySet()) {
+                BigDecimal percentage = entry.getValue()
+                        .divide(totalValue, 4, RoundingMode.HALF_UP)
+                        .multiply(BigDecimal.valueOf(100));
+                allocation.put(entry.getKey(), percentage);
             }
         }
         return allocation;

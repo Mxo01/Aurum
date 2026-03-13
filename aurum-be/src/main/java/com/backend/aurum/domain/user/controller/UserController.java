@@ -1,0 +1,39 @@
+package com.backend.aurum.domain.user.controller;
+
+import com.backend.aurum.domain.user.dto.UpdateNameDTO;
+import com.backend.aurum.domain.user.dto.UserPrincipal;
+import com.backend.aurum.domain.user.service.UserService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.UUID;
+
+@RestController
+@RequestMapping("/api/users")
+@RequiredArgsConstructor
+public class UserController {
+
+	private final UserService userService;
+
+	@DeleteMapping
+	public ResponseEntity<Void> deleteUser(@AuthenticationPrincipal UserPrincipal principal) {
+		UUID userId = principal.user().getId();
+		String jwtId = principal.jwt().getSubject();
+
+		userService.deleteUser(userId, jwtId);
+
+		return ResponseEntity.ok().build();
+	}
+
+	@PutMapping
+	public ResponseEntity<Void> updateName(@AuthenticationPrincipal UserPrincipal principal,
+			@RequestBody UpdateNameDTO dto) {
+		String jwtId = principal.jwt().getSubject();
+
+		userService.updateAuth0Name(jwtId, dto);
+
+		return ResponseEntity.ok().build();
+	}
+}
