@@ -11,10 +11,16 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.CascadeType;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -30,6 +36,7 @@ public class AssetCategory {
 
 	@ManyToOne(optional = true)
 	@JoinColumn(name = "user_id")
+	@OnDelete(action = OnDeleteAction.CASCADE)
 	private User user;
 
 	@Column(nullable = false)
@@ -38,4 +45,7 @@ public class AssetCategory {
 	@Enumerated(EnumType.STRING)
 	@Column(nullable = false)
 	private AssetType type;
+
+	@OneToMany(mappedBy = "category", cascade = CascadeType.ALL, orphanRemoval = true)
+	private List<Asset> assets = new ArrayList<>();
 }

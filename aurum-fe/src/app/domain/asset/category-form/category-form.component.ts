@@ -16,6 +16,7 @@ import { TableModule } from "primeng/table";
 import { ToggleSwitch } from "primeng/toggleswitch";
 import { AssetCategory, AssetType } from "../model/asset.model";
 import { typeOptions } from "../asset-form/asset-form.utils";
+import { Dialog } from "primeng/dialog";
 
 @Component({
 	selector: "app-category-form",
@@ -31,11 +32,13 @@ import { typeOptions } from "../asset-form/asset-form.utils";
 		InputText,
 		Select,
 		Panel,
-		ReactiveFormsModule
+		ReactiveFormsModule,
+		Dialog
 	],
 	changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class CategoryFormComponent {
+	isVisible = model.required<boolean>();
 	isNewCategory = model.required<boolean>();
 
 	categoriesOptions = input.required<AssetCategory[]>();

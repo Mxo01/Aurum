@@ -1,11 +1,15 @@
 package com.backend.aurum.domain.asset.service;
 
 import com.backend.aurum.domain.asset.model.Asset;
+import com.backend.aurum.domain.asset.model.Snapshot;
 import com.backend.aurum.domain.asset.repository.AssetRepository;
+import com.backend.aurum.domain.asset.repository.SnapshotRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -13,42 +17,59 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class AssetService {
 
-    private final AssetRepository assetRepository;
+	private final AssetRepository assetRepository;
+	private final SnapshotRepository snapshotRepository;
 
-    public List<Asset> findAll(UUID userId) {
-        return assetRepository.findByUserId(userId);
-    }
+	public List<Asset> findAll(UUID userId) {
+		return assetRepository.findByUserId(userId);
+	}
 
-    public List<Asset> findAllActive(UUID userId) {
-        return assetRepository.findByUserIdAndIsActiveTrue(userId);
-    }
+	public List<Asset> findAllActive(UUID userId) {
+		return assetRepository.findByUserIdAndIsActiveTrue(userId);
+	}
 
-    public Asset findById(UUID id) {
-        return assetRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Asset not found"));
-    }
+	public Asset findById(UUID id, UUID userId) {
+		Asset asset = assetRepository.findById(id)
+				.orElseThrow(() -> new RuntimeException("Asset not found"));
 
-    @Transactional
-    public Asset save(Asset asset) {
-        return assetRepository.save(asset);
-    }
+		if (!asset.getUser().getId().equals(userId)) {
+			throw new RuntimeException("Access denied: Asset does not belong to user");
+		}
 
-    @Transactional
-    public Asset update(UUID id, Asset assetDetails) {
-        Asset asset = findById(id);
-        asset.setName(assetDetails.getName());
-        asset.setCategory(assetDetails.getCategory());
-        asset.setOriginalCurrency(assetDetails.getOriginalCurrency());
-        asset.setIsActive(assetDetails.getIsActive());
-        asset.setIsFavorite(assetDetails.getIsFavorite());
-        asset.setUser(assetDetails.getUser());
-        return assetRepository.save(asset);
-    }
+		return asset;
+	}
 
-    @Transactional
-    public void delete(UUID id) {
-        Asset asset = findById(id);
-        asset.setIsActive(false);
-        assetRepository.save(asset);
-    }
+	@Transactional
+	public Asset save(Asset asset, BigDecimal initialValue, LocalDate referenceDate) {
+		Asset savedAsset = assetRepository.save(asset);
+
+		if (initialValue != null && referenceDate != null) {
+			Snapshot snapshot = new Snapshot();
+			snapshot.setAsset(savedAsset);
+			snapshot.setAmountOriginalCurrency(initialValue);
+			snapshot.setReferenceDate(referenceDate);
+			snapshotRepository.save(snapshot);
+			savedAsset.getSnapshots().add(snapshot);
+		}
+
+		return savedAsset;
+	}
+
+	@Transactional
+	public Asset update(UUID id, Asset assetDetails, UUID userId) {
+		Asset asset = findById(id, userId);
+		asset.setName(assetDetails.getName());
+		asset.setCategory(assetDetails.getCategory());
+		asset.setOriginalCurrency(assetDetails.getOriginalCurrency());
+		asset.setIsActive(assetDetails.getIsActive());
+		asset.setIsFavorite(assetDetails.getIsFavorite());
+		asset.setUser(assetDetails.getUser());
+		return assetRepository.save(asset);
+	}
+
+	@Transactional
+	public void delete(UUID id, UUID userId) {
+		Asset asset = findById(id, userId);
+		assetRepository.delete(asset);
+	}
 }

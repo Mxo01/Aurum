@@ -40,22 +40,22 @@ export class SnapshotService {
 		);
 	}
 
-	deleteSnapshot(id: string) {
-		return this.http.delete<void>(`${this.snapshotsUrl}/${id}`).pipe(
+	deleteSnapshotsBulk(assetId: string, ids: string[]) {
+		return this.http.delete(`${this.snapshotsUrl}/bulk?assetId=${assetId}`, { body: ids }).pipe(
 			switchMap(() => this.getAllSnapshots()),
 			tap({
 				next: () => {
 					this.messageService.add({
 						severity: "success",
 						summary: "Success",
-						detail: "Snapshot deleted successfully"
+						detail: "Snapshots deleted successfully"
 					});
 				},
 				error: () => {
 					this.messageService.add({
 						severity: "error",
 						summary: "Error",
-						detail: "Failed to delete snapshot"
+						detail: "Failed to delete snapshots"
 					});
 				}
 			})

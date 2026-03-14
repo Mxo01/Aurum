@@ -5,6 +5,9 @@ import com.backend.aurum.domain.user.enums.Currency;
 
 import lombok.Data;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 
 @Data
@@ -17,4 +20,7 @@ public class AssetDTO {
 	private Currency originalCurrency;
 	private Boolean isActive;
 	private Boolean isFavorite;
+	private List<SnapshotDTO> snapshots;
+	private BigDecimal initialValue;
+	private LocalDate referenceDate;
 }

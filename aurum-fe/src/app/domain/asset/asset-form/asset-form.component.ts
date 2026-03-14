@@ -1,5 +1,15 @@
 import { ToggleButton } from "primeng/togglebutton";
-import { ChangeDetectionStrategy, Component, effect, input, OnInit, signal } from "@angular/core";
+import {
+	ChangeDetectionStrategy,
+	Component,
+	effect,
+	input,
+	model,
+	OnInit,
+	output,
+	signal,
+	OnDestroy
+} from "@angular/core";
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from "@angular/forms";
 import { Asset, AssetCategory, AssetType } from "../model/asset.model";
 import { InputText } from "primeng/inputtext";
@@ -9,6 +19,9 @@ import { InputNumber } from "primeng/inputnumber";
 import { DatePicker } from "primeng/datepicker";
 import { currencyOptions, typeOptions } from "./asset-form.utils";
 import { Currency } from "../../profile/model/currency.model";
+import { Button } from "primeng/button";
+import { Drawer } from "primeng/drawer";
+import { Subscription } from "rxjs";
 
 @Component({
 	selector: "app-asset-form",
@@ -21,15 +34,21 @@ import { Currency } from "../../profile/model/currency.model";
 		Select,
 		SelectButton,
 		InputNumber,
-		DatePicker
+		DatePicker,
+		Button,
+		Drawer
 	],
 	changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class AssetFormComponent implements OnInit {
-	selectedAsset = input<Asset | null>(null);
+export class AssetFormComponent implements OnInit, OnDestroy {
+	isVisible = model.required<boolean>();
+	selectedAsset = model<Asset | null>(null);
+
 	categoriesOptions = input.required<AssetCategory[]>();
 
-	readonly assetForm = new FormGroup({
+	save = output<Asset>();
+
+	protected readonly assetForm = new FormGroup({
 		name: new FormControl<string>("", Validators.required),
 		category: new FormControl<AssetCategory | null>(null, Validators.required),
 		type: new FormControl<AssetType | null>({ value: null, disabled: true }, Validators.required),
@@ -41,6 +60,8 @@ export class AssetFormComponent implements OnInit {
 	});
 	protected readonly currencyOptions = signal(currencyOptions);
 	protected readonly typeOptions = signal(typeOptions);
+
+	private categoryCtrlSub?: Subscription;
 
 	constructor() {
 		effect(() => {
@@ -59,15 +80,66 @@ export class AssetFormComponent implements OnInit {
 					isActive: selectedAsset.isActive,
 					isFavorite: selectedAsset.isFavorite
 				});
+				this.assetForm.controls.currency.disable();
+			} else {
+				this.assetForm.controls.currency.enable();
+				this.resetForm();
 			}
 		});
 	}
 
 	ngOnInit() {
-		this.assetForm.controls.category.valueChanges.subscribe({
+		this.categoryCtrlSub = this.assetForm.controls.category.valueChanges.subscribe({
 			next: category => {
 				if (category) this.assetForm.controls.type.setValue(category.type);
 			}
 		});
+	}
+
+	ngOnDestroy() {
+		this.categoryCtrlSub?.unsubscribe();
+	}
+
+	resetForm() {
+		this.assetForm.reset({
+			currency: Currency.EUR,
+			isActive: true,
+			referenceDate: new Date()
+		});
+	}
+
+	hideDrawer() {
+		this.selectedAsset.set(null);
+	}
+
+	saveAssetFromForm() {
+		const form = this.assetForm.getRawValue();
+
+		if (!form || !form.category || !form.type || !form.currency || !form.name) return;
+
+		const isNewAsset = !this.selectedAsset();
+
+		const asset: Asset = {
+			id: this.selectedAsset()?.id ?? "",
+			name: form.name,
+			categoryId: form.category.id,
+			categoryName: form.category.name,
+			type: form.type,
+			originalCurrency: form.currency,
+			isActive: !!form.isActive,
+			isFavorite: !!form.isFavorite,
+			initialValue: isNewAsset ? form.initialValue : null,
+			referenceDate:
+				isNewAsset && form.referenceDate
+					? form.referenceDate.getFullYear() +
+						"-" +
+						String(form.referenceDate.getMonth() + 1).padStart(2, "0") +
+						"-" +
+						String(form.referenceDate.getDate()).padStart(2, "0")
+					: null
+		};
+
+		this.isVisible.set(false);
+		this.save.emit(asset);
 	}
 }

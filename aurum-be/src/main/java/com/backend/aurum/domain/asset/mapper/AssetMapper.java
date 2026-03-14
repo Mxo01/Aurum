@@ -18,6 +18,7 @@ public class AssetMapper {
 
 	private final AssetCategoryRepository categoryRepository;
 	private final UserRepository userRepository;
+	private final SnapshotMapper snapshotMapper;
 
 	public Asset toEntity(AssetDTO dto, UUID userId) {
 		if (dto == null)
@@ -63,6 +64,12 @@ public class AssetMapper {
 			dto.setCategoryId(entity.getCategory().getId());
 			dto.setCategoryName(entity.getCategory().getName());
 			dto.setType(entity.getCategory().getType());
+		}
+
+		if (entity.getSnapshots() != null) {
+			dto.setSnapshots(entity.getSnapshots().stream()
+					.map(snapshotMapper::toDto)
+					.toList());
 		}
 
 		return dto;

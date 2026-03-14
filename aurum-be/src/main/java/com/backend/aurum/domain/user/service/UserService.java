@@ -22,16 +22,20 @@ public class UserService {
 	private final UserRepository userRepository;
 	private final Auth0ManagementService auth0ManagementService;
 
-	@Transactional
 	public User findOrCreate(String jwtId, String email) {
 		return userRepository
 				.findByJwtId(jwtId)
 				.orElseGet(() -> {
-					User newUser = new User();
-					newUser.setJwtId(jwtId);
-					newUser.setEmail(email);
-					newUser.setCurrency(Currency.EUR);
-					return userRepository.save(newUser);
+					try {
+						User newUser = new User();
+						newUser.setJwtId(jwtId);
+						newUser.setEmail(email);
+						newUser.setCurrency(Currency.EUR);
+						return userRepository.saveAndFlush(newUser);
+					} catch (Exception e) {
+						return userRepository.findByJwtId(jwtId)
+								.orElseThrow(() -> new RuntimeException("Failed to find or create user", e));
+					}
 				});
 	}
 

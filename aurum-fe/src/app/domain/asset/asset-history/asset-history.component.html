@@ -1,0 +1,150 @@
+<p-dialog
+	[header]="'History: ' + selectedAsset()?.name"
+	[(visible)]="isVisible"
+	[modal]="true"
+	[draggable]="false"
+	(onHide)="onHideDrawer()"
+	[style]="{ width: '50vw' }"
+	[breakpoints]="{ '960px': '75vw', '640px': '90vw' }"
+>
+	<ng-template #content>
+		<p-select-button
+			class="mb-5"
+			[(ngModel)]="viewMode"
+			[options]="viewModeOptions()"
+		>
+			<ng-template
+				#item
+				let-item
+			>
+				<div class="flex items-center gap-2">
+					<i [class]="item.icon"></i>
+					<span>{{ item.label }}</span>
+				</div>
+			</ng-template>
+		</p-select-button>
+
+		@if (viewMode() === ViewMode.Table) {
+			<p-table
+				[value]="snapshotsForSelectedAsset()"
+				[stripedRows]="true"
+				size="small"
+				[(selection)]="selectedSnapshotsHistory"
+				dataKey="id"
+				style="min-width: 32rem"
+			>
+				<ng-template #header>
+					<tr>
+						<th style="width: 4rem">
+							<p-tableHeaderCheckbox />
+						</th>
+						<th>Date</th>
+						<th class="text-right">Amount</th>
+						<th class="text-right">Value (Base)</th>
+					</tr>
+				</ng-template>
+				<ng-template
+					#body
+					let-snapshot
+				>
+					<tr>
+						<td>
+							<p-tableCheckbox [value]="snapshot" />
+						</td>
+						<td>{{ snapshot.referenceDate | date: "mediumDate" }}</td>
+						<td class="text-right font-mono">
+							{{
+								snapshot.amountOriginalCurrency
+									| currency: selectedAsset()?.originalCurrency : "symbol" : "1.2-2"
+							}}
+						</td>
+						<td class="text-right font-mono font-bold">
+							{{
+								snapshot.amountBaseCurrency
+									| currency: selectedAsset()?.originalCurrency : "symbol" : "1.2-2"
+							}}
+						</td>
+					</tr>
+				</ng-template>
+				<ng-template #footer>
+					<tr>
+						<td></td>
+						<td>
+							<p-datePicker
+								[(ngModel)]="newSnapshotDate"
+								[showIcon]="true"
+								appendTo="body"
+								dateFormat="dd/mm/yy"
+								size="small"
+								fluid
+							/>
+						</td>
+						<td>
+							<p-inputNumber
+								[(ngModel)]="newSnapshotValue"
+								mode="currency"
+								[currency]="selectedAsset()?.originalCurrency || 'EUR'"
+								[minFractionDigits]="2"
+								size="small"
+								fluid
+							/>
+						</td>
+						<td>
+							<p-button
+								icon="pi pi-plus"
+								label="Add"
+								[disabled]="newSnapshotValue() === null"
+								(onClick)="addSnapshotFromHistory()"
+								size="small"
+								fluid
+							/>
+						</td>
+					</tr>
+				</ng-template>
+				<ng-template #emptymessage>
+					<tr>
+						<td
+							colspan="4"
+							class="text-center py-12!"
+						>
+							<div class="flex flex-col items-center gap-4 text-stone-400">
+								<i class="pi pi-inbox text-4xl"></i>
+								No snapshots found for this asset.
+							</div>
+						</td>
+					</tr>
+				</ng-template>
+			</p-table>
+		} @else {
+			<p-chart
+				type="line"
+				[data]="chartData()"
+				[options]="chartOptions()"
+			/>
+		}
+	</ng-template>
+
+	<ng-template #footer>
+		<div
+			[class]="
+				viewMode() === ViewMode.Table ? 'flex justify-between w-full' : 'flex justify-end w-full'
+			"
+		>
+			@if (viewMode() === ViewMode.Table) {
+				<p-button
+					label="Delete Selected"
+					icon="pi pi-trash"
+					severity="danger"
+					[disabled]="selectedSnapshotsHistory().length === 0"
+					(onClick)="deleteSelectedSnapshotsHistory()"
+					[text]="true"
+				/>
+			}
+			<p-button
+				label="Close"
+				(onClick)="isVisible.set(false)"
+				severity="secondary"
+			/>
+		</div>
+	</ng-template>
+</p-dialog>

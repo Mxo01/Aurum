@@ -11,12 +11,19 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.OrderBy;
 
 @Entity
 @Table(name = "assets")
@@ -31,6 +38,7 @@ public class Asset {
 
 	@ManyToOne(optional = false)
 	@JoinColumn(name = "user_id", nullable = false)
+	@OnDelete(action = OnDeleteAction.CASCADE)
 	private User user;
 
 	@Column(nullable = false)
@@ -38,6 +46,7 @@ public class Asset {
 
 	@ManyToOne(optional = false)
 	@JoinColumn(name = "category_id", nullable = false)
+	@OnDelete(action = OnDeleteAction.CASCADE)
 	private AssetCategory category;
 
 	@Column(nullable = false, length = 3)
@@ -51,6 +60,10 @@ public class Asset {
 
 	@Column(nullable = false, updatable = false)
 	private LocalDateTime createdAt;
+
+	@OneToMany(mappedBy = "asset", cascade = CascadeType.ALL, orphanRemoval = true)
+	@OrderBy("referenceDate DESC")
+	private List<Snapshot> snapshots = new ArrayList<>();
 
 	@PrePersist
 	protected void onCreate() {

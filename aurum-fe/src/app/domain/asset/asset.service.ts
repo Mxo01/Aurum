@@ -133,22 +133,22 @@ export class AssetService {
 				);
 	}
 
-	deleteAsset(id: string) {
-		return this.http.delete<Asset[]>(`${this.assetsUrl}/${id}`).pipe(
+	deleteAssetPermanently(id: string) {
+		return this.http.delete<void>(`${this.assetsUrl}/${id}`).pipe(
 			switchMap(() => this.getAssets()),
 			tap({
 				next: () => {
 					this.messageService.add({
 						severity: "success",
 						summary: "Success",
-						detail: "Asset deleted successfully"
+						detail: "Asset deleted permanently"
 					});
 				},
 				error: () => {
 					this.messageService.add({
 						severity: "error",
 						summary: "Error",
-						detail: "Failed to delete asset"
+						detail: "Failed to delete asset permanently"
 					});
 				}
 			})

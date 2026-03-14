@@ -1,105 +1,123 @@
-<form
-	class="flex flex-col gap-5"
-	[formGroup]="assetForm"
+<p-drawer
+	[header]="selectedAsset() ? 'Edit Asset' : 'Add Asset'"
+	[(visible)]="isVisible"
+	(onHide)="hideDrawer()"
+	position="right"
 >
-	<div class="flex flex-col gap-2">
-		<label for="name">Name *</label>
-		<input
-			id="name"
-			pInputText
-			formControlName="name"
-		/>
-		@if (assetForm.controls.name.invalid && assetForm.controls.name.touched) {
-			<small class="text-red-500 text-xs">Name is required</small>
-		}
-	</div>
-	<div class="flex flex-col gap-2">
-		<label for="category">Category *</label>
-		<p-select
-			formControlName="category"
-			[options]="categoriesOptions()"
-			optionLabel="name"
-		/>
-		@if (assetForm.controls.category.invalid && assetForm.controls.category.touched) {
-			<small class="text-red-500 text-xs">Category is required</small>
-		}
-	</div>
-	<div class="flex flex-col gap-2">
-		<label for="type">Type *</label>
-		<p-select
-			formControlName="type"
-			[options]="typeOptions()"
-		/>
-		@if (assetForm.controls.type.invalid && assetForm.controls.type.touched) {
-			<small class="text-red-500 text-xs">Type is required</small>
-		}
-	</div>
-	<div class="flex flex-col gap-2">
-		<label for="currency">Currency *</label>
-		<p-select-button
-			formControlName="currency"
-			[options]="currencyOptions()"
+	<ng-template #content>
+		<form
+			class="flex flex-col gap-5"
+			[formGroup]="assetForm"
 		>
-			<ng-template
-				#item
-				let-item
-			>
-				<div class="flex items-center gap-2">
-					<i [class]="item.icon"></i>
-					<span>{{ item.label }}</span>
-				</div>
-			</ng-template>
-		</p-select-button>
-		@if (assetForm.controls.currency.invalid && assetForm.controls.currency.touched) {
-			<small class="text-red-500 text-xs">Currency is required</small>
-		}
-	</div>
-	<div class="flex flex-col gap-2">
-		<label for="status">Status</label>
-		<p-toggle-button
-			id="status"
-			formControlName="isActive"
-			onLabel="Active"
-			onIcon="pi pi-check-circle"
-			offLabel="Archived"
-		/>
-		@if (!assetForm.value.isActive) {
-			<small class="text-stone-400 text-xs">
-				Assets that are archived will not be shown in the dashboard charts.
-			</small>
-		}
-	</div>
-	<div class="flex flex-col gap-2">
-		<label for="favorite">Track in Dashboard</label>
-		<p-toggle-button
-			id="favorite"
-			formControlName="isFavorite"
-			onIcon="pi pi-bookmark-fill"
-		/>
-	</div>
+			<div class="flex flex-col gap-2">
+				<label for="name">Name *</label>
+				<input
+					id="name"
+					pInputText
+					formControlName="name"
+				/>
+				@if (assetForm.controls.name.invalid && assetForm.controls.name.touched) {
+					<small class="text-red-500 text-xs">Name is required</small>
+				}
+			</div>
+			<div class="flex flex-col gap-2">
+				<label for="category">Category *</label>
+				<p-select
+					formControlName="category"
+					[options]="categoriesOptions()"
+					optionLabel="name"
+				/>
+				@if (assetForm.controls.category.invalid && assetForm.controls.category.touched) {
+					<small class="text-red-500 text-xs">Category is required</small>
+				}
+			</div>
+			<div class="flex flex-col gap-2">
+				<label for="type">Type *</label>
+				<p-select
+					formControlName="type"
+					[options]="typeOptions()"
+				/>
+				@if (assetForm.controls.type.invalid && assetForm.controls.type.touched) {
+					<small class="text-red-500 text-xs">Type is required</small>
+				}
+			</div>
+			<div class="flex flex-col gap-2">
+				<label for="currency">Currency *</label>
+				<p-select-button
+					formControlName="currency"
+					[options]="currencyOptions()"
+				>
+					<ng-template
+						#item
+						let-item
+					>
+						<div class="flex items-center gap-2">
+							<i [class]="item.icon"></i>
+							<span>{{ item.label }}</span>
+						</div>
+					</ng-template>
+				</p-select-button>
+				@if (assetForm.controls.currency.invalid && assetForm.controls.currency.touched) {
+					<small class="text-red-500 text-xs">Currency is required</small>
+				}
+			</div>
+			<div class="flex flex-col gap-2">
+				<label for="status">Status</label>
+				<p-toggle-button
+					id="status"
+					formControlName="isActive"
+					onLabel="Active"
+					onIcon="pi pi-check-circle"
+					offLabel="Archived"
+				/>
+				@if (!assetForm.value.isActive) {
+					<small class="text-stone-400 text-xs">
+						Assets that are archived will not be shown in the dashboard charts.
+					</small>
+				}
+			</div>
+			<div class="flex flex-col gap-2">
+				<label for="favorite">Track in Dashboard</label>
+				<p-toggle-button
+					id="favorite"
+					formControlName="isFavorite"
+					onIcon="pi pi-bookmark-fill"
+				/>
+			</div>
 
-	@if (!selectedAsset()) {
-		<div class="flex flex-col gap-2">
-			<label for="initialValue">Initial Value</label>
-			<p-inputNumber
-				id="initialValue"
-				formControlName="initialValue"
-				mode="currency"
-				[currency]="assetForm.value.currency || 'EUR'"
-				locale="en-US"
-				[minFractionDigits]="2"
-				[fluid]="true"
-			/>
-		</div>
-		<div class="flex flex-col gap-2">
-			<label for="referenceDate">Value Date</label>
-			<p-datePicker
-				id="referenceDate"
-				formControlName="referenceDate"
-				[showIcon]="true"
-				dateFormat="dd/mm/yy"
-				[fluid]="true"
-			/>
-		</div>
-	}
-</form>
+			@if (!selectedAsset()) {
+				<div class="flex flex-col gap-2">
+					<label for="initialValue">Initial Value</label>
+					<p-inputNumber
+						id="initialValue"
+						formControlName="initialValue"
+						mode="currency"
+						[currency]="assetForm.value.currency || 'EUR'"
+						locale="en-US"
+						[minFractionDigits]="2"
+						[fluid]="true"
+					/>
+				</div>
+				<div class="flex flex-col gap-2">
+					<label for="referenceDate">Value Date</label>
+					<p-datePicker
+						id="referenceDate"
+						formControlName="referenceDate"
+						[showIcon]="true"
+						dateFormat="dd/mm/yy"
+						[fluid]="true"
+					/>
+				</div>
+			}
+		</form>
+	</ng-template>
+
+	<ng-template #footer>
+		<p-button
+			label="Save"
+			[fluid]="true"
+			[disabled]="assetForm.invalid"
+			(onClick)="saveAssetFromForm()"
+		/>
+	</ng-template>
+</p-drawer>

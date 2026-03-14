@@ -1,34 +1,19 @@
-import { Currency } from "./../profile/model/currency.model";
-import {
-	ChangeDetectionStrategy,
-	Component,
-	inject,
-	signal,
-	OnInit,
-	viewChild,
-	computed
-} from "@angular/core";
-import { CurrencyPipe, DatePipe, DecimalPipe } from "@angular/common";
+import { ChangeDetectionStrategy, Component, inject, signal, OnInit } from "@angular/core";
 import { Button } from "primeng/button";
 import { BlockUIModule } from "primeng/blockui";
 import { TableModule } from "primeng/table";
 import { AssetService } from "./asset.service";
-import { SnapshotService } from "../snapshot/snapshot.service";
-import { Asset, AssetCategory, AssetType } from "./model/asset.model";
-import { Snapshot } from "../snapshot/model/snapshot.model";
-import { finalize, switchMap, forkJoin, of, filter } from "rxjs";
-import { Drawer } from "primeng/drawer";
+import { Asset, AssetCategory } from "./model/asset.model";
+import { finalize, switchMap, tap } from "rxjs";
 import { AssetFormComponent } from "./asset-form/asset-form.component";
-import { Dialog } from "primeng/dialog";
 import { ReactiveFormsModule, FormsModule } from "@angular/forms";
 import { CategoryFormComponent } from "./category-form/category-form.component";
-import { Menu } from "primeng/menu";
-import { ConfirmationService, MenuItem, MenuItemCommandEvent } from "primeng/api";
-import { Tag } from "primeng/tag";
+import { ConfirmationService, MenuItemCommandEvent } from "primeng/api";
 import { NavigationService } from "../../shared/services/navigation/navigation.service";
 import { RouterLink } from "@angular/router";
 import { paths } from "../../app.routes";
-import { isTruthy } from "../../app.utils";
+import { AssetHistoryComponent } from "./asset-history/asset-history.component";
+import { AssetTableComponent } from "./asset-table/asset-table.component";
 
 @Component({
 	selector: "app-asset",
@@ -45,166 +30,98 @@ import { isTruthy } from "../../app.utils";
 		Button,
 		BlockUIModule,
 		TableModule,
-		Drawer,
-		Menu,
 		AssetFormComponent,
-		Dialog,
-		Tag,
 		FormsModule,
 		ReactiveFormsModule,
 		CategoryFormComponent,
 		RouterLink,
-		CurrencyPipe,
-		DecimalPipe,
-		DatePipe
+		AssetHistoryComponent,
+		AssetTableComponent
 	],
 	changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class AssetComponent implements OnInit {
 	private readonly assetService = inject(AssetService);
-	private readonly snapshotService = inject(SnapshotService);
 	private readonly confirmationService = inject(ConfirmationService);
 	private readonly navigationService = inject(NavigationService);
 
-	protected readonly assetFormComponent = viewChild<AssetFormComponent>("assetForm");
-	protected readonly categoryFormComponent = viewChild<CategoryFormComponent>("categoryForm");
-
-	protected readonly Currency = Currency;
-	protected readonly AssetType = AssetType;
-
 	protected readonly paths = paths;
 	protected readonly previousRoute = this.navigationService.previousRoute;
-	protected readonly categoriesOptions = signal<AssetCategory[]>([]);
 	protected readonly assets = signal<Asset[]>([]);
-	protected readonly snapshots = signal<Snapshot[]>([]);
 	protected readonly areAssetsLoading = signal(false);
+	protected readonly categoriesOptions = signal<AssetCategory[]>([]);
+	protected readonly isHistoryDialogVisible = signal(false);
 	protected readonly isDrawerVisible = signal(false);
+	protected readonly isDeletePermanentlyLoading = signal(false);
 	protected readonly isNewCategory = signal(false);
 	protected readonly isCategoriesDialogVisible = signal(false);
 	protected readonly isCategorySaveLoading = signal(false);
 	protected readonly isCategoryDeleteLoading = signal(false);
 	protected readonly isSaveLoading = signal(false);
 	protected readonly selectedAsset = signal<Asset | null>(null);
-	protected readonly rowMenuItems = computed<MenuItem[]>(() => [
-		{
-			label: "Edit",
-			icon: "pi pi-pencil",
-			command: () => this.editAsset(this.selectedAsset())
-		},
-		{
-			label: "View History",
-			icon: "pi pi-history",
-			command: () => this.viewHistory(this.selectedAsset())
-		},
-		{
-			label: this.selectedAsset()?.isActive ? "Archive" : "Activate",
-			labelClass: this.selectedAsset()?.isActive ? "text-red-500" : "",
-			icon: this.selectedAsset()?.isActive ? "pi pi-inbox" : "pi pi-check-circle",
-			iconClass: this.selectedAsset()?.isActive ? "text-red-500!" : "",
-			command: event => this.toggleAssetStatus(event)
-		}
-	]);
-
-	protected readonly assetsWithBalance = computed(() => {
-		return this.assets().map(asset => {
-			const assetSnapshots = this.snapshots()
-				.filter(s => s.assetId === asset.id)
-				.sort((a, b) => new Date(b.referenceDate).getTime() - new Date(a.referenceDate).getTime());
-
-			const currentValue = assetSnapshots.length > 0 ? assetSnapshots[0].amountOriginalCurrency : 0;
-			const previousValue =
-				assetSnapshots.length > 1 ? assetSnapshots[1].amountOriginalCurrency : null;
-
-			let trend = null;
-			let trendPercentage = null;
-
-			if (previousValue !== null && previousValue !== 0) {
-				trend = currentValue - previousValue;
-				trendPercentage = (trend / previousValue) * 100;
-			} else if (previousValue === 0 && currentValue > 0) {
-				trend = currentValue;
-				trendPercentage = 100;
-			}
-
-			return {
-				...asset,
-				currentValue,
-				trend,
-				trendPercentage,
-				snapshots: assetSnapshots
-			};
-		});
-	});
 
 	ngOnInit() {
 		this.assetService.getUserAssetCategories().subscribe({
 			next: categories => this.categoriesOptions.set(categories)
 		});
 
+		this.refreshAssets();
+	}
+
+	protected refreshAssets() {
+		this.getAssets().subscribe();
+	}
+
+	private getAssets() {
 		this.areAssetsLoading.set(true);
 
-		forkJoin({
-			assets: this.assetService.getAssets(),
-			snapshots: this.snapshotService.getAllSnapshots()
-		})
-			.pipe(finalize(() => this.areAssetsLoading.set(false)))
-			.subscribe({
-				next: ({ assets, snapshots }) => {
+		return this.assetService.getAssets().pipe(
+			finalize(() => this.areAssetsLoading.set(false)),
+			tap({
+				next: assets => {
 					this.assets.set(assets);
-					this.snapshots.set(snapshots);
+					const selectedAsset = this.selectedAsset();
+
+					if (selectedAsset) {
+						const updatedAsset = assets.find(({ id }) => id === selectedAsset.id);
+						if (updatedAsset) this.selectedAsset.set(updatedAsset);
+					}
 				}
-			});
+			})
+		);
 	}
 
-	protected isHistoryDialogVisible = signal(false);
-
-	protected getSnapshotsForSelectedAsset() {
-		const assetId = this.selectedAsset()?.id;
-		if (!assetId) return [];
-		return this.snapshots()
-			.filter(s => s.assetId === assetId)
-			.sort((a, b) => new Date(b.referenceDate).getTime() - new Date(a.referenceDate).getTime());
-	}
-
-	private viewHistory(asset: Asset | null) {
-		if (!asset) return;
+	protected viewHistory(asset: Asset) {
+		this.selectedAsset.set(asset);
 		this.isHistoryDialogVisible.set(true);
 	}
 
-	private editAsset(asset: Asset | null) {
-		if (!asset) return;
+	protected editAsset(asset: Asset) {
+		this.selectedAsset.set(asset);
 		this.isDrawerVisible.set(true);
 	}
 
-	private toggleAssetStatus(event: MenuItemCommandEvent) {
-		if (this.selectedAsset()?.isActive) {
-			this.deleteAsset({
-				target: event?.originalEvent?.target,
-				id: this.selectedAsset()?.id ?? ""
-			});
-		} else {
-			const asset = this.selectedAsset();
-			if (!asset) return;
+	protected toggleAssetStatus(asset: Asset) {
+		const updatedAsset: Asset = {
+			...asset,
+			isActive: !asset.isActive
+		};
 
-			const updatedAsset: Asset = {
-				...asset,
-				isActive: !asset.isActive
-			};
-
-			this.saveAssetAndSnapshot(updatedAsset, null, null);
-		}
+		this.saveAssetAndSnapshot(updatedAsset);
 	}
 
-	private deleteAsset(event: { target?: EventTarget | null; id: string }) {
-		const { id, target } = event;
+	protected deleteAsset({ event, asset }: { event: MenuItemCommandEvent; asset: Asset }) {
+		const id = asset.id;
+		const target = event?.originalEvent?.target;
 
 		if (!id || !target) return;
 
 		this.confirmationService.confirm({
 			target,
-			message: "Are you sure you want to archive this asset?",
-			header: "Danger Zone",
-			icon: "pi pi-info-circle",
+			message:
+				"Are you sure you want to delete this asset forever? All its history will be lost. This action is irreversible.",
+			header: "Permanent Deletion",
+			icon: "pi pi-exclamation-triangle",
 			rejectLabel: "Cancel",
 			rejectButtonProps: {
 				label: "Cancel",
@@ -212,20 +129,35 @@ export class AssetComponent implements OnInit {
 				outlined: true
 			},
 			acceptButtonProps: {
-				label: "Archive",
+				label: "Delete Forever",
 				severity: "danger",
-				loading: this.isCategoryDeleteLoading()
+				loading: this.isDeletePermanentlyLoading()
 			},
-
 			accept: () => {
-				this.assetService.deleteAsset(id).subscribe({
-					next: assets => this.assets.set(assets)
-				});
+				this.isDeletePermanentlyLoading.set(true);
+
+				this.assetService
+					.deleteAssetPermanently(id)
+					.pipe(finalize(() => this.isDeletePermanentlyLoading.set(false)))
+					.subscribe({
+						next: assets => this.assets.set(assets)
+					});
 			}
 		});
 	}
 
-	saveCategory(category: AssetCategory) {
+	protected saveAssetAndSnapshot(asset: Asset) {
+		this.isSaveLoading.set(true);
+
+		this.assetService
+			.saveAsset(asset)
+			.pipe(finalize(() => this.isSaveLoading.set(false)))
+			.subscribe({
+				next: assets => this.assets.set(assets)
+			});
+	}
+
+	protected saveCategory(category: AssetCategory) {
 		this.isCategorySaveLoading.set(true);
 
 		this.assetService
@@ -236,85 +168,7 @@ export class AssetComponent implements OnInit {
 			});
 	}
 
-	saveAssetFromForm() {
-		const form = this.assetFormComponent()?.assetForm.getRawValue();
-
-		if (!form || !form.category || !form.type || !form.currency || !form.name) return;
-
-		const isNewAsset = !this.selectedAsset();
-		const initialVal = isNewAsset ? form.initialValue : null;
-		const refDate = isNewAsset ? form.referenceDate : null;
-
-		const asset: Asset = {
-			id: this.selectedAsset()?.id ?? "",
-			name: form.name,
-			categoryId: form.category.id,
-			categoryName: form.category.name,
-			type: form.type,
-			originalCurrency: form.currency,
-			isActive: !!form.isActive,
-			isFavorite: !!form.isFavorite
-		};
-
-		this.saveAssetAndSnapshot(asset, initialVal, refDate);
-	}
-
-	private saveAssetAndSnapshot(
-		asset: Asset,
-		initialValue?: number | null,
-		referenceDate?: Date | null
-	) {
-		this.isSaveLoading.set(true);
-
-		const isNewAsset = !asset.id;
-
-		this.assetService
-			.saveAsset(asset)
-			.pipe(
-				switchMap(savedAssets => {
-					this.assets.set(savedAssets);
-
-					let newAssetId = asset.id;
-
-					if (isNewAsset) {
-						const oldIds = new Set(this.assets().map(({ id }) => id));
-						const createdAsset = savedAssets.find(({ id }) => !oldIds.has(id));
-						if (createdAsset) newAssetId = createdAsset.id;
-					}
-
-					if (isNewAsset && newAssetId && isTruthy(initialValue) && isTruthy(referenceDate)) {
-						const formattedDate =
-							referenceDate.getFullYear() +
-							"-" +
-							String(referenceDate.getMonth() + 1).padStart(2, "0") +
-							"-" +
-							String(referenceDate.getDate()).padStart(2, "0");
-						const snapshot: Snapshot = {
-							assetId: newAssetId,
-							referenceDate: formattedDate,
-							amountOriginalCurrency: initialValue
-						};
-
-						return this.snapshotService.saveSnapshot(snapshot);
-					}
-
-					return of(null);
-				}),
-				finalize(() => {
-					this.isSaveLoading.set(false);
-					this.hideDrawer();
-				}),
-				filter(snapshots => snapshots !== null)
-			)
-			.subscribe({ next: snapshots => this.snapshots.set(snapshots) });
-	}
-
-	hideDrawer() {
-		this.isDrawerVisible.set(false);
-		this.selectedAsset.set(null);
-	}
-
-	deleteCategory(event: { target: EventTarget; id: string }) {
+	protected deleteCategory(event: { target: EventTarget; id: string }) {
 		const { id, target } = event;
 
 		this.confirmationService.confirm({
@@ -325,8 +179,7 @@ export class AssetComponent implements OnInit {
 			rejectLabel: "Cancel",
 			rejectButtonProps: {
 				label: "Cancel",
-				severity: "secondary",
-				outlined: true
+				severity: "secondary"
 			},
 			acceptButtonProps: {
 				label: "Delete",
@@ -341,9 +194,15 @@ export class AssetComponent implements OnInit {
 
 				this.assetService
 					.deleteCategory(id)
-					.pipe(finalize(() => this.isCategoryDeleteLoading.set(false)))
+					.pipe(
+						switchMap(categories => {
+							this.categoriesOptions.set(categories);
+							return this.getAssets();
+						}),
+						finalize(() => this.isCategoryDeleteLoading.set(false))
+					)
 					.subscribe({
-						next: categories => this.categoriesOptions.set(categories)
+						next: assets => this.assets.set(assets)
 					});
 			}
 		});

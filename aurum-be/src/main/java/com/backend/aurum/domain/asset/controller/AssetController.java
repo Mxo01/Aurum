@@ -36,8 +36,9 @@ public class AssetController {
 	}
 
 	@GetMapping("/{id}")
-	public ResponseEntity<AssetDTO> getAssetById(@PathVariable UUID id) {
-		Asset asset = assetService.findById(id);
+	public ResponseEntity<AssetDTO> getAssetById(@PathVariable UUID id,
+			@AuthenticationPrincipal UserPrincipal principal) {
+		Asset asset = assetService.findById(id, principal.user().getId());
 		return ResponseEntity.ok(mapper.toDto(asset));
 	}
 
@@ -47,7 +48,7 @@ public class AssetController {
 		UUID userId = principal.user().getId();
 		validationService.validate(assetDto);
 		Asset asset = mapper.toEntity(assetDto, userId);
-		Asset savedAsset = assetService.save(asset);
+		Asset savedAsset = assetService.save(asset, assetDto.getInitialValue(), assetDto.getReferenceDate());
 		return ResponseEntity.ok(mapper.toDto(savedAsset));
 	}
 
@@ -57,13 +58,13 @@ public class AssetController {
 		UUID userId = principal.user().getId();
 		validationService.validate(assetDto);
 		Asset assetDetails = mapper.toEntity(assetDto, userId);
-		Asset updatedAsset = assetService.update(id, assetDetails);
+		Asset updatedAsset = assetService.update(id, assetDetails, userId);
 		return ResponseEntity.ok(mapper.toDto(updatedAsset));
 	}
 
 	@DeleteMapping("/{id}")
-	public ResponseEntity<Void> deleteAsset(@PathVariable UUID id) {
-		assetService.delete(id);
+	public ResponseEntity<Void> deleteAsset(@PathVariable UUID id, @AuthenticationPrincipal UserPrincipal principal) {
+		assetService.delete(id, principal.user().getId());
 		return ResponseEntity.noContent().build();
 	}
 }

@@ -10,9 +10,15 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
+import com.backend.aurum.domain.asset.model.Asset;
+import com.backend.aurum.domain.asset.model.AssetCategory;
 import com.backend.aurum.domain.user.enums.Currency;
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.OneToMany;
 
 @Entity
 @Table(name = "users")
@@ -33,4 +39,10 @@ public class User {
 
 	@Column(nullable = false)
 	private Currency currency;
+
+	@OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+	private List<Asset> assets = new ArrayList<>();
+
+	@OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+	private List<AssetCategory> categories = new ArrayList<>();
 }

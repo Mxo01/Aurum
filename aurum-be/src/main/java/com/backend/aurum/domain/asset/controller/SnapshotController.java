@@ -62,9 +62,9 @@ public class SnapshotController {
 		return ResponseEntity.ok(mapper.toDto(savedSnapshot));
 	}
 
-	@DeleteMapping("/{id}")
-	public ResponseEntity<Void> deleteSnapshot(@PathVariable UUID id) {
-		snapshotService.delete(id);
+	@DeleteMapping("/bulk")
+	public ResponseEntity<Void> deleteSnapshotsBulk(@RequestParam UUID assetId, @RequestBody List<UUID> ids, @AuthenticationPrincipal UserPrincipal principal) {
+		snapshotService.deleteBulk(ids, assetId, principal.user().getId());
 		return ResponseEntity.noContent().build();
 	}
 }
