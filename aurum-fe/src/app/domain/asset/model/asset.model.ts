@@ -1,7 +1,23 @@
+import { Currency } from "../../profile/model/currency.model";
+
+export enum AssetType {
+	LIABILITY = "LIABILITY",
+	ASSET = "ASSET"
+}
+
+export interface AssetCategory {
+	id: string;
+	name: string;
+	type: AssetType;
+}
+
 export interface Asset {
 	id: string;
 	name: string;
-	originalCurrency: string;
+	categoryId: string;
+	categoryName: string;
+	type: AssetType;
+	originalCurrency: Currency;
 	isActive: boolean;
-	createdAt: Date;
+	isFavorite: boolean;
 }

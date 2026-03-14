@@ -13,33 +13,37 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class AssetCategoryService {
 
-    private final AssetCategoryRepository categoryRepository;
+	private final AssetCategoryRepository categoryRepository;
 
-    public List<AssetCategory> findAll(UUID userId) {
-        return categoryRepository.findByUserIdOrUserIsNull(userId);
-    }
+	public List<AssetCategory> findAll(UUID userId) {
+		return categoryRepository.findByUserIdOrUserIsNull(userId);
+	}
 
-    public AssetCategory findById(UUID id) {
-        return categoryRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Category not found"));
-    }
+	public List<AssetCategory> findByUserId(UUID userId) {
+		return categoryRepository.findByUserId(userId);
+	}
 
-    @Transactional
-    public AssetCategory save(AssetCategory category) {
-        return categoryRepository.save(category);
-    }
+	public AssetCategory findById(UUID id) {
+		return categoryRepository.findById(id)
+				.orElseThrow(() -> new RuntimeException("Category not found"));
+	}
 
-    @Transactional
-    public AssetCategory update(UUID id, AssetCategory categoryDetails) {
-        AssetCategory category = findById(id);
-        category.setName(categoryDetails.getName());
-        category.setType(categoryDetails.getType());
-        category.setUser(categoryDetails.getUser());
-        return categoryRepository.save(category);
-    }
+	@Transactional
+	public AssetCategory save(AssetCategory category) {
+		return categoryRepository.save(category);
+	}
 
-    @Transactional
-    public void delete(UUID id) {
-        categoryRepository.deleteById(id);
-    }
+	@Transactional
+	public AssetCategory update(UUID id, AssetCategory categoryDetails) {
+		AssetCategory category = findById(id);
+		category.setName(categoryDetails.getName());
+		category.setType(categoryDetails.getType());
+		category.setUser(categoryDetails.getUser());
+		return categoryRepository.save(category);
+	}
+
+	@Transactional
+	public void delete(UUID id) {
+		categoryRepository.deleteById(id);
+	}
 }

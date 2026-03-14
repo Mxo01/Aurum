@@ -35,6 +35,16 @@ public class AssetCategoryController {
 		return ResponseEntity.ok(categories);
 	}
 
+	@GetMapping("/user")
+	public ResponseEntity<List<AssetCategoryDTO>> getUserAssetCategories(
+			@AuthenticationPrincipal UserPrincipal principal) {
+		UUID userId = principal.user().getId();
+		List<AssetCategoryDTO> categories = categoryService.findByUserId(userId).stream()
+				.map(mapper::toDto)
+				.toList();
+		return ResponseEntity.ok(categories);
+	}
+
 	@PostMapping
 	public ResponseEntity<AssetCategoryDTO> createCategory(@RequestBody AssetCategoryDTO categoryDto,
 			@AuthenticationPrincipal UserPrincipal principal) {

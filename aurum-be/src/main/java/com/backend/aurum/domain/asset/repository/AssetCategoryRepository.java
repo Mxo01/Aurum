@@ -9,6 +9,7 @@ import java.util.UUID;
 
 @Repository
 public interface AssetCategoryRepository extends JpaRepository<AssetCategory, UUID> {
-    List<AssetCategory> findByUserId(UUID userId);
-    List<AssetCategory> findByUserIdOrUserIsNull(UUID userId);
+	List<AssetCategory> findByUserId(UUID userId);
+
+	List<AssetCategory> findByUserIdOrUserIsNull(UUID userId);
 }

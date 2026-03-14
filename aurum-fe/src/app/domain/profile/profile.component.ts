@@ -34,6 +34,7 @@ import { InputIcon } from "primeng/inputicon";
 import { paths } from "../../app.routes";
 import { NavigationService } from "../../shared/services/navigation/navigation.service";
 import { RouterLink } from "@angular/router";
+import { currencyOptions } from "../asset/asset-form/asset-form.utils";
 
 @Component({
 	selector: "app-profile",
@@ -82,18 +83,7 @@ export class ProfileComponent implements OnInit {
 	);
 	protected readonly hasGoogleProfile = computed(() => this.user()?.sub?.includes("google"));
 	protected readonly isUpdatingName = signal(false);
-	protected readonly currencyOptions = signal([
-		{
-			label: "EUR",
-			value: "EUR",
-			icon: "pi pi-euro"
-		},
-		{
-			label: "USD",
-			value: "USD",
-			icon: "pi pi-dollar"
-		}
-	]);
+	protected readonly currencyOptions = signal(currencyOptions);
 	protected readonly isDeletingProfile = signal(false);
 
 	private readonly nameTrigger$ = new Subject<string>();

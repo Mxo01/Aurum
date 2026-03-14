@@ -1,23 +1,56 @@
-<!-- <section class="flex flex-col gap-5 max-w-4xl mx-auto">
-	<div class="flex justify-end">
+<section class="flex flex-col gap-3 max-w-6xl mx-auto">
+	<div class="flex items-center justify-between gap-3">
 		<p-button
-			label="Add Asset"
-			icon="pi pi-plus"
+			[label]="'Back to ' + paths[previousRoute].label"
+			[routerLink]="previousRoute"
+			icon="pi pi-arrow-left"
+			[text]="true"
+			severity="secondary"
+			size="small"
 		/>
+
+		<div class="flex gap-3">
+			<p-button
+				label="Edit Categories"
+				icon="pi pi-pencil"
+				severity="secondary"
+				(onClick)="isCategoriesDialogVisible.set(true)"
+			/>
+
+			<p-button
+				label="Add Asset"
+				icon="pi pi-plus"
+				(onClick)="isDrawerVisible.set(true)"
+			/>
+		</div>
 	</div>
 
 	<p-table
 		[value]="assets()"
 		sortMode="single"
+		[stripedRows]="true"
 		rowGroupMode="subheader"
-		groupRowsBy="representative.name"
+		groupRowsBy="categoryName"
+		[loading]="areAssetsLoading()"
 	>
 		<ng-template #header>
 			<tr>
+				<th>Actions</th>
 				<th>Name</th>
+				<th>Type</th>
 				<th>Currency</th>
 				<th>Status</th>
-				<th>Creation Date</th>
+				<th>Track in Dashboard</th>
+			</tr>
+		</ng-template>
+		<ng-template
+			#groupheader
+			let-asset
+		>
+			<tr pRowGroupHeader>
+				<td colspan="6">
+					<span class="font-bold">{{ asset.categoryName }}</span>
+				</td>
 			</tr>
 		</ng-template>
 		<ng-template
@@ -25,12 +58,105 @@
 			let-asset
 		>
 			<tr>
-				<td>{{ asset.name }}</td>
-				<td>{{ asset.originalCurrency }}</td>
-				<td>{{ asset.isActive }}</td>
-				<td>{{ asset.createdAt }}</td>
+				<td>
+					<p-button
+						icon="pi pi-cog"
+						[text]="true"
+						(onClick)="selectedAsset.set(asset); rowMenu.toggle($event)"
+					/>
+				</td>
+				<td>
+					<p-tag [value]="asset.name" />
+				</td>
+				<td>
+					<p-tag
+						[value]="asset.type"
+						[icon]="asset.type === AssetType.ASSET ? 'pi pi-wallet' : 'pi pi-shield'"
+						[severity]="asset.type === AssetType.ASSET ? 'info' : 'warn'"
+					/>
+				</td>
+				<td>
+					<p-tag
+						[value]="asset.originalCurrency === Currency.EUR ? 'EUR' : 'USD'"
+						[icon]="asset.originalCurrency === Currency.EUR ? 'pi pi-euro' : 'pi pi-dollar'"
+					/>
+				</td>
+				<td>
+					<p-tag
+						[value]="asset.isActive ? 'Active' : 'Archived'"
+						[severity]="asset.isActive ? 'success' : 'danger'"
+						[icon]="asset.isActive ? 'pi pi-check-circle' : 'pi pi-inbox'"
+					/>
+				</td>
+				<td>
+					<p-tag
+						[value]="asset.isFavorite ? 'Yes' : 'No'"
+						[icon]="asset.isFavorite ? 'pi pi-bookmark-fill' : ''"
+					/>
+				</td>
+			</tr>
+		</ng-template>
+		<ng-template #emptymessage>
+			<tr>
+				<td
+					colspan="6"
+					class="text-center py-12"
+				>
+					<div class="flex flex-col items-center gap-4 text-stone-400">
+						<i class="pi pi-inbox text-4xl"></i>
+						<p>No assets found.</p>
+					</div>
+				</td>
 			</tr>
 		</ng-template>
 	</p-table>
 </section>
- -->
+
+<p-menu
+	#rowMenu
+	[popup]="true"
+	[model]="rowMenuItems()"
+/>
+
+<p-drawer
+	[header]="selectedAsset() ? 'Edit Asset' : 'Add Asset'"
+	[(visible)]="isDrawerVisible"
+	(onHide)="hideDrawer()"
+	position="right"
+>
+	<ng-template #content>
+		<app-asset-form
+			#assetForm
+			[selectedAsset]="selectedAsset()"
+			[categoriesOptions]="categoriesOptions()"
+		/>
+	</ng-template>
+
+	<ng-template #footer>
+		<p-button
+			label="Save"
+			[fluid]="true"
+			[disabled]="assetFormComponent()?.assetForm?.invalid"
+			(onClick)="saveAssetFromForm()"
+		/>
+	</ng-template>
+</p-drawer>
+
+<p-dialog
+	header="Edit Categories"
+	[(visible)]="isCategoriesDialogVisible"
+	[modal]="true"
+	(onHide)="categoryFormComponent()?.onCategoriesDialogHide()"
+>
+	<ng-template #content>
+		<app-category-form
+			#categoryForm
+			[(isNewCategory)]="isNewCategory"
+			[categoriesOptions]="categoriesOptions()"
+			[isSaveLoading]="isCategorySaveLoading()"
+			(save)="saveCategory($event)"
+			[isDeleteLoading]="isCategoryDeleteLoading()"
+			(delete)="deleteCategory($event)"
+		/>
+	</ng-template>
+</p-dialog>

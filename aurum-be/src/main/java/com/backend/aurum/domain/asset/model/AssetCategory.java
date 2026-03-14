@@ -24,18 +24,18 @@ import java.util.UUID;
 @NoArgsConstructor
 public class AssetCategory {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private UUID id;
+	@Id
+	@GeneratedValue(strategy = GenerationType.UUID)
+	private UUID id;
 
-    @ManyToOne(optional = true) // Optional if we want global "system" categories in the future
-    @JoinColumn(name = "user_id")
-    private User user;
+	@ManyToOne(optional = true)
+	@JoinColumn(name = "user_id")
+	private User user;
 
-    @Column(nullable = false)
-    private String name;
+	@Column(nullable = false)
+	private String name;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private AssetType type;
+	@Enumerated(EnumType.STRING)
+	@Column(nullable = false)
+	private AssetType type;
 }

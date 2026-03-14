@@ -1,10 +1,18 @@
 import { Routes } from "@angular/router";
 import { authGuardFn } from "@auth0/auth0-angular";
 
+interface RouteInfo {
+	label: string;
+	icon: string;
+}
+
 export const routes: Routes = [
 	{
 		path: "dashboard",
 		title: "Dashboard",
+		data: {
+			icon: "pi pi-objects-column"
+		},
 		canActivate: [authGuardFn],
 		loadComponent: () =>
 			import("./domain/dashboard/dashboard.component").then(m => m.DashboardComponent)
@@ -18,6 +26,9 @@ export const routes: Routes = [
 	{
 		path: "assets",
 		title: "Assets",
+		data: {
+			icon: "pi pi-wallet"
+		},
 		canActivate: [authGuardFn],
 		loadComponent: () => import("./domain/asset/asset.component").then(m => m.AssetComponent)
 	},
@@ -32,13 +43,16 @@ export const routes: Routes = [
 	}
 ];
 
-export const paths: Record<string, string> = routes.reduce(
+export const paths: Record<string, RouteInfo> = routes.reduce(
 	(acc, route) => {
-		if (route.path === "**" || route.path === "profile" || !route.path) return acc;
+		if (route.path === "**" || !route.path) return acc;
 
-		acc[`/${route.path}`] = route.title as string;
+		acc[`/${route.path}`] = {
+			label: route.title as string,
+			icon: route.data?.["icon"] as string
+		};
 
 		return acc;
 	},
-	{} as Record<string, string>
+	{} as Record<string, RouteInfo>
 );

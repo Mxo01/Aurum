@@ -7,13 +7,17 @@
 			@for (path of paths; track path[0]) {
 				<a
 					[routerLink]="path[0]"
-					routerLinkActive="text-primary! font-bold"
+					routerLinkActive="text-primary! font-extrabold"
 					[routerLinkActiveOptions]="{ exact: true }"
-					[text]="true"
 					severity="secondary"
+					[text]="true"
+					class="mr-3"
 					pButton
 				>
-					{{ path[1] }}
+					<span class="flex items-center gap-2">
+						<i [class]="path[1].icon"></i>
+						<span class="max-sm:hidden">{{ path[1].label }}</span>
+					</span>
 				</a>
 			}
 		</ng-template>
@@ -23,7 +27,7 @@
 				[text]="true"
 				routerLink="/profile"
 			>
-				<div class="flex flex-col items-end">
+				<div class="flex flex-col items-end max-sm:hidden">
 					<span class="text-primary text-sm font-bold">{{ user()?.name }}</span>
 					<span class="text-xs">{{ user()?.email }}</span>
 				</div>
