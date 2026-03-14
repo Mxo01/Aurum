@@ -26,7 +26,7 @@
 	</div>
 
 	<p-table
-		[value]="assets()"
+		[value]="assetsWithBalance()"
 		sortMode="single"
 		[stripedRows]="true"
 		rowGroupMode="subheader"
@@ -37,10 +37,9 @@
 			<tr>
 				<th>Actions</th>
 				<th>Name</th>
-				<th>Type</th>
-				<th>Currency</th>
+				<th>Current Value</th>
+				<th>Trend</th>
 				<th>Status</th>
-				<th>Track in Dashboard</th>
 			</tr>
 		</ng-template>
 		<ng-template
@@ -48,8 +47,14 @@
 			let-asset
 		>
 			<tr pRowGroupHeader>
-				<td colspan="6">
-					<span class="font-bold">{{ asset.categoryName }}</span>
+				<td colspan="5">
+					<span class="font-bold me-3">{{ asset.categoryName }}</span>
+					<p-tag
+						[value]="asset.type === AssetType.ASSET ? 'Asset' : 'Liability'"
+						[severity]="asset.type === AssetType.ASSET ? 'info' : 'warn'"
+						[icon]="asset.type === AssetType.ASSET ? 'pi pi-wallet' : 'pi pi-shield'"
+						[rounded]="true"
+					/>
 				</td>
 			</tr>
 		</ng-template>
@@ -66,20 +71,30 @@
 					/>
 				</td>
 				<td>
-					<p-tag [value]="asset.name" />
+					<div class="flex items-center gap-2">
+						<p-tag
+							[value]="asset.name"
+							[icon]="asset.isFavorite ? 'pi pi-bookmark-fill' : ''"
+						/>
+					</div>
 				</td>
-				<td>
-					<p-tag
-						[value]="asset.type"
-						[icon]="asset.type === AssetType.ASSET ? 'pi pi-wallet' : 'pi pi-shield'"
-						[severity]="asset.type === AssetType.ASSET ? 'info' : 'warn'"
-					/>
+				<td class="text-right font-mono">
+					<span class="font-bold">
+						{{ asset.currentValue | currency: asset.originalCurrency : "symbol" : "1.2-2" }}
+					</span>
 				</td>
-				<td>
-					<p-tag
-						[value]="asset.originalCurrency === Currency.EUR ? 'EUR' : 'USD'"
-						[icon]="asset.originalCurrency === Currency.EUR ? 'pi pi-euro' : 'pi pi-dollar'"
-					/>
+				<td class="text-right font-mono">
+					@if (asset.trend !== null) {
+						<span [class]="asset.trend >= 0 ? 'text-green-500' : 'text-red-500'">
+							<i
+								[class]="asset.trend >= 0 ? 'pi pi-arrow-up' : 'pi pi-arrow-down'"
+								class="text-sm"
+							></i>
+							{{ asset.trendPercentage | number: "1.2-2" }}%
+						</span>
+					} @else {
+						<span class="text-stone-400 italic text-xs">No data</span>
+					}
 				</td>
 				<td>
 					<p-tag
@@ -88,19 +103,13 @@
 						[icon]="asset.isActive ? 'pi pi-check-circle' : 'pi pi-inbox'"
 					/>
 				</td>
-				<td>
-					<p-tag
-						[value]="asset.isFavorite ? 'Yes' : 'No'"
-						[icon]="asset.isFavorite ? 'pi pi-bookmark-fill' : ''"
-					/>
-				</td>
 			</tr>
 		</ng-template>
 		<ng-template #emptymessage>
 			<tr>
 				<td
-					colspan="6"
-					class="text-center py-12"
+					colspan="5"
+					class="text-center py-12!"
 				>
 					<div class="flex flex-col items-center gap-4 text-stone-400">
 						<i class="pi pi-inbox text-4xl"></i>
@@ -157,6 +166,75 @@
 			(save)="saveCategory($event)"
 			[isDeleteLoading]="isCategoryDeleteLoading()"
 			(delete)="deleteCategory($event)"
+		/>
+	</ng-template>
+</p-dialog>
+
+<p-dialog
+	[header]="'History: ' + selectedAsset()?.name"
+	[(visible)]="isHistoryDialogVisible"
+	[modal]="true"
+	[style]="{ width: '50vw' }"
+	[breakpoints]="{ '960px': '75vw', '640px': '90vw' }"
+>
+	<ng-template #content>
+		<p-table
+			[value]="getSnapshotsForSelectedAsset()"
+			[stripedRows]="true"
+			size="small"
+		>
+			<ng-template #header>
+				<tr>
+					<th>Date</th>
+					<th class="text-right">Amount</th>
+					<th class="text-right">Exchange Rate</th>
+					<th class="text-right">Value (Base)</th>
+				</tr>
+			</ng-template>
+			<ng-template
+				#body
+				let-snapshot
+			>
+				<tr>
+					<td>{{ snapshot.referenceDate | date: "mediumDate" }}</td>
+					<td class="text-right font-mono">
+						{{
+							snapshot.amountOriginalCurrency
+								| currency: selectedAsset()?.originalCurrency : "symbol" : "1.2-2"
+						}}
+					</td>
+					<td class="text-right font-mono text-stone-500">
+						{{ snapshot.exchangeRateToBase || "-" }}
+					</td>
+					<td class="text-right font-mono font-bold">
+						{{
+							snapshot.amountBaseCurrency
+								| currency: selectedAsset()?.originalCurrency : "symbol" : "1.2-2"
+						}}
+					</td>
+				</tr>
+			</ng-template>
+			<ng-template #emptymessage>
+				<tr>
+					<td
+						colspan="4"
+						class="text-center py-12!"
+					>
+						<div class="flex flex-col items-center gap-4 text-stone-400">
+							<i class="pi pi-inbox text-4xl"></i>
+							No snapshots found for this asset.
+						</div>
+					</td>
+				</tr>
+			</ng-template>
+		</p-table>
+	</ng-template>
+
+	<ng-template #footer>
+		<p-button
+			label="Close"
+			(onClick)="isHistoryDialogVisible.set(false)"
+			severity="secondary"
 		/>
 	</ng-template>
 </p-dialog>

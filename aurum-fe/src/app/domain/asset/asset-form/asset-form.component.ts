@@ -5,6 +5,8 @@ import { Asset, AssetCategory, AssetType } from "../model/asset.model";
 import { InputText } from "primeng/inputtext";
 import { Select } from "primeng/select";
 import { SelectButton } from "primeng/selectbutton";
+import { InputNumber } from "primeng/inputnumber";
+import { DatePicker } from "primeng/datepicker";
 import { currencyOptions, typeOptions } from "./asset-form.utils";
 import { Currency } from "../../profile/model/currency.model";
 
@@ -12,7 +14,15 @@ import { Currency } from "../../profile/model/currency.model";
 	selector: "app-asset-form",
 	standalone: true,
 	templateUrl: "./asset-form.component.html",
-	imports: [ReactiveFormsModule, InputText, ToggleButton, Select, SelectButton],
+	imports: [
+		ReactiveFormsModule,
+		InputText,
+		ToggleButton,
+		Select,
+		SelectButton,
+		InputNumber,
+		DatePicker
+	],
 	changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class AssetFormComponent implements OnInit {
@@ -25,7 +35,9 @@ export class AssetFormComponent implements OnInit {
 		type: new FormControl<AssetType | null>({ value: null, disabled: true }, Validators.required),
 		currency: new FormControl<Currency>(Currency.EUR, Validators.required),
 		isActive: new FormControl<boolean>(true),
-		isFavorite: new FormControl<boolean>(false)
+		isFavorite: new FormControl<boolean>(false),
+		initialValue: new FormControl<number | null>(null),
+		referenceDate: new FormControl<Date>(new Date())
 	});
 	protected readonly currencyOptions = signal(currencyOptions);
 	protected readonly typeOptions = signal(typeOptions);

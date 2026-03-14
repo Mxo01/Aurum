@@ -77,4 +77,29 @@
 			onIcon="pi pi-bookmark-fill"
 		/>
 	</div>
+
+	@if (!selectedAsset()) {
+		<div class="flex flex-col gap-2">
+			<label for="initialValue">Initial Value</label>
+			<p-inputNumber
+				id="initialValue"
+				formControlName="initialValue"
+				mode="currency"
+				[currency]="assetForm.value.currency || 'EUR'"
+				locale="en-US"
+				[minFractionDigits]="2"
+				[fluid]="true"
+			/>
+		</div>
+		<div class="flex flex-col gap-2">
+			<label for="referenceDate">Value Date</label>
+			<p-datePicker
+				id="referenceDate"
+				formControlName="referenceDate"
+				[showIcon]="true"
+				dateFormat="dd/mm/yy"
+				[fluid]="true"
+			/>
+		</div>
+	}
 </form>

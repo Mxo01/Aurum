@@ -8,12 +8,15 @@ import {
 	viewChild,
 	computed
 } from "@angular/core";
+import { CurrencyPipe, DatePipe, DecimalPipe } from "@angular/common";
 import { Button } from "primeng/button";
 import { BlockUIModule } from "primeng/blockui";
 import { TableModule } from "primeng/table";
 import { AssetService } from "./asset.service";
+import { SnapshotService } from "../snapshot/snapshot.service";
 import { Asset, AssetCategory, AssetType } from "./model/asset.model";
-import { finalize } from "rxjs";
+import { Snapshot } from "../snapshot/model/snapshot.model";
+import { finalize, switchMap, forkJoin, of, filter } from "rxjs";
 import { Drawer } from "primeng/drawer";
 import { AssetFormComponent } from "./asset-form/asset-form.component";
 import { Dialog } from "primeng/dialog";
@@ -25,6 +28,7 @@ import { Tag } from "primeng/tag";
 import { NavigationService } from "../../shared/services/navigation/navigation.service";
 import { RouterLink } from "@angular/router";
 import { paths } from "../../app.routes";
+import { isTruthy } from "../../app.utils";
 
 @Component({
 	selector: "app-asset",
@@ -49,12 +53,16 @@ import { paths } from "../../app.routes";
 		FormsModule,
 		ReactiveFormsModule,
 		CategoryFormComponent,
-		RouterLink
+		RouterLink,
+		CurrencyPipe,
+		DecimalPipe,
+		DatePipe
 	],
 	changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class AssetComponent implements OnInit {
 	private readonly assetService = inject(AssetService);
+	private readonly snapshotService = inject(SnapshotService);
 	private readonly confirmationService = inject(ConfirmationService);
 	private readonly navigationService = inject(NavigationService);
 
@@ -68,6 +76,7 @@ export class AssetComponent implements OnInit {
 	protected readonly previousRoute = this.navigationService.previousRoute;
 	protected readonly categoriesOptions = signal<AssetCategory[]>([]);
 	protected readonly assets = signal<Asset[]>([]);
+	protected readonly snapshots = signal<Snapshot[]>([]);
 	protected readonly areAssetsLoading = signal(false);
 	protected readonly isDrawerVisible = signal(false);
 	protected readonly isNewCategory = signal(false);
@@ -83,6 +92,11 @@ export class AssetComponent implements OnInit {
 			command: () => this.editAsset(this.selectedAsset())
 		},
 		{
+			label: "View History",
+			icon: "pi pi-history",
+			command: () => this.viewHistory(this.selectedAsset())
+		},
+		{
 			label: this.selectedAsset()?.isActive ? "Archive" : "Activate",
 			labelClass: this.selectedAsset()?.isActive ? "text-red-500" : "",
 			icon: this.selectedAsset()?.isActive ? "pi pi-inbox" : "pi pi-check-circle",
@@ -91,6 +105,37 @@ export class AssetComponent implements OnInit {
 		}
 	]);
 
+	protected readonly assetsWithBalance = computed(() => {
+		return this.assets().map(asset => {
+			const assetSnapshots = this.snapshots()
+				.filter(s => s.assetId === asset.id)
+				.sort((a, b) => new Date(b.referenceDate).getTime() - new Date(a.referenceDate).getTime());
+
+			const currentValue = assetSnapshots.length > 0 ? assetSnapshots[0].amountOriginalCurrency : 0;
+			const previousValue =
+				assetSnapshots.length > 1 ? assetSnapshots[1].amountOriginalCurrency : null;
+
+			let trend = null;
+			let trendPercentage = null;
+
+			if (previousValue !== null && previousValue !== 0) {
+				trend = currentValue - previousValue;
+				trendPercentage = (trend / previousValue) * 100;
+			} else if (previousValue === 0 && currentValue > 0) {
+				trend = currentValue;
+				trendPercentage = 100;
+			}
+
+			return {
+				...asset,
+				currentValue,
+				trend,
+				trendPercentage,
+				snapshots: assetSnapshots
+			};
+		});
+	});
+
 	ngOnInit() {
 		this.assetService.getUserAssetCategories().subscribe({
 			next: categories => this.categoriesOptions.set(categories)
@@ -98,12 +143,32 @@ export class AssetComponent implements OnInit {
 
 		this.areAssetsLoading.set(true);
 
-		this.assetService
-			.getAssets()
+		forkJoin({
+			assets: this.assetService.getAssets(),
+			snapshots: this.snapshotService.getAllSnapshots()
+		})
 			.pipe(finalize(() => this.areAssetsLoading.set(false)))
 			.subscribe({
-				next: assets => this.assets.set(assets)
+				next: ({ assets, snapshots }) => {
+					this.assets.set(assets);
+					this.snapshots.set(snapshots);
+				}
 			});
+	}
+
+	protected isHistoryDialogVisible = signal(false);
+
+	protected getSnapshotsForSelectedAsset() {
+		const assetId = this.selectedAsset()?.id;
+		if (!assetId) return [];
+		return this.snapshots()
+			.filter(s => s.assetId === assetId)
+			.sort((a, b) => new Date(b.referenceDate).getTime() - new Date(a.referenceDate).getTime());
+	}
+
+	private viewHistory(asset: Asset | null) {
+		if (!asset) return;
+		this.isHistoryDialogVisible.set(true);
 	}
 
 	private editAsset(asset: Asset | null) {
@@ -126,7 +191,7 @@ export class AssetComponent implements OnInit {
 				isActive: !asset.isActive
 			};
 
-			this.saveAsset(updatedAsset);
+			this.saveAssetAndSnapshot(updatedAsset, null, null);
 		}
 	}
 
@@ -176,6 +241,10 @@ export class AssetComponent implements OnInit {
 
 		if (!form || !form.category || !form.type || !form.currency || !form.name) return;
 
+		const isNewAsset = !this.selectedAsset();
+		const initialVal = isNewAsset ? form.initialValue : null;
+		const refDate = isNewAsset ? form.referenceDate : null;
+
 		const asset: Asset = {
 			id: this.selectedAsset()?.id ?? "",
 			name: form.name,
@@ -187,21 +256,57 @@ export class AssetComponent implements OnInit {
 			isFavorite: !!form.isFavorite
 		};
 
-		this.saveAsset(asset);
+		this.saveAssetAndSnapshot(asset, initialVal, refDate);
 	}
 
-	private saveAsset(asset: Asset) {
+	private saveAssetAndSnapshot(
+		asset: Asset,
+		initialValue?: number | null,
+		referenceDate?: Date | null
+	) {
 		this.isSaveLoading.set(true);
+
+		const isNewAsset = !asset.id;
 
 		this.assetService
 			.saveAsset(asset)
-			.pipe(finalize(() => this.isSaveLoading.set(false)))
-			.subscribe({
-				next: assets => {
-					this.assets.set(assets);
+			.pipe(
+				switchMap(savedAssets => {
+					this.assets.set(savedAssets);
+
+					let newAssetId = asset.id;
+
+					if (isNewAsset) {
+						const oldIds = new Set(this.assets().map(({ id }) => id));
+						const createdAsset = savedAssets.find(({ id }) => !oldIds.has(id));
+						if (createdAsset) newAssetId = createdAsset.id;
+					}
+
+					if (isNewAsset && newAssetId && isTruthy(initialValue) && isTruthy(referenceDate)) {
+						const formattedDate =
+							referenceDate.getFullYear() +
+							"-" +
+							String(referenceDate.getMonth() + 1).padStart(2, "0") +
+							"-" +
+							String(referenceDate.getDate()).padStart(2, "0");
+						const snapshot: Snapshot = {
+							assetId: newAssetId,
+							referenceDate: formattedDate,
+							amountOriginalCurrency: initialValue
+						};
+
+						return this.snapshotService.saveSnapshot(snapshot);
+					}
+
+					return of(null);
+				}),
+				finalize(() => {
+					this.isSaveLoading.set(false);
 					this.hideDrawer();
-				}
-			});
+				}),
+				filter(snapshots => snapshots !== null)
+			)
+			.subscribe({ next: snapshots => this.snapshots.set(snapshots) });
 	}
 
 	hideDrawer() {
