@@ -3,7 +3,9 @@ package com.backend.aurum.domain.user.service;
 import com.auth0.client.mgmt.ManagementAPI;
 import com.auth0.exception.Auth0Exception;
 import com.backend.aurum.domain.auth.service.Auth0ManagementService;
+import com.backend.aurum.domain.user.dto.UpdateCurrencyDTO;
 import com.backend.aurum.domain.user.dto.UpdateNameDTO;
+import com.backend.aurum.domain.user.enums.Currency;
 import com.backend.aurum.domain.user.model.User;
 import com.backend.aurum.domain.user.repository.UserRepository;
 
@@ -28,8 +30,14 @@ public class UserService {
 					User newUser = new User();
 					newUser.setJwtId(jwtId);
 					newUser.setEmail(email);
+					newUser.setCurrency(Currency.EUR);
 					return userRepository.save(newUser);
 				});
+	}
+
+	@Transactional
+	public User getUserById(UUID userId) {
+		return userRepository.findById(userId).orElseThrow();
 	}
 
 	@Transactional
@@ -54,5 +62,12 @@ public class UserService {
 		} catch (Auth0Exception e) {
 			throw new RuntimeException("Errore durante l'aggiornamento del nome su Auth0: " + e.getMessage());
 		}
+	}
+
+	@Transactional
+	public void updateCurrency(UUID userId, UpdateCurrencyDTO dto) {
+		User user = userRepository.findById(userId).orElseThrow();
+		user.setCurrency(dto.currency());
+		userRepository.save(user);
 	}
 }

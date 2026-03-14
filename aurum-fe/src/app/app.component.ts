@@ -9,6 +9,7 @@ import { darkModeSelector } from "./app.utils";
 import { ThemeService } from "./shared/services/theme/theme.service";
 import { ConfirmDialog } from "primeng/confirmdialog";
 import { Toast } from "primeng/toast";
+import { paths } from "./app.routes";
 
 @Component({
 	selector: "app-root",
@@ -31,12 +32,12 @@ export class App implements OnInit {
 	private readonly themeService = inject(ThemeService);
 	private readonly document = inject(DOCUMENT);
 
-	user = toSignal(this.authService.user$);
+	protected readonly user = toSignal(this.authService.user$);
+	protected readonly paths = Object.entries(paths);
 
 	ngOnInit() {
-		if (this.themeService.isDarkMode()) {
+		if (this.themeService.isDarkMode())
 			this.document.documentElement.classList.add(darkModeSelector);
-		}
 	}
 
 	logout() {

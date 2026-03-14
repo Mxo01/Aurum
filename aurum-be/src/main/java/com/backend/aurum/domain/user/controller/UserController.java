@@ -1,7 +1,9 @@
 package com.backend.aurum.domain.user.controller;
 
+import com.backend.aurum.domain.user.dto.UpdateCurrencyDTO;
 import com.backend.aurum.domain.user.dto.UpdateNameDTO;
-import com.backend.aurum.domain.user.dto.UserPrincipal;
+import com.backend.aurum.domain.user.model.User;
+import com.backend.aurum.domain.user.model.UserPrincipal;
 import com.backend.aurum.domain.user.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -16,6 +18,13 @@ import java.util.UUID;
 public class UserController {
 
 	private final UserService userService;
+
+	@GetMapping
+	public ResponseEntity<User> getUser(@AuthenticationPrincipal UserPrincipal principal) {
+		UUID userId = principal.user().getId();
+		User user = userService.getUserById(userId);
+		return ResponseEntity.ok(user);
+	}
 
 	@DeleteMapping
 	public ResponseEntity<Void> deleteUser(@AuthenticationPrincipal UserPrincipal principal) {
@@ -33,6 +42,16 @@ public class UserController {
 		String jwtId = principal.jwt().getSubject();
 
 		userService.updateAuth0Name(jwtId, dto);
+
+		return ResponseEntity.ok().build();
+	}
+
+	@PutMapping("/currency")
+	public ResponseEntity<Void> updateCurrency(@AuthenticationPrincipal UserPrincipal principal,
+			@RequestBody UpdateCurrencyDTO dto) {
+		UUID userId = principal.user().getId();
+
+		userService.updateCurrency(userId, dto);
 
 		return ResponseEntity.ok().build();
 	}

@@ -3,7 +3,7 @@ package com.backend.aurum.domain.analytics.controller;
 import com.backend.aurum.domain.analytics.dto.AnalyticsSummaryDTO;
 import com.backend.aurum.domain.analytics.dto.ChartDataDTO;
 import com.backend.aurum.domain.analytics.service.AnalyticsService;
-import com.backend.aurum.domain.user.dto.UserPrincipal;
+import com.backend.aurum.domain.user.model.UserPrincipal;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;

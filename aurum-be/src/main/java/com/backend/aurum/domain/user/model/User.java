@@ -12,6 +12,8 @@ import lombok.Setter;
 
 import java.util.UUID;
 
+import com.backend.aurum.domain.user.enums.Currency;
+
 @Entity
 @Table(name = "users")
 @Getter
@@ -28,4 +30,7 @@ public class User {
 
 	@Column(nullable = false)
 	private String email;
+
+	@Column(nullable = false)
+	private Currency currency;
 }

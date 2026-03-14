@@ -1,8 +1,6 @@
-package com.backend.aurum.domain.user.dto;
+package com.backend.aurum.domain.user.model;
 
 import org.springframework.security.oauth2.jwt.Jwt;
-
-import com.backend.aurum.domain.user.model.User;
 
 public record UserPrincipal(
 		User user,

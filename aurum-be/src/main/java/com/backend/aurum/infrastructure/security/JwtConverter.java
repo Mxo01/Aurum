@@ -7,8 +7,8 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Component;
 
-import com.backend.aurum.domain.user.dto.UserPrincipal;
 import com.backend.aurum.domain.user.model.User;
+import com.backend.aurum.domain.user.model.UserPrincipal;
 import com.backend.aurum.domain.user.service.UserService;
 
 import lombok.RequiredArgsConstructor;

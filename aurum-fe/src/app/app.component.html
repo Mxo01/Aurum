@@ -4,26 +4,18 @@
 <main class="flex flex-col w-screen h-screen">
 	<p-toolbar class="rounded-none!">
 		<ng-template #start>
-			<a
-				routerLink="/dashboard"
-				routerLinkActive="text-primary! font-bold"
-				[routerLinkActiveOptions]="{ exact: true }"
-				[text]="true"
-				severity="secondary"
-				pButton
-			>
-				Dashboard
-			</a>
-			<a
-				routerLink="/assets"
-				routerLinkActive="text-primary! font-bold"
-				[routerLinkActiveOptions]="{ exact: true }"
-				[text]="true"
-				severity="secondary"
-				pButton
-			>
-				Assets
-			</a>
+			@for (path of paths; track path[0]) {
+				<a
+					[routerLink]="path[0]"
+					routerLinkActive="text-primary! font-bold"
+					[routerLinkActiveOptions]="{ exact: true }"
+					[text]="true"
+					severity="secondary"
+					pButton
+				>
+					{{ path[1] }}
+				</a>
+			}
 		</ng-template>
 		<ng-template #end>
 			<p-button

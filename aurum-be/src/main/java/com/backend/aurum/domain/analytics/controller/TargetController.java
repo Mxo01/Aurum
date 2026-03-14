@@ -6,7 +6,7 @@ import com.backend.aurum.domain.analytics.model.Target;
 import com.backend.aurum.domain.analytics.service.AnalyticsService;
 import com.backend.aurum.domain.analytics.service.TargetService;
 import com.backend.aurum.domain.analytics.validation.TargetValidationService;
-import com.backend.aurum.domain.user.dto.UserPrincipal;
+import com.backend.aurum.domain.user.model.UserPrincipal;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;

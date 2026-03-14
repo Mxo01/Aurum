@@ -5,7 +5,7 @@ import com.backend.aurum.domain.asset.mapper.AssetCategoryMapper;
 import com.backend.aurum.domain.asset.model.AssetCategory;
 import com.backend.aurum.domain.asset.service.AssetCategoryService;
 import com.backend.aurum.domain.asset.validation.AssetCategoryValidationService;
-import com.backend.aurum.domain.user.dto.UserPrincipal;
+import com.backend.aurum.domain.user.model.UserPrincipal;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;

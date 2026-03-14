@@ -1,3 +1,4 @@
+import { Divider } from "primeng/divider";
 import {
 	ChangeDetectionStrategy,
 	Component,
@@ -8,35 +9,37 @@ import {
 } from "@angular/core";
 import { toSignal } from "@angular/core/rxjs-interop";
 import { AuthService } from "@auth0/auth0-angular";
-import { RouterLink } from "@angular/router";
 import { Card } from "primeng/card";
 import { Avatar } from "primeng/avatar";
 import { InputText } from "primeng/inputtext";
 import { Button } from "primeng/button";
 import { Tag } from "primeng/tag";
-import { SelectButton } from "primeng/selectbutton";
+import { SelectButton, SelectButtonChangeEvent } from "primeng/selectbutton";
 import { FormsModule } from "@angular/forms";
 import { ThemeService } from "../../shared/services/theme/theme.service";
 import { ProfileService } from "./profile.service";
-import { ConfirmationService, MessageService } from "primeng/api";
+import { ConfirmationService } from "primeng/api";
 import {
 	catchError,
 	debounceTime,
 	distinctUntilChanged,
 	EMPTY,
 	finalize,
+	map,
 	Subject,
 	switchMap
 } from "rxjs";
 import { IconField } from "primeng/iconfield";
 import { InputIcon } from "primeng/inputicon";
+import { paths } from "../../app.routes";
+import { NavigationService } from "../../shared/services/navigation/navigation.service";
+import { RouterLink } from "@angular/router";
 
 @Component({
 	selector: "app-profile",
 	standalone: true,
 	imports: [
 		Button,
-		RouterLink,
 		IconField,
 		InputIcon,
 		Card,
@@ -44,7 +47,9 @@ import { InputIcon } from "primeng/inputicon";
 		FormsModule,
 		InputText,
 		Tag,
-		SelectButton
+		SelectButton,
+		RouterLink,
+		Divider
 	],
 	templateUrl: "./profile.component.html",
 	changeDetection: ChangeDetectionStrategy.OnPush
@@ -53,10 +58,12 @@ export class ProfileComponent implements OnInit {
 	private readonly authService = inject(AuthService);
 	private readonly themeService = inject(ThemeService);
 	private readonly profileService = inject(ProfileService);
-	private readonly messageService = inject(MessageService);
 	private readonly confirmationService = inject(ConfirmationService);
+	private readonly navigationService = inject(NavigationService);
 
-	themeOptions = signal([
+	protected readonly paths = paths;
+	protected readonly previousRoute = this.navigationService.previousRoute;
+	protected readonly themeOptions = signal([
 		{
 			label: "Dark",
 			value: true,
@@ -68,19 +75,30 @@ export class ProfileComponent implements OnInit {
 			icon: "pi pi-sun"
 		}
 	]);
-	user = toSignal(this.authService.user$);
-	theme = computed(() => this.themeService.isDarkMode());
-	hasGoogleProfile = computed(() => this.user()?.sub?.includes("google"));
-	isUpdatingName = signal(false);
-	isDeletingProfile = signal(false);
+	protected readonly user = toSignal(this.authService.user$);
+	protected readonly theme = computed(() => this.themeService.isDarkMode());
+	protected readonly currency = toSignal(
+		this.profileService.getProfile().pipe(map(profile => profile.currency))
+	);
+	protected readonly hasGoogleProfile = computed(() => this.user()?.sub?.includes("google"));
+	protected readonly isUpdatingName = signal(false);
+	protected readonly currencyOptions = signal([
+		{
+			label: "EUR",
+			value: "EUR",
+			icon: "pi pi-euro"
+		},
+		{
+			label: "USD",
+			value: "USD",
+			icon: "pi pi-dollar"
+		}
+	]);
+	protected readonly isDeletingProfile = signal(false);
 
 	private readonly nameTrigger$ = new Subject<string>();
 
 	ngOnInit() {
-		this.authService.user$.subscribe(user => {
-			console.log(user);
-		});
-
 		this.nameTrigger$
 			.pipe(debounceTime(500), distinctUntilChanged())
 			.pipe(
@@ -98,6 +116,10 @@ export class ProfileComponent implements OnInit {
 
 	updateName(name: string) {
 		this.nameTrigger$.next(name);
+	}
+
+	chooseCurrency(event: SelectButtonChangeEvent) {
+		this.profileService.updateCurrency(event.value).subscribe();
 	}
 
 	toggleTheme() {
