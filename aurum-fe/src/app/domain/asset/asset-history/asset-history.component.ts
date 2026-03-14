@@ -17,6 +17,7 @@ import { UIChart } from "primeng/chart";
 import { Currency } from "../../profile/model/currency.model";
 import { currencyMap } from "../../profile/profile.utils";
 import { getChartOptions, mapSnapshotsToChartData } from "./asset-history.utils";
+import { RouterLink } from "@angular/router";
 
 @Component({
 	selector: "app-asset-history",
@@ -33,7 +34,8 @@ import { getChartOptions, mapSnapshotsToChartData } from "./asset-history.utils"
 		CurrencyPipe,
 		FormsModule,
 		SelectButton,
-		UIChart
+		UIChart,
+		RouterLink
 	]
 })
 export class AssetHistoryComponent {

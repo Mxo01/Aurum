@@ -21,11 +21,11 @@ public class AssetService {
 	private final SnapshotRepository snapshotRepository;
 
 	public List<Asset> findAll(UUID userId) {
-		return assetRepository.findByUserId(userId);
+		return assetRepository.findByUserIdOrderByCreatedAtDesc(userId);
 	}
 
 	public List<Asset> findAllActive(UUID userId) {
-		return assetRepository.findByUserIdAndIsActiveTrue(userId);
+		return assetRepository.findByUserIdAndIsActiveTrueOrderByCreatedAtDesc(userId);
 	}
 
 	public Asset findById(UUID id, UUID userId) {

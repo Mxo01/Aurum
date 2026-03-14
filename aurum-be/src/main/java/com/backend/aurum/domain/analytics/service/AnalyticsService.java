@@ -69,7 +69,7 @@ public class AnalyticsService {
     }
 
     private BigDecimal calculateFavoriteAssetsValueAt(UUID userId, LocalDate date) {
-        List<Asset> favoriteAssets = assetRepository.findByUserIdAndIsActiveTrue(userId).stream()
+        List<Asset> favoriteAssets = assetRepository.findByUserIdAndIsActiveTrueOrderByCreatedAtDesc(userId).stream()
                 .filter(Asset::getIsFavorite)
                 .toList();
         
@@ -105,7 +105,7 @@ public class AnalyticsService {
     }
 
     private BigDecimal calculateNetWorthAt(UUID userId, LocalDate date) {
-        List<Asset> assets = assetRepository.findByUserIdAndIsActiveTrue(userId);
+        List<Asset> assets = assetRepository.findByUserIdAndIsActiveTrueOrderByCreatedAtDesc(userId);
         BigDecimal total = BigDecimal.ZERO;
         
         for (Asset asset : assets) {
@@ -138,7 +138,7 @@ public class AnalyticsService {
     }
 
     private Map<String, BigDecimal> calculateAssetAllocation(UUID userId) {
-        List<Asset> assets = assetRepository.findByUserIdAndIsActiveTrue(userId);
+        List<Asset> assets = assetRepository.findByUserIdAndIsActiveTrueOrderByCreatedAtDesc(userId);
         Map<String, BigDecimal> categoryValues = new HashMap<>();
         BigDecimal totalValue = BigDecimal.ZERO;
 
@@ -167,7 +167,7 @@ public class AnalyticsService {
     }
 
     private BigDecimal calculateCurrencyImpact(UUID userId, LocalDate start, LocalDate end) {
-        List<Asset> assets = assetRepository.findByUserIdAndIsActiveTrue(userId);
+        List<Asset> assets = assetRepository.findByUserIdAndIsActiveTrueOrderByCreatedAtDesc(userId);
         BigDecimal impact = BigDecimal.ZERO;
 
         for (Asset asset : assets) {

@@ -164,7 +164,10 @@ export class AssetComponent implements OnInit {
 			.saveCategory(category)
 			.pipe(finalize(() => this.isCategorySaveLoading.set(false)))
 			.subscribe({
-				next: categories => this.categoriesOptions.set(categories)
+				next: ({ assets, categories }) => {
+					this.assets.set(assets);
+					this.categoriesOptions.set(categories);
+				}
 			});
 	}
 
@@ -173,7 +176,8 @@ export class AssetComponent implements OnInit {
 
 		this.confirmationService.confirm({
 			target,
-			message: "Are you sure you want to delete this category?",
+			message:
+				"Are you sure you want to delete this category? All assets in this category will be deleted. This action is irreversible.",
 			header: "Danger Zone",
 			icon: "pi pi-info-circle",
 			rejectLabel: "Cancel",
@@ -195,7 +199,7 @@ export class AssetComponent implements OnInit {
 				this.assetService
 					.deleteCategory(id)
 					.pipe(
-						switchMap(categories => {
+						switchMap(({ categories }) => {
 							this.categoriesOptions.set(categories);
 							return this.getAssets();
 						}),

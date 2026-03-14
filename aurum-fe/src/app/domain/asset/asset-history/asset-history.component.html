@@ -29,6 +29,9 @@
 				[value]="snapshotsForSelectedAsset()"
 				[stripedRows]="true"
 				size="small"
+				[paginator]="true"
+				[rows]="12"
+				[rowsPerPageOptions]="[12, 24, 36]"
 				[(selection)]="selectedSnapshotsHistory"
 				dataKey="id"
 				style="min-width: 32rem"
@@ -116,11 +119,21 @@
 				</ng-template>
 			</p-table>
 		} @else {
-			<p-chart
-				type="line"
-				[data]="chartData()"
-				[options]="chartOptions()"
-			/>
+			@if (chartData().labels.length > 1) {
+				<p-chart
+					type="line"
+					[data]="chartData()"
+					[responsive]="true"
+					[options]="chartOptions()"
+				/>
+			} @else {
+				<div class="flex items-center justify-center h-32">
+					<div class="flex flex-col items-center gap-4 text-stone-400">
+						<i class="pi pi-chart-line text-4xl!"></i>
+						Not enough data to display a chart.
+					</div>
+				</div>
+			}
 		}
 	</ng-template>
 

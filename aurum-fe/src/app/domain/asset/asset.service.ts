@@ -2,7 +2,7 @@ import { HttpClient } from "@angular/common/http";
 import { inject, Injectable } from "@angular/core";
 import { environment } from "../../../environments/environment";
 import { Asset, AssetCategory } from "./model/asset.model";
-import { switchMap, tap } from "rxjs";
+import { forkJoin, switchMap, tap } from "rxjs";
 import { MessageService } from "primeng/api";
 
 @Injectable({
@@ -26,7 +26,9 @@ export class AssetService {
 	saveCategory(category: AssetCategory) {
 		return category.id
 			? this.http.put<AssetCategory>(`${this.assetCategoriesUrl}/${category.id}`, category).pipe(
-					switchMap(() => this.getUserAssetCategories()),
+					switchMap(() =>
+						forkJoin({ categories: this.getUserAssetCategories(), assets: this.getAssets() })
+					),
 					tap({
 						next: () => {
 							this.messageService.add({
@@ -45,7 +47,9 @@ export class AssetService {
 					})
 				)
 			: this.http.post<AssetCategory>(this.assetCategoriesUrl, category).pipe(
-					switchMap(() => this.getUserAssetCategories()),
+					switchMap(() =>
+						forkJoin({ categories: this.getUserAssetCategories(), assets: this.getAssets() })
+					),
 					tap({
 						next: () => {
 							this.messageService.add({
@@ -67,7 +71,9 @@ export class AssetService {
 
 	deleteCategory(id: string) {
 		return this.http.delete<AssetCategory[]>(`${this.assetCategoriesUrl}/${id}`).pipe(
-			switchMap(() => this.getUserAssetCategories()),
+			switchMap(() =>
+				forkJoin({ categories: this.getUserAssetCategories(), assets: this.getAssets() })
+			),
 			tap({
 				next: () => {
 					this.messageService.add({

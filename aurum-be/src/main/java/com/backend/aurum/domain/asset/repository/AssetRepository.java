@@ -11,6 +11,6 @@ import java.util.UUID;
 public interface AssetRepository extends JpaRepository<Asset, UUID> {
 
     List<Asset> findAllByIsActiveTrue();
-    List<Asset> findByUserId(UUID userId);
-    List<Asset> findByUserIdAndIsActiveTrue(UUID userId);
+    List<Asset> findByUserIdOrderByCreatedAtDesc(UUID userId);
+    List<Asset> findByUserIdAndIsActiveTrueOrderByCreatedAtDesc(UUID userId);
 }
