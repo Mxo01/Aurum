@@ -1,0 +1,86 @@
+<p-dialog
+	[header]="selectedTarget() ? 'Edit Target' : 'Create Target'"
+	[(visible)]="isVisible"
+	[modal]="true"
+	[draggable]="false"
+	(onHide)="onHide()"
+	[style]="{ width: '450px' }"
+>
+	<form
+		[formGroup]="targetForm"
+		(ngSubmit)="onSubmit()"
+		class="flex flex-col gap-4 pt-2"
+	>
+		<div class="flex flex-col gap-2">
+			<label for="type">Target Type</label>
+			<p-selectButton
+				id="type"
+				formControlName="type"
+				[options]="typeOptions"
+				[allowEmpty]="false"
+				styleClass="w-full"
+			/>
+		</div>
+
+		<div class="flex flex-col gap-2">
+			<label for="name">Name</label>
+			<input
+				pInputText
+				id="name"
+				formControlName="name"
+				placeholder="e.g. New Car"
+				class="w-full"
+			/>
+		</div>
+
+		<div class="flex flex-col gap-2">
+			<label for="targetAmount">Target Amount</label>
+			<p-inputNumber
+				id="targetAmount"
+				formControlName="targetAmount"
+				mode="currency"
+				[currency]="currency()"
+				class="w-full"
+				[min]="0"
+			/>
+		</div>
+
+		@if (targetForm.get("type")?.value === TargetType.MANUAL) {
+			<div class="flex flex-col gap-2">
+				<label for="currentAmount">Current Saved Amount</label>
+				<p-inputNumber
+					id="currentAmount"
+					formControlName="currentAmount"
+					mode="currency"
+					[currency]="currency()"
+					class="w-full"
+					[min]="0"
+				/>
+			</div>
+		}
+
+		<div class="flex flex-col gap-2">
+			<label for="deadline">Deadline</label>
+			<p-datePicker
+				id="deadline"
+				formControlName="deadline"
+				[showIcon]="true"
+				appendTo="body"
+				class="w-full"
+			/>
+		</div>
+
+		<div class="flex justify-end gap-2 mt-4">
+			<p-button
+				label="Cancel"
+				severity="secondary"
+				(onClick)="isVisible.set(false)"
+			/>
+			<p-button
+				type="submit"
+				[label]="selectedTarget() ? 'Update' : 'Create'"
+				[disabled]="targetForm.invalid"
+			/>
+		</div>
+	</form>
+</p-dialog>

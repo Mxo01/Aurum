@@ -1,31 +1,31 @@
-<section class="flex flex-col">
+<section class="flex flex-col gap-4">
 	<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-		<!-- <app-kpi-card
+		<app-kpi-card
 			label="Currency Exposure"
-			[value]="summary()?.currencyImpact ?? 0 | currency: userCurrency()"
+			[value]="(summary()?.currencyImpact ?? 0 | currency: userCurrency()) || '0€'"
 			subtext="Impact of FX variations"
 		/>
 
 		<app-kpi-card
 			label="Savings Rate"
-			[value]="summary()?.savingsRate + '%'"
+			[value]="(summary()?.savingsRate ?? 0) + '%'"
 			[variation]="2.5"
 			subtext="VS last month"
-		/> -->
+		/>
 
-		<!-- <app-kpi-card
+		<app-kpi-card
 			label="Total Liabilities"
-			[value]="(15400 | currency: userCurrency()) ?? ''"
+			[value]="(0 | currency: userCurrency()) || '0€'"
 			[variation]="-1.2"
 			subtext="Debt reduction"
 		/>
 
 		<app-kpi-card
 			label="Net Cash Flow"
-			[value]="(2450 | currency: userCurrency()) ?? ''"
+			[value]="(0 | currency: userCurrency()) || '0€'"
 			[variation]="5.8"
 			subtext="Monthly surplus"
-		/> -->
+		/>
 	</div>
 
 	<div class="grid grid-cols-12 gap-4">
@@ -50,9 +50,8 @@
 
 		<div class="col-span-12 lg:col-span-4 h-100">
 			<app-target-widget
-				[target]="targets().length ? targets()[0] : null"
+				[targets]="targets()"
 				[currency]="userCurrency()"
-				(updateTarget)="handleUpdateTarget()"
 			/>
 		</div>
 	</div>

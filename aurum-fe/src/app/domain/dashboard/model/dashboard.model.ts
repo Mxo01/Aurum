@@ -22,13 +22,3 @@ export interface ChartData {
 	totalNetWorth: number[];
 	favoriteAssetsValue: number[];
 }
-
-export interface Target {
-	id: string;
-	name: string;
-	targetAmount: number;
-	currentAmount: number;
-	completionPercentage: number;
-	deadline: string;
-	isCompleted: boolean;
-}

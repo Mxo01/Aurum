@@ -2,8 +2,7 @@ import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from "@ang
 import { CommonModule } from "@angular/common";
 import { DashboardService } from "./dashboard.service";
 import { AssetService } from "../asset/asset.service";
-import { AnalyticsSummary, ChartData, Target } from "./model/dashboard.model";
-import { KpiCardComponent } from "./components/kpi-card/kpi-card.component";
+import { AnalyticsSummary, ChartData } from "./model/dashboard.model";
 import { NetworthChartComponent } from "./components/networth-chart/networth-chart.component";
 import { TopAssetsWidgetComponent } from "./components/top-assets/top-assets-widget.component";
 import { TargetWidgetComponent } from "./components/target-widget/target-widget.component";
@@ -14,18 +13,21 @@ import { ChartModule } from "primeng/chart";
 import { Currency } from "../profile/model/currency.model";
 import { ProfileService } from "../profile/profile.service";
 import { AssetAllocationChartComponent } from "./components/asset-allocation-chart/asset-allocation-chart.component";
+import { KpiCardComponent } from "./components/kpi-card/kpi-card.component";
+import { Target } from "../target/model/target.model";
+import { TargetService } from "../target/target.service";
 
 @Component({
 	selector: "app-dashboard",
 	standalone: true,
 	imports: [
 		CommonModule,
-		KpiCardComponent,
 		NetworthChartComponent,
 		TopAssetsWidgetComponent,
 		TargetWidgetComponent,
 		ChartModule,
-		AssetAllocationChartComponent
+		AssetAllocationChartComponent,
+		KpiCardComponent
 	],
 	templateUrl: "./dashboard.component.html",
 	changeDetection: ChangeDetectionStrategy.OnPush
@@ -34,6 +36,7 @@ export class DashboardComponent implements OnInit {
 	private readonly profileService = inject(ProfileService);
 	private readonly dashboardService = inject(DashboardService);
 	private readonly assetService = inject(AssetService);
+	private readonly targetService = inject(TargetService);
 	private readonly router = inject(Router);
 
 	protected readonly userCurrency = signal<Currency>(Currency.EUR);
@@ -43,6 +46,10 @@ export class DashboardComponent implements OnInit {
 	protected readonly topAssets = signal<Asset[]>([]);
 
 	ngOnInit() {
+		this.loadData();
+	}
+
+	protected loadData() {
 		forkJoin({
 			userCurrency: this.profileService.getProfile().pipe(
 				map(profile => profile.currency),
@@ -50,7 +57,7 @@ export class DashboardComponent implements OnInit {
 			),
 			summary: this.dashboardService.getSummary().pipe(catchError(() => of(null))),
 			chart: this.dashboardService.getChartData().pipe(catchError(() => of(null))),
-			targets: this.dashboardService.getTargets().pipe(catchError(() => of([]))),
+			targets: this.targetService.getTargets().pipe(catchError(() => of([]))),
 			assets: this.assetService.getAssets().pipe(
 				catchError(() => of([])),
 				map((assets: Asset[]) =>
@@ -64,13 +71,7 @@ export class DashboardComponent implements OnInit {
 				)
 			)
 		}).subscribe({
-			next: (data: {
-				userCurrency: Currency;
-				summary: AnalyticsSummary | null;
-				chart: ChartData | null;
-				targets: Target[];
-				assets: Asset[];
-			}) => {
+			next: data => {
 				this.userCurrency.set(data.userCurrency);
 				this.summary.set(data.summary);
 				this.chartData.set(data.chart);
@@ -82,9 +83,5 @@ export class DashboardComponent implements OnInit {
 
 	protected navigateToAssets() {
 		this.router.navigate(["/assets"]);
-	}
-
-	protected handleUpdateTarget() {
-		console.log("Update target clicked");
 	}
 }

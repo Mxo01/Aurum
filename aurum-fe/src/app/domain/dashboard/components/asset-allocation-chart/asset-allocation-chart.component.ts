@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, input } from "@angular/co
 import { Card } from "primeng/card";
 import { UIChart } from "primeng/chart";
 import { AnalyticsSummary } from "../../model/dashboard.model";
-import { mapSummaryToAssetAllocationChart } from "../../dashboard.utils";
+import { mapSummaryToAssetAllocationChart } from "./asset-allocation-chart.utils";
 
 @Component({
 	selector: "app-asset-allocation-chart",
@@ -17,8 +17,9 @@ export class AssetAllocationChartComponent {
 	protected readonly assetAllocationChartData = computed(() =>
 		mapSummaryToAssetAllocationChart(this.summary())
 	);
-	protected readonly allocationOptions = {
+	protected readonly chartOptions = {
 		plugins: { legend: { position: "right" } },
+		responsive: true,
 		maintainAspectRatio: false
 	};
 }

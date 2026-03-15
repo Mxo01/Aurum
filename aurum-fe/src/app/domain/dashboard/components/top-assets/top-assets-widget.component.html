@@ -1,7 +1,7 @@
 <p-card class="rounded-xl h-full flex flex-col">
 	<div class="flex flex-col h-full p-6">
-		<div class="flex justify-between items-center mb-4">
-			<span class="text-xl font-bold flex items-center gap-3">
+		<div class="flex flex-wrap justify-between items-center gap-3 mb-4">
+			<span class="text-xl font-bold flex items-center gap-3 whitespace-nowrap">
 				<i class="pi pi-wallet text-xl! font-bold"></i>
 				Top Assets
 			</span>
@@ -11,6 +11,7 @@
 				severity="secondary"
 				iconPos="right"
 				icon="pi pi-external-link"
+				class="whitespace-nowrap"
 				(onClick)="viewMore.emit()"
 			/>
 		</div>
@@ -70,7 +71,7 @@
 							class="text-center py-12!"
 						>
 							<div class="flex flex-col items-center gap-4 text-stone-400">
-								<i class="pi pi-inbox text-4xl"></i>
+								<i class="pi pi-inbox text-4xl!"></i>
 								<p>No assets found.</p>
 							</div>
 						</td>

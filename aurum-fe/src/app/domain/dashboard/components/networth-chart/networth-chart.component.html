@@ -1,35 +1,42 @@
 <p-card class="rounded-xl p-6 h-full flex flex-col">
 	<div class="flex flex-col md:flex-row justify-between items-start gap-4 mb-6">
 		<div class="flex flex-col gap-3">
-			<span class="text-xl font-bold text-secondary flex items-center gap-3">
+			<span class="text-xl font-bold text-secondary flex items-center gap-3 whitespace-nowrap">
 				<i class="pi pi-money-bill text-xl! font-bold"></i>
 				Total Net Worth
 			</span>
 			<div class="flex items-center gap-3">
 				<span class="text-4xl font-bold font-mono">{{ totalAmount() | currency: currency() }}</span>
-				<span
-					[class]="variation() >= 0 ? 'text-green-500' : 'text-red-500'"
-					class="font-medium"
-				>
-					{{ variation() > 0 ? "+" : "" }}{{ variation() }}%
-				</span>
+
+				@if (hasEnoughDataToDisplayChart() && variation()) {
+					<span [class]="variation()! > 0 ? 'text-green-500' : 'text-red-500'">
+						<i
+							[class]="variation()! > 0 ? 'pi pi-arrow-up' : 'pi pi-arrow-down'"
+							class="text-sm"
+						></i>
+						{{ variation()! | number: "1.2-2" }}%
+					</span>
+				}
 			</div>
 		</div>
-		<p-selectButton
-			[options]="timePeriods()"
-			[(ngModel)]="selectedPeriod"
-			[allowEmpty]="false"
-			optionLabel="label"
-			optionValue="value"
-		/>
+
+		@if (hasEnoughDataToDisplayChart()) {
+			<p-selectButton
+				[options]="timePeriods()"
+				[(ngModel)]="selectedPeriod"
+				[allowEmpty]="false"
+				optionLabel="label"
+				optionValue="value"
+			/>
+		}
 	</div>
 
 	<div class="grow min-h-0">
-		@if (chartData().labels?.length) {
+		@if (hasEnoughDataToDisplayChart()) {
 			<p-chart
 				type="bar"
 				[data]="chartData()"
-				[options]="chartOptions"
+				[options]="chartOptions()"
 				height="100%"
 				width="100%"
 			/>
