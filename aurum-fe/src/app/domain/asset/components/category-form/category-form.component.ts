@@ -14,9 +14,9 @@ import { Panel } from "primeng/panel";
 import { Select } from "primeng/select";
 import { TableModule } from "primeng/table";
 import { ToggleSwitch } from "primeng/toggleswitch";
-import { AssetCategory, AssetType } from "../model/asset.model";
 import { typeOptions } from "../asset-form/asset-form.utils";
 import { Dialog } from "primeng/dialog";
+import { AssetCategory, AssetType } from "../../model/asset.model";
 
 @Component({
 	selector: "app-category-form",

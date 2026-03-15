@@ -34,7 +34,7 @@ import { InputIcon } from "primeng/inputicon";
 import { paths } from "../../app.routes";
 import { NavigationService } from "../../shared/services/navigation/navigation.service";
 import { RouterLink } from "@angular/router";
-import { currencyOptions } from "../asset/asset-form/asset-form.utils";
+import { currencyOptions } from "../asset/components/asset-form/asset-form.utils";
 
 @Component({
 	selector: "app-profile",

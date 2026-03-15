@@ -3,10 +3,11 @@ import { TableModule } from "primeng/table";
 import { Tag } from "primeng/tag";
 import { Button } from "primeng/button";
 import { CurrencyPipe, DecimalPipe } from "@angular/common";
-import { Asset, AssetType } from "../model/asset.model";
-import { Currency } from "../../profile/model/currency.model";
 import { MenuItem, MenuItemCommandEvent } from "primeng/api";
 import { Menu } from "primeng/menu";
+import { Currency } from "../../../profile/model/currency.model";
+import { Asset, AssetType } from "../../model/asset.model";
+import { mapAssetsToAssetsWithBalance } from "./asset-table.utils";
 
 @Component({
 	selector: "app-asset-table",
@@ -27,36 +28,9 @@ export class AssetTableComponent {
 	protected readonly AssetType = AssetType;
 
 	protected readonly rowMenuItems = signal<MenuItem[]>([]);
-	protected readonly assetsWithBalance = computed(() => {
-		return this.assets().map(asset => {
-			const assetSnapshots = (asset.snapshots || []).sort(
-				(a, b) => new Date(b.referenceDate).getTime() - new Date(a.referenceDate).getTime()
-			);
-
-			const currentValue = assetSnapshots.length > 0 ? assetSnapshots[0].amountOriginalCurrency : 0;
-			const previousValue =
-				assetSnapshots.length > 1 ? assetSnapshots[1].amountOriginalCurrency : null;
-
-			let trend = null;
-			let trendPercentage = null;
-
-			if (previousValue !== null && previousValue !== 0) {
-				trend = currentValue - previousValue;
-				trendPercentage = (trend / previousValue) * 100;
-			} else if (previousValue === 0 && currentValue > 0) {
-				trend = currentValue;
-				trendPercentage = 100;
-			}
-
-			return {
-				...asset,
-				currentValue,
-				trend,
-				trendPercentage,
-				snapshots: assetSnapshots
-			};
-		});
-	});
+	protected readonly assetsWithBalance = computed(() =>
+		mapAssetsToAssetsWithBalance(this.assets())
+	);
 
 	protected showMenu(event: MouseEvent, menu: Menu, asset: Asset) {
 		this.rowMenuItems.set([

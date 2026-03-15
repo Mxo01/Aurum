@@ -6,18 +6,17 @@ import { Button } from "primeng/button";
 import { InputNumber } from "primeng/inputnumber";
 import { DatePicker } from "primeng/datepicker";
 import { DatePipe, CurrencyPipe } from "@angular/common";
-import { Asset } from "../model/asset.model";
-import { Snapshot } from "../../snapshot/model/snapshot.model";
-import { isTruthy } from "../../../app.utils";
-import { SnapshotService } from "../../snapshot/snapshot.service";
 import { SelectButton } from "primeng/selectbutton";
 import { ViewMode } from "./model/asset-history.model";
 import { SelectItem } from "primeng/api";
 import { UIChart } from "primeng/chart";
-import { Currency } from "../../profile/model/currency.model";
-import { currencyMap } from "../../profile/profile.utils";
-import { getChartOptions, mapSnapshotsToChartData } from "./asset-history.utils";
-import { RouterLink } from "@angular/router";
+import { isTruthy } from "../../../../shared/utils";
+import { Currency } from "../../../profile/model/currency.model";
+import { currencyMap } from "../../../profile/profile.utils";
+import { Snapshot } from "../../../snapshot/model/snapshot.model";
+import { SnapshotService } from "../../../snapshot/snapshot.service";
+import { Asset } from "../../model/asset.model";
+import { mapSnapshotsToChartData, getChartOptions } from "./asset-history.utils";
 
 @Component({
 	selector: "app-asset-history",
@@ -34,8 +33,7 @@ import { RouterLink } from "@angular/router";
 		CurrencyPipe,
 		FormsModule,
 		SelectButton,
-		UIChart,
-		RouterLink
+		UIChart
 	]
 })
 export class AssetHistoryComponent {

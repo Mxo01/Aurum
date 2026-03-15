@@ -11,17 +11,17 @@ import {
 	OnDestroy
 } from "@angular/core";
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from "@angular/forms";
-import { Asset, AssetCategory, AssetType } from "../model/asset.model";
 import { InputText } from "primeng/inputtext";
 import { Select } from "primeng/select";
 import { SelectButton } from "primeng/selectbutton";
 import { InputNumber } from "primeng/inputnumber";
 import { DatePicker } from "primeng/datepicker";
 import { currencyOptions, typeOptions } from "./asset-form.utils";
-import { Currency } from "../../profile/model/currency.model";
 import { Button } from "primeng/button";
 import { Drawer } from "primeng/drawer";
 import { Subscription } from "rxjs";
+import { Currency } from "../../../profile/model/currency.model";
+import { Asset, AssetCategory, AssetType } from "../../model/asset.model";
 
 @Component({
 	selector: "app-asset-form",

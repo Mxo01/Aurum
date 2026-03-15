@@ -1,0 +1,43 @@
+<p-card class="rounded-xl p-6 h-full flex flex-col">
+	<div class="flex flex-col md:flex-row justify-between items-start gap-4 mb-6">
+		<div class="flex flex-col gap-3">
+			<span class="text-xl font-bold text-secondary">
+				<i class="pi pi-money-bill text-xl! font-bold mr-3"></i>
+				Total Net Worth
+			</span>
+			<div class="flex items-center gap-3">
+				<span class="text-4xl font-bold font-mono">{{ totalAmount() | currency: currency() }}</span>
+				<span
+					[class]="variation() >= 0 ? 'text-green-500' : 'text-red-500'"
+					class="font-medium"
+				>
+					{{ variation() > 0 ? "+" : "" }}{{ variation() }}%
+				</span>
+			</div>
+		</div>
+		<p-selectButton
+			[options]="timePeriods()"
+			[(ngModel)]="selectedPeriod"
+			[allowEmpty]="false"
+			optionLabel="label"
+			optionValue="value"
+		/>
+	</div>
+
+	@if (chartData().labels?.length) {
+		<p-chart
+			type="bar"
+			[data]="chartData()"
+			[options]="chartOptions"
+			height="100%"
+			width="100%"
+		/>
+	} @else {
+		<div class="flex items-center justify-center h-full">
+			<div class="flex flex-col items-center gap-4 text-stone-400">
+				<i class="pi pi-chart-line text-4xl!"></i>
+				Not enough data to display a chart.
+			</div>
+		</div>
+	}
+</p-card>

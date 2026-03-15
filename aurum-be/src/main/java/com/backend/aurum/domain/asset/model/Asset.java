@@ -2,6 +2,8 @@ package com.backend.aurum.domain.asset.model;
 
 import com.backend.aurum.domain.user.enums.Currency;
 import com.backend.aurum.domain.user.model.User;
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -39,6 +41,7 @@ public class Asset {
 	@ManyToOne(optional = false)
 	@JoinColumn(name = "user_id", nullable = false)
 	@OnDelete(action = OnDeleteAction.CASCADE)
+	@JsonBackReference
 	private User user;
 
 	@Column(nullable = false)
@@ -63,6 +66,7 @@ public class Asset {
 
 	@OneToMany(mappedBy = "asset", cascade = CascadeType.ALL, orphanRemoval = true)
 	@OrderBy("referenceDate DESC")
+	@JsonManagedReference
 	private List<Snapshot> snapshots = new ArrayList<>();
 
 	@PrePersist

@@ -1,6 +1,6 @@
 import { SelectItem } from "primeng/api";
-import { AssetType } from "../model/asset.model";
-import { Currency } from "../../profile/model/currency.model";
+import { Currency } from "../../../profile/model/currency.model";
+import { AssetType } from "../../model/asset.model";
 
 export const typeOptions: SelectItem<AssetType>[] = [
 	{ label: "Asset", value: AssetType.ASSET },

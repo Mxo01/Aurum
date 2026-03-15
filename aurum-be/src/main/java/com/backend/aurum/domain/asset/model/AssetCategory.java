@@ -1,6 +1,7 @@
 package com.backend.aurum.domain.asset.model;
 
 import com.backend.aurum.domain.user.model.User;
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -37,6 +38,7 @@ public class AssetCategory {
 	@ManyToOne(optional = true)
 	@JoinColumn(name = "user_id")
 	@OnDelete(action = OnDeleteAction.CASCADE)
+	@JsonBackReference
 	private User user;
 
 	@Column(nullable = false)
@@ -47,5 +49,6 @@ public class AssetCategory {
 	private AssetType type;
 
 	@OneToMany(mappedBy = "category", cascade = CascadeType.ALL, orphanRemoval = true)
+	@JsonBackReference
 	private List<Asset> assets = new ArrayList<>();
 }

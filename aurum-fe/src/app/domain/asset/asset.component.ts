@@ -5,15 +5,15 @@ import { TableModule } from "primeng/table";
 import { AssetService } from "./asset.service";
 import { Asset, AssetCategory } from "./model/asset.model";
 import { finalize, switchMap, tap } from "rxjs";
-import { AssetFormComponent } from "./asset-form/asset-form.component";
 import { ReactiveFormsModule, FormsModule } from "@angular/forms";
-import { CategoryFormComponent } from "./category-form/category-form.component";
 import { ConfirmationService, MenuItemCommandEvent } from "primeng/api";
 import { NavigationService } from "../../shared/services/navigation/navigation.service";
 import { RouterLink } from "@angular/router";
 import { paths } from "../../app.routes";
-import { AssetHistoryComponent } from "./asset-history/asset-history.component";
-import { AssetTableComponent } from "./asset-table/asset-table.component";
+import { AssetFormComponent } from "./components/asset-form/asset-form.component";
+import { AssetHistoryComponent } from "./components/asset-history/asset-history.component";
+import { AssetTableComponent } from "./components/asset-table/asset-table.component";
+import { CategoryFormComponent } from "./components/category-form/category-form.component";
 
 @Component({
 	selector: "app-asset",

@@ -1,5 +1,6 @@
 package com.backend.aurum.domain.asset.model;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -33,6 +34,7 @@ public class Snapshot {
     @ManyToOne(optional = false)
     @JoinColumn(name = "asset_id", nullable = false)
     @OnDelete(action = OnDeleteAction.CASCADE)
+    @JsonBackReference
     private Asset asset;
 
     @Column(nullable = false)

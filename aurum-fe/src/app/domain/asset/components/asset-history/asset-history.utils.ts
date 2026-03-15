@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { Snapshot } from "../../snapshot/model/snapshot.model";
+import { Snapshot } from "../../../snapshot/model/snapshot.model";
 
 export function mapSnapshotsToChartData(snapshots: Snapshot[]) {
 	const data = snapshots.toSorted(
@@ -32,6 +32,8 @@ export function mapSnapshotsToChartData(snapshots: Snapshot[]) {
 
 export function getChartOptions(currencySymbol: string) {
 	return {
+		responsive: true,
+		maintainAspectRatio: false,
 		plugins: {
 			legend: { display: false },
 			tooltip: {
