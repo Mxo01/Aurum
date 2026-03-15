@@ -23,6 +23,7 @@
 			<td colspan="5">
 				<span class="font-bold me-3">{{ asset.categoryName }}</span>
 				<p-tag
+					class="whitespace-nowrap"
 					[value]="asset.type === AssetType.ASSET ? 'Asset' : 'Liability'"
 					[severity]="asset.type === AssetType.ASSET ? 'info' : 'warn'"
 					[icon]="asset.type === AssetType.ASSET ? 'pi pi-wallet' : 'pi pi-shield'"
@@ -46,6 +47,7 @@
 			<td>
 				<div class="flex items-center gap-2">
 					<p-tag
+						class="whitespace-nowrap"
 						[value]="asset.name"
 						[icon]="asset.isFavorite ? 'pi pi-bookmark-fill' : ''"
 					/>
@@ -58,7 +60,10 @@
 			</td>
 			<td class="text-right font-mono">
 				@if (asset.trend !== null) {
-					<span [class]="asset.trend >= 0 ? 'text-green-500' : 'text-red-500'">
+					<span
+						class="whitespace-nowrap"
+						[class]="asset.trend >= 0 ? 'text-green-500' : 'text-red-500'"
+					>
 						<i
 							[class]="asset.trend >= 0 ? 'pi pi-arrow-up' : 'pi pi-arrow-down'"
 							class="text-sm"
@@ -71,6 +76,7 @@
 			</td>
 			<td>
 				<p-tag
+					class="whitespace-nowrap"
 					[value]="asset.isActive ? 'Active' : 'Archived'"
 					[severity]="asset.isActive ? 'success' : 'danger'"
 					[icon]="asset.isActive ? 'pi pi-check-circle' : 'pi pi-inbox'"

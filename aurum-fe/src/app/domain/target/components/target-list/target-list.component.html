@@ -39,11 +39,12 @@
 				<td class="text-center">
 					<p-progressbar [value]="target.completionPercentage | number: '1.0-0'" />
 				</td>
-				<td class="text-center">
+				<td class="text-center whitespace-nowrap">
 					{{ target.deadline | date: "mediumDate" }}
 				</td>
 				<td class="text-center">
 					<p-tag
+						class="whitespace-nowrap"
 						[value]="statusLabel(target.status)"
 						[severity]="statusSeverity(target.status)"
 					/>

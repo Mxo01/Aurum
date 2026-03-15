@@ -37,6 +37,7 @@
 							<div class="flex flex-column">
 								<span class="font-medium flex items-center gap-3">
 									<p-tag
+										class="whitespace-nowrap"
 										[value]="asset.type === AssetType.ASSET ? 'Asset' : 'Liability'"
 										[severity]="asset.type === AssetType.ASSET ? 'info' : 'warn'"
 										[icon]="asset.type === AssetType.ASSET ? 'pi pi-wallet' : 'pi pi-shield'"
@@ -51,7 +52,10 @@
 						</td>
 						<td>
 							@if (asset.trend !== null) {
-								<span [class]="asset.trend >= 0 ? 'text-green-500' : 'text-red-500'">
+								<span
+									class="whitespace-nowrap"
+									[class]="asset.trend >= 0 ? 'text-green-500' : 'text-red-500'"
+								>
 									<i
 										[class]="asset.trend >= 0 ? 'pi pi-arrow-up' : 'pi pi-arrow-down'"
 										class="text-sm"

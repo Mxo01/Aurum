@@ -1,7 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from "@angular/core";
 import { CommonModule } from "@angular/common";
 import { DashboardService } from "./dashboard.service";
-import { AssetService } from "../asset/asset.service";
 import { AnalyticsSummary, ChartData } from "./model/dashboard.model";
 import { NetworthChartComponent } from "./components/networth-chart/networth-chart.component";
 import { TopAssetsWidgetComponent } from "./components/top-assets/top-assets-widget.component";
@@ -35,7 +34,6 @@ import { TargetService } from "../target/target.service";
 export class DashboardComponent implements OnInit {
 	private readonly profileService = inject(ProfileService);
 	private readonly dashboardService = inject(DashboardService);
-	private readonly assetService = inject(AssetService);
 	private readonly targetService = inject(TargetService);
 	private readonly router = inject(Router);
 
@@ -57,26 +55,14 @@ export class DashboardComponent implements OnInit {
 			),
 			summary: this.dashboardService.getSummary().pipe(catchError(() => of(null))),
 			chart: this.dashboardService.getChartData().pipe(catchError(() => of(null))),
-			targets: this.targetService.getTargets().pipe(catchError(() => of([]))),
-			assets: this.assetService.getAssets().pipe(
-				catchError(() => of([])),
-				map((assets: Asset[]) =>
-					assets
-						.toSorted((a, b) => {
-							const valA = a.snapshots?.[0]?.amountOriginalCurrency || 0;
-							const valB = b.snapshots?.[0]?.amountOriginalCurrency || 0;
-							return valB - valA;
-						})
-						.slice(0, 5)
-				)
-			)
+			targets: this.targetService.getTargets().pipe(catchError(() => of([])))
 		}).subscribe({
 			next: data => {
 				this.userCurrency.set(data.userCurrency);
 				this.summary.set(data.summary);
 				this.chartData.set(data.chart);
 				this.targets.set(data.targets);
-				this.topAssets.set(data.assets);
+				this.topAssets.set(data.summary?.topAssets || []);
 			}
 		});
 	}

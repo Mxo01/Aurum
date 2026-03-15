@@ -8,6 +8,8 @@ import com.backend.aurum.domain.asset.model.Asset;
 import com.backend.aurum.domain.asset.model.Snapshot;
 import com.backend.aurum.domain.asset.repository.AssetRepository;
 import com.backend.aurum.domain.asset.repository.SnapshotRepository;
+import com.backend.aurum.domain.asset.mapper.AssetMapper;
+import com.backend.aurum.domain.asset.dto.AssetDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -22,6 +24,7 @@ public class AnalyticsService {
 
 	private final SnapshotRepository snapshotRepository;
 	private final AssetRepository assetRepository;
+	private final AssetMapper assetMapper;
 
 	public AnalyticsSummaryDTO getSummary(UUID userId) {
 		LocalDate now = LocalDate.now();
@@ -41,6 +44,7 @@ public class AnalyticsService {
 				.assetAllocation(calculateAssetAllocation(userId))
 				.currencyImpact(calculateCurrencyImpact(userId, now.minusMonths(1), now))
 				.savingsRate(BigDecimal.ZERO) // Simplified placeholder for now
+				.topAssets(calculateTopAssets(userId, 5))
 				.build();
 	}
 
@@ -192,5 +196,25 @@ public class AnalyticsService {
 		}
 
 		return impact;
+	}
+
+	private List<AssetDTO> calculateTopAssets(UUID userId, int limit) {
+		List<Asset> assets = assetRepository.findByUserIdAndIsActiveTrueOrderByCreatedAtDesc(userId);
+		return assets.stream()
+				.sorted((a, b) -> {
+					BigDecimal valA = getLatestSnapshotValue(a);
+					BigDecimal valB = getLatestSnapshotValue(b);
+					return valB.compareTo(valA);
+				})
+				.limit(limit)
+				.map(assetMapper::toDto)
+				.toList();
+	}
+
+	private BigDecimal getLatestSnapshotValue(Asset asset) {
+		return snapshotRepository.findByAssetId(asset.getId()).stream()
+				.max(Comparator.comparing(Snapshot::getReferenceDate))
+				.map(Snapshot::getAmountInBaseCurrency)
+				.orElse(BigDecimal.ZERO);
 	}
 }

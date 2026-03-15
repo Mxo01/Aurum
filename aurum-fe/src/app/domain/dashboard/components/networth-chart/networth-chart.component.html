@@ -5,7 +5,7 @@
 				<i class="pi pi-money-bill text-xl! font-bold"></i>
 				Total Net Worth
 			</span>
-			<div class="flex items-center gap-3">
+			<div class="flex items-center flex-wrap gap-3">
 				<span class="text-4xl font-bold font-mono">{{ totalAmount() | currency: currency() }}</span>
 
 				@if (hasEnoughDataToDisplayChart() && variation()?.percentage) {

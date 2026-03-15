@@ -1,3 +1,5 @@
+import { Asset } from "../../asset/model/asset.model";
+
 export interface Delta {
 	absolute: number;
 	percentage: number;
@@ -15,6 +17,7 @@ export interface AnalyticsSummary {
 	assetAllocation: { [key: string]: number };
 	currencyImpact: number;
 	savingsRate: number;
+	topAssets: Asset[];
 }
 
 export interface ChartData {
