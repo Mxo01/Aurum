@@ -1,8 +1,8 @@
 <p-card class="rounded-xl p-6 h-full flex flex-col">
 	<div class="flex flex-col md:flex-row justify-between items-start gap-4 mb-6">
 		<div class="flex flex-col gap-3">
-			<span class="text-xl font-bold text-secondary">
-				<i class="pi pi-money-bill text-xl! font-bold mr-3"></i>
+			<span class="text-xl font-bold text-secondary flex items-center gap-3">
+				<i class="pi pi-money-bill text-xl! font-bold"></i>
 				Total Net Worth
 			</span>
 			<div class="flex items-center gap-3">
@@ -24,20 +24,22 @@
 		/>
 	</div>
 
-	@if (chartData().labels?.length) {
-		<p-chart
-			type="bar"
-			[data]="chartData()"
-			[options]="chartOptions"
-			height="100%"
-			width="100%"
-		/>
-	} @else {
-		<div class="flex items-center justify-center h-full">
-			<div class="flex flex-col items-center gap-4 text-stone-400">
-				<i class="pi pi-chart-line text-4xl!"></i>
-				Not enough data to display a chart.
+	<div class="grow min-h-0">
+		@if (chartData().labels?.length) {
+			<p-chart
+				type="bar"
+				[data]="chartData()"
+				[options]="chartOptions"
+				height="100%"
+				width="100%"
+			/>
+		} @else {
+			<div class="flex items-center justify-center h-full">
+				<div class="flex flex-col items-center gap-4 text-stone-400">
+					<i class="pi pi-chart-line text-4xl!"></i>
+					Not enough data to display a chart.
+				</div>
 			</div>
-		</div>
-	}
+		}
+	</div>
 </p-card>

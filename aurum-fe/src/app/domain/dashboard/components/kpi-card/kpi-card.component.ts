@@ -7,22 +7,24 @@ import { Card } from "primeng/card";
 	standalone: true,
 	imports: [CommonModule, Card],
 	template: `
-		<p-card class="rounded-xl p-6 flex flex-col gap-2 h-full">
-			<span class="text-secondary font-medium">{{ label() }}</span>
-			<div class="flex items-center justify-between">
-				<span class="text-2xl font-bold">{{ value() }}</span>
-				@if (variation() !== undefined) {
-					<span
-						[class]="variation()! >= 0 ? 'text-green-500' : 'text-red-500'"
-						class="font-medium"
-					>
-						{{ variation()! > 0 ? "+" : "" }}{{ variation() }}%
-					</span>
+		<p-card class="rounded-xl h-full flex flex-col">
+			<div class="flex flex-col h-full p-6 gap-2">
+				<span class="text-secondary font-medium">{{ label() }}</span>
+				<div class="flex items-center justify-between">
+					<span class="text-2xl font-bold">{{ value() }}</span>
+					@if (variation() !== undefined) {
+						<span
+							[class]="variation()! >= 0 ? 'text-green-500' : 'text-red-500'"
+							class="font-medium"
+						>
+							{{ variation()! > 0 ? "+" : "" }}{{ variation() }}%
+						</span>
+					}
+				</div>
+				@if (subtext()) {
+					<span class="text-sm text-secondary">{{ subtext() }}</span>
 				}
 			</div>
-			@if (subtext()) {
-				<span class="text-sm text-secondary">{{ subtext() }}</span>
-			}
 		</p-card>
 	`,
 	changeDetection: ChangeDetectionStrategy.OnPush

@@ -5,3 +5,22 @@ body {
 	margin: 0;
 	font-family: "Poppins", sans-serif;
 }
+
+/* Fix for PrimeNG p-card to support full height */
+p-card.h-full,
+.p-card.h-full {
+	display: flex;
+	flex-direction: column;
+
+	.p-card-body {
+		flex-grow: 1;
+		display: flex;
+		flex-direction: column;
+	}
+
+	.p-card-content {
+		flex-grow: 1;
+		display: flex;
+		flex-direction: column;
+	}
+}

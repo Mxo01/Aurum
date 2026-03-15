@@ -51,6 +51,7 @@
 		<div class="col-span-12 lg:col-span-4 h-100">
 			<app-target-widget
 				[target]="targets().length ? targets()[0] : null"
+				[currency]="userCurrency()"
 				(updateTarget)="handleUpdateTarget()"
 			/>
 		</div>
