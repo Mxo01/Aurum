@@ -46,7 +46,8 @@ public class TargetController {
 		validationService.validate(targetDto);
 		Target target = mapper.toEntity(targetDto, userId);
 		Target savedTarget = targetService.save(target);
-		return ResponseEntity.ok(mapper.toDto(savedTarget, BigDecimal.ZERO));
+		BigDecimal currentNetWorth = analyticsService.getSummary(userId).getTotalNetWorth();
+		return ResponseEntity.ok(mapper.toDto(savedTarget, currentNetWorth));
 	}
 
 	@PutMapping("/{id}")
@@ -56,7 +57,8 @@ public class TargetController {
 		validationService.validate(targetDto);
 		Target targetDetails = mapper.toEntity(targetDto, userId);
 		Target updatedTarget = targetService.update(id, targetDetails);
-		return ResponseEntity.ok(mapper.toDto(updatedTarget, BigDecimal.ZERO));
+		BigDecimal currentNetWorth = analyticsService.getSummary(userId).getTotalNetWorth();
+		return ResponseEntity.ok(mapper.toDto(updatedTarget, currentNetWorth));
 	}
 
 	@DeleteMapping("/{id}")

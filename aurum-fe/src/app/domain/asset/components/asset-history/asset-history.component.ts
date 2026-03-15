@@ -18,6 +18,8 @@ import { SnapshotService } from "../../../snapshot/snapshot.service";
 import { Asset } from "../../model/asset.model";
 import { mapSnapshotsToChartData, getChartOptions } from "./asset-history.utils";
 
+import { ThemeService } from "../../../../shared/services/theme/theme.service";
+
 @Component({
 	selector: "app-asset-history",
 	standalone: true,
@@ -37,6 +39,7 @@ import { mapSnapshotsToChartData, getChartOptions } from "./asset-history.utils"
 	]
 })
 export class AssetHistoryComponent {
+	protected readonly themeService = inject(ThemeService);
 	private readonly snapshotService = inject(SnapshotService);
 
 	isVisible = model.required<boolean>();
@@ -62,10 +65,13 @@ export class AssetHistoryComponent {
 		);
 	});
 	protected readonly chartData = computed(() =>
-		mapSnapshotsToChartData(this.snapshotsForSelectedAsset())
+		mapSnapshotsToChartData(this.snapshotsForSelectedAsset(), this.themeService.isDarkMode())
 	);
 	protected readonly chartOptions = computed(() =>
-		getChartOptions(currencyMap[this.selectedAsset()?.originalCurrency || Currency.EUR])
+		getChartOptions(
+			currencyMap[this.selectedAsset()?.originalCurrency || Currency.EUR],
+			this.themeService.isDarkMode()
+		)
 	);
 
 	protected onHideDrawer() {

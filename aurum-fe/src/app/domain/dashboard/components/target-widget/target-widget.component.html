@@ -23,8 +23,8 @@
 					[readonly]="true"
 					valueTemplate="{value}%"
 					[size]="150"
-					valueColor="#ffffff"
-					rangeColor="#454545"
+					[valueColor]="themeService.isDarkMode() ? '#ffffff' : '#000000'"
+					[rangeColor]="themeService.isDarkMode() ? '#454545' : '#e5e7eb'"
 				/>
 
 				<div class="text-center">
@@ -44,8 +44,8 @@
 						[disabled]="true"
 						valueTemplate="{value}%"
 						[size]="150"
-						valueColor="#ffffff"
-						rangeColor="#454545"
+						[valueColor]="themeService.isDarkMode() ? '#ffffff' : '#000000'"
+						[rangeColor]="themeService.isDarkMode() ? '#454545' : '#e5e7eb'"
 					/>
 					No target set
 				</div>

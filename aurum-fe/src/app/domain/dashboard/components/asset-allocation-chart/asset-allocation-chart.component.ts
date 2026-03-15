@@ -1,8 +1,12 @@
-import { ChangeDetectionStrategy, Component, computed, input } from "@angular/core";
+import { ChangeDetectionStrategy, Component, computed, inject, input } from "@angular/core";
 import { Card } from "primeng/card";
 import { UIChart } from "primeng/chart";
 import { AnalyticsSummary } from "../../model/dashboard.model";
-import { mapSummaryToAssetAllocationChart } from "./asset-allocation-chart.utils";
+import {
+	getAssetAllocationOptions,
+	mapSummaryToAssetAllocationChart
+} from "./asset-allocation-chart.utils";
+import { ThemeService } from "../../../../shared/services/theme/theme.service";
 
 @Component({
 	selector: "app-asset-allocation-chart",
@@ -12,14 +16,14 @@ import { mapSummaryToAssetAllocationChart } from "./asset-allocation-chart.utils
 	changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class AssetAllocationChartComponent {
+	private readonly themeService = inject(ThemeService);
+
 	summary = input.required<AnalyticsSummary | null>();
 
 	protected readonly assetAllocationChartData = computed(() =>
-		mapSummaryToAssetAllocationChart(this.summary())
+		mapSummaryToAssetAllocationChart(this.summary(), this.themeService.isDarkMode())
 	);
-	protected readonly chartOptions = {
-		plugins: { legend: { position: "right" } },
-		responsive: true,
-		maintainAspectRatio: false
-	};
+	protected readonly chartOptions = computed(() =>
+		getAssetAllocationOptions(this.themeService.isDarkMode())
+	);
 }

@@ -1,5 +1,7 @@
 package com.backend.aurum.domain.analytics.dto;
 
+import com.backend.aurum.domain.analytics.model.TargetStatus;
+import com.backend.aurum.domain.analytics.model.TargetType;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -15,4 +17,6 @@ public class TargetDTO {
     private Double completionPercentage;
     private LocalDate deadline;
     private Boolean isCompleted;
+    private TargetType type;
+    private TargetStatus status;
 }

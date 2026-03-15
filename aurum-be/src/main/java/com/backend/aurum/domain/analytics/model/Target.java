@@ -31,6 +31,13 @@ public class Target {
     @Column(nullable = false, precision = 19, scale = 4)
     private BigDecimal targetAmount;
 
+    @Column(precision = 19, scale = 4)
+    private BigDecimal currentAmount;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private TargetType type = TargetType.MANUAL;
+
     private LocalDate deadline;
 
     @Column(nullable = false)

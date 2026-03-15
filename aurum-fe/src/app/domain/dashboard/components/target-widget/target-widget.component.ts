@@ -20,6 +20,7 @@ import { finalize } from "rxjs";
 import { SplitButton } from "primeng/splitbutton";
 import { MenuItem } from "primeng/api";
 import { Currency } from "../../../profile/model/currency.model";
+import { ThemeService } from "../../../../shared/services/theme/theme.service";
 
 @Component({
 	selector: "app-target-widget",
@@ -40,6 +41,7 @@ import { Currency } from "../../../profile/model/currency.model";
 	changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class TargetWidgetComponent {
+	protected readonly themeService = inject(ThemeService);
 	private readonly targetService = inject(TargetService);
 
 	targets = model.required<Target[]>();

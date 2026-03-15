@@ -2,6 +2,8 @@ package com.backend.aurum.domain.analytics.mapper;
 
 import com.backend.aurum.domain.analytics.dto.TargetDTO;
 import com.backend.aurum.domain.analytics.model.Target;
+import com.backend.aurum.domain.analytics.model.TargetStatus;
+import com.backend.aurum.domain.analytics.model.TargetType;
 import com.backend.aurum.domain.user.model.User;
 import com.backend.aurum.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -9,49 +11,83 @@ import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-
+import java.time.LocalDate;
 import java.util.UUID;
 
 @Component
 @RequiredArgsConstructor
 public class TargetMapper {
 
-    private final UserRepository userRepository;
+	private final UserRepository userRepository;
 
-    public Target toEntity(TargetDTO dto, UUID userId) {
-        if (dto == null) return null;
-        Target target = new Target();
-        target.setId(dto.getId());
-        
-        if (userId != null) {
-            User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-            target.setUser(user);
-        }
+	public Target toEntity(TargetDTO dto, UUID userId) {
+		if (dto == null)
+			return null;
+		Target target = new Target();
+		target.setId(dto.getId());
 
-        target.setName(dto.getName());
-        target.setTargetAmount(dto.getTargetAmount());
-        target.setDeadline(dto.getDeadline());
-        target.setIsCompleted(dto.getIsCompleted() != null ? dto.getIsCompleted() : false);
-        return target;
-    }
+		if (userId != null) {
+			User user = userRepository.findById(userId)
+					.orElseThrow(() -> new RuntimeException("User not found"));
+			target.setUser(user);
+		}
 
-    public TargetDTO toDto(Target entity, BigDecimal currentAmount) {
-        if (entity == null) return null;
-        TargetDTO dto = new TargetDTO();
-        dto.setId(entity.getId());
-        dto.setName(entity.getName());
-        dto.setTargetAmount(entity.getTargetAmount());
-        dto.setCurrentAmount(currentAmount);
-        dto.setDeadline(entity.getDeadline());
-        dto.setIsCompleted(entity.getIsCompleted());
-        
-        if (entity.getTargetAmount().compareTo(BigDecimal.ZERO) > 0) {
-            dto.setCompletionPercentage(currentAmount.divide(entity.getTargetAmount(), 4, RoundingMode.HALF_UP).doubleValue() * 100);
-        } else {
-            dto.setCompletionPercentage(0.0);
-        }
-        
-        return dto;
-    }
+		target.setName(dto.getName());
+		target.setTargetAmount(dto.getTargetAmount());
+		target.setCurrentAmount(dto.getCurrentAmount());
+		target.setType(dto.getType() != null ? dto.getType() : TargetType.MANUAL);
+		target.setDeadline(dto.getDeadline());
+		target.setIsCompleted(dto.getIsCompleted() != null ? dto.getIsCompleted() : false);
+		return target;
+	}
+
+	public TargetDTO toDto(Target entity, BigDecimal currentNetWorth) {
+		if (entity == null)
+			return null;
+		TargetDTO dto = new TargetDTO();
+		dto.setId(entity.getId());
+		dto.setName(entity.getName());
+		dto.setTargetAmount(entity.getTargetAmount());
+		dto.setDeadline(entity.getDeadline());
+
+		TargetType type = entity.getType() != null ? entity.getType() : TargetType.MANUAL;
+		dto.setType(type);
+
+		BigDecimal currentAmount = (entity.getType() == TargetType.NET_WORTH)
+				? (currentNetWorth != null ? currentNetWorth : BigDecimal.ZERO)
+				: (entity.getCurrentAmount() != null ? entity.getCurrentAmount() : BigDecimal.ZERO);
+
+		dto.setCurrentAmount(currentAmount);
+
+		if (Boolean.TRUE.equals(entity.getIsCompleted())) {
+			dto.setCurrentAmount(currentAmount.max(entity.getTargetAmount()));
+			dto.setCompletionPercentage(100.0);
+			dto.setIsCompleted(true);
+			dto.setStatus(TargetStatus.COMPLETED);
+			return dto;
+		}
+
+		double percentage = 0.0;
+		if (entity.getTargetAmount().compareTo(BigDecimal.ZERO) > 0) {
+			percentage = currentAmount.multiply(new BigDecimal("100"))
+					.divide(entity.getTargetAmount(), 2, RoundingMode.HALF_UP)
+					.doubleValue();
+		}
+
+		double cappedPercentage = Math.min(100.0, percentage);
+		dto.setCompletionPercentage(cappedPercentage);
+
+		boolean isFinished = cappedPercentage >= 100.0;
+		dto.setIsCompleted(isFinished);
+
+		if (isFinished) {
+			dto.setStatus(TargetStatus.COMPLETED);
+		} else if (entity.getDeadline() != null && entity.getDeadline().isBefore(LocalDate.now())) {
+			dto.setStatus(TargetStatus.NOT_REACHED);
+		} else {
+			dto.setStatus(TargetStatus.IN_PROGRESS);
+		}
+
+		return dto;
+	}
 }

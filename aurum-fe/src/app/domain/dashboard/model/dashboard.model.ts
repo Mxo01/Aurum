@@ -20,5 +20,5 @@ export interface AnalyticsSummary {
 export interface ChartData {
 	labels: string[];
 	totalNetWorth: number[];
-	favoriteAssetsValue: number[];
+	favoriteAssetsValues: Record<string, number[]>;
 }

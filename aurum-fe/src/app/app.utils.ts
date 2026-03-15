@@ -72,3 +72,9 @@ export const auth0Config: AuthConfig = {
 };
 
 export const darkModeSelector = "p-dark";
+
+export function getChartColors(isDarkMode: boolean) {
+	return isDarkMode
+		? ["#a5f3fc", "#99f6e4", "#c7d2fe", "#bfdbfe", "#a7f3d0", "#fde68a"]
+		: ["#7dd3fc", "#5eead4", "#a5b4fc", "#93c5fd", "#6ee7b7", "#fcd34d"];
+}

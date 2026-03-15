@@ -8,14 +8,48 @@
 			<div class="flex items-center gap-3">
 				<span class="text-4xl font-bold font-mono">{{ totalAmount() | currency: currency() }}</span>
 
-				@if (hasEnoughDataToDisplayChart() && variation()) {
-					<span [class]="variation()! > 0 ? 'text-green-500' : 'text-red-500'">
-						<i
-							[class]="variation()! > 0 ? 'pi pi-arrow-up' : 'pi pi-arrow-down'"
-							class="text-sm"
-						></i>
-						{{ variation()! | number: "1.2-2" }}%
-					</span>
+				@if (hasEnoughDataToDisplayChart() && variation()?.percentage) {
+					<div
+						class="flex items-center justify-between gap-3 p-2 rounded-full"
+						[class]="
+							variation()!.percentage > 0
+								? 'text-green-500 bg-green-600/10'
+								: 'text-red-500 bg-red-600/10'
+						"
+					>
+						@if (percentageView()) {
+							<span
+								class="text-sm"
+								[class]="variation()!.percentage > 0 ? 'text-green-500' : 'text-red-500'"
+							>
+								<i
+									[class]="variation()!.percentage > 0 ? 'pi pi-arrow-up' : 'pi pi-arrow-down'"
+									class="text-xs!"
+								></i>
+								{{ variation()!.percentage | number: "1.2-2" }}%
+							</span>
+						} @else {
+							<span
+								class="text-sm"
+								[class]="variation()!.percentage > 0 ? 'text-green-500' : 'text-red-500'"
+							>
+								<i
+									[class]="variation()!.percentage > 0 ? 'pi pi-arrow-up' : 'pi pi-arrow-down'"
+									class="text-xs!"
+								></i>
+								{{ variation()!.absolute | currency: currency() }}
+							</span>
+						}
+
+						<p-button
+							size="small"
+							[rounded]="true"
+							[severity]="variation()!.percentage > 0 ? 'success' : 'danger'"
+							[icon]="percentageView() ? 'pi pi-percentage text-xs!' : 'pi pi-money-bill text-xs!'"
+							styleClass="p-1"
+							(onClick)="percentageView.set(!percentageView())"
+						/>
+					</div>
 				}
 			</div>
 		</div>
