@@ -1,52 +1,62 @@
 <p-toast />
 <p-confirmdialog />
 
-<main class="flex flex-col w-screen h-screen">
-	<p-toolbar class="rounded-none!">
-		<ng-template #start>
-			@for (path of paths; track path[0]) {
-				<a
-					[routerLink]="path[0]"
-					routerLinkActive="text-primary! font-extrabold"
-					[routerLinkActiveOptions]="{ exact: true }"
+<main class="flex flex-col w-screen h-screen box-border">
+	<div
+		#navbar
+		class="fixed z-10 p-3 w-full"
+	>
+		<p-toolbar
+			class="bg-white/30! border-gray-300/30! shadow-sm! dark:bg-zinc-900/40! dark:border-zinc-800/70! dark:shadow-2xl! backdrop-blur-md!"
+		>
+			<ng-template #start>
+				@for (path of paths; track path[0]) {
+					<a
+						[routerLink]="path[0]"
+						routerLinkActive="text-primary! font-extrabold"
+						[routerLinkActiveOptions]="{ exact: true }"
+						severity="secondary"
+						[text]="true"
+						class="mr-3"
+						pButton
+					>
+						<span class="flex items-center gap-2">
+							<i [class]="path[1].icon"></i>
+							<span class="max-sm:hidden">{{ path[1].label }}</span>
+						</span>
+					</a>
+				}
+			</ng-template>
+			<ng-template #end>
+				<p-button
 					severity="secondary"
 					[text]="true"
-					class="mr-3"
-					pButton
+					routerLink="/profile"
 				>
-					<span class="flex items-center gap-2">
-						<i [class]="path[1].icon"></i>
-						<span class="max-sm:hidden">{{ path[1].label }}</span>
-					</span>
-				</a>
-			}
-		</ng-template>
-		<ng-template #end>
-			<p-button
-				severity="secondary"
-				[text]="true"
-				routerLink="/profile"
-			>
-				<div class="flex flex-col items-end max-sm:hidden">
-					<span class="text-primary text-sm font-bold">{{ user()?.name }}</span>
-					<span class="text-xs">{{ user()?.email }}</span>
-				</div>
-				<p-avatar
-					[image]="user()?.picture"
-					shape="circle"
-				/>
-			</p-button>
+					<div class="flex flex-col items-end max-sm:hidden">
+						<span class="text-primary text-sm font-bold">{{ user()?.name }}</span>
+						<span class="text-xs">{{ user()?.email }}</span>
+					</div>
+					<p-avatar
+						[image]="user()?.picture"
+						shape="circle"
+					/>
+				</p-button>
 
-			<p-button
-				severity="danger"
-				icon="pi pi-sign-out"
-				[rounded]="true"
-				[text]="true"
-				(onClick)="logout()"
-			/>
-		</ng-template>
-	</p-toolbar>
-	<section class="w-full h-full p-3">
+				<p-button
+					severity="danger"
+					icon="pi pi-sign-out"
+					[rounded]="true"
+					[text]="true"
+					(onClick)="logout()"
+				/>
+			</ng-template>
+		</p-toolbar>
+	</div>
+	<section
+		class="w-full h-full px-3 pb-3"
+		[style.margin-top.px]="navbar.offsetHeight"
+	>
 		<router-outlet />
 	</section>
 </main>

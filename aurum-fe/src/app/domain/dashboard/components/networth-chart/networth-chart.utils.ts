@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { getChartColors } from "../../../../app.utils";
+import { chartColors } from "../../../../app.utils";
 import { ChartData } from "../../model/dashboard.model";
 import { ChartConfiguration, ChartDataset } from "chart.js";
 
@@ -13,7 +13,7 @@ export function mapDataIntoNetworthChartData(data: ChartData | null, isDarkMode:
 		})
 	);
 
-	const colors = getChartColors(isDarkMode);
+	const colors = chartColors;
 
 	const datasets: ChartDataset[] = [
 		{

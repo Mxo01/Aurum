@@ -21,7 +21,7 @@ export class AssetAllocationChartComponent {
 	summary = input.required<AnalyticsSummary | null>();
 
 	protected readonly assetAllocationChartData = computed(() =>
-		mapSummaryToAssetAllocationChart(this.summary(), this.themeService.isDarkMode())
+		mapSummaryToAssetAllocationChart(this.summary())
 	);
 	protected readonly chartOptions = computed(() =>
 		getAssetAllocationOptions(this.themeService.isDarkMode())

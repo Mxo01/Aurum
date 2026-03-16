@@ -1,18 +1,15 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { getChartColors } from "../../../../app.utils";
+import { chartColors } from "../../../../app.utils";
 import { AnalyticsSummary } from "../../model/dashboard.model";
 
-export function mapSummaryToAssetAllocationChart(
-	summary: AnalyticsSummary | null,
-	isDarkMode: boolean
-) {
+export function mapSummaryToAssetAllocationChart(summary: AnalyticsSummary | null) {
 	if (!summary || !summary.assetAllocation) return null;
 
 	const labels = Object.keys(summary.assetAllocation);
 	const data = Object.values(summary.assetAllocation);
 
-	const colors = getChartColors(isDarkMode);
+	const colors = chartColors;
 
 	return {
 		labels,
