@@ -107,7 +107,7 @@
 						formControlName="initialValue"
 						mode="currency"
 						[currency]="assetForm.value.currency || 'EUR'"
-						locale="en-US"
+						[locale]="locale()"
 						[minFractionDigits]="2"
 						[fluid]="true"
 						size="small"

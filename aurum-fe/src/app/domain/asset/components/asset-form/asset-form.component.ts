@@ -21,6 +21,7 @@ import { Button } from "primeng/button";
 import { Drawer } from "primeng/drawer";
 import { Subscription } from "rxjs";
 import { Currency } from "../../../profile/model/currency.model";
+import { Locale } from "../../../profile/model/locale.model";
 import { Asset, AssetCategory, AssetType } from "../../model/asset.model";
 
 @Component({
@@ -45,6 +46,7 @@ export class AssetFormComponent implements OnInit, OnDestroy {
 	selectedAsset = model<Asset | null>(null);
 
 	categoriesOptions = input.required<AssetCategory[]>();
+	locale = input<Locale>(Locale.EN_US);
 
 	save = output<Asset>();
 

@@ -88,6 +88,7 @@
 								[(ngModel)]="newSnapshotValue"
 								mode="currency"
 								[currency]="selectedAsset()?.originalCurrency || 'EUR'"
+								[locale]="locale()"
 								[minFractionDigits]="2"
 								size="small"
 								fluid

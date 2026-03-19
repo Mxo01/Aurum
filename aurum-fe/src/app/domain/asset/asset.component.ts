@@ -135,13 +135,9 @@ export class AssetComponent implements OnInit {
 				"Are you sure you want to delete this asset forever? All its history will be lost. This action is irreversible.",
 			header: "Permanent Deletion",
 			icon: "pi pi-exclamation-triangle",
-			rejectLabel: "Cancel",
-			rejectButtonProps: {
-				label: "Cancel",
-				severity: "secondary",
-				outlined: true
-			},
+			rejectVisible: false,
 			acceptButtonProps: {
+				size: "small",
 				label: "Delete Forever",
 				severity: "danger",
 				loading: this.isDeletePermanentlyLoading()
@@ -193,12 +189,9 @@ export class AssetComponent implements OnInit {
 				"Are you sure you want to delete this category? All assets in this category will be deleted. This action is irreversible.",
 			header: "Danger Zone",
 			icon: "pi pi-info-circle",
-			rejectLabel: "Cancel",
-			rejectButtonProps: {
-				label: "Cancel",
-				severity: "secondary"
-			},
+			rejectVisible: false,
 			acceptButtonProps: {
+				size: "small",
 				label: "Delete",
 				severity: "danger",
 				loading: this.isCategoryDeleteLoading()

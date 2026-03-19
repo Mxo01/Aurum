@@ -9,6 +9,7 @@ import { SelectButton } from "primeng/selectbutton";
 import { Target, TargetType } from "../../model/target.model";
 import { CommonModule } from "@angular/common";
 import { Currency } from "../../../profile/model/currency.model";
+import { Locale } from "../../../profile/model/locale.model";
 
 @Component({
 	selector: "app-target-form",
@@ -30,6 +31,7 @@ export class TargetFormComponent {
 	isVisible = model.required<boolean>();
 	selectedTarget = model<Target | null>(null);
 	currency = input.required<Currency>();
+	locale = input<Locale>(Locale.EN_US);
 
 	save = output<Target>();
 

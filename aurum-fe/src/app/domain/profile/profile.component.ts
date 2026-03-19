@@ -123,13 +123,9 @@ export class ProfileComponent implements OnInit {
 			message: "Are you sure you want to delete your profile?",
 			header: "Danger Zone",
 			icon: "pi pi-info-circle",
-			rejectLabel: "Cancel",
-			rejectButtonProps: {
-				label: "Cancel",
-				severity: "secondary",
-				outlined: true
-			},
+			rejectVisible: false,
 			acceptButtonProps: {
+				size: "small",
 				label: "Delete",
 				severity: "danger",
 				loading: this.isDeletingProfile()
