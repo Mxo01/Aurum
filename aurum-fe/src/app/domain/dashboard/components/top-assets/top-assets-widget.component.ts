@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, input, output } from "@angular/core";
+import { Locale } from "../../../profile/model/locale.model";
 import { CommonModule, DecimalPipe } from "@angular/common";
 import { TableModule } from "primeng/table";
 import { ButtonModule } from "primeng/button";
@@ -27,6 +28,7 @@ import { Divider } from "primeng/divider";
 export class TopAssetsWidgetComponent {
 	assets = input.required<Asset[]>();
 	summary = input.required<AnalyticsSummary | null>();
+	locale = input<Locale>(Locale.EN_US);
 	viewMore = output<void>();
 
 	protected readonly AssetType = AssetType;

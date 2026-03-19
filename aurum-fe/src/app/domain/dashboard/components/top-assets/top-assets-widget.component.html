@@ -40,7 +40,9 @@
 						</div>
 					</td>
 					<td class="font-mono">
-						{{ asset.currentValue | currency: asset.originalCurrency }}
+						{{
+							asset.currentValue | currency: asset.originalCurrency : "symbol" : "1.2-2" : locale()
+						}}
 					</td>
 					<td>
 						@if (asset.trend !== null) {
@@ -56,7 +58,7 @@
 									[class]="asset.trend >= 0 ? 'pi pi-arrow-up' : 'pi pi-arrow-down'"
 									class="text-sm"
 								></i>
-								{{ asset.trendPercentage | number: "1.2-2" }}%
+								{{ asset.trendPercentage | number: "1.2-2" : locale() }}%
 							</span>
 						} @else {
 							<span class="text-stone-400 italic text-xs">No data</span>

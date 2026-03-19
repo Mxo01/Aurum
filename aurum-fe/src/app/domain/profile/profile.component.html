@@ -48,7 +48,7 @@
 					<span class="text-xs text-gray-500">Change your display currency</span>
 				</div>
 				<p-select-button
-					[ngModel]="currency()"
+					[ngModel]="profile()?.currency"
 					(onChange)="chooseCurrency($event)"
 					[options]="currencyOptions()"
 					size="small"
@@ -63,6 +63,22 @@
 						</div>
 					</ng-template>
 				</p-select-button>
+			</div>
+
+			<p-divider />
+
+			<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+				<div class="flex flex-col">
+					<span>Locale</span>
+					<span class="text-xs text-gray-500">Change your display locale</span>
+				</div>
+				<p-select
+					[ngModel]="profile()?.locale"
+					(onChange)="chooseLocale($event)"
+					[options]="localeOptions()"
+					size="small"
+					styleClass="w-56"
+				/>
 			</div>
 
 			<p-divider />

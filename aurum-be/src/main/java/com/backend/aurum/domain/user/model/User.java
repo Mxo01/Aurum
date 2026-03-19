@@ -17,6 +17,7 @@ import java.util.UUID;
 import com.backend.aurum.domain.asset.model.Asset;
 import com.backend.aurum.domain.asset.model.AssetCategory;
 import com.backend.aurum.domain.user.enums.Currency;
+import com.backend.aurum.domain.user.enums.Locale;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.OneToMany;
@@ -40,6 +41,9 @@ public class User {
 
 	@Column(nullable = false)
 	private Currency currency;
+
+	@Column(nullable = false)
+	private Locale locale;
 
 	@OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
 	@JsonManagedReference

@@ -10,11 +10,10 @@ import {
 import { toSignal } from "@angular/core/rxjs-interop";
 import { AuthService } from "@auth0/auth0-angular";
 import { Card } from "primeng/card";
-import { Avatar } from "primeng/avatar";
 import { InputText } from "primeng/inputtext";
 import { Button } from "primeng/button";
-import { Tag } from "primeng/tag";
 import { SelectButton, SelectButtonChangeEvent } from "primeng/selectbutton";
+import { Select, SelectChangeEvent } from "primeng/select";
 import { FormsModule } from "@angular/forms";
 import { ThemeService } from "../../shared/services/theme/theme.service";
 import { ProfileService } from "./profile.service";
@@ -25,7 +24,6 @@ import {
 	distinctUntilChanged,
 	EMPTY,
 	finalize,
-	map,
 	Subject,
 	switchMap
 } from "rxjs";
@@ -35,6 +33,7 @@ import { paths } from "../../app.routes";
 import { NavigationService } from "../../shared/services/navigation/navigation.service";
 import { RouterLink } from "@angular/router";
 import { currencyOptions } from "../asset/components/asset-form/asset-form.utils";
+import { localeOptions } from "./profile.utils";
 
 @Component({
 	selector: "app-profile",
@@ -44,11 +43,10 @@ import { currencyOptions } from "../asset/components/asset-form/asset-form.utils
 		IconField,
 		InputIcon,
 		Card,
-		Avatar,
 		FormsModule,
 		InputText,
-		Tag,
 		SelectButton,
+		Select,
 		RouterLink,
 		Divider
 	],
@@ -78,12 +76,11 @@ export class ProfileComponent implements OnInit {
 	]);
 	protected readonly user = toSignal(this.authService.user$);
 	protected readonly theme = computed(() => this.themeService.isDarkMode());
-	protected readonly currency = toSignal(
-		this.profileService.getProfile().pipe(map(profile => profile.currency))
-	);
+	protected readonly profile = toSignal(this.profileService.getProfile());
 	protected readonly hasGoogleProfile = computed(() => this.user()?.sub?.includes("google"));
 	protected readonly isUpdatingName = signal(false);
 	protected readonly currencyOptions = signal(currencyOptions);
+	protected readonly localeOptions = signal(localeOptions);
 	protected readonly isDeletingProfile = signal(false);
 
 	private readonly nameTrigger$ = new Subject<string>();
@@ -110,6 +107,10 @@ export class ProfileComponent implements OnInit {
 
 	chooseCurrency(event: SelectButtonChangeEvent) {
 		this.profileService.updateCurrency(event.value).subscribe();
+	}
+
+	chooseLocale(event: SelectChangeEvent) {
+		this.profileService.updateLocale(event.value).subscribe();
 	}
 
 	toggleTheme() {

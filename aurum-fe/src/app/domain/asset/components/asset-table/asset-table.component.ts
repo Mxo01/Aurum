@@ -6,6 +6,7 @@ import { CurrencyPipe, DecimalPipe } from "@angular/common";
 import { MenuItem, MenuItemCommandEvent } from "primeng/api";
 import { Menu } from "primeng/menu";
 import { Currency } from "../../../profile/model/currency.model";
+import { Locale } from "../../../profile/model/locale.model";
 import { Asset, AssetType } from "../../model/asset.model";
 import { mapAssetsToAssetsWithBalance } from "./asset-table.utils";
 
@@ -18,6 +19,8 @@ import { mapAssetsToAssetsWithBalance } from "./asset-table.utils";
 export class AssetTableComponent {
 	assets = input.required<Asset[]>();
 	isLoading = input.required<boolean>();
+	currency = input<Currency>(Currency.EUR);
+	locale = input<Locale>(Locale.EN_US);
 
 	viewHistory = output<Asset>();
 	editAsset = output<Asset>();
@@ -28,9 +31,20 @@ export class AssetTableComponent {
 	protected readonly AssetType = AssetType;
 
 	protected readonly rowMenuItems = signal<MenuItem[]>([]);
+	protected expandedRowGroups: string[] = [];
 	protected readonly assetsWithBalance = computed(() =>
 		mapAssetsToAssetsWithBalance(this.assets())
 	);
+	protected readonly categoryTotals = computed(() => {
+		const totals: Record<string, number> = {};
+
+		for (const asset of this.assetsWithBalance()) {
+			if (!totals[asset.categoryName]) totals[asset.categoryName] = 0;
+			totals[asset.categoryName] += asset.currentValueBase ?? 0;
+		}
+
+		return totals;
+	});
 
 	protected showMenu(event: MouseEvent, menu: Menu, asset: Asset) {
 		this.rowMenuItems.set([

@@ -65,7 +65,7 @@ public class Asset {
 	private LocalDateTime createdAt;
 
 	@OneToMany(mappedBy = "asset", cascade = CascadeType.ALL, orphanRemoval = true)
-	@OrderBy("referenceDate DESC")
+	@OrderBy("referenceDate ASC")
 	@JsonManagedReference
 	private List<Snapshot> snapshots = new ArrayList<>();
 

@@ -71,6 +71,7 @@ export class TargetFormComponent {
 					currentAmount: target.currentAmount || 0,
 					deadline: new Date(target.deadline)
 				});
+				this.targetForm.get("type")?.disable();
 			} else {
 				this.targetForm.reset({
 					name: "",
@@ -79,6 +80,7 @@ export class TargetFormComponent {
 					currentAmount: 0,
 					deadline: new Date()
 				});
+				this.targetForm.get("type")?.enable();
 			}
 		});
 	}

@@ -9,6 +9,9 @@ import { ReactiveFormsModule, FormsModule } from "@angular/forms";
 import { ConfirmationService, MenuItemCommandEvent } from "primeng/api";
 import { NavigationService } from "../../shared/services/navigation/navigation.service";
 import { RouterLink } from "@angular/router";
+import { ProfileService } from "../profile/profile.service";
+import { Currency } from "../profile/model/currency.model";
+import { Locale } from "../profile/model/locale.model";
 import { paths } from "../../app.routes";
 import { AssetFormComponent } from "./components/asset-form/asset-form.component";
 import { AssetHistoryComponent } from "./components/asset-history/asset-history.component";
@@ -44,10 +47,13 @@ export class AssetComponent implements OnInit {
 	private readonly assetService = inject(AssetService);
 	private readonly confirmationService = inject(ConfirmationService);
 	private readonly navigationService = inject(NavigationService);
+	private readonly profileService = inject(ProfileService);
 
 	protected readonly paths = paths;
 	protected readonly previousRoute = this.navigationService.previousRoute;
 	protected readonly assets = signal<Asset[]>([]);
+	protected readonly userCurrency = signal<Currency>(Currency.EUR);
+	protected readonly userLocale = signal<Locale>(Locale.EN_US);
 	protected readonly areAssetsLoading = signal(false);
 	protected readonly categoriesOptions = signal<AssetCategory[]>([]);
 	protected readonly isHistoryDialogVisible = signal(false);
@@ -61,6 +67,13 @@ export class AssetComponent implements OnInit {
 	protected readonly selectedAsset = signal<Asset | null>(null);
 
 	ngOnInit() {
+		this.profileService.getProfile().subscribe({
+			next: profile => {
+				this.userCurrency.set(profile.currency);
+				this.userLocale.set(profile.locale);
+			}
+		});
+
 		this.assetService.getUserAssetCategories().subscribe({
 			next: categories => this.categoriesOptions.set(categories)
 		});

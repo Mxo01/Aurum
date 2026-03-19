@@ -30,6 +30,8 @@
 	<app-asset-table
 		[assets]="assets()"
 		[isLoading]="areAssetsLoading()"
+		[currency]="userCurrency()"
+		[locale]="userLocale()"
 		(viewHistory)="viewHistory($event)"
 		(editAsset)="editAsset($event)"
 		(toggleAssetStatus)="toggleAssetStatus($event)"
@@ -57,5 +59,6 @@
 <app-asset-history
 	[(isVisible)]="isHistoryDialogVisible"
 	[(selectedAsset)]="selectedAsset"
+	[locale]="userLocale()"
 	(snapshotsChanged)="refreshAssets()"
 />

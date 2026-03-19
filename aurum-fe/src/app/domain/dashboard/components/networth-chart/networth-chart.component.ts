@@ -15,9 +15,10 @@ import { FormsModule } from "@angular/forms";
 import { AnalyticsSummary, ChartData, Variation } from "../../model/dashboard.model";
 import { Card } from "primeng/card";
 import { Currency } from "../../../profile/model/currency.model";
+import { Locale } from "../../../profile/model/locale.model";
 import { SelectItem } from "primeng/api";
 import { getNetworthChartOptions, mapDataIntoNetworthChartData } from "./networth-chart.utils";
-import { currencyMap, localeMap } from "../../../profile/profile.utils";
+import { currencyMap } from "../../../profile/profile.utils";
 import { Button } from "primeng/button";
 import { ThemeService } from "../../../../shared/services/theme/theme.service";
 
@@ -43,6 +44,7 @@ export class NetworthChartComponent {
 	data = input<ChartData | null>(null);
 	summary = input<AnalyticsSummary | null>(null);
 	currency = input.required<Currency>();
+	locale = input<string>(Locale.EN_US);
 
 	yearChanged = output<number | null>();
 
@@ -71,7 +73,7 @@ export class NetworthChartComponent {
 		getNetworthChartOptions(
 			currencyMap[this.currency()],
 			this.themeService.isDarkMode(),
-			localeMap[this.currency()]
+			this.locale()
 		)
 	);
 

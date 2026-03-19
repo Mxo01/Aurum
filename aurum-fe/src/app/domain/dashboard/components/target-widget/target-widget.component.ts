@@ -20,6 +20,7 @@ import { finalize } from "rxjs";
 import { Menu } from "primeng/menu";
 import { MenuItem } from "primeng/api";
 import { Currency } from "../../../profile/model/currency.model";
+import { Locale } from "../../../profile/model/locale.model";
 import { ThemeService } from "../../../../shared/services/theme/theme.service";
 
 @Component({
@@ -46,6 +47,7 @@ export class TargetWidgetComponent {
 
 	targets = model.required<Target[]>();
 	currency = input.required<Currency>();
+	locale = input<Locale>(Locale.EN_US);
 
 	protected readonly menuItems = computed<MenuItem[]>(() => [
 		{

@@ -1,6 +1,7 @@
 package com.backend.aurum.domain.user.controller;
 
 import com.backend.aurum.domain.user.dto.UpdateCurrencyDTO;
+import com.backend.aurum.domain.user.dto.UpdateLocaleDTO;
 import com.backend.aurum.domain.user.dto.UpdateNameDTO;
 import com.backend.aurum.domain.user.model.User;
 import com.backend.aurum.domain.user.model.UserPrincipal;
@@ -52,6 +53,16 @@ public class UserController {
 		UUID userId = principal.user().getId();
 
 		userService.updateCurrency(userId, dto);
+
+		return ResponseEntity.ok().build();
+	}
+
+	@PutMapping("/locale")
+	public ResponseEntity<Void> updateLocale(@AuthenticationPrincipal UserPrincipal principal,
+			@RequestBody UpdateLocaleDTO dto) {
+		UUID userId = principal.user().getId();
+
+		userService.updateLocale(userId, dto);
 
 		return ResponseEntity.ok().build();
 	}

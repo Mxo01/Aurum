@@ -1,5 +1,5 @@
 import { FormsModule } from "@angular/forms";
-import { Component, computed, inject, model, output, signal } from "@angular/core";
+import { Component, computed, inject, input, model, output, signal } from "@angular/core";
 import { Dialog } from "primeng/dialog";
 import { TableModule } from "primeng/table";
 import { Button } from "primeng/button";
@@ -12,12 +12,12 @@ import { SelectItem } from "primeng/api";
 import { UIChart } from "primeng/chart";
 import { isTruthy } from "../../../../shared/utils";
 import { Currency } from "../../../profile/model/currency.model";
+import { Locale } from "../../../profile/model/locale.model";
 import { currencyMap } from "../../../profile/profile.utils";
 import { Snapshot } from "../../../snapshot/model/snapshot.model";
 import { SnapshotService } from "../../../snapshot/snapshot.service";
 import { Asset } from "../../model/asset.model";
 import { mapSnapshotsToChartData, getChartOptions } from "./asset-history.utils";
-
 import { ThemeService } from "../../../../shared/services/theme/theme.service";
 
 @Component({
@@ -44,6 +44,7 @@ export class AssetHistoryComponent {
 
 	isVisible = model.required<boolean>();
 	selectedAsset = model<Asset | null>();
+	locale = input<Locale>(Locale.EN_US);
 	snapshotsChanged = output<void>();
 
 	protected readonly ViewMode = ViewMode;
@@ -61,16 +62,21 @@ export class AssetHistoryComponent {
 		if (!asset || !asset.snapshots) return [];
 
 		return asset.snapshots.toSorted(
-			(a, b) => new Date(b.referenceDate).getTime() - new Date(a.referenceDate).getTime()
+			(a, b) => new Date(a.referenceDate).getTime() - new Date(b.referenceDate).getTime()
 		);
 	});
 	protected readonly chartData = computed(() =>
-		mapSnapshotsToChartData(this.snapshotsForSelectedAsset(), this.themeService.isDarkMode())
+		mapSnapshotsToChartData(
+			this.snapshotsForSelectedAsset(),
+			this.themeService.isDarkMode(),
+			this.locale()
+		)
 	);
 	protected readonly chartOptions = computed(() =>
 		getChartOptions(
 			currencyMap[this.selectedAsset()?.originalCurrency || Currency.EUR],
-			this.themeService.isDarkMode()
+			this.themeService.isDarkMode(),
+			this.locale()
 		)
 	);
 

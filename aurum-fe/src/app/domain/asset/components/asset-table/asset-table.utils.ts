@@ -7,6 +7,8 @@ export function mapAssetsToAssetsWithBalance(assets: Asset[]) {
 		);
 
 		const currentValue = assetSnapshots.length > 0 ? assetSnapshots[0].amountOriginalCurrency : 0;
+		const currentValueBase =
+			assetSnapshots.length > 0 ? (assetSnapshots[0].amountBaseCurrency ?? currentValue) : 0;
 		const previousValue =
 			assetSnapshots.length > 1 ? assetSnapshots[1].amountOriginalCurrency : null;
 
@@ -24,6 +26,7 @@ export function mapAssetsToAssetsWithBalance(assets: Asset[]) {
 		return {
 			...asset,
 			currentValue,
+			currentValueBase,
 			trend,
 			trendPercentage,
 			snapshots: assetSnapshots

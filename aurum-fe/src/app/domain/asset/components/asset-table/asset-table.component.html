@@ -1,7 +1,6 @@
 <p-table
 	[value]="assetsWithBalance()"
 	sortMode="single"
-	[stripedRows]="true"
 	rowGroupMode="subheader"
 	groupRowsBy="categoryName"
 	[loading]="isLoading()"
@@ -19,15 +18,24 @@
 	<ng-template
 		#groupheader
 		let-asset
+		let-expanded="expanded"
 	>
-		<tr pRowGroupHeader>
+		<tr>
 			<td colspan="6">
-				<span class="font-bold">{{ asset.categoryName }}</span>
+				<div class="flex items-center gap-2">
+					<p-button
+						[pRowToggler]="asset"
+						[text]="true"
+						size="small"
+						[icon]="expanded ? 'pi pi-chevron-down' : 'pi pi-chevron-right'"
+					/>
+					<span class="font-bold">{{ asset.categoryName }}</span>
+				</div>
 			</td>
 		</tr>
 	</ng-template>
 	<ng-template
-		#body
+		#expandedrow
 		let-asset
 	>
 		<tr>
@@ -59,7 +67,9 @@
 			</td>
 			<td class="text-right font-mono">
 				<span class="font-bold">
-					{{ asset.currentValue | currency: asset.originalCurrency : "symbol" : "1.2-2" }}
+					{{
+						asset.currentValue | currency: asset.originalCurrency : "symbol" : "1.2-2" : locale()
+					}}
 				</span>
 			</td>
 			<td class="text-right font-mono">
@@ -76,7 +86,7 @@
 							[class]="asset.trend >= 0 ? 'pi pi-arrow-up' : 'pi pi-arrow-down'"
 							class="text-sm"
 						></i>
-						{{ asset.trendPercentage | number: "1.2-2" }}%
+						{{ asset.trendPercentage | number: "1.2-2" : locale() }}%
 					</span>
 				} @else {
 					<span class="text-stone-400 italic text-xs">No data</span>
@@ -90,6 +100,26 @@
 					[icon]="asset.isActive ? 'pi pi-check-circle' : 'pi pi-inbox'"
 				/>
 			</td>
+		</tr>
+	</ng-template>
+	<ng-template
+		#groupfooter
+		let-asset
+	>
+		<tr class="font-semibold">
+			<td
+				colspan="3"
+				class="text-right text-stone-400 text-sm"
+			>
+				Total
+			</td>
+			<td class="text-right font-mono">
+				{{
+					categoryTotals()[asset.categoryName]
+						| currency: currency() : "symbol" : "1.2-2" : locale()
+				}}
+			</td>
+			<td colspan="2"></td>
 		</tr>
 	</ng-template>
 	<ng-template #emptymessage>

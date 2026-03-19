@@ -62,6 +62,27 @@ export class ProfileService {
 		);
 	}
 
+	updateLocale(locale: string) {
+		return this.http.put(`${this.userApiUrl}/locale`, { locale }).pipe(
+			switchMap(() => this.getProfile()),
+			tap({
+				next: () => {
+					this.messageService.add({
+						severity: "success",
+						summary: "Success",
+						detail: "Locale updated successfully"
+					});
+				},
+				error: () =>
+					this.messageService.add({
+						severity: "error",
+						summary: "Error",
+						detail: "Failed to update locale"
+					})
+			})
+		);
+	}
+
 	updateName(name: string) {
 		return this.http.put(this.userApiUrl, { name }).pipe(
 			switchMap(() => this.refreshAccessToken()),

@@ -1,15 +1,20 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import { Locale } from "../../../profile/model/locale.model";
 import { Snapshot } from "../../../snapshot/model/snapshot.model";
 
-export function mapSnapshotsToChartData(snapshots: Snapshot[], isDarkMode: boolean) {
+export function mapSnapshotsToChartData(
+	snapshots: Snapshot[],
+	isDarkMode: boolean,
+	locale: Locale
+) {
 	const data = snapshots.toSorted(
 		(a, b) => new Date(a.referenceDate).getTime() - new Date(b.referenceDate).getTime()
 	);
 
 	return {
 		labels: data.map(({ referenceDate }) =>
-			new Date(referenceDate).toLocaleDateString("it-IT", {
+			new Date(referenceDate).toLocaleDateString(locale, {
 				day: "2-digit",
 				month: "2-digit",
 				year: "numeric"
@@ -30,7 +35,7 @@ export function mapSnapshotsToChartData(snapshots: Snapshot[], isDarkMode: boole
 	};
 }
 
-export function getChartOptions(currencySymbol: string, isDarkMode: boolean) {
+export function getChartOptions(currencySymbol: string, isDarkMode: boolean, locale: Locale) {
 	const textColor = isDarkMode ? "#ffffff" : "#000000";
 	const gridColor = isDarkMode ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.1)";
 
@@ -54,7 +59,7 @@ export function getChartOptions(currencySymbol: string, isDarkMode: boolean) {
 
 						if (label) label += ": ";
 						if (context.parsed.y !== null)
-							label += `${currencySymbol} ${context.parsed.y.toLocaleString("it-IT", { minimumFractionDigits: 2 })}`;
+							label += `${currencySymbol} ${context.parsed.y.toLocaleString(locale, { minimumFractionDigits: 2 })}`;
 
 						return label;
 					}
@@ -68,7 +73,7 @@ export function getChartOptions(currencySymbol: string, isDarkMode: boolean) {
 				grid: { color: gridColor },
 				ticks: {
 					color: textColor,
-					callback: (value: number) => `${currencySymbol} ${value.toLocaleString("it-IT")}`
+					callback: (value: number) => `${currencySymbol} ${value.toLocaleString(locale)}`
 				}
 			}
 		}

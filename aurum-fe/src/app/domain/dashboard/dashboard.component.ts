@@ -13,11 +13,12 @@ import { NetworthChartComponent } from "./components/networth-chart/networth-cha
 import { TopAssetsWidgetComponent } from "./components/top-assets/top-assets-widget.component";
 import { TargetWidgetComponent } from "./components/target-widget/target-widget.component";
 import { KpiCardComponent } from "./components/kpi-card/kpi-card.component";
-import { catchError, forkJoin, map, of } from "rxjs";
+import { catchError, forkJoin, of } from "rxjs";
 import { Router } from "@angular/router";
 import { Asset } from "../asset/model/asset.model";
 import { Currency } from "../profile/model/currency.model";
 import { ProfileService } from "../profile/profile.service";
+import { Locale } from "../profile/model/locale.model";
 import { Target } from "../target/model/target.model";
 import { TargetService } from "../target/target.service";
 
@@ -42,6 +43,7 @@ export class DashboardComponent implements OnInit {
 	private readonly router = inject(Router);
 
 	protected readonly userCurrency = signal<Currency>(Currency.EUR);
+	protected readonly userLocale = signal<Locale>(Locale.EN_US);
 	protected readonly summary = signal<AnalyticsSummary | null>(null);
 	protected readonly chartData = signal<ChartData | null>(null);
 	protected readonly targets = signal<Target[]>([]);
@@ -61,16 +63,16 @@ export class DashboardComponent implements OnInit {
 
 	protected loadData() {
 		forkJoin({
-			userCurrency: this.profileService.getProfile().pipe(
-				map(profile => profile.currency),
-				catchError(() => of(Currency.EUR))
-			),
+			profile: this.profileService.getProfile().pipe(catchError(() => of(null))),
 			summary: this.dashboardService.getSummary().pipe(catchError(() => of(null))),
 			chart: this.dashboardService.getChartData().pipe(catchError(() => of(null))),
 			targets: this.targetService.getTargets().pipe(catchError(() => of([])))
 		}).subscribe({
 			next: data => {
-				this.userCurrency.set(data.userCurrency);
+				if (data.profile) {
+					this.userCurrency.set(data.profile.currency);
+					this.userLocale.set(data.profile.locale);
+				}
 				this.summary.set(data.summary);
 				this.chartData.set(data.chart);
 				this.targets.set(data.targets);

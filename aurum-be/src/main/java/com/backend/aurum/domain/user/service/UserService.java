@@ -4,8 +4,10 @@ import com.auth0.client.mgmt.ManagementAPI;
 import com.auth0.exception.Auth0Exception;
 import com.backend.aurum.domain.auth.service.Auth0ManagementService;
 import com.backend.aurum.domain.user.dto.UpdateCurrencyDTO;
+import com.backend.aurum.domain.user.dto.UpdateLocaleDTO;
 import com.backend.aurum.domain.user.dto.UpdateNameDTO;
 import com.backend.aurum.domain.user.enums.Currency;
+import com.backend.aurum.domain.user.enums.Locale;
 import com.backend.aurum.domain.user.model.User;
 import com.backend.aurum.domain.user.repository.UserRepository;
 
@@ -31,6 +33,7 @@ public class UserService {
 						newUser.setJwtId(jwtId);
 						newUser.setEmail(email);
 						newUser.setCurrency(Currency.EUR);
+						newUser.setLocale(Locale.EN_US);
 						return userRepository.saveAndFlush(newUser);
 					} catch (Exception e) {
 						return userRepository.findByJwtId(jwtId)
@@ -72,6 +75,13 @@ public class UserService {
 	public void updateCurrency(UUID userId, UpdateCurrencyDTO dto) {
 		User user = userRepository.findById(userId).orElseThrow();
 		user.setCurrency(dto.currency());
+		userRepository.save(user);
+	}
+
+	@Transactional
+	public void updateLocale(UUID userId, UpdateLocaleDTO dto) {
+		User user = userRepository.findById(userId).orElseThrow();
+		user.setLocale(dto.locale());
 		userRepository.save(user);
 	}
 }

@@ -3,7 +3,9 @@
 		<div class="col-span-12 sm:col-span-6 lg:col-span-3">
 			<app-kpi-card
 				label="Total Liabilities"
-				[value]="(totalLiabilities() | currency: userCurrency()) || 0"
+				[value]="
+					(totalLiabilities() | currency: userCurrency() : 'symbol' : '1.2-2' : userLocale()) || 0
+				"
 				[invertVariation]="true"
 				[sparklineData]="liabilitiesSparkline()"
 			/>
@@ -16,6 +18,7 @@
 				[data]="chartData()"
 				[summary]="summary()"
 				[currency]="userCurrency()"
+				[locale]="userLocale()"
 				(yearChanged)="onYearChanged($event)"
 			/>
 		</div>
@@ -26,6 +29,7 @@
 			<app-target-widget
 				[targets]="targets()"
 				[currency]="userCurrency()"
+				[locale]="userLocale()"
 			/>
 		</div>
 
@@ -33,6 +37,7 @@
 			<app-top-assets
 				[summary]="summary()"
 				[assets]="topAssets()"
+				[locale]="userLocale()"
 				(viewMore)="navigateToAssets()"
 			/>
 		</div>

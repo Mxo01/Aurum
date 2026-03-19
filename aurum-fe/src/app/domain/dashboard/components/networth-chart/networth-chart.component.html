@@ -7,7 +7,7 @@
 			</span>
 			<div class="flex items-center flex-wrap gap-3">
 				<span class="text-2xl sm:text-3xl font-bold font-mono">
-					{{ totalAmount() | currency: currency() }}
+					{{ totalAmount() | currency: currency() : "symbol" : "1.2-2" : locale() }}
 				</span>
 
 				@if (
@@ -30,7 +30,7 @@
 									[class]="variation()!.percentage > 0 ? 'pi pi-arrow-up' : 'pi pi-arrow-down'"
 									class="text-xs!"
 								></i>
-								{{ variation()!.percentage | number: "1.2-2" }}%
+								{{ variation()!.percentage | number: "1.2-2" : locale() }}%
 							</span>
 						} @else {
 							<span
@@ -41,7 +41,7 @@
 									[class]="variation()!.percentage > 0 ? 'pi pi-arrow-up' : 'pi pi-arrow-down'"
 									class="text-xs!"
 								></i>
-								{{ variation()!.absolute | currency: currency() }}
+								{{ variation()!.absolute | currency: currency() : "symbol" : "1.2-2" : locale() }}
 							</span>
 						}
 
