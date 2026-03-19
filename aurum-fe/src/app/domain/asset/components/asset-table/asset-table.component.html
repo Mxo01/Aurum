@@ -1,6 +1,7 @@
 <p-table
 	[value]="assetsWithBalance()"
 	sortMode="single"
+	[stripedRows]="true"
 	rowGroupMode="subheader"
 	groupRowsBy="categoryName"
 	[loading]="isLoading()"
@@ -109,15 +110,18 @@
 		<tr class="font-semibold">
 			<td
 				colspan="3"
-				class="text-right text-stone-400 text-sm"
+				class="text-right text-stone-400 text-sm italic"
 			>
 				Total
 			</td>
 			<td class="text-right font-mono">
-				{{
-					categoryTotals()[asset.categoryName]
-						| currency: currency() : "symbol" : "1.2-2" : locale()
-				}}
+				<p-tag
+					class="whitespace-nowrap"
+					[value]="
+						(categoryTotals()[asset.categoryName]
+							| currency: currency() : 'symbol' : '1.2-2' : locale()) || 'N/A'
+					"
+				/>
 			</td>
 			<td colspan="2"></td>
 		</tr>
