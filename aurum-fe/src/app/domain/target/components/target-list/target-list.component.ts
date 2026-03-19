@@ -6,6 +6,7 @@ import { Button } from "primeng/button";
 import { Dialog } from "primeng/dialog";
 import { Target, TargetStatus } from "../../model/target.model";
 import { Currency } from "../../../profile/model/currency.model";
+import { Locale } from "../../../profile/model/locale.model";
 import { ProgressBar } from "primeng/progressbar";
 
 @Component({
@@ -19,6 +20,7 @@ export class TargetListComponent {
 	isVisible = model.required<boolean>();
 	targets = input.required<Target[]>();
 	currency = input.required<Currency>();
+	locale = input<Locale>(Locale.EN_US);
 
 	edit = output<Target>();
 	delete = output<string>();

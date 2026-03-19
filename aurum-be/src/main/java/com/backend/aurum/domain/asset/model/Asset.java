@@ -6,6 +6,8 @@ import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -52,6 +54,7 @@ public class Asset {
 	@OnDelete(action = OnDeleteAction.CASCADE)
 	private AssetCategory category;
 
+	@Enumerated(EnumType.STRING)
 	@Column(nullable = false, length = 3)
 	private Currency originalCurrency = Currency.EUR;
 

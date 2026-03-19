@@ -13,7 +13,6 @@ import {
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from "@angular/forms";
 import { InputText } from "primeng/inputtext";
 import { Select } from "primeng/select";
-import { SelectButton } from "primeng/selectbutton";
 import { InputNumber } from "primeng/inputnumber";
 import { DatePicker } from "primeng/datepicker";
 import { currencyOptions, typeOptions } from "./asset-form.utils";
@@ -33,7 +32,6 @@ import { Asset, AssetCategory, AssetType } from "../../model/asset.model";
 		InputText,
 		ToggleButton,
 		Select,
-		SelectButton,
 		InputNumber,
 		DatePicker,
 		Button,

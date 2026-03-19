@@ -8,3 +8,6 @@ databaseChangeLog:
   - include:
       file: db/changelog/changes/2026-03-19-reduce-locales.sql
       relativeToChangelogFile: false
+  - include:
+      file: db/changelog/changes/2026-03-19-migrate-currency-to-string.sql
+      relativeToChangelogFile: false

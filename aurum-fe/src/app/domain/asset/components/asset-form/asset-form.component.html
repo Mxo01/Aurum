@@ -46,21 +46,13 @@
 			</div>
 			<div class="flex flex-col gap-2">
 				<label for="currency">Currency *</label>
-				<p-select-button
+				<p-select
 					formControlName="currency"
 					[options]="currencyOptions()"
+					[filter]="true"
+					filterBy="label"
 					size="small"
-				>
-					<ng-template
-						#item
-						let-item
-					>
-						<div class="flex items-center gap-2">
-							<i [class]="item.icon"></i>
-							<span>{{ item.label }}</span>
-						</div>
-					</ng-template>
-				</p-select-button>
+				/>
 				@if (assetForm.controls.currency.invalid && assetForm.controls.currency.touched) {
 					<small class="text-red-500 text-xs">Currency is required</small>
 				}

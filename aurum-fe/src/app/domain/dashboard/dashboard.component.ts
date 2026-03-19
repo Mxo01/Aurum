@@ -56,7 +56,11 @@ export class DashboardComponent implements OnInit {
 	protected readonly liabilitiesSparkline = computed<number[]>(() => {
 		const chart = this.chartData();
 		if (!chart?.totalAssetsOnly || !chart?.totalNetWorth) return [];
-		return chart.totalAssetsOnly.map((a, i) => a - chart.totalNetWorth[i]).slice(-6);
+		const liabilities = chart.totalAssetsOnly.map((a, i) => a - Math.abs(chart.totalNetWorth[i]));
+		const deduped = liabilities
+			.filter((v, i, arr) => i === 0 || v !== arr[i - 1])
+			.map(v => Math.abs(v));
+		return deduped;
 	});
 
 	ngOnInit() {

@@ -13,7 +13,7 @@ import { UIChart } from "primeng/chart";
 import { isTruthy } from "../../../../shared/utils";
 import { Currency } from "../../../profile/model/currency.model";
 import { Locale } from "../../../profile/model/locale.model";
-import { currencyMap } from "../../../profile/profile.utils";
+import { getCurrencySymbol } from "../../../profile/profile.utils";
 import { Snapshot } from "../../../snapshot/model/snapshot.model";
 import { SnapshotService } from "../../../snapshot/snapshot.service";
 import { Asset } from "../../model/asset.model";
@@ -74,7 +74,7 @@ export class AssetHistoryComponent {
 	);
 	protected readonly chartOptions = computed(() =>
 		getChartOptions(
-			currencyMap[this.selectedAsset()?.originalCurrency || Currency.EUR],
+			getCurrencySymbol(this.selectedAsset()?.originalCurrency || Currency.EUR),
 			this.themeService.isDarkMode(),
 			this.locale()
 		)

@@ -41,9 +41,7 @@
 						</div>
 					</td>
 					<td class="font-mono">
-						{{
-							asset.currentValue | currency: asset.originalCurrency : "symbol" : "1.2-2" : locale()
-						}}
+						{{ asset.currentValueBase | currency: currency() : "symbol" : "1.2-2" : locale() }}
 					</td>
 					<td>
 						@if (asset.trend !== null) {

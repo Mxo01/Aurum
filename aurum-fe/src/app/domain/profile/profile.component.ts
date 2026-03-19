@@ -12,7 +12,7 @@ import { AuthService } from "@auth0/auth0-angular";
 import { Card } from "primeng/card";
 import { InputText } from "primeng/inputtext";
 import { Button } from "primeng/button";
-import { SelectButton, SelectButtonChangeEvent } from "primeng/selectbutton";
+import { SelectButton } from "primeng/selectbutton";
 import { Select, SelectChangeEvent } from "primeng/select";
 import { FormsModule } from "@angular/forms";
 import { ThemeService } from "../../shared/services/theme/theme.service";
@@ -32,8 +32,7 @@ import { InputIcon } from "primeng/inputicon";
 import { paths } from "../../app.routes";
 import { NavigationService } from "../../shared/services/navigation/navigation.service";
 import { RouterLink } from "@angular/router";
-import { currencyOptions } from "../asset/components/asset-form/asset-form.utils";
-import { localeOptions } from "./profile.utils";
+import { currencyOptions, localeOptions } from "./profile.utils";
 
 @Component({
 	selector: "app-profile",
@@ -105,7 +104,7 @@ export class ProfileComponent implements OnInit {
 		this.nameTrigger$.next(name);
 	}
 
-	chooseCurrency(event: SelectButtonChangeEvent) {
+	chooseCurrency(event: SelectChangeEvent) {
 		this.profileService.updateCurrency(event.value).subscribe();
 	}
 

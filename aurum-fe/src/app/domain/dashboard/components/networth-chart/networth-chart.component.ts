@@ -18,7 +18,7 @@ import { Currency } from "../../../profile/model/currency.model";
 import { Locale } from "../../../profile/model/locale.model";
 import { SelectItem } from "primeng/api";
 import { getNetworthChartOptions, mapDataIntoNetworthChartData } from "./networth-chart.utils";
-import { currencyMap } from "../../../profile/profile.utils";
+import { getCurrencySymbol } from "../../../profile/profile.utils";
 import { Button } from "primeng/button";
 import { ThemeService } from "../../../../shared/services/theme/theme.service";
 
@@ -71,7 +71,7 @@ export class NetworthChartComponent {
 	);
 	protected readonly chartOptions = computed(() =>
 		getNetworthChartOptions(
-			currencyMap[this.currency()],
+			getCurrencySymbol(this.currency()),
 			this.themeService.isDarkMode(),
 			this.locale()
 		)

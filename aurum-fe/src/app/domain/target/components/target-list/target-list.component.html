@@ -31,10 +31,10 @@
 			<tr>
 				<td class="font-medium">{{ target.name }}</td>
 				<td class="text-right font-mono">
-					{{ target.targetAmount | currency: currency() }}
+					{{ target.targetAmount | currency: currency() : "symbol" : "1.2-2" : locale() }}
 				</td>
 				<td class="text-right font-mono">
-					{{ target.currentAmount | currency: currency() }}
+					{{ target.currentAmount | currency: currency() : "symbol" : "1.2-2" : locale() }}
 				</td>
 				<td class="text-center">
 					<p-progressbar [value]="target.completionPercentage | number: '1.0-0'" />
