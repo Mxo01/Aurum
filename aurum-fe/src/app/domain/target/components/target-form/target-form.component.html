@@ -5,6 +5,7 @@
 	[draggable]="false"
 	(onHide)="onHide()"
 	[style]="{ width: '450px' }"
+	[breakpoints]="{ '640px': '85vw' }"
 >
 	<form
 		[formGroup]="targetForm"
@@ -18,6 +19,7 @@
 				formControlName="type"
 				[options]="typeOptions"
 				[allowEmpty]="false"
+				[disabled]="!!selectedTarget()"
 				styleClass="w-full"
 			/>
 		</div>
@@ -71,11 +73,6 @@
 		</div>
 
 		<div class="flex justify-end gap-2 mt-4">
-			<p-button
-				label="Cancel"
-				severity="secondary"
-				(onClick)="isVisible.set(false)"
-			/>
 			<p-button
 				type="submit"
 				[label]="selectedTarget() ? 'Update' : 'Create'"

@@ -52,7 +52,7 @@ public class UserService {
 			ManagementAPI managementApi = auth0ManagementService.getManagementAPI();
 			managementApi.users().delete(jwtId).execute();
 		} catch (Auth0Exception e) {
-			throw new RuntimeException("Errore durante l'eliminazione da Auth0", e);
+			throw new RuntimeException("Error during Auth0 user deletion", e);
 		}
 	}
 
@@ -64,7 +64,7 @@ public class UserService {
 			auth0User.setName(dto.name());
 			mgmt.users().update(jwtId, auth0User).execute();
 		} catch (Auth0Exception e) {
-			throw new RuntimeException("Errore durante l'aggiornamento del nome su Auth0: " + e.getMessage());
+			throw new RuntimeException("Error during Auth0 name update: " + e.getMessage());
 		}
 	}
 

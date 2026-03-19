@@ -12,9 +12,12 @@ import com.backend.aurum.domain.asset.dto.AssetDTO;
 @Builder
 public class AnalyticsSummaryDTO {
     private BigDecimal totalNetWorth;
+    private BigDecimal totalGrossAssets;
     private VariationDTO variations;
+    private VariationDTO assetVariations;
     private Map<String, BigDecimal> assetAllocation;
     private BigDecimal currencyImpact;
-    private BigDecimal savingsRate;
+    private BigDecimal totalLiabilities;
+    private BigDecimal debtToAssetRatio;
     private List<AssetDTO> topAssets;
 }

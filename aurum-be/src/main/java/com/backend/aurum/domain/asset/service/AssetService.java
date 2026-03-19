@@ -62,8 +62,17 @@ public class AssetService {
 		asset.setCategory(assetDetails.getCategory());
 		asset.setOriginalCurrency(assetDetails.getOriginalCurrency());
 		asset.setIsActive(assetDetails.getIsActive());
-		asset.setIsFavorite(assetDetails.getIsFavorite());
 		asset.setUser(assetDetails.getUser());
+
+		boolean willBeActive = Boolean.TRUE.equals(assetDetails.getIsActive());
+		if (!willBeActive) {
+			asset.setIsFavorite(false);
+		} else if (Boolean.TRUE.equals(assetDetails.getIsFavorite())) {
+			asset.setIsFavorite(true);
+		} else {
+			asset.setIsFavorite(false);
+		}
+
 		return assetRepository.save(asset);
 	}
 

@@ -17,7 +17,7 @@ import { TargetFormComponent } from "../../../target/components/target-form/targ
 import { TargetListComponent } from "../../../target/components/target-list/target-list.component";
 import { TargetService } from "../../../target/target.service";
 import { finalize } from "rxjs";
-import { SplitButton } from "primeng/splitbutton";
+import { Menu } from "primeng/menu";
 import { MenuItem } from "primeng/api";
 import { Currency } from "../../../profile/model/currency.model";
 import { ThemeService } from "../../../../shared/services/theme/theme.service";
@@ -35,7 +35,7 @@ import { ThemeService } from "../../../../shared/services/theme/theme.service";
 		Card,
 		TargetFormComponent,
 		TargetListComponent,
-		SplitButton
+		Menu
 	],
 	templateUrl: "./target-widget.component.html",
 	changeDetection: ChangeDetectionStrategy.OnPush
@@ -47,17 +47,23 @@ export class TargetWidgetComponent {
 	targets = model.required<Target[]>();
 	currency = input.required<Currency>();
 
-	protected readonly splitButtonItems = computed<MenuItem[]>(() => [
+	protected readonly menuItems = computed<MenuItem[]>(() => [
 		{
-			label: "View All Targets",
-			icon: "pi pi-list",
-			command: () => this.isListVisible.set(true)
+			label: this.activeTarget() ? "Edit Target" : "Set Target",
+			icon: this.activeTarget() ? "pi pi-pencil" : "pi pi-plus",
+			command: () =>
+				this.activeTarget() ? this.onEditTarget(this.activeTarget()!) : this.onAddTarget()
 		},
 		{
 			label: "Add Target",
 			icon: "pi pi-plus",
 			visible: this.activeTarget() !== null,
 			command: () => this.onAddTarget()
+		},
+		{
+			label: "View All Targets",
+			icon: "pi pi-list",
+			command: () => this.isListVisible.set(true)
 		}
 	]);
 

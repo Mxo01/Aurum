@@ -31,6 +31,7 @@
 				<p-button
 					severity="secondary"
 					[text]="true"
+					size="small"
 					routerLink="/profile"
 				>
 					<div class="flex flex-col items-end max-sm:hidden">
@@ -48,14 +49,16 @@
 					icon="pi pi-sign-out"
 					[rounded]="true"
 					[text]="true"
+					size="small"
 					(onClick)="logout()"
 				/>
 			</ng-template>
 		</p-toolbar>
 	</div>
 	<section
-		class="w-full h-full px-3 pb-3"
+		class="w-full overflow-y-auto px-3 pb-3"
 		[style.margin-top.px]="navbar.offsetHeight"
+		[style.height]="'calc(100dvh - ' + navbar.offsetHeight + 'px)'"
 	>
 		<router-outlet />
 	</section>

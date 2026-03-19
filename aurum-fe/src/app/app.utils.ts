@@ -73,4 +73,4 @@ export const auth0Config: AuthConfig = {
 
 export const darkModeSelector = "p-dark";
 
-export const chartColors = ["#1D2D44", "#2E455D", "#3E5C76", "#597491", "#748CAB"];
+export const chartColors = ["#1D2D44", "#597491", "#748CAB", "#99aec9", "#c0d5f0"];

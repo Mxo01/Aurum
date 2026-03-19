@@ -1,16 +1,20 @@
 <p-card class="rounded-xl p-2 h-full flex flex-col">
-	<div class="flex flex-col md:flex-row justify-between items-start gap-4 mb-6">
-		<div class="flex flex-col gap-3">
-			<span class="text-xl font-bold text-secondary flex items-center gap-3 whitespace-nowrap">
-				<i class="pi pi-money-bill text-xl! font-bold"></i>
-				Total Net Worth
+	<div class="flex flex-col md:flex-row justify-between items-start gap-3 mb-4">
+		<div class="flex flex-col gap-2">
+			<span class="font-bold text-secondary flex items-center gap-2">
+				<i class="pi pi-money-bill font-bold"></i>
+				Total Assets
 			</span>
 			<div class="flex items-center flex-wrap gap-3">
-				<span class="text-4xl font-bold font-mono">{{ totalAmount() | currency: currency() }}</span>
+				<span class="text-2xl sm:text-3xl font-bold font-mono">
+					{{ totalAmount() | currency: currency() }}
+				</span>
 
-				@if (hasEnoughDataToDisplayChart() && variation()?.percentage) {
+				@if (
+					hasEnoughDataToDisplayChart() && variation()?.percentage && !isSpecificYearSelected()
+				) {
 					<div
-						class="flex items-center justify-between gap-3 p-2 rounded-full"
+						class="flex items-center gap-2 px-2 py-1 rounded-full"
 						[class]="
 							variation()!.percentage > 0
 								? 'text-green-500 bg-green-600/10'
@@ -54,15 +58,42 @@
 			</div>
 		</div>
 
-		@if (hasEnoughDataToDisplayChart()) {
-			<p-selectButton
-				[options]="timePeriods()"
-				[(ngModel)]="selectedPeriod"
-				[allowEmpty]="false"
-				optionLabel="label"
-				optionValue="value"
-			/>
-		}
+		<div class="flex flex-wrap items-center gap-2">
+			@if (hasEnoughDataToDisplayChart()) {
+				<div class="flex items-center gap-1">
+					<p-datepicker
+						[(ngModel)]="selectedDate"
+						view="year"
+						dateFormat="yy"
+						[minDate]="minDate()"
+						[maxDate]="maxDate()"
+						[showIcon]="true"
+						(onSelect)="onDateChange()"
+						placeholder="Year"
+					/>
+					@if (isSpecificYearSelected()) {
+						<p-button
+							icon="pi pi-times"
+							[rounded]="true"
+							[text]="true"
+							severity="secondary"
+							size="small"
+							(onClick)="selectedDate.set(null); onDateChange()"
+						/>
+					}
+				</div>
+			}
+
+			@if (!isSpecificYearSelected() && hasEnoughDataToDisplayChart()) {
+				<p-selectButton
+					[options]="timePeriods()"
+					[(ngModel)]="selectedPeriod"
+					[allowEmpty]="false"
+					optionLabel="label"
+					optionValue="value"
+				/>
+			}
+		</div>
 	</div>
 
 	<div class="grow min-h-0">

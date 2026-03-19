@@ -1,18 +1,23 @@
-import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from "@angular/core";
-import { CommonModule } from "@angular/common";
+import {
+	ChangeDetectionStrategy,
+	Component,
+	computed,
+	inject,
+	OnInit,
+	signal
+} from "@angular/core";
+import { CommonModule, CurrencyPipe } from "@angular/common";
 import { DashboardService } from "./dashboard.service";
 import { AnalyticsSummary, ChartData } from "./model/dashboard.model";
 import { NetworthChartComponent } from "./components/networth-chart/networth-chart.component";
 import { TopAssetsWidgetComponent } from "./components/top-assets/top-assets-widget.component";
 import { TargetWidgetComponent } from "./components/target-widget/target-widget.component";
+import { KpiCardComponent } from "./components/kpi-card/kpi-card.component";
 import { catchError, forkJoin, map, of } from "rxjs";
 import { Router } from "@angular/router";
 import { Asset } from "../asset/model/asset.model";
-import { ChartModule } from "primeng/chart";
 import { Currency } from "../profile/model/currency.model";
 import { ProfileService } from "../profile/profile.service";
-import { AssetAllocationChartComponent } from "./components/asset-allocation-chart/asset-allocation-chart.component";
-import { KpiCardComponent } from "./components/kpi-card/kpi-card.component";
 import { Target } from "../target/model/target.model";
 import { TargetService } from "../target/target.service";
 
@@ -24,9 +29,8 @@ import { TargetService } from "../target/target.service";
 		NetworthChartComponent,
 		TopAssetsWidgetComponent,
 		TargetWidgetComponent,
-		ChartModule,
-		AssetAllocationChartComponent,
-		KpiCardComponent
+		KpiCardComponent,
+		CurrencyPipe
 	],
 	templateUrl: "./dashboard.component.html",
 	changeDetection: ChangeDetectionStrategy.OnPush
@@ -42,6 +46,14 @@ export class DashboardComponent implements OnInit {
 	protected readonly chartData = signal<ChartData | null>(null);
 	protected readonly targets = signal<Target[]>([]);
 	protected readonly topAssets = signal<Asset[]>([]);
+	protected readonly totalLiabilities = computed<number>(
+		() => this.summary()?.totalLiabilities ?? 0
+	);
+	protected readonly liabilitiesSparkline = computed<number[]>(() => {
+		const chart = this.chartData();
+		if (!chart?.totalAssetsOnly || !chart?.totalNetWorth) return [];
+		return chart.totalAssetsOnly.map((a, i) => a - chart.totalNetWorth[i]).slice(-6);
+	});
 
 	ngOnInit() {
 		this.loadData();
@@ -69,5 +81,18 @@ export class DashboardComponent implements OnInit {
 
 	protected navigateToAssets() {
 		this.router.navigate(["/assets"]);
+	}
+
+	protected onYearChanged(year: number | null) {
+		if (year === null) {
+			this.loadData();
+		} else {
+			this.dashboardService
+				.getChartDataForYear(year)
+				.pipe(catchError(() => of(null)))
+				.subscribe(chartData => {
+					this.chartData.set(chartData);
+				});
+		}
 	}
 }

@@ -16,7 +16,12 @@ export class DashboardService {
 		return this.http.get<AnalyticsSummary>(`${this.analyticsUrl}/summary`);
 	}
 
-	getChartData(): Observable<ChartData> {
-		return this.http.get<ChartData>(`${this.analyticsUrl}/chart`);
+	getChartData(allHistory: boolean = false): Observable<ChartData> {
+		const params = allHistory ? "?allHistory=true" : "";
+		return this.http.get<ChartData>(`${this.analyticsUrl}/chart${params}`);
+	}
+
+	getChartDataForYear(year: number): Observable<ChartData> {
+		return this.http.get<ChartData>(`${this.analyticsUrl}/chart?year=${year}`);
 	}
 }

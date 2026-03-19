@@ -60,8 +60,10 @@ export class AssetFormComponent implements OnInit, OnDestroy {
 	});
 	protected readonly currencyOptions = signal(currencyOptions);
 	protected readonly typeOptions = signal(typeOptions);
+	protected readonly AssetType = AssetType;
 
 	private categoryCtrlSub?: Subscription;
+	private isActiveCtrlSub?: Subscription;
 
 	constructor() {
 		effect(() => {
@@ -94,10 +96,18 @@ export class AssetFormComponent implements OnInit, OnDestroy {
 				if (category) this.assetForm.controls.type.setValue(category.type);
 			}
 		});
+		this.isActiveCtrlSub = this.assetForm.controls.isActive.valueChanges.subscribe({
+			next: isActive => {
+				if (!isActive) {
+					this.assetForm.controls.isFavorite.setValue(false);
+				}
+			}
+		});
 	}
 
 	ngOnDestroy() {
 		this.categoryCtrlSub?.unsubscribe();
+		this.isActiveCtrlSub?.unsubscribe();
 	}
 
 	resetForm() {
@@ -110,6 +120,7 @@ export class AssetFormComponent implements OnInit, OnDestroy {
 
 	hideDrawer() {
 		this.selectedAsset.set(null);
+		this.resetForm();
 	}
 
 	saveAssetFromForm() {
@@ -139,6 +150,7 @@ export class AssetFormComponent implements OnInit, OnDestroy {
 					: null
 		};
 
+		this.hideDrawer();
 		this.isVisible.set(false);
 		this.save.emit(asset);
 	}

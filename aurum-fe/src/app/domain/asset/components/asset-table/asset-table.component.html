@@ -10,6 +10,7 @@
 		<tr>
 			<th>Actions</th>
 			<th>Name</th>
+			<th>Type</th>
 			<th>Current Value</th>
 			<th>Trend</th>
 			<th>Status</th>
@@ -20,15 +21,8 @@
 		let-asset
 	>
 		<tr pRowGroupHeader>
-			<td colspan="5">
-				<span class="font-bold me-3">{{ asset.categoryName }}</span>
-				<p-tag
-					class="whitespace-nowrap"
-					[value]="asset.type === AssetType.ASSET ? 'Asset' : 'Liability'"
-					[severity]="asset.type === AssetType.ASSET ? 'info' : 'warn'"
-					[icon]="asset.type === AssetType.ASSET ? 'pi pi-wallet' : 'pi pi-shield'"
-					[rounded]="true"
-				/>
+			<td colspan="6">
+				<span class="font-bold">{{ asset.categoryName }}</span>
 			</td>
 		</tr>
 	</ng-template>
@@ -53,6 +47,15 @@
 					/>
 				</div>
 			</td>
+			<td>
+				<p-tag
+					class="whitespace-nowrap"
+					[value]="asset.type === AssetType.ASSET ? 'Asset' : 'Liability'"
+					[severity]="asset.type === AssetType.ASSET ? 'info' : 'warn'"
+					[icon]="asset.type === AssetType.ASSET ? 'pi pi-wallet' : 'pi pi-shield'"
+					[rounded]="true"
+				/>
+			</td>
 			<td class="text-right font-mono">
 				<span class="font-bold">
 					{{ asset.currentValue | currency: asset.originalCurrency : "symbol" : "1.2-2" }}
@@ -62,7 +65,11 @@
 				@if (asset.trend !== null) {
 					<span
 						class="whitespace-nowrap"
-						[class]="asset.trend >= 0 ? 'text-green-500' : 'text-red-500'"
+						[class]="
+							(asset.type === AssetType.ASSET ? asset.trend >= 0 : asset.trend < 0)
+								? 'text-green-500'
+								: 'text-red-500'
+						"
 					>
 						<i
 							[class]="asset.trend >= 0 ? 'pi pi-arrow-up' : 'pi pi-arrow-down'"
@@ -87,7 +94,7 @@
 	<ng-template #emptymessage>
 		<tr>
 			<td
-				colspan="5"
+				colspan="6"
 				class="text-center py-12!"
 			>
 				<div class="flex flex-col items-center gap-4 text-stone-400">

@@ -21,48 +21,43 @@ public class TargetService {
 
     public List<Target> findAll(UUID userId) {
         List<Target> targets = targetRepository.findByUserId(userId);
-        BigDecimal currentNetWorth = analyticsService.getSummary(userId).getTotalNetWorth();
-        
-        // Sync completion status for all targets
-        targets.forEach(t -> checkAndSyncCompletion(t, currentNetWorth));
-        
+        BigDecimal grossAssets = analyticsService.getSummary(userId).getTotalGrossAssets();
+
+        targets.forEach(t -> checkAndSyncCompletion(t, grossAssets));
+
         return targets;
     }
 
     public Target findById(UUID id) {
         Target target = targetRepository.findById(id)
             .orElseThrow(() -> new RuntimeException("Target not found"));
-        
-        BigDecimal currentNetWorth = analyticsService.getSummary(target.getUser().getId()).getTotalNetWorth();
-        checkAndSyncCompletion(target, currentNetWorth);
-        
+
+        BigDecimal grossAssets = analyticsService.getSummary(target.getUser().getId()).getTotalGrossAssets();
+        checkAndSyncCompletion(target, grossAssets);
+
         return target;
     }
 
     @Transactional
     public Target save(Target target) {
-        BigDecimal currentNetWorth = analyticsService.getSummary(target.getUser().getId()).getTotalNetWorth();
-        checkAndSyncCompletion(target, currentNetWorth);
+        BigDecimal grossAssets = analyticsService.getSummary(target.getUser().getId()).getTotalGrossAssets();
+        checkAndSyncCompletion(target, grossAssets);
         return targetRepository.save(target);
     }
 
     @Transactional
     public Target update(UUID id, Target targetDetails) {
         Target target = findById(id);
-        
-        // If it was already completed, we "freeze" it - we don't allow changing most fields 
-        // except maybe name if really needed, but let's allow it for now.
-        // However, we strictly don't allow un-completing it if it reached the goal.
-        
+
         target.setName(targetDetails.getName());
         target.setTargetAmount(targetDetails.getTargetAmount());
         target.setCurrentAmount(targetDetails.getCurrentAmount());
         target.setDeadline(targetDetails.getDeadline());
-        target.setType(targetDetails.getType());
+        // Type is immutable after creation
 
-        BigDecimal currentNetWorth = analyticsService.getSummary(target.getUser().getId()).getTotalNetWorth();
-        checkAndSyncCompletion(target, currentNetWorth);
-        
+        BigDecimal grossAssets = analyticsService.getSummary(target.getUser().getId()).getTotalGrossAssets();
+        checkAndSyncCompletion(target, grossAssets);
+
         return targetRepository.save(target);
     }
 
@@ -71,13 +66,13 @@ public class TargetService {
         targetRepository.deleteById(id);
     }
 
-    private void checkAndSyncCompletion(Target target, BigDecimal currentNetWorth) {
+    private void checkAndSyncCompletion(Target target, BigDecimal grossAssets) {
         if (Boolean.TRUE.equals(target.getIsCompleted())) {
             return;
         }
 
         BigDecimal currentAmount = target.getType() == TargetType.NET_WORTH
-                ? currentNetWorth
+                ? grossAssets
                 : (target.getCurrentAmount() != null ? target.getCurrentAmount() : BigDecimal.ZERO);
 
         if (target.getTargetAmount().compareTo(BigDecimal.ZERO) > 0) {

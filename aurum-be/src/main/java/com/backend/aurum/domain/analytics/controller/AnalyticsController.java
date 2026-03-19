@@ -30,9 +30,18 @@ public class AnalyticsController {
 	}
 
 	@GetMapping("/chart")
-	public ResponseEntity<ChartDataDTO> getChartData(@AuthenticationPrincipal UserPrincipal principal) {
+	public ResponseEntity<ChartDataDTO> getChartData(
+			@RequestParam(required = false) Integer year,
+			@RequestParam(defaultValue = "false") boolean allHistory,
+			@AuthenticationPrincipal UserPrincipal principal) {
 		UUID userId = principal.user().getId();
-		return ResponseEntity.ok(analyticsService.getChartData(userId));
+		ChartDataDTO chartData;
+		if (year != null) {
+			chartData = analyticsService.getChartDataForYear(userId, year);
+		} else {
+			chartData = analyticsService.getChartData(userId, allHistory);
+		}
+		return ResponseEntity.ok(chartData);
 	}
 
 	@GetMapping("/projections")

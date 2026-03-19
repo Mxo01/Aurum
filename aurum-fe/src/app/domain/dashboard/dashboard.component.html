@@ -1,57 +1,39 @@
 <section class="flex flex-col gap-4">
-	<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-		<app-kpi-card
-			label="Currency Exposure"
-			[value]="(summary()?.currencyImpact ?? 0 | currency: userCurrency()) || '0€'"
-			subtext="Impact of FX variations"
-		/>
-
-		<app-kpi-card
-			label="Savings Rate"
-			[value]="(summary()?.savingsRate ?? 0) + '%'"
-			[variation]="2.5"
-			subtext="VS last month"
-		/>
-
-		<app-kpi-card
-			label="Total Liabilities"
-			[value]="(0 | currency: userCurrency()) || '0€'"
-			[variation]="-1.2"
-			subtext="Debt reduction"
-		/>
-
-		<app-kpi-card
-			label="Net Cash Flow"
-			[value]="(0 | currency: userCurrency()) || '0€'"
-			[variation]="5.8"
-			subtext="Monthly surplus"
-		/>
+	<div class="grid grid-cols-12 gap-4">
+		<div class="col-span-12 sm:col-span-6 lg:col-span-3">
+			<app-kpi-card
+				label="Total Liabilities"
+				[value]="(totalLiabilities() | currency: userCurrency()) || 0"
+				[invertVariation]="true"
+				[sparklineData]="liabilitiesSparkline()"
+			/>
+		</div>
 	</div>
 
-	<div class="grid grid-cols-12 gap-4">
-		<div class="col-span-12 lg:col-span-8 h-125">
+	<div class="grid grid-cols-12 gap-4 h-72 sm:h-96 lg:h-125">
+		<div class="col-span-12">
 			<app-networth-chart
 				[data]="chartData()"
 				[summary]="summary()"
 				[currency]="userCurrency()"
+				(yearChanged)="onYearChanged($event)"
 			/>
 		</div>
+	</div>
 
-		<div class="col-span-12 lg:col-span-4 h-125">
-			<app-top-assets
-				[assets]="topAssets()"
-				(viewMore)="navigateToAssets()"
-			/>
-		</div>
-
-		<div class="col-span-12 lg:col-span-8 h-100">
-			<app-asset-allocation-chart [summary]="summary()" />
-		</div>
-
-		<div class="col-span-12 lg:col-span-4 h-100">
+	<div class="grid grid-cols-12 gap-4">
+		<div class="col-span-12 lg:col-span-3">
 			<app-target-widget
 				[targets]="targets()"
 				[currency]="userCurrency()"
+			/>
+		</div>
+
+		<div class="col-span-12 lg:col-span-9">
+			<app-top-assets
+				[summary]="summary()"
+				[assets]="topAssets()"
+				(viewMore)="navigateToAssets()"
 			/>
 		</div>
 	</div>

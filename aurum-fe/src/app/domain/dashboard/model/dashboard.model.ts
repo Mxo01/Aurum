@@ -13,15 +13,20 @@ export interface Variation {
 
 export interface AnalyticsSummary {
 	totalNetWorth: number;
+	totalGrossAssets: number;
 	variations: Variation;
+	assetVariations: Variation;
 	assetAllocation: { [key: string]: number };
 	currencyImpact: number;
-	savingsRate: number;
+	totalLiabilities: number;
+	debtToAssetRatio: number;
 	topAssets: Asset[];
 }
 
 export interface ChartData {
 	labels: string[];
 	totalNetWorth: number[];
+	totalAssetsOnly: number[];
 	favoriteAssetsValues: Record<string, number[]>;
+	favoriteAssetsTypes: Record<string, string>;
 }

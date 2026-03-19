@@ -76,14 +76,22 @@
 					</small>
 				}
 			</div>
-			<div class="flex flex-col gap-2">
-				<label for="favorite">Track in Dashboard</label>
-				<p-toggle-button
-					id="favorite"
-					formControlName="isFavorite"
-					onIcon="pi pi-bookmark-fill"
-				/>
-			</div>
+			@if (assetForm.controls.type.value !== AssetType.LIABILITY) {
+				<div class="flex flex-col gap-2">
+					<label for="favorite">Track in Dashboard</label>
+					<p-toggle-button
+						id="favorite"
+						formControlName="isFavorite"
+						onIcon="pi pi-bookmark-fill"
+						[disabled]="!assetForm.value.isActive"
+					/>
+					@if (!assetForm.value.isActive) {
+						<small class="text-stone-400 text-xs">
+							Archived assets cannot be tracked in the dashboard.
+						</small>
+					}
+				</div>
+			}
 
 			@if (!selectedAsset()) {
 				<div class="flex flex-col gap-2">
@@ -117,6 +125,7 @@
 			label="Save"
 			[fluid]="true"
 			[disabled]="assetForm.invalid"
+			size="small"
 			(onClick)="saveAssetFromForm()"
 		/>
 	</ng-template>
