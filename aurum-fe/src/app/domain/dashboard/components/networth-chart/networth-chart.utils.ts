@@ -14,8 +14,9 @@ export function mapDataIntoNetworthChartData(
 			type: "bar",
 			label: "Total Assets",
 			data: data?.totalAssetsOnly ?? [],
-			backgroundColor: isDarkMode ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.06)",
-			borderRadius: 4,
+			backgroundColor: isDarkMode ? "rgba(255,255,255,0.7)" : "rgba(0,0,0,0.1)",
+			borderRadius: 16,
+			borderSkipped: false,
 			order: 1
 		} as ChartDataset<"bar">
 	];
@@ -162,12 +163,12 @@ export function getNetworthChartOptions(
 		scales: {
 			x: {
 				grid: { display: false },
+				border: { display: false },
 				ticks: { color: textColor }
 			},
 			y: {
-				beginAtZero: false,
-				grid: { display: false },
-				ticks: { display: false }
+				display: false,
+				beginAtZero: false
 			}
 		}
 	} as ChartConfiguration["options"];

@@ -313,6 +313,7 @@ public class AnalyticsService {
 	private List<AssetDTO> calculateTopAssets(
 			List<Asset> assets, Map<UUID, List<Snapshot>> snapshotsByAsset, int limit) {
 		return assets.stream()
+				.filter(a -> a.getCategory().getType() != AssetType.LIABILITY)
 				.sorted((a, b) -> {
 					BigDecimal valA = getLatestSnapshotValue(snapshotsByAsset.getOrDefault(a.getId(), List.of())).abs();
 					BigDecimal valB = getLatestSnapshotValue(snapshotsByAsset.getOrDefault(b.getId(), List.of())).abs();

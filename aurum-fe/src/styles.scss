@@ -7,6 +7,14 @@ body {
 	font-size: 14px;
 }
 
+/* Remove default shadow from all p-card components and add subtle border */
+.p-card {
+	box-shadow: none !important;
+	border-width: 1px !important;
+	border-style: solid !important;
+	border-color: var(--p-content-border-color) !important;
+}
+
 /* Fix for PrimeNG p-card to support full height */
 p-card.h-full,
 .p-card.h-full {
