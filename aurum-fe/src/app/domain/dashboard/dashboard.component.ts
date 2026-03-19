@@ -53,6 +53,7 @@ export class DashboardComponent implements OnInit {
 	protected readonly totalLiabilities = computed<number>(
 		() => this.summary()?.totalLiabilities ?? 0
 	);
+	protected readonly currencyImpact = computed<number>(() => this.summary()?.currencyImpact ?? 0);
 	protected readonly liabilitiesSparkline = computed<number[]>(() => {
 		const chart = this.chartData();
 		if (!chart?.totalAssetsOnly || !chart?.totalNetWorth) return [];

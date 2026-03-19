@@ -10,6 +10,16 @@
 				[sparklineData]="liabilitiesSparkline()"
 			/>
 		</div>
+		<div class="col-span-12 sm:col-span-6 lg:col-span-3">
+			<app-kpi-card
+				label="Currency Exposure"
+				[value]="
+					(currencyImpact() | currency: userCurrency() : 'symbol' : '1.2-2' : userLocale()) || 0
+				"
+				[variation]="currencyImpact()"
+				subtext="FX impact (1M)"
+			/>
+		</div>
 	</div>
 
 	<div class="grid grid-cols-12 gap-4 h-125 sm:h-none!">
