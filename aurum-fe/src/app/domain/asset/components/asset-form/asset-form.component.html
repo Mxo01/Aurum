@@ -15,6 +15,7 @@
 					id="name"
 					pInputText
 					formControlName="name"
+					pSize="small"
 				/>
 				@if (assetForm.controls.name.invalid && assetForm.controls.name.touched) {
 					<small class="text-red-500 text-xs">Name is required</small>
@@ -26,6 +27,7 @@
 					formControlName="category"
 					[options]="categoriesOptions()"
 					optionLabel="name"
+					size="small"
 				/>
 				@if (assetForm.controls.category.invalid && assetForm.controls.category.touched) {
 					<small class="text-red-500 text-xs">Category is required</small>
@@ -36,6 +38,7 @@
 				<p-select
 					formControlName="type"
 					[options]="typeOptions()"
+					size="small"
 				/>
 				@if (assetForm.controls.type.invalid && assetForm.controls.type.touched) {
 					<small class="text-red-500 text-xs">Type is required</small>
@@ -46,6 +49,7 @@
 				<p-select-button
 					formControlName="currency"
 					[options]="currencyOptions()"
+					size="small"
 				>
 					<ng-template
 						#item
@@ -69,6 +73,7 @@
 					onLabel="Active"
 					onIcon="pi pi-check-circle"
 					offLabel="Archived"
+					size="small"
 				/>
 				@if (!assetForm.value.isActive) {
 					<small class="text-stone-400 text-xs">
@@ -84,6 +89,7 @@
 						formControlName="isFavorite"
 						onIcon="pi pi-bookmark-fill"
 						[disabled]="!assetForm.value.isActive"
+						size="small"
 					/>
 					@if (!assetForm.value.isActive) {
 						<small class="text-stone-400 text-xs">
@@ -104,6 +110,7 @@
 						locale="en-US"
 						[minFractionDigits]="2"
 						[fluid]="true"
+						size="small"
 					/>
 				</div>
 				<div class="flex flex-col gap-2">
@@ -114,6 +121,7 @@
 						[showIcon]="true"
 						dateFormat="dd/mm/yy"
 						[fluid]="true"
+						size="small"
 					/>
 				</div>
 			}

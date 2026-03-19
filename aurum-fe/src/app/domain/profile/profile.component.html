@@ -25,6 +25,7 @@
 						[fluid]="true"
 						[ngModel]="user()?.name"
 						(ngModelChange)="updateName($event)"
+						size="small"
 					/>
 					@if (isUpdatingName()) {
 						<p-inputicon class="pi pi-spinner pi-spin" />

@@ -21,6 +21,7 @@
 				[allowEmpty]="false"
 				[disabled]="!!selectedTarget()"
 				styleClass="w-full"
+				size="small"
 			/>
 		</div>
 
@@ -32,6 +33,7 @@
 				formControlName="name"
 				placeholder="e.g. New Car"
 				class="w-full"
+				size="small"
 			/>
 		</div>
 
@@ -44,6 +46,7 @@
 				[currency]="currency()"
 				class="w-full"
 				[min]="0"
+				size="small"
 			/>
 		</div>
 
@@ -57,6 +60,7 @@
 					[currency]="currency()"
 					class="w-full"
 					[min]="0"
+					size="small"
 				/>
 			</div>
 		}
@@ -69,6 +73,7 @@
 				[showIcon]="true"
 				appendTo="body"
 				class="w-full"
+				size="small"
 			/>
 		</div>
 
@@ -77,6 +82,7 @@
 				type="submit"
 				[label]="selectedTarget() ? 'Update' : 'Create'"
 				[disabled]="targetForm.invalid"
+				size="small"
 			/>
 		</div>
 	</form>

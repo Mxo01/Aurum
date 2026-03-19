@@ -12,6 +12,7 @@
 			class="mb-5"
 			[(ngModel)]="viewMode"
 			[options]="viewModeOptions()"
+			size="small"
 		>
 			<ng-template
 				#item
@@ -151,6 +152,7 @@
 					[disabled]="selectedSnapshotsHistory().length === 0"
 					(onClick)="deleteSelectedSnapshotsHistory()"
 					[text]="true"
+					size="small"
 				/>
 			}
 		</div>

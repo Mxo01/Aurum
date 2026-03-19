@@ -23,6 +23,7 @@
 				<div class="flex items-center gap-2 mb-3">
 					<span>New Category</span>
 					<p-toggle-switch
+						size="small"
 						[(ngModel)]="isNewCategory"
 						(ngModelChange)="onNewCategoryToggleChange($event)"
 						[ngModelOptions]="{ standalone: true }"
@@ -39,6 +40,7 @@
 								id="category"
 								pInputText
 								formControlName="name"
+								pSize="small"
 							/>
 							@if (categoryForm.controls.name.invalid && categoryForm.controls.name.touched) {
 								<small class="text-red-500 text-xs">Category is required</small>
@@ -50,6 +52,7 @@
 								id="type"
 								formControlName="type"
 								[options]="typeOptions()"
+								size="small"
 							/>
 							@if (categoryForm.controls.type.invalid && categoryForm.controls.type.touched) {
 								<small class="text-red-500 text-xs">Type is required</small>
@@ -65,6 +68,7 @@
 									styleClass="w-full"
 									[loading]="isDeleteLoading()"
 									(onClick)="deleteCategory($event)"
+									size="small"
 								/>
 							}
 							<p-button
@@ -75,6 +79,7 @@
 								styleClass="w-full"
 								[loading]="isSaveLoading()"
 								(onClick)="saveCategory()"
+								size="small"
 							/>
 						</div>
 					</form>
