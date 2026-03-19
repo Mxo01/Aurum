@@ -8,6 +8,7 @@ import { finalize, switchMap, tap } from "rxjs";
 import { ReactiveFormsModule, FormsModule } from "@angular/forms";
 import { ConfirmationService, MenuItemCommandEvent } from "primeng/api";
 import { NavigationService } from "../../shared/services/navigation/navigation.service";
+import { ThemeService } from "../../shared/services/theme/theme.service";
 import { RouterLink } from "@angular/router";
 import { ProfileService } from "../profile/profile.service";
 import { Currency } from "../profile/model/currency.model";
@@ -48,6 +49,7 @@ export class AssetComponent implements OnInit {
 	private readonly confirmationService = inject(ConfirmationService);
 	private readonly navigationService = inject(NavigationService);
 	private readonly profileService = inject(ProfileService);
+	private readonly themeService = inject(ThemeService);
 
 	protected readonly paths = paths;
 	protected readonly previousRoute = this.navigationService.previousRoute;
@@ -71,6 +73,7 @@ export class AssetComponent implements OnInit {
 			next: profile => {
 				this.userCurrency.set(profile.currency);
 				this.userLocale.set(profile.locale);
+				this.themeService.applyLocale(profile.locale);
 			}
 		});
 

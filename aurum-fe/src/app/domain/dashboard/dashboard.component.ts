@@ -21,6 +21,7 @@ import { ProfileService } from "../profile/profile.service";
 import { Locale } from "../profile/model/locale.model";
 import { Target } from "../target/model/target.model";
 import { TargetService } from "../target/target.service";
+import { ThemeService } from "../../shared/services/theme/theme.service";
 
 @Component({
 	selector: "app-dashboard",
@@ -41,6 +42,7 @@ export class DashboardComponent implements OnInit {
 	private readonly dashboardService = inject(DashboardService);
 	private readonly targetService = inject(TargetService);
 	private readonly router = inject(Router);
+	private readonly themeService = inject(ThemeService);
 
 	protected readonly userCurrency = signal<Currency>(Currency.EUR);
 	protected readonly userLocale = signal<Locale>(Locale.EN_US);
@@ -72,6 +74,7 @@ export class DashboardComponent implements OnInit {
 				if (data.profile) {
 					this.userCurrency.set(data.profile.currency);
 					this.userLocale.set(data.profile.locale);
+					this.themeService.applyLocale(data.profile.locale);
 				}
 				this.summary.set(data.summary);
 				this.chartData.set(data.chart);
