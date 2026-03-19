@@ -1,7 +1,7 @@
 import { HttpClient } from "@angular/common/http";
 import { inject, Injectable } from "@angular/core";
 import { environment } from "../../../environments/environment";
-import { AnalyticsSummary, ChartData } from "./model/dashboard.model";
+import { AnalyticsSummary, ChartData, Projections } from "./model/dashboard.model";
 import { Observable } from "rxjs";
 
 @Injectable({
@@ -23,5 +23,9 @@ export class DashboardService {
 
 	getChartDataForYear(year: number): Observable<ChartData> {
 		return this.http.get<ChartData>(`${this.analyticsUrl}/chart?year=${year}`);
+	}
+
+	getProjections(): Observable<Projections> {
+		return this.http.get<Projections>(`${this.analyticsUrl}/projections?years=1&assetsOnly=true`);
 	}
 }

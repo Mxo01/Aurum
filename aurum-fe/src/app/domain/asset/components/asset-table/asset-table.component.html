@@ -31,6 +31,10 @@
 						[icon]="expanded ? 'pi pi-chevron-down' : 'pi pi-chevron-right'"
 					/>
 					<span class="font-bold">{{ asset.categoryName }}</span>
+					<p-badge
+						[value]="categoryCounts()[asset.categoryName]?.toString()"
+						severity="secondary"
+					/>
 				</div>
 			</td>
 		</tr>

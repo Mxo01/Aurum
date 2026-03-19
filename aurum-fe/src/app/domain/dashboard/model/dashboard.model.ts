@@ -23,6 +23,8 @@ export interface AnalyticsSummary {
 	topAssets: Asset[];
 }
 
+export type Projections = { [year: number]: number };
+
 export interface ChartData {
 	labels: string[];
 	totalNetWorth: number[];

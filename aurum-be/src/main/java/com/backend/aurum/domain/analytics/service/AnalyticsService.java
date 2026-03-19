@@ -138,12 +138,16 @@ public class AnalyticsService {
 		return month + " " + year;
 	}
 
-	public Map<Integer, BigDecimal> getProjections(UUID userId, int years) {
+	public Map<Integer, BigDecimal> getProjections(UUID userId, int years, boolean assetsOnly) {
 		List<Asset> assets = assetRepository.findByUserIdAndIsActiveTrueOrderByCreatedAtDesc(userId);
 		Map<UUID, List<Snapshot>> snapshotsByAsset = loadSnapshotsByAsset(userId);
 
-		BigDecimal current = calculateNetWorthAt(assets, snapshotsByAsset, LocalDate.now());
-		BigDecimal oneYearAgo = calculateNetWorthAt(assets, snapshotsByAsset, LocalDate.now().minusYears(1));
+		BigDecimal current = assetsOnly
+				? calculateGrossAssetsAt(assets, snapshotsByAsset, LocalDate.now())
+				: calculateNetWorthAt(assets, snapshotsByAsset, LocalDate.now());
+		BigDecimal oneYearAgo = assetsOnly
+				? calculateGrossAssetsAt(assets, snapshotsByAsset, LocalDate.now().minusYears(1))
+				: calculateNetWorthAt(assets, snapshotsByAsset, LocalDate.now().minusYears(1));
 
 		BigDecimal growth = current.subtract(oneYearAgo);
 		if (growth.compareTo(BigDecimal.ZERO) < 0) growth = BigDecimal.ZERO;

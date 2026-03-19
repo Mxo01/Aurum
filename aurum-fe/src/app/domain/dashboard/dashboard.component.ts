@@ -8,7 +8,7 @@ import {
 } from "@angular/core";
 import { CommonModule, CurrencyPipe } from "@angular/common";
 import { DashboardService } from "./dashboard.service";
-import { AnalyticsSummary, ChartData } from "./model/dashboard.model";
+import { AnalyticsSummary, ChartData, Projections } from "./model/dashboard.model";
 import { NetworthChartComponent } from "./components/networth-chart/networth-chart.component";
 import { TopAssetsWidgetComponent } from "./components/top-assets/top-assets-widget.component";
 import { TargetWidgetComponent } from "./components/target-widget/target-widget.component";
@@ -48,12 +48,23 @@ export class DashboardComponent implements OnInit {
 	protected readonly userLocale = signal<Locale>(Locale.EN_US);
 	protected readonly summary = signal<AnalyticsSummary | null>(null);
 	protected readonly chartData = signal<ChartData | null>(null);
+	protected readonly projections = signal<Projections | null>(null);
+	protected readonly projectedNetWorth = computed<number>(() => this.projections()?.[1] ?? 0);
+	protected readonly projectedGrowthVariation = computed<number | undefined>(() => {
+		const current = this.summary()?.totalGrossAssets;
+		const projected = this.projections()?.[1];
+		if (!current || !projected || current === 0) return undefined;
+		return +(((projected - current) / current) * 100).toFixed(2);
+	});
 	protected readonly targets = signal<Target[]>([]);
 	protected readonly topAssets = signal<Asset[]>([]);
 	protected readonly totalLiabilities = computed<number>(
 		() => this.summary()?.totalLiabilities ?? 0
 	);
 	protected readonly currencyImpact = computed<number>(() => this.summary()?.currencyImpact ?? 0);
+	protected readonly debtToAssetRatio = computed<number>(
+		() => this.summary()?.debtToAssetRatio ?? 0
+	);
 	protected readonly liabilitiesSparkline = computed<number[]>(() => {
 		const chart = this.chartData();
 		if (!chart?.totalAssetsOnly || !chart?.totalNetWorth) return [];
@@ -73,7 +84,8 @@ export class DashboardComponent implements OnInit {
 			profile: this.profileService.getProfile().pipe(catchError(() => of(null))),
 			summary: this.dashboardService.getSummary().pipe(catchError(() => of(null))),
 			chart: this.dashboardService.getChartData().pipe(catchError(() => of(null))),
-			targets: this.targetService.getTargets().pipe(catchError(() => of([])))
+			targets: this.targetService.getTargets().pipe(catchError(() => of([]))),
+			projections: this.dashboardService.getProjections().pipe(catchError(() => of(null)))
 		}).subscribe({
 			next: data => {
 				if (data.profile) {
@@ -85,6 +97,7 @@ export class DashboardComponent implements OnInit {
 				this.chartData.set(data.chart);
 				this.targets.set(data.targets);
 				this.topAssets.set(data.summary?.topAssets || []);
+				this.projections.set(data.projections);
 			}
 		});
 	}

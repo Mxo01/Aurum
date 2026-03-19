@@ -46,8 +46,9 @@ public class AnalyticsController {
 
 	@GetMapping("/projections")
 	public ResponseEntity<Map<Integer, BigDecimal>> getProjections(@RequestParam(defaultValue = "10") int years,
+			@RequestParam(defaultValue = "false") boolean assetsOnly,
 			@AuthenticationPrincipal UserPrincipal principal) {
 		UUID userId = principal.user().getId();
-		return ResponseEntity.ok(analyticsService.getProjections(userId, years));
+		return ResponseEntity.ok(analyticsService.getProjections(userId, years, assetsOnly));
 	}
 }

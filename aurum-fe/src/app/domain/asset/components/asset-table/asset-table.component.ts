@@ -1,6 +1,7 @@
 import { Component, computed, input, output, signal } from "@angular/core";
 import { TableModule } from "primeng/table";
 import { Tag } from "primeng/tag";
+import { Badge } from "primeng/badge";
 import { Button } from "primeng/button";
 import { CurrencyPipe, DecimalPipe } from "@angular/common";
 import { MenuItem, MenuItemCommandEvent } from "primeng/api";
@@ -14,7 +15,7 @@ import { mapAssetsToAssetsWithBalance } from "./asset-table.utils";
 	selector: "app-asset-table",
 	standalone: true,
 	templateUrl: "./asset-table.component.html",
-	imports: [TableModule, Tag, Button, CurrencyPipe, DecimalPipe, Menu]
+	imports: [TableModule, Tag, Badge, Button, CurrencyPipe, DecimalPipe, Menu]
 })
 export class AssetTableComponent {
 	assets = input.required<Asset[]>();
@@ -35,6 +36,13 @@ export class AssetTableComponent {
 	protected readonly assetsWithBalance = computed(() =>
 		mapAssetsToAssetsWithBalance(this.assets())
 	);
+	protected readonly categoryCounts = computed(() => {
+		const counts: Record<string, number> = {};
+		for (const asset of this.assetsWithBalance()) {
+			counts[asset.categoryName] = (counts[asset.categoryName] ?? 0) + 1;
+		}
+		return counts;
+	});
 	protected readonly categoryTotals = computed(() => {
 		const totals: Record<string, number> = {};
 
