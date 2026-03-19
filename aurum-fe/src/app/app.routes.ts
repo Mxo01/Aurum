@@ -9,8 +9,8 @@ interface RouteInfo {
 export const routes: Routes = [
 	{
 		path: "dashboard",
-		title: "Dashboard",
 		data: {
+			label: "Dashboard",
 			icon: "pi pi-objects-column"
 		},
 		canActivate: [authGuardFn],
@@ -19,14 +19,17 @@ export const routes: Routes = [
 	},
 	{
 		path: "profile",
-		title: "Profile",
+		data: {
+			label: "Profile",
+			icon: "pi pi-user"
+		},
 		canActivate: [authGuardFn],
 		loadComponent: () => import("./domain/profile/profile.component").then(m => m.ProfileComponent)
 	},
 	{
 		path: "assets",
-		title: "Assets",
 		data: {
+			label: "Assets",
 			icon: "pi pi-wallet"
 		},
 		canActivate: [authGuardFn],
@@ -48,7 +51,7 @@ export const paths: Record<string, RouteInfo> = routes.reduce(
 		if (route.path === "**" || !route.path) return acc;
 
 		acc[`/${route.path}`] = {
-			label: route.title as string,
+			label: route.data?.["label"] as string,
 			icon: route.data?.["icon"] as string
 		};
 
