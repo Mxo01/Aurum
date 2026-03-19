@@ -62,6 +62,13 @@ export class DashboardComponent implements OnInit {
 		() => this.summary()?.totalLiabilities ?? 0
 	);
 	protected readonly currencyImpact = computed<number>(() => this.summary()?.currencyImpact ?? 0);
+	protected readonly assetGrowth1Y = computed<number>(
+		() => this.summary()?.assetVariations.oneYear.absolute ?? 0
+	);
+	protected readonly assetGrowth1YVariation = computed<number | undefined>(() => {
+		const pct = this.summary()?.assetVariations.oneYear.percentage;
+		return pct !== undefined ? +pct.toFixed(2) : undefined;
+	});
 	protected readonly debtToAssetRatio = computed<number>(
 		() => this.summary()?.debtToAssetRatio ?? 0
 	);

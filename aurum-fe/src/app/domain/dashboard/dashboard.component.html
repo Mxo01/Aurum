@@ -31,6 +31,16 @@
 				subtext="Based on 1 year growth rate"
 			/>
 		</div>
+		<div class="col-span-12 sm:col-span-6 lg:col-span-3">
+			<app-kpi-card
+				label="Asset Growth"
+				[value]="
+					(assetGrowth1Y() | currency: userCurrency() : 'symbol' : '1.2-2' : userLocale()) || 0
+				"
+				[variation]="assetGrowth1YVariation()"
+				subtext="Gross asset change vs. 1 year ago"
+			/>
+		</div>
 	</div>
 
 	<div class="grid grid-cols-12 gap-4 h-125 sm:h-none!">
