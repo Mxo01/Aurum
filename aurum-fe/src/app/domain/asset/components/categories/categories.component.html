@@ -1,0 +1,62 @@
+<section class="flex flex-col gap-3 max-w-4xl mx-auto">
+	<div class="flex items-center justify-between">
+		<p-button
+			[label]="'Back to ' + paths[previousRoute].label"
+			[routerLink]="previousRoute"
+			icon="pi pi-arrow-left"
+			[text]="true"
+			severity="secondary"
+			size="small"
+		/>
+		<p-button
+			label="Add Category"
+			icon="pi pi-plus"
+			size="small"
+			(onClick)="openAdd()"
+		/>
+	</div>
+
+	@if (!categories().length) {
+		<div
+			class="flex flex-col items-center justify-center gap-3 py-12 text-center border border-dashed border-surface-200 dark:border-surface-700 rounded-xl"
+		>
+			<i class="pi pi-tag text-4xl! text-gray-500"></i>
+			<p class="text-gray-500 text-sm">No categories yet. Create one to get started.</p>
+		</div>
+	} @else {
+		<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+			@for (category of categories(); track category.id) {
+				<p-button
+					[fluid]="true"
+					[outlined]="true"
+					(onClick)="openEdit(category)"
+				>
+					<div class="flex items-center justify-between gap-3 w-full">
+						<div class="flex items-center gap-3">
+							<i
+								class="rounded-full p-3"
+								[class]="
+									category.type === AssetType.ASSET
+										? 'pi pi-wallet bg-blue-400/20 text-blue-400'
+										: 'pi pi-shield bg-orange-400/20 text-orange-400'
+								"
+							></i>
+							<span class="font-medium text-sm">{{ category.name }}</span>
+						</div>
+
+						<i class="pi pi-pencil text-gray-500"></i>
+					</div>
+				</p-button>
+			}
+		</div>
+	}
+</section>
+
+<app-category-form
+	[(isVisible)]="isDialogVisible"
+	[selectedCategory]="selectedCategory()"
+	[isSaveLoading]="isSaveLoading()"
+	[isDeleteLoading]="isDeleteLoading()"
+	(save)="saveCategory($event)"
+	(delete)="deleteCategory($event)"
+/>

@@ -14,7 +14,7 @@
 				label="Edit Categories"
 				icon="pi pi-pencil"
 				severity="secondary"
-				(onClick)="isCategoriesDialogVisible.set(true)"
+				routerLink="/assets/categories"
 				size="small"
 			/>
 
@@ -45,16 +45,6 @@
 	[categoriesOptions]="categoriesOptions()"
 	[locale]="userLocale()"
 	(save)="saveAssetAndSnapshot($event)"
-/>
-
-<app-category-form
-	[(isVisible)]="isCategoriesDialogVisible"
-	[(isNewCategory)]="isNewCategory"
-	[categoriesOptions]="categoriesOptions()"
-	[isSaveLoading]="isCategorySaveLoading()"
-	(save)="saveCategory($event)"
-	[isDeleteLoading]="isCategoryDeleteLoading()"
-	(delete)="deleteCategory($event)"
 />
 
 <app-asset-history

@@ -33,7 +33,9 @@ export class App implements OnInit {
 	private readonly document = inject(DOCUMENT);
 
 	protected readonly user = toSignal(this.authService.user$);
-	protected readonly paths = Object.entries(paths).filter(([path]) => path !== "/profile");
+	protected readonly paths = Object.entries(paths).filter(
+		([path]) => path !== "/profile" && path !== "/assets/categories"
+	);
 
 	ngOnInit() {
 		if (this.themeService.isDarkMode())

@@ -1,96 +1,62 @@
-import { ChangeDetectionStrategy, Component, input, model, output, signal } from "@angular/core";
 import {
-	FormControl,
-	FormGroup,
-	FormsModule,
-	ReactiveFormsModule,
-	Validators
-} from "@angular/forms";
-import { BlockUIModule } from "primeng/blockui";
+	ChangeDetectionStrategy,
+	Component,
+	effect,
+	input,
+	model,
+	output,
+	signal
+} from "@angular/core";
+import { FormControl, FormGroup, ReactiveFormsModule, Validators } from "@angular/forms";
 import { Button } from "primeng/button";
 import { InputText } from "primeng/inputtext";
-import { Listbox, ListboxChangeEvent } from "primeng/listbox";
-import { Panel } from "primeng/panel";
 import { Select } from "primeng/select";
-import { TableModule } from "primeng/table";
-import { ToggleSwitch } from "primeng/toggleswitch";
-import { typeOptions } from "../asset-form/asset-form.utils";
 import { Dialog } from "primeng/dialog";
 import { AssetCategory, AssetType } from "../../model/asset.model";
+import { typeOptions } from "../asset-form/asset-form.utils";
 
 @Component({
 	selector: "app-category-form",
 	standalone: true,
 	templateUrl: "./category-form.component.html",
-	imports: [
-		Button,
-		BlockUIModule,
-		TableModule,
-		ToggleSwitch,
-		FormsModule,
-		Listbox,
-		InputText,
-		Select,
-		Panel,
-		ReactiveFormsModule,
-		Dialog
-	],
+	imports: [Button, InputText, Select, ReactiveFormsModule, Dialog],
 	changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class CategoryFormComponent {
 	isVisible = model.required<boolean>();
-	isNewCategory = model.required<boolean>();
-
-	categoriesOptions = input.required<AssetCategory[]>();
-	isSaveLoading = input.required<boolean>();
-	isDeleteLoading = input.required<boolean>();
+	selectedCategory = input<AssetCategory | null>(null);
+	isSaveLoading = input<boolean>(false);
+	isDeleteLoading = input<boolean>(false);
 
 	save = output<AssetCategory>();
 	delete = output<{ target: EventTarget; id: string }>();
 
 	protected readonly typeOptions = signal(typeOptions);
-	protected readonly selectedCategory = signal<AssetCategory | null>(null);
 	protected readonly categoryForm = new FormGroup({
 		name: new FormControl<string>("", Validators.required),
 		type: new FormControl<AssetType | null>(null, Validators.required)
 	});
 
-	selectCategory(event: ListboxChangeEvent) {
-		this.isNewCategory.set(false);
-		this.selectedCategory.set(event.value);
-		this.categoryForm.patchValue({
-			name: this.selectedCategory()?.name,
-			type: this.selectedCategory()?.type
+	constructor() {
+		effect(() => {
+			const selectedCategory = this.selectedCategory();
+
+			if (selectedCategory) {
+				this.categoryForm.patchValue({ name: selectedCategory.name, type: selectedCategory.type });
+			} else {
+				this.categoryForm.reset();
+			}
 		});
 	}
 
-	addNewCategory() {
-		this.selectedCategory.set(null);
+	onDialogHide() {
 		this.categoryForm.reset();
-	}
-
-	onCategoriesDialogHide() {
-		this.selectedCategory.set(null);
-		this.categoryForm.reset();
-	}
-
-	onNewCategoryToggleChange(isNewCategory: boolean) {
-		if (isNewCategory) this.selectedCategory.set(null);
-		else this.categoryForm.reset();
 	}
 
 	saveCategory() {
-		const form = this.categoryForm.value;
-
-		if (!form || !form.name || !form.type) return;
-
-		const category: AssetCategory = {
-			id: this.selectedCategory()?.id ?? "",
-			name: form.name,
-			type: form.type
-		};
-
-		this.save.emit(category);
+		const { name, type } = this.categoryForm.value;
+		if (!name || !type) return;
+		this.save.emit({ id: this.selectedCategory()?.id ?? "", name, type });
 	}
 
 	deleteCategory(event: Event) {
@@ -98,7 +64,5 @@ export class CategoryFormComponent {
 			target: event.target as EventTarget,
 			id: this.selectedCategory()?.id ?? ""
 		});
-		this.selectedCategory.set(null);
-		this.categoryForm.reset();
 	}
 }

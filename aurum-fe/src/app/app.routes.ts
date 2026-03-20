@@ -33,7 +33,23 @@ export const routes: Routes = [
 			icon: "pi pi-wallet"
 		},
 		canActivate: [authGuardFn],
-		loadComponent: () => import("./domain/asset/asset.component").then(m => m.AssetComponent)
+		children: [
+			{
+				path: "",
+				loadComponent: () => import("./domain/asset/asset.component").then(m => m.AssetComponent)
+			},
+			{
+				path: "categories",
+				data: {
+					label: "Categories",
+					icon: "pi pi-tags"
+				},
+				loadComponent: () =>
+					import("./domain/asset/components/categories/categories.component").then(
+						m => m.CategoriesComponent
+					)
+			}
+		]
 	},
 	{
 		path: "",
@@ -48,12 +64,20 @@ export const routes: Routes = [
 
 export const paths: Record<string, RouteInfo> = routes.reduce(
 	(acc, route) => {
-		if (route.path === "**" || !route.path) return acc;
+		if (route.path === "**" || !route.path || !route.data?.["label"]) return acc;
 
 		acc[`/${route.path}`] = {
-			label: route.data?.["label"] as string,
-			icon: route.data?.["icon"] as string
+			label: route.data["label"] as string,
+			icon: route.data["icon"] as string
 		};
+
+		route.children?.forEach(child => {
+			if (!child.path || !child.data?.["label"]) return;
+			acc[`/${route.path}/${child.path}`] = {
+				label: child.data["label"] as string,
+				icon: child.data["icon"] as string
+			};
+		});
 
 		return acc;
 	},

@@ -1,6 +1,6 @@
 <section class="flex flex-col gap-4">
 	<div class="grid grid-cols-12 gap-4">
-		<div class="col-span-12 sm:col-span-6 lg:col-span-3">
+		<div class="col-span-12 sm:col-span-6 xl:col-span-3">
 			<app-kpi-card
 				label="Total Liabilities"
 				[value]="
@@ -11,7 +11,7 @@
 				[subtext]="'Debt ratio: ' + (debtToAssetRatio() | number: '1.1-1') + '%'"
 			/>
 		</div>
-		<div class="col-span-12 sm:col-span-6 lg:col-span-3">
+		<div class="col-span-12 sm:col-span-6 xl:col-span-3">
 			<app-kpi-card
 				label="Currency Exposure"
 				[value]="
@@ -21,7 +21,7 @@
 				subtext="FX impact (1M)"
 			/>
 		</div>
-		<div class="col-span-12 sm:col-span-6 lg:col-span-3">
+		<div class="col-span-12 sm:col-span-6 xl:col-span-3">
 			<app-kpi-card
 				label="Projected Net Worth"
 				[value]="
@@ -31,7 +31,7 @@
 				subtext="Based on 1 year growth rate"
 			/>
 		</div>
-		<div class="col-span-12 sm:col-span-6 lg:col-span-3">
+		<div class="col-span-12 sm:col-span-6 xl:col-span-3">
 			<app-kpi-card
 				label="Asset Growth"
 				[value]="
