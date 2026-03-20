@@ -44,6 +44,60 @@
 					<small class="text-red-500 text-xs">Type is required</small>
 				}
 			</div>
+
+			@if (assetForm.controls.type.value === AssetType.LIABILITY) {
+				<div class="flex flex-col gap-2">
+					<label for="liabilityType">Liability Type *</label>
+					<p-select
+						id="liabilityType"
+						formControlName="liabilityType"
+						[options]="liabilityTypeOptions()"
+						placeholder="Select type"
+						size="small"
+					/>
+					@if (assetForm.controls.liabilityType.invalid && assetForm.controls.liabilityType.touched) {
+						<small class="text-red-500 text-xs">Liability type is required</small>
+					}
+				</div>
+
+				@if (assetForm.controls.liabilityType.value === LiabilityType.AUTOMATIC) {
+					<div class="flex flex-col gap-2">
+						<label for="paymentFrequency">Payment Frequency *</label>
+						<p-select
+							id="paymentFrequency"
+							formControlName="paymentFrequency"
+							[options]="paymentFrequencyOptions()"
+							placeholder="Select frequency"
+							size="small"
+						/>
+						@if (
+							assetForm.controls.paymentFrequency.invalid &&
+							assetForm.controls.paymentFrequency.touched
+						) {
+							<small class="text-red-500 text-xs">Payment frequency is required</small>
+						}
+					</div>
+					<div class="flex flex-col gap-2">
+						<label for="paymentAmount">Payment Amount *</label>
+						<p-inputNumber
+							id="paymentAmount"
+							formControlName="paymentAmount"
+							mode="currency"
+							[currency]="assetForm.value.currency || 'EUR'"
+							[locale]="locale()"
+							[minFractionDigits]="2"
+							[fluid]="true"
+							size="small"
+						/>
+						@if (
+							assetForm.controls.paymentAmount.invalid && assetForm.controls.paymentAmount.touched
+						) {
+							<small class="text-red-500 text-xs">A valid payment amount is required</small>
+						}
+					</div>
+				}
+			}
+
 			<div class="flex flex-col gap-2">
 				<label for="currency">Currency *</label>
 				<p-select

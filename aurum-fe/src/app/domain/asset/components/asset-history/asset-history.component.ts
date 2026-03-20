@@ -16,9 +16,10 @@ import { Locale } from "../../../profile/model/locale.model";
 import { getCurrencySymbol } from "../../../profile/profile.utils";
 import { Snapshot } from "../../../snapshot/model/snapshot.model";
 import { SnapshotService } from "../../../snapshot/snapshot.service";
-import { Asset } from "../../model/asset.model";
+import { Asset, LiabilityType } from "../../model/asset.model";
 import { mapSnapshotsToChartData, getChartOptions } from "./asset-history.utils";
 import { ThemeService } from "../../../../shared/services/theme/theme.service";
+import { Message } from "primeng/message";
 
 @Component({
 	selector: "app-asset-history",
@@ -34,6 +35,7 @@ import { ThemeService } from "../../../../shared/services/theme/theme.service";
 		DatePipe,
 		CurrencyPipe,
 		FormsModule,
+		Message,
 		SelectButton,
 		UIChart
 	]
@@ -48,6 +50,7 @@ export class AssetHistoryComponent {
 	snapshotsChanged = output<void>();
 
 	protected readonly ViewMode = ViewMode;
+	protected readonly LiabilityType = LiabilityType;
 
 	protected viewMode = signal<ViewMode>(ViewMode.Table);
 	protected viewModeOptions = signal<SelectItem<ViewMode>[]>([
@@ -57,6 +60,12 @@ export class AssetHistoryComponent {
 	protected selectedSnapshotsHistory = signal<Snapshot[]>([]);
 	protected newSnapshotValue = signal<number | null>(null);
 	protected newSnapshotDate = signal<Date>(new Date());
+
+	protected readonly isAutomaticLiability = computed(() => {
+		const asset = this.selectedAsset();
+		return asset?.liabilityType === LiabilityType.AUTOMATIC;
+	});
+
 	protected readonly snapshotsForSelectedAsset = computed(() => {
 		const asset = this.selectedAsset();
 		if (!asset || !asset.snapshots) return [];

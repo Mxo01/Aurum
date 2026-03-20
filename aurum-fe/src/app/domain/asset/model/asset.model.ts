@@ -6,6 +6,17 @@ export enum AssetType {
 	ASSET = "ASSET"
 }
 
+export enum LiabilityType {
+	MANUAL = "MANUAL",
+	AUTOMATIC = "AUTOMATIC"
+}
+
+export enum PaymentFrequency {
+	WEEKLY = "WEEKLY",
+	MONTHLY = "MONTHLY",
+	YEARLY = "YEARLY"
+}
+
 export interface AssetCategory {
 	id: string;
 	name: string;
@@ -24,4 +35,7 @@ export interface Asset {
 	snapshots?: Snapshot[];
 	initialValue?: number | null;
 	referenceDate?: string | Date | null;
+	liabilityType?: LiabilityType | null;
+	paymentFrequency?: PaymentFrequency | null;
+	paymentAmount?: number | null;
 }

@@ -76,6 +76,17 @@ public class SnapshotController {
 		}
 
 		Snapshot savedSnapshot = snapshotService.save(snapshotToSave);
+
+		if (snapshotDto.getAmountOriginalCurrency() != null
+				&& snapshotDto.getAmountOriginalCurrency().compareTo(BigDecimal.ZERO) == 0) {
+			Asset asset = assetRepository.findById(snapshotDto.getAssetId())
+					.orElseThrow(() -> new IllegalArgumentException("Asset not found"));
+			if (asset.getLiabilityType() != null) {
+				asset.setIsActive(false);
+				assetRepository.save(asset);
+			}
+		}
+
 		return ResponseEntity.ok(mapper.toDto(savedSnapshot));
 	}
 
