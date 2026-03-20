@@ -101,6 +101,12 @@ public class LiabilitySchedulerService {
 
         snapshotRepository.save(newSnapshot);
         log.info("Created automatic payment snapshot for liability {} (new value: {})", asset.getId(), newValue);
+
+        if (newValue.compareTo(BigDecimal.ZERO) == 0) {
+            asset.setIsActive(false);
+            assetRepository.save(asset);
+            log.info("Archived liability {} as it reached zero value", asset.getId());
+        }
     }
 
     private boolean isPaymentDue(LocalDate lastDate, LocalDate today, PaymentFrequency frequency) {
