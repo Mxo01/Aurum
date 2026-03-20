@@ -3,7 +3,7 @@
 start:
 	@cd aurum-fe && npm start &
 	@cd aurum-be && docker compose up -d
-	@cd aurum-be && ./mvnw spring-boot:run
+	@cd aurum-be && ./mvnw spring-boot:run -Dspring-boot.run.profiles=local
 
 stop:
 	@cd aurum-be && docker compose down

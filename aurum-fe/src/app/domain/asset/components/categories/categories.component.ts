@@ -6,7 +6,6 @@ import { finalize } from "rxjs";
 import { AssetService } from "../../asset.service";
 import { AssetCategory, AssetType } from "../../model/asset.model";
 import { CategoryFormComponent } from "../category-form/category-form.component";
-import { Tag } from "primeng/tag";
 import { NavigationService } from "../../../../shared/services/navigation/navigation.service";
 import { paths } from "../../../../app.routes";
 
@@ -14,7 +13,7 @@ import { paths } from "../../../../app.routes";
 	selector: "app-categories",
 	standalone: true,
 	templateUrl: "./categories.component.html",
-	imports: [Button, RouterLink, CategoryFormComponent, Tag],
+	imports: [Button, RouterLink, CategoryFormComponent],
 	changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class CategoriesComponent implements OnInit {
