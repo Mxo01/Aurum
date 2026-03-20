@@ -21,6 +21,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -63,6 +64,17 @@ public class Asset {
 
 	@Column(nullable = false)
 	private Boolean isFavorite = false;
+
+	@Enumerated(EnumType.STRING)
+	@Column(name = "liability_type")
+	private LiabilityType liabilityType;
+
+	@Enumerated(EnumType.STRING)
+	@Column(name = "payment_frequency")
+	private PaymentFrequency paymentFrequency;
+
+	@Column(name = "payment_amount", precision = 19, scale = 4)
+	private BigDecimal paymentAmount;
 
 	@Column(nullable = false, updatable = false)
 	private LocalDateTime createdAt;

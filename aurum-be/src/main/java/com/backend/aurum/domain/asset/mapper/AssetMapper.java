@@ -29,6 +29,9 @@ public class AssetMapper {
 		asset.setIsActive(dto.getIsActive() != null ? dto.getIsActive() : true);
 		asset.setIsFavorite(dto.getIsFavorite() != null ? dto.getIsFavorite() : false);
 		asset.setOriginalCurrency(dto.getOriginalCurrency() != null ? dto.getOriginalCurrency() : Currency.EUR);
+		asset.setLiabilityType(dto.getLiabilityType());
+		asset.setPaymentFrequency(dto.getPaymentFrequency());
+		asset.setPaymentAmount(dto.getPaymentAmount());
 
 		if (userId != null) {
 			User user = userRepository.findById(userId)
@@ -71,6 +74,10 @@ public class AssetMapper {
 					.map(snapshotMapper::toDto)
 					.toList());
 		}
+
+		dto.setLiabilityType(entity.getLiabilityType());
+		dto.setPaymentFrequency(entity.getPaymentFrequency());
+		dto.setPaymentAmount(entity.getPaymentAmount());
 
 		return dto;
 	}

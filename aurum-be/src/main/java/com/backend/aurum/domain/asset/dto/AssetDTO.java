@@ -1,6 +1,8 @@
 package com.backend.aurum.domain.asset.dto;
 
 import com.backend.aurum.domain.asset.model.AssetType;
+import com.backend.aurum.domain.asset.model.LiabilityType;
+import com.backend.aurum.domain.asset.model.PaymentFrequency;
 import com.backend.aurum.domain.user.enums.Currency;
 
 import lombok.Data;
@@ -23,4 +25,7 @@ public class AssetDTO {
 	private List<SnapshotDTO> snapshots;
 	private BigDecimal initialValue;
 	private LocalDate referenceDate;
+	private LiabilityType liabilityType;
+	private PaymentFrequency paymentFrequency;
+	private BigDecimal paymentAmount;
 }

@@ -63,6 +63,9 @@ public class AssetService {
 		asset.setOriginalCurrency(assetDetails.getOriginalCurrency());
 		asset.setIsActive(assetDetails.getIsActive());
 		asset.setUser(assetDetails.getUser());
+		asset.setLiabilityType(assetDetails.getLiabilityType());
+		asset.setPaymentFrequency(assetDetails.getPaymentFrequency());
+		asset.setPaymentAmount(assetDetails.getPaymentAmount());
 
 		boolean willBeActive = Boolean.TRUE.equals(assetDetails.getIsActive());
 		if (!willBeActive) {

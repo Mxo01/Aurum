@@ -8,6 +8,17 @@
 	[breakpoints]="{ '960px': '75vw', '640px': '90vw' }"
 >
 	<ng-template #content>
+		@if (isAutomaticLiability()) {
+			<div class="flex items-start gap-2 mb-4 p-3 rounded-lg bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800">
+				<i class="pi pi-info-circle text-amber-600 dark:text-amber-400 mt-0.5 shrink-0"></i>
+				<small class="text-amber-700 dark:text-amber-300 text-xs leading-relaxed">
+					This liability uses <strong>automatic payments</strong>. Snapshots are generated automatically
+					based on the configured payment schedule and cannot be added or deleted manually. To change the
+					payment schedule, edit the liability settings.
+				</small>
+			</div>
+		}
+
 		<p-select-button
 			class="mb-5"
 			[(ngModel)]="viewMode"
@@ -39,9 +50,11 @@
 			>
 				<ng-template #header>
 					<tr>
-						<th style="width: 4rem">
-							<p-tableHeaderCheckbox />
-						</th>
+						@if (!isAutomaticLiability()) {
+							<th style="width: 4rem">
+								<p-tableHeaderCheckbox />
+							</th>
+						}
 						<th>Date</th>
 						<th class="text-right">Amount</th>
 						<th class="text-right">Value (Base)</th>
@@ -52,9 +65,11 @@
 					let-snapshot
 				>
 					<tr>
-						<td>
-							<p-tableCheckbox [value]="snapshot" />
-						</td>
+						@if (!isAutomaticLiability()) {
+							<td>
+								<p-tableCheckbox [value]="snapshot" />
+							</td>
+						}
 						<td>{{ snapshot.referenceDate | date: "mediumDate" }}</td>
 						<td class="text-right font-mono">
 							{{
@@ -70,46 +85,48 @@
 						</td>
 					</tr>
 				</ng-template>
-				<ng-template #footer>
-					<tr>
-						<td></td>
-						<td>
-							<p-datePicker
-								[(ngModel)]="newSnapshotDate"
-								[showIcon]="true"
-								appendTo="body"
-								dateFormat="dd/mm/yy"
-								size="small"
-								fluid
-							/>
-						</td>
-						<td>
-							<p-inputNumber
-								[(ngModel)]="newSnapshotValue"
-								mode="currency"
-								[currency]="selectedAsset()?.originalCurrency || 'EUR'"
-								[locale]="locale()"
-								[minFractionDigits]="2"
-								size="small"
-								fluid
-							/>
-						</td>
-						<td>
-							<p-button
-								icon="pi pi-plus"
-								label="Add"
-								[disabled]="newSnapshotValue() === null"
-								(onClick)="addSnapshotFromHistory()"
-								size="small"
-								fluid
-							/>
-						</td>
-					</tr>
-				</ng-template>
+				@if (!isAutomaticLiability()) {
+					<ng-template #footer>
+						<tr>
+							<td></td>
+							<td>
+								<p-datePicker
+									[(ngModel)]="newSnapshotDate"
+									[showIcon]="true"
+									appendTo="body"
+									dateFormat="dd/mm/yy"
+									size="small"
+									fluid
+								/>
+							</td>
+							<td>
+								<p-inputNumber
+									[(ngModel)]="newSnapshotValue"
+									mode="currency"
+									[currency]="selectedAsset()?.originalCurrency || 'EUR'"
+									[locale]="locale()"
+									[minFractionDigits]="2"
+									size="small"
+									fluid
+								/>
+							</td>
+							<td>
+								<p-button
+									icon="pi pi-plus"
+									label="Add"
+									[disabled]="newSnapshotValue() === null"
+									(onClick)="addSnapshotFromHistory()"
+									size="small"
+									fluid
+								/>
+							</td>
+						</tr>
+					</ng-template>
+				}
 				<ng-template #emptymessage>
 					<tr>
 						<td
-							colspan="4"
+							[attr.colspan]="isAutomaticLiability() ? 3 : 4"
 							class="text-center py-12!"
 						>
 							<div class="flex flex-col items-center gap-4 text-stone-400">
@@ -142,10 +159,12 @@
 	<ng-template #footer>
 		<div
 			[class]="
-				viewMode() === ViewMode.Table ? 'flex justify-between w-full' : 'flex justify-end w-full'
+				viewMode() === ViewMode.Table && !isAutomaticLiability()
+					? 'flex justify-between w-full'
+					: 'flex justify-end w-full'
 			"
 		>
-			@if (viewMode() === ViewMode.Table) {
+			@if (viewMode() === ViewMode.Table && !isAutomaticLiability()) {
 				<p-button
 					label="Delete Selected"
 					icon="pi pi-trash"

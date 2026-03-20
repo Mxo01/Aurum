@@ -15,13 +15,13 @@ import { InputText } from "primeng/inputtext";
 import { Select } from "primeng/select";
 import { InputNumber } from "primeng/inputnumber";
 import { DatePicker } from "primeng/datepicker";
-import { currencyOptions, typeOptions } from "./asset-form.utils";
+import { currencyOptions, typeOptions, liabilityTypeOptions, paymentFrequencyOptions } from "./asset-form.utils";
 import { Button } from "primeng/button";
 import { Drawer } from "primeng/drawer";
 import { Subscription } from "rxjs";
 import { Currency } from "../../../profile/model/currency.model";
 import { Locale } from "../../../profile/model/locale.model";
-import { Asset, AssetCategory, AssetType } from "../../model/asset.model";
+import { Asset, AssetCategory, AssetType, LiabilityType, PaymentFrequency } from "../../model/asset.model";
 
 @Component({
 	selector: "app-asset-form",
@@ -56,14 +56,21 @@ export class AssetFormComponent implements OnInit, OnDestroy {
 		isActive: new FormControl<boolean>(true),
 		isFavorite: new FormControl<boolean>(false),
 		initialValue: new FormControl<number | null>(null),
-		referenceDate: new FormControl<Date>(new Date())
+		referenceDate: new FormControl<Date>(new Date()),
+		liabilityType: new FormControl<LiabilityType | null>(null),
+		paymentFrequency: new FormControl<PaymentFrequency | null>(null),
+		paymentAmount: new FormControl<number | null>(null)
 	});
 	protected readonly currencyOptions = signal(currencyOptions);
 	protected readonly typeOptions = signal(typeOptions);
+	protected readonly liabilityTypeOptions = signal(liabilityTypeOptions);
+	protected readonly paymentFrequencyOptions = signal(paymentFrequencyOptions);
 	protected readonly AssetType = AssetType;
+	protected readonly LiabilityType = LiabilityType;
 
 	private categoryCtrlSub?: Subscription;
 	private isActiveCtrlSub?: Subscription;
+	private liabilityTypeCtrlSub?: Subscription;
 
 	constructor() {
 		effect(() => {
@@ -80,9 +87,13 @@ export class AssetFormComponent implements OnInit, OnDestroy {
 					type: selectedAsset.type,
 					currency: selectedAsset.originalCurrency,
 					isActive: selectedAsset.isActive,
-					isFavorite: selectedAsset.isFavorite
+					isFavorite: selectedAsset.isFavorite,
+					liabilityType: selectedAsset.liabilityType ?? null,
+					paymentFrequency: selectedAsset.paymentFrequency ?? null,
+					paymentAmount: selectedAsset.paymentAmount ?? null
 				});
 				this.assetForm.controls.currency.disable();
+				this.updateLiabilityValidators(selectedAsset.liabilityType ?? null);
 			} else {
 				this.assetForm.controls.currency.enable();
 				this.resetForm();
@@ -103,11 +114,35 @@ export class AssetFormComponent implements OnInit, OnDestroy {
 				}
 			}
 		});
+		this.liabilityTypeCtrlSub = this.assetForm.controls.liabilityType.valueChanges.subscribe({
+			next: liabilityType => {
+				this.updateLiabilityValidators(liabilityType);
+			}
+		});
 	}
 
 	ngOnDestroy() {
 		this.categoryCtrlSub?.unsubscribe();
 		this.isActiveCtrlSub?.unsubscribe();
+		this.liabilityTypeCtrlSub?.unsubscribe();
+	}
+
+	private updateLiabilityValidators(liabilityType: LiabilityType | null) {
+		const frequencyCtrl = this.assetForm.controls.paymentFrequency;
+		const amountCtrl = this.assetForm.controls.paymentAmount;
+
+		if (liabilityType === LiabilityType.AUTOMATIC) {
+			frequencyCtrl.setValidators(Validators.required);
+			amountCtrl.setValidators([Validators.required, Validators.min(0.01)]);
+		} else {
+			frequencyCtrl.clearValidators();
+			amountCtrl.clearValidators();
+			frequencyCtrl.setValue(null);
+			amountCtrl.setValue(null);
+		}
+
+		frequencyCtrl.updateValueAndValidity();
+		amountCtrl.updateValueAndValidity();
 	}
 
 	resetForm() {
@@ -147,6 +182,15 @@ export class AssetFormComponent implements OnInit, OnDestroy {
 						String(form.referenceDate.getMonth() + 1).padStart(2, "0") +
 						"-" +
 						String(form.referenceDate.getDate()).padStart(2, "0")
+					: null,
+			liabilityType: form.type === AssetType.LIABILITY ? (form.liabilityType ?? null) : null,
+			paymentFrequency:
+				form.type === AssetType.LIABILITY && form.liabilityType === LiabilityType.AUTOMATIC
+					? (form.paymentFrequency ?? null)
+					: null,
+			paymentAmount:
+				form.type === AssetType.LIABILITY && form.liabilityType === LiabilityType.AUTOMATIC
+					? (form.paymentAmount ?? null)
 					: null
 		};
 
