@@ -1,3 +1,3 @@
 export const environment = {
-	apiUrl: "https://aurum-networth.com/api"
+	apiUrl: "https://api.aurum-networth.com/api"
 };
