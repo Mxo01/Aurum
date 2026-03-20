@@ -1,6 +1,7 @@
 import Aura from "@primeuix/themes/aura";
 import { definePreset } from "@primeuix/themes";
 import { AuthConfig } from "@auth0/auth0-angular";
+import { environment } from "../environments/environment";
 
 export const primengPreset = definePreset(Aura, {
 	semantic: {
@@ -60,7 +61,7 @@ export const auth0Config: AuthConfig = {
 	httpInterceptor: {
 		allowedList: [
 			{
-				uri: "http://localhost:8080/api/*",
+				uri: `${environment.apiUrl}/*`,
 				tokenOptions: {
 					authorizationParams: {
 						audience: "https://api.aurum.com"
