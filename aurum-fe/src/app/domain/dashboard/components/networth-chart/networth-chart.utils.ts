@@ -1,5 +1,6 @@
 import {
 	chartColors,
+	createBarGradient,
 	getChartTooltipStyle,
 	getOrCreateTooltipEl,
 	positionTooltipEl,
@@ -9,10 +10,10 @@ import {
 import { ChartData } from "../../model/dashboard.model";
 import { ChartConfiguration, ChartDataset } from "chart.js";
 
-export function mapDataIntoNetworthChartData(
-	data: ChartData | null,
-	isDarkMode: boolean
-): { labels: string[]; datasets: ChartDataset[] } {
+export function mapDataIntoNetworthChartData(data: ChartData | null): {
+	labels: string[];
+	datasets: ChartDataset[];
+} {
 	const labels = data?.labels ?? [];
 	const colors = chartColors;
 
@@ -21,8 +22,9 @@ export function mapDataIntoNetworthChartData(
 			type: "bar",
 			label: "Total Assets",
 			data: data?.totalAssetsOnly ?? [],
-			backgroundColor: isDarkMode ? "rgba(255,255,255,0.7)" : "rgba(0,0,0,0.1)",
+			backgroundColor: createBarGradient("rgba(255,255,255)", "rgba(0,0,0,0.1)"),
 			borderRadius: 16,
+			maxBarThickness: 64,
 			borderSkipped: false,
 			order: 1
 		} as ChartDataset<"bar">

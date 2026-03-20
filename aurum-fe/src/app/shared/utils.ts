@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 type Truthy<T> = Exclude<T, false | "" | null | undefined>;
 
 export function isTruthy<T>(value: T): value is Truthy<T> {
@@ -11,7 +13,25 @@ export function isTruthy<T>(value: T): value is Truthy<T> {
  * canvas gradient: 15% opacity near the line fading to fully transparent at the bottom.
  * Pass the result directly as a dataset's `backgroundColor`.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+/**
+ * Returns a Chart.js scriptable backgroundColor function that renders a vertical
+ * canvas gradient across the full chart area, suitable for bar datasets.
+ */
+export function createBarGradient(
+	topColor: string,
+	bottomColor: string
+): (context: any) => CanvasGradient | string {
+	return context => {
+		const chart = context.chart;
+		const { ctx, chartArea } = chart;
+		if (!chartArea) return topColor;
+		const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+		gradient.addColorStop(0, topColor);
+		gradient.addColorStop(1, bottomColor);
+		return gradient;
+	};
+}
+
 export function createGradientFill(
 	borderColorHex: string
 ): (context: any) => CanvasGradient | string {

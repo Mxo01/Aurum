@@ -66,9 +66,7 @@ export class NetworthChartComponent {
 		{ label: "1Y", value: "oneYear" }
 	]);
 	protected readonly selectedPeriod = signal<keyof Variation>("oneMonth");
-	protected readonly chartData = computed(() =>
-		mapDataIntoNetworthChartData(this.data(), this.themeService.isDarkMode())
-	);
+	protected readonly chartData = computed(() => mapDataIntoNetworthChartData(this.data()));
 	protected readonly chartOptions = computed(() =>
 		getNetworthChartOptions(
 			getCurrencySymbol(this.currency()),
