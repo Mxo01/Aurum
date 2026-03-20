@@ -37,7 +37,9 @@ export class ProfileService {
 						detail: "Failed to delete profile"
 					})
 			}),
-			switchMap(() => this.authService.logout())
+			switchMap(() =>
+				this.authService.logout({ logoutParams: { returnTo: window.location.origin } })
+			)
 		);
 	}
 

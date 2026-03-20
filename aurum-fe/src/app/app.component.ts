@@ -43,6 +43,6 @@ export class App implements OnInit {
 	}
 
 	logout() {
-		this.authService.logout();
+		this.authService.logout({ logoutParams: { returnTo: this.document.location.origin } });
 	}
 }
