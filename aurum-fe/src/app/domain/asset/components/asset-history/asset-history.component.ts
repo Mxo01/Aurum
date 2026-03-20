@@ -19,6 +19,7 @@ import { SnapshotService } from "../../../snapshot/snapshot.service";
 import { Asset, LiabilityType } from "../../model/asset.model";
 import { mapSnapshotsToChartData, getChartOptions } from "./asset-history.utils";
 import { ThemeService } from "../../../../shared/services/theme/theme.service";
+import { Message } from "primeng/message";
 
 @Component({
 	selector: "app-asset-history",
@@ -34,6 +35,7 @@ import { ThemeService } from "../../../../shared/services/theme/theme.service";
 		DatePipe,
 		CurrencyPipe,
 		FormsModule,
+		Message,
 		SelectButton,
 		UIChart
 	]

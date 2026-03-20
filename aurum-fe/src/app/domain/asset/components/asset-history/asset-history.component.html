@@ -9,14 +9,16 @@
 >
 	<ng-template #content>
 		@if (isAutomaticLiability()) {
-			<div class="flex items-start gap-2 mb-4 p-3 rounded-lg bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800">
-				<i class="pi pi-info-circle text-amber-600 dark:text-amber-400 mt-0.5 shrink-0"></i>
-				<small class="text-amber-700 dark:text-amber-300 text-xs leading-relaxed">
-					This liability uses <strong>automatic payments</strong>. Snapshots are generated automatically
-					based on the configured payment schedule and cannot be added or deleted manually. To change the
-					payment schedule, edit the liability settings.
-				</small>
-			</div>
+			<p-message
+				severity="warn"
+				icon="pi pi-info-circle"
+				class="my-5"
+			>
+				This liability uses
+				<strong>automatic payments</strong>
+				. Snapshots are generated automatically based on the configured payment schedule and cannot
+				be added or deleted manually. To change the payment schedule, edit the liability settings.
+			</p-message>
 		}
 
 		<p-select-button
