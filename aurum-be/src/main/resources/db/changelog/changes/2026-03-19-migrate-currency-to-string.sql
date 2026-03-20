@@ -1,3 +1,5 @@
+--liquibase formatted sql
+
 --changeset aurum:2026-03-19-migrate-currency-to-string
 -- users.currency: 0=EUR, 1=USD → VARCHAR
 ALTER TABLE users ADD COLUMN currency_str VARCHAR(3);
