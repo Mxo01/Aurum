@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, input } from "@angular/co
 import { CommonModule } from "@angular/common";
 import { Card } from "primeng/card";
 import { ChartModule } from "primeng/chart";
+import { createGradientFill } from "../../../../shared/utils";
 
 @Component({
 	selector: "app-kpi-card",
@@ -30,20 +31,23 @@ export class KpiCardComponent {
 		return isGood ? "#22c55e" : "#ef4444";
 	});
 
-	protected readonly sparklineChartData = computed(() => ({
-		labels: (this.sparklineData() ?? []).map(() => ""),
-		datasets: [
-			{
-				data: this.sparklineData() ?? [],
-				borderColor: this.sparklineColor(),
-				borderWidth: 1.5,
-				tension: 0,
-				pointRadius: 0,
-				fill: true,
-				backgroundColor: this.sparklineColor() + "15"
-			}
-		]
-	}));
+	protected readonly sparklineChartData = computed(() => {
+		const color = this.sparklineColor();
+		return {
+			labels: (this.sparklineData() ?? []).map(() => ""),
+			datasets: [
+				{
+					data: this.sparklineData() ?? [],
+					borderColor: color,
+					borderWidth: 1.5,
+					tension: 0,
+					pointRadius: 0,
+					fill: true,
+					backgroundColor: createGradientFill(color)
+				}
+			]
+		};
+	});
 
 	protected readonly sparklineOptions = {
 		responsive: false,

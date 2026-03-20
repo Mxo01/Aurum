@@ -1,12 +1,13 @@
 import { Locale } from "../../../profile/model/locale.model";
 import { Snapshot } from "../../../snapshot/model/snapshot.model";
 import {
-	chartTooltipStyle,
+	createGradientFill,
+	getChartTooltipStyle,
 	getOrCreateTooltipEl,
 	positionTooltipEl,
 	tooltipContainer,
 	tooltipRow
-} from "../../../../app.utils";
+} from "../../../../shared/utils";
 
 export function mapSnapshotsToChartData(
 	snapshots: Snapshot[],
@@ -31,9 +32,10 @@ export function mapSnapshotsToChartData(
 				data: data.map(({ amountBaseCurrency }) => amountBaseCurrency),
 				fill: true,
 				borderColor: isDarkMode ? "#ffffff" : "#000000",
-				backgroundColor: isDarkMode ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.05)",
+				backgroundColor: createGradientFill(isDarkMode ? "#ffffff" : "#000000"),
 				tension: 0.4,
-				pointRadius: 4,
+				pointRadius: 0,
+				pointHoverRadius: 5,
 				pointBackgroundColor: isDarkMode ? "#ffffff" : "#000000"
 			}
 		]
@@ -42,8 +44,7 @@ export function mapSnapshotsToChartData(
 
 export function getChartOptions(currencySymbol: string, isDarkMode: boolean, locale: Locale) {
 	const textColor = isDarkMode ? "#ffffff" : "#000000";
-	const gridColor = isDarkMode ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.1)";
-	const t = chartTooltipStyle;
+	const t = getChartTooltipStyle(isDarkMode);
 
 	return {
 		responsive: true,
@@ -81,11 +82,11 @@ export function getChartOptions(currencySymbol: string, isDarkMode: boolean, loc
 							const formattedVal = `${currencySymbol}${point.parsed.y.toLocaleString(locale, { minimumFractionDigits: 2 })}`;
 							const dotColor = (point.dataset.borderColor as string | undefined) ?? t.muted;
 							const dot = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${dotColor};margin-right:6px;flex-shrink:0;"></span>`;
-							return tooltipRow(dot, point.dataset.label ?? "", formattedVal);
+							return tooltipRow(t, dot, point.dataset.label ?? "", formattedVal);
 						})
 						.join("");
 
-					el.innerHTML = tooltipContainer(title, rowsHtml);
+					el.innerHTML = tooltipContainer(t, title, rowsHtml);
 
 					positionTooltipEl(
 						el,
@@ -97,15 +98,8 @@ export function getChartOptions(currencySymbol: string, isDarkMode: boolean, loc
 			}
 		},
 		scales: {
-			x: { ticks: { color: textColor } },
-			y: {
-				beginAtZero: false,
-				grid: { color: gridColor },
-				ticks: {
-					color: textColor,
-					callback: (value: number) => `${currencySymbol} ${value.toLocaleString(locale)}`
-				}
-			}
+			x: { grid: { display: false }, ticks: { color: textColor } },
+			y: { display: false }
 		}
 	};
 }

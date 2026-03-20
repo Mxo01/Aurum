@@ -1,11 +1,11 @@
 import {
 	chartColors,
-	chartTooltipStyle,
+	getChartTooltipStyle,
 	getOrCreateTooltipEl,
 	positionTooltipEl,
 	tooltipContainer,
 	tooltipRow
-} from "../../../../app.utils";
+} from "../../../../shared/utils";
 import { ChartData } from "../../model/dashboard.model";
 import { ChartConfiguration, ChartDataset } from "chart.js";
 
@@ -56,7 +56,7 @@ export function getNetworthChartOptions(
 	locale: string
 ): ChartConfiguration["options"] {
 	const textColor = isDarkMode ? "#ffffff" : "#000000";
-	const t = chartTooltipStyle;
+	const t = getChartTooltipStyle(isDarkMode);
 
 	return {
 		responsive: true,
@@ -112,11 +112,11 @@ export function getNetworthChartOptions(
 							const dot = isTotal
 								? `<span style="display:inline-block;width:8px;height:2px;border-radius:1px;background:${t.muted};margin-right:6px;flex-shrink:0;"></span>`
 								: `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${dotColor};margin-right:6px;flex-shrink:0;"></span>`;
-							return tooltipRow(dot, point.dataset.label ?? "", formattedVal);
+							return tooltipRow(t, dot, point.dataset.label ?? "", formattedVal);
 						})
 						.join("");
 
-					el.innerHTML = tooltipContainer(title, rowsHtml + variationHtml);
+					el.innerHTML = tooltipContainer(t, title, rowsHtml + variationHtml);
 
 					positionTooltipEl(
 						el,

@@ -1,4 +1,4 @@
-import { chartColors } from "../../../../app.utils";
+import { chartColors } from "../../../../shared/utils";
 import { AnalyticsSummary } from "../../model/dashboard.model";
 
 export interface MeterItem {
