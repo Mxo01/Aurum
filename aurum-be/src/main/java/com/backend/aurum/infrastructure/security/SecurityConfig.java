@@ -46,7 +46,7 @@ public class SecurityConfig {
 	public SecurityFilterChain mcpFilterChain(HttpSecurity http, ApiKeyAuthFilter apiKeyAuthFilter)
 		throws Exception {
 		http
-			.securityMatcher("/sse", "/mcp/**")
+			.securityMatcher("/sse", "/mcp/message")
 			.csrf(AbstractHttpConfigurer::disable)
 			.cors(cors -> cors.configurationSource(corsConfigurationSource()))
 			.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
