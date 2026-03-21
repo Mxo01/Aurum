@@ -5,7 +5,7 @@ echo "--- Checking Aurum FE ---"
 (cd aurum-fe && npx lint-staged)
 
 echo "--- Checking Aurum BE ---"
-STAGED_JAVA=$(git diff --cached --name-only | grep "aurum-be/.*\.java$" || true)
+STAGED_JAVA=$(git diff --cached --name-only --diff-filter=ACM | grep "aurum-be/.*\.java$" || true)
 echo "Staged Java files: '$STAGED_JAVA'"
 if [ -n "$STAGED_JAVA" ]; then
   echo "$STAGED_JAVA" | xargs ./node_modules/.bin/prettier --write --log-level log
