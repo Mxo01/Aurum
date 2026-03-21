@@ -6,13 +6,12 @@ import com.backend.aurum.domain.analytics.model.TargetStatus;
 import com.backend.aurum.domain.analytics.model.TargetType;
 import com.backend.aurum.domain.user.model.User;
 import com.backend.aurum.domain.user.repository.UserRepository;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Component;
-
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.UUID;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
@@ -21,14 +20,14 @@ public class TargetMapper {
 	private final UserRepository userRepository;
 
 	public Target toEntity(TargetDTO dto, UUID userId) {
-		if (dto == null)
-			return null;
+		if (dto == null) return null;
 		Target target = new Target();
 		target.setId(dto.getId());
 
 		if (userId != null) {
-			User user = userRepository.findById(userId)
-					.orElseThrow(() -> new RuntimeException("User not found"));
+			User user = userRepository
+				.findById(userId)
+				.orElseThrow(() -> new RuntimeException("User not found"));
 			target.setUser(user);
 		}
 
@@ -42,8 +41,7 @@ public class TargetMapper {
 	}
 
 	public TargetDTO toDto(Target entity, BigDecimal currentNetWorth) {
-		if (entity == null)
-			return null;
+		if (entity == null) return null;
 		TargetDTO dto = new TargetDTO();
 		dto.setId(entity.getId());
 		dto.setName(entity.getName());
@@ -54,8 +52,8 @@ public class TargetMapper {
 		dto.setType(type);
 
 		BigDecimal currentAmount = (entity.getType() == TargetType.NET_WORTH)
-				? (currentNetWorth != null ? currentNetWorth : BigDecimal.ZERO)
-				: (entity.getCurrentAmount() != null ? entity.getCurrentAmount() : BigDecimal.ZERO);
+			? (currentNetWorth != null ? currentNetWorth : BigDecimal.ZERO)
+			: (entity.getCurrentAmount() != null ? entity.getCurrentAmount() : BigDecimal.ZERO);
 
 		dto.setCurrentAmount(currentAmount);
 
@@ -69,9 +67,10 @@ public class TargetMapper {
 
 		double percentage = 0.0;
 		if (entity.getTargetAmount().compareTo(BigDecimal.ZERO) > 0) {
-			percentage = currentAmount.multiply(new BigDecimal("100"))
-					.divide(entity.getTargetAmount(), 2, RoundingMode.HALF_UP)
-					.doubleValue();
+			percentage = currentAmount
+				.multiply(new BigDecimal("100"))
+				.divide(entity.getTargetAmount(), 2, RoundingMode.HALF_UP)
+				.doubleValue();
 		}
 
 		double cappedPercentage = Math.min(100.0, percentage);

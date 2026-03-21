@@ -7,16 +7,14 @@ import com.backend.aurum.domain.analytics.service.AnalyticsService;
 import com.backend.aurum.domain.analytics.service.TargetService;
 import com.backend.aurum.domain.analytics.validation.TargetValidationService;
 import com.backend.aurum.domain.user.model.UserPrincipal;
-
 import io.swagger.v3.oas.annotations.tags.Tag;
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
-
-import java.math.BigDecimal;
-import java.util.List;
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/targets")
@@ -30,18 +28,24 @@ public class TargetController {
 	private final TargetMapper mapper;
 
 	@GetMapping
-	public ResponseEntity<List<TargetDTO>> getAllTargets(@AuthenticationPrincipal UserPrincipal principal) {
+	public ResponseEntity<List<TargetDTO>> getAllTargets(
+		@AuthenticationPrincipal UserPrincipal principal
+	) {
 		UUID userId = principal.user().getId();
 		BigDecimal currentNetWorth = analyticsService.getSummary(userId).getTotalNetWorth();
-		List<TargetDTO> targets = targetService.findAll(userId).stream()
-				.map(t -> mapper.toDto(t, currentNetWorth))
-				.toList();
+		List<TargetDTO> targets = targetService
+			.findAll(userId)
+			.stream()
+			.map(t -> mapper.toDto(t, currentNetWorth))
+			.toList();
 		return ResponseEntity.ok(targets);
 	}
 
 	@PostMapping
-	public ResponseEntity<TargetDTO> createTarget(@RequestBody TargetDTO targetDto,
-			@AuthenticationPrincipal UserPrincipal principal) {
+	public ResponseEntity<TargetDTO> createTarget(
+		@RequestBody TargetDTO targetDto,
+		@AuthenticationPrincipal UserPrincipal principal
+	) {
 		UUID userId = principal.user().getId();
 		validationService.validate(targetDto);
 		Target target = mapper.toEntity(targetDto, userId);
@@ -51,8 +55,11 @@ public class TargetController {
 	}
 
 	@PutMapping("/{id}")
-	public ResponseEntity<TargetDTO> updateTarget(@PathVariable UUID id, @RequestBody TargetDTO targetDto,
-			@AuthenticationPrincipal UserPrincipal principal) {
+	public ResponseEntity<TargetDTO> updateTarget(
+		@PathVariable UUID id,
+		@RequestBody TargetDTO targetDto,
+		@AuthenticationPrincipal UserPrincipal principal
+	) {
 		UUID userId = principal.user().getId();
 		validationService.validate(targetDto);
 		Target targetDetails = mapper.toEntity(targetDto, userId);

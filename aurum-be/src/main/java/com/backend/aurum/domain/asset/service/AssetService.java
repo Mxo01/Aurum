@@ -4,14 +4,13 @@ import com.backend.aurum.domain.asset.model.Asset;
 import com.backend.aurum.domain.asset.model.Snapshot;
 import com.backend.aurum.domain.asset.repository.AssetRepository;
 import com.backend.aurum.domain.asset.repository.SnapshotRepository;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -29,8 +28,9 @@ public class AssetService {
 	}
 
 	public Asset findById(UUID id, UUID userId) {
-		Asset asset = assetRepository.findById(id)
-				.orElseThrow(() -> new RuntimeException("Asset not found"));
+		Asset asset = assetRepository
+			.findById(id)
+			.orElseThrow(() -> new RuntimeException("Asset not found"));
 
 		if (!asset.getUser().getId().equals(userId)) {
 			throw new RuntimeException("Access denied: Asset does not belong to user");

@@ -6,6 +6,7 @@ import com.backend.aurum.domain.user.dto.UpdateNameDTO;
 import com.backend.aurum.domain.user.model.User;
 import com.backend.aurum.domain.user.model.UserPrincipal;
 import com.backend.aurum.domain.user.service.UserService;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -13,8 +14,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/users")
@@ -41,8 +40,10 @@ public class UserController {
 	}
 
 	@PutMapping
-	public ResponseEntity<Void> updateName(@AuthenticationPrincipal UserPrincipal principal,
-			@RequestBody UpdateNameDTO dto) {
+	public ResponseEntity<Void> updateName(
+		@AuthenticationPrincipal UserPrincipal principal,
+		@RequestBody UpdateNameDTO dto
+	) {
 		String jwtId = principal.jwt().getSubject();
 
 		userService.updateAuth0Name(jwtId, dto);
@@ -51,8 +52,10 @@ public class UserController {
 	}
 
 	@PutMapping("/currency")
-	public ResponseEntity<Void> updateCurrency(@AuthenticationPrincipal UserPrincipal principal,
-			@RequestBody UpdateCurrencyDTO dto) {
+	public ResponseEntity<Void> updateCurrency(
+		@AuthenticationPrincipal UserPrincipal principal,
+		@RequestBody UpdateCurrencyDTO dto
+	) {
 		UUID userId = principal.user().getId();
 
 		userService.updateCurrency(userId, dto);
@@ -61,8 +64,10 @@ public class UserController {
 	}
 
 	@PutMapping("/locale")
-	public ResponseEntity<Void> updateLocale(@AuthenticationPrincipal UserPrincipal principal,
-			@RequestBody UpdateLocaleDTO dto) {
+	public ResponseEntity<Void> updateLocale(
+		@AuthenticationPrincipal UserPrincipal principal,
+		@RequestBody UpdateLocaleDTO dto
+	) {
 		UUID userId = principal.user().getId();
 
 		userService.updateLocale(userId, dto);
@@ -71,8 +76,10 @@ public class UserController {
 	}
 
 	@PostMapping(value = "/picture", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-	public ResponseEntity<Void> updatePicture(@AuthenticationPrincipal UserPrincipal principal,
-			@RequestParam("file") MultipartFile file) {
+	public ResponseEntity<Void> updatePicture(
+		@AuthenticationPrincipal UserPrincipal principal,
+		@RequestParam("file") MultipartFile file
+	) {
 		if (userService.isGoogleUser(principal)) {
 			return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
 		}

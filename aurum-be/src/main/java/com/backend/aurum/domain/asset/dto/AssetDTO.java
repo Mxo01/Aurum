@@ -4,16 +4,15 @@ import com.backend.aurum.domain.asset.model.AssetType;
 import com.backend.aurum.domain.asset.model.LiabilityType;
 import com.backend.aurum.domain.asset.model.PaymentFrequency;
 import com.backend.aurum.domain.user.enums.Currency;
-
-import lombok.Data;
-
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
+import lombok.Data;
 
 @Data
 public class AssetDTO {
+
 	private UUID id;
 	private String name;
 	private UUID categoryId;
