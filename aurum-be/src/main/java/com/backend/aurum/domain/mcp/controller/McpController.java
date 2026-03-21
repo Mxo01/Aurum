@@ -17,7 +17,6 @@ import com.backend.aurum.domain.asset.model.Asset;
 import com.backend.aurum.domain.asset.model.AssetCategory;
 import com.backend.aurum.domain.asset.model.AssetType;
 import com.backend.aurum.domain.asset.model.Snapshot;
-import com.backend.aurum.domain.asset.repository.AssetRepository;
 import com.backend.aurum.domain.asset.service.AssetCategoryService;
 import com.backend.aurum.domain.asset.service.AssetService;
 import com.backend.aurum.domain.asset.service.SnapshotService;
@@ -56,7 +55,6 @@ public class McpController {
 	private final TargetService targetService;
 	private final TargetMapper targetMapper;
 	private final AnalyticsService analyticsService;
-	private final AssetRepository assetRepository;
 	private final ExchangeRateService exchangeRateService;
 	private final AssetCategoryService categoryService;
 	private final AssetCategoryMapper categoryMapper;

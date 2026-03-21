@@ -1,7 +1,9 @@
 package com.backend.aurum.domain.asset.service;
 
+import com.backend.aurum.domain.asset.model.Asset;
 import com.backend.aurum.domain.asset.model.Snapshot;
 import com.backend.aurum.domain.asset.repository.SnapshotRepository;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -55,6 +57,22 @@ public class SnapshotService {
 
 	@Transactional
 	public Snapshot save(Snapshot snapshot) {
+		return snapshotRepository.save(snapshot);
+	}
+
+	@Transactional
+	public Snapshot saveOrUpdate(
+		Asset asset,
+		BigDecimal amount,
+		LocalDate referenceDate,
+		BigDecimal exchangeRate
+	) {
+		Optional<Snapshot> existing = findExistingForMonth(asset.getId(), referenceDate);
+		Snapshot snapshot = existing.orElseGet(Snapshot::new);
+		snapshot.setAsset(asset);
+		snapshot.setAmountOriginalCurrency(amount);
+		snapshot.setReferenceDate(referenceDate);
+		snapshot.setExchangeRateToBase(exchangeRate);
 		return snapshotRepository.save(snapshot);
 	}
 

@@ -137,6 +137,7 @@ export class McpSetupComponent implements OnInit {
 			{
 				mcpServers: {
 					aurum: {
+						type: "sse",
 						url: this.sseUrl,
 						headers: {
 							Authorization: `Bearer ${key ?? "<your-api-key>"}`
