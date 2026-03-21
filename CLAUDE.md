@@ -111,8 +111,15 @@ Use a concise kebab-case short name that describes the change (e.g., `feat/targe
 
 ## Hosting
 
-- **Frontend** — deployed on **Vercel** (connected to the GitHub repo, auto-deploys on push to `main`)
-- **Backend + Database** — deployed on a **Hetzner VPS** via Docker Compose (same `compose.yaml` used locally, with production environment variables injected on the server)
+- **Frontend** — deployed on **Vercel** (connected to the GitHub repo, auto-deploys on push to `main`) at `aurum-networth.com`
+- **Backend + Database** — deployed on a **Hetzner VPS** via Docker Compose (same `compose.yaml` used locally, with production environment variables injected on the server) at `api.aurum-networth.com`
+
+### Domain / Routing Structure
+
+- `aurum-networth.com` → Vercel (Angular SPA)
+- `api.aurum-networth.com` → Hetzner VPS → Spring Boot on port 8080
+
+Backend endpoints are served **directly at the root** of `api.aurum-networth.com` (e.g. `api.aurum-networth.com/users`, `/assets`). There is **no `/api` path prefix** — the subdomain itself conveys that. Any reverse proxy (nginx/Caddy) on the VPS should forward all traffic straight to port 8080 without adding a path prefix.
 
 ## Secret Variables
 
@@ -120,7 +127,7 @@ Secrets are never committed. They are managed via environment-specific config:
 
 ### Backend
 - Local: `aurum-be/src/main/resources/application-local.properties` (gitignored) — loaded when `spring.profiles.active=local` (i.e., via `make start`)
-- Production: set as environment variables on Render
+- Production: set as environment variables on the Hetzner VPS
 
 Key secrets required:
 ```
