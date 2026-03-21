@@ -17,7 +17,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/targets")
+@RequestMapping("/targets")
 @RequiredArgsConstructor
 @Tag(name = "Targets", description = "Financial goals tracking")
 public class TargetController {

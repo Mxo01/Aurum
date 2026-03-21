@@ -14,7 +14,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/analytics")
+@RequestMapping("/analytics")
 @RequiredArgsConstructor
 @Tag(name = "Analytics", description = "Performance metrics, allocation and projections")
 public class AnalyticsController {

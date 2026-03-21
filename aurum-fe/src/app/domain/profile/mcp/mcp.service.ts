@@ -10,7 +10,7 @@ export class McpService {
 	private readonly http = inject(HttpClient);
 
 	private readonly mcpApiUrl = environment.apiUrl + "/mcp";
-	readonly mcpSseUrl = environment.apiUrl.replace(/\/api$/, "") + "/sse";
+	readonly mcpSseUrl = environment.apiUrl + "/sse";
 
 	generateKey() {
 		return this.http.post<GeneratedKey>(`${this.mcpApiUrl}/keys`, {});
