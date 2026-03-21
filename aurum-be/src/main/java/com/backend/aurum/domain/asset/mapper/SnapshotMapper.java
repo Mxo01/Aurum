@@ -5,6 +5,7 @@ import com.backend.aurum.domain.asset.model.Asset;
 import com.backend.aurum.domain.asset.model.Snapshot;
 import com.backend.aurum.domain.asset.repository.AssetRepository;
 import java.math.BigDecimal;
+import java.util.Objects;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -27,7 +28,7 @@ public class SnapshotMapper {
 
 		if (dto.getAssetId() != null) {
 			Asset asset = assetRepository
-				.findById(dto.getAssetId())
+				.findById(Objects.requireNonNull(dto.getAssetId()))
 				.orElseThrow(() -> new RuntimeException("Asset not found"));
 
 			if (userId != null && !asset.getUser().getId().equals(userId)) {

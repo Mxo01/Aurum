@@ -15,11 +15,7 @@ export class AssetService {
 	private readonly assetsUrl = `${environment.apiUrl}/assets`;
 	private readonly assetCategoriesUrl = `${environment.apiUrl}/categories`;
 
-	getUserAssetCategories() {
-		return this.http.get<AssetCategory[]>(`${this.assetCategoriesUrl}/user`);
-	}
-
-	getAllAssetCategories() {
+	getAssetCategories() {
 		return this.http.get<AssetCategory[]>(this.assetCategoriesUrl);
 	}
 
@@ -27,7 +23,7 @@ export class AssetService {
 		return category.id
 			? this.http.put<AssetCategory>(`${this.assetCategoriesUrl}/${category.id}`, category).pipe(
 					switchMap(() =>
-						forkJoin({ categories: this.getUserAssetCategories(), assets: this.getAssets() })
+						forkJoin({ categories: this.getAssetCategories(), assets: this.getAssets() })
 					),
 					tap({
 						next: () => {
@@ -48,7 +44,7 @@ export class AssetService {
 				)
 			: this.http.post<AssetCategory>(this.assetCategoriesUrl, category).pipe(
 					switchMap(() =>
-						forkJoin({ categories: this.getUserAssetCategories(), assets: this.getAssets() })
+						forkJoin({ categories: this.getAssetCategories(), assets: this.getAssets() })
 					),
 					tap({
 						next: () => {
@@ -72,7 +68,7 @@ export class AssetService {
 	deleteCategory(id: string) {
 		return this.http.delete<AssetCategory[]>(`${this.assetCategoriesUrl}/${id}`).pipe(
 			switchMap(() =>
-				forkJoin({ categories: this.getUserAssetCategories(), assets: this.getAssets() })
+				forkJoin({ categories: this.getAssetCategories(), assets: this.getAssets() })
 			),
 			tap({
 				next: () => {

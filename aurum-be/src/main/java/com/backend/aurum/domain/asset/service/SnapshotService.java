@@ -6,6 +6,7 @@ import com.backend.aurum.domain.asset.repository.SnapshotRepository;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -28,7 +29,7 @@ public class SnapshotService {
 
 	public Snapshot findById(UUID id, UUID userId) {
 		Snapshot snapshot = snapshotRepository
-			.findById(id)
+			.findById(Objects.requireNonNull(id))
 			.orElseThrow(() -> new RuntimeException("Snapshot not found"));
 
 		if (!snapshot.getAsset().getUser().getId().equals(userId)) {
@@ -57,7 +58,7 @@ public class SnapshotService {
 
 	@Transactional
 	public Snapshot save(Snapshot snapshot) {
-		return snapshotRepository.save(snapshot);
+		return snapshotRepository.save(Objects.requireNonNull(snapshot));
 	}
 
 	@Transactional
@@ -73,18 +74,18 @@ public class SnapshotService {
 		snapshot.setAmountOriginalCurrency(amount);
 		snapshot.setReferenceDate(referenceDate);
 		snapshot.setExchangeRateToBase(exchangeRate);
-		return snapshotRepository.save(snapshot);
+		return snapshotRepository.save(Objects.requireNonNull(snapshot));
 	}
 
 	@Transactional
 	public void delete(UUID id, UUID userId) {
 		Snapshot snapshot = findById(id, userId);
-		snapshotRepository.delete(snapshot);
+		snapshotRepository.delete(Objects.requireNonNull(snapshot));
 	}
 
 	@Transactional
 	public void deleteBulk(List<UUID> ids, UUID assetId, UUID userId) {
-		List<Snapshot> snapshots = snapshotRepository.findAllById(ids);
+		List<Snapshot> snapshots = snapshotRepository.findAllById(Objects.requireNonNull(ids));
 
 		for (Snapshot s : snapshots) {
 			if (!s.getAsset().getId().equals(assetId)) {

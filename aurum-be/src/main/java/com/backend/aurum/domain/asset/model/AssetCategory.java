@@ -47,6 +47,9 @@ public class AssetCategory {
 	@Column(nullable = false)
 	private AssetType type;
 
+	@Column
+	private String icon;
+
 	@OneToMany(mappedBy = "category", cascade = CascadeType.ALL, orphanRemoval = true)
 	@JsonBackReference
 	private List<Asset> assets = new ArrayList<>();

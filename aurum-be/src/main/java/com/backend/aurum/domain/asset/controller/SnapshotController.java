@@ -12,6 +12,7 @@ import com.backend.aurum.infrastructure.exchange.ExchangeRateService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -54,7 +55,7 @@ public class SnapshotController {
 
 		if (snapshotDto.getExchangeRateToBase() == null) {
 			Asset asset = assetRepository
-				.findById(snapshotDto.getAssetId())
+				.findById(Objects.requireNonNull(snapshotDto.getAssetId()))
 				.orElseThrow(() -> new IllegalArgumentException("Asset not found"));
 			String assetCurrency = asset.getOriginalCurrency().getValue();
 			String userCurrency = principal.user().getCurrency().getValue();
@@ -93,7 +94,7 @@ public class SnapshotController {
 			snapshotDto.getAmountOriginalCurrency().compareTo(BigDecimal.ZERO) == 0
 		) {
 			Asset asset = assetRepository
-				.findById(snapshotDto.getAssetId())
+				.findById(Objects.requireNonNull(snapshotDto.getAssetId()))
 				.orElseThrow(() -> new IllegalArgumentException("Asset not found"));
 			if (asset.getLiabilityType() != null) {
 				asset.setIsActive(false);

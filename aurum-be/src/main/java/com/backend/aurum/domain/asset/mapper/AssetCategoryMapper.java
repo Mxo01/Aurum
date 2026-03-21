@@ -20,6 +20,7 @@ public class AssetCategoryMapper {
 		category.setId(dto.getId());
 		category.setName(dto.getName());
 		category.setType(dto.getType());
+		category.setIcon(dto.getIcon());
 
 		if (userId != null) {
 			User user = userRepository
@@ -37,6 +38,8 @@ public class AssetCategoryMapper {
 		dto.setId(entity.getId());
 		dto.setName(entity.getName());
 		dto.setType(entity.getType());
+		dto.setIcon(entity.getIcon());
+		dto.setDefault(entity.getUser() == null);
 		return dto;
 	}
 }

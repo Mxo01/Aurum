@@ -6,6 +6,7 @@ import com.backend.aurum.domain.analytics.repository.TargetRepository;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -29,7 +30,7 @@ public class TargetService {
 
 	public Target findById(UUID id) {
 		Target target = targetRepository
-			.findById(id)
+			.findById(Objects.requireNonNull(id))
 			.orElseThrow(() -> new RuntimeException("Target not found"));
 
 		BigDecimal grossAssets = analyticsService
@@ -69,7 +70,7 @@ public class TargetService {
 
 	@Transactional
 	public void delete(UUID id) {
-		targetRepository.deleteById(id);
+		targetRepository.deleteById(Objects.requireNonNull(id));
 	}
 
 	private void checkAndSyncCompletion(Target target, BigDecimal grossAssets) {

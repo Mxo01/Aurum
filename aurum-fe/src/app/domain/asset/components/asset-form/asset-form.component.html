@@ -28,7 +28,27 @@
 					[options]="categoriesOptions()"
 					optionLabel="name"
 					size="small"
-				/>
+					appendTo="body"
+				>
+					<ng-template
+						#selectedItem
+						let-category
+					>
+						<div class="flex items-center gap-2">
+							<i class="pi {{ category.icon || 'pi-question' }} text-sm"></i>
+							<span>{{ category.name }}</span>
+						</div>
+					</ng-template>
+					<ng-template
+						#item
+						let-category
+					>
+						<div class="flex items-center gap-2">
+							<i class="pi {{ category.icon || 'pi-question' }} text-sm"></i>
+							<span>{{ category.name }}</span>
+						</div>
+					</ng-template>
+				</p-select>
 				@if (assetForm.controls.category.invalid && assetForm.controls.category.touched) {
 					<small class="text-red-500 text-xs">Category is required</small>
 				}
@@ -136,7 +156,6 @@
 						id="favorite"
 						formControlName="isFavorite"
 						onIcon="pi pi-bookmark-fill"
-						[disabled]="!assetForm.value.isActive"
 						size="small"
 					/>
 					@if (!assetForm.value.isActive) {

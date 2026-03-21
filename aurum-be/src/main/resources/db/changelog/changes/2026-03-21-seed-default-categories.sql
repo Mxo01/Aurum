@@ -1,0 +1,19 @@
+-- liquibase formatted sql
+
+-- changeset aurum:seed-default-categories
+INSERT INTO asset_categories (id, user_id, name, type) VALUES
+    ('a0000000-0000-0000-0000-000000000001', NULL, 'Cash & Bank Accounts', 'ASSET'),
+    ('a0000000-0000-0000-0000-000000000002', NULL, 'Stocks & ETFs', 'ASSET'),
+    ('a0000000-0000-0000-0000-000000000003', NULL, 'Bonds & Fixed Income', 'ASSET'),
+    ('a0000000-0000-0000-0000-000000000004', NULL, 'Retirement Accounts', 'ASSET'),
+    ('a0000000-0000-0000-0000-000000000005', NULL, 'Real Estate', 'ASSET'),
+    ('a0000000-0000-0000-0000-000000000006', NULL, 'Vehicles', 'ASSET'),
+    ('a0000000-0000-0000-0000-000000000007', NULL, 'Crypto', 'ASSET'),
+    ('a0000000-0000-0000-0000-000000000008', NULL, 'Business Ownership', 'ASSET'),
+    ('a0000000-0000-0000-0000-000000000009', NULL, 'Other Assets', 'ASSET'),
+    ('a0000000-0000-0000-0000-000000000010', NULL, 'Mortgage', 'LIABILITY'),
+    ('a0000000-0000-0000-0000-000000000011', NULL, 'Student Loans', 'LIABILITY'),
+    ('a0000000-0000-0000-0000-000000000012', NULL, 'Car Loans', 'LIABILITY'),
+    ('a0000000-0000-0000-0000-000000000013', NULL, 'Credit Card Debt', 'LIABILITY'),
+    ('a0000000-0000-0000-0000-000000000014', NULL, 'Personal Loans', 'LIABILITY'),
+    ('a0000000-0000-0000-0000-000000000015', NULL, 'Other Liabilities', 'LIABILITY');

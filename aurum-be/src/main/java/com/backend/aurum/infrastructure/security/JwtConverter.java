@@ -6,6 +6,7 @@ import com.backend.aurum.domain.user.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.convert.converter.Converter;
+import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
@@ -21,7 +22,7 @@ public class JwtConverter implements Converter<Jwt, AbstractAuthenticationToken>
 	private String audience;
 
 	@Override
-	public AbstractAuthenticationToken convert(Jwt jwt) {
+	public AbstractAuthenticationToken convert(@NonNull Jwt jwt) {
 		String jwtId = jwt.getSubject();
 		String email = jwt.getClaimAsString(audience + "/email");
 

@@ -20,6 +20,7 @@ public class ExchangeRateService {
 				.uri("/{date}?from={from}&to={to}", date, from, to)
 				.retrieve()
 				.body(new ParameterizedTypeReference<>() {});
+			if (response == null) return BigDecimal.ONE;
 			@SuppressWarnings("unchecked")
 			Map<String, Number> rates = (Map<String, Number>) response.get("rates");
 			return BigDecimal.valueOf(rates.get(to).doubleValue());

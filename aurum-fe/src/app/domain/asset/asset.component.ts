@@ -62,7 +62,7 @@ export class AssetComponent implements OnInit {
 			}
 		});
 
-		this.assetService.getUserAssetCategories().subscribe({
+		this.assetService.getAssetCategories().subscribe({
 			next: categories => this.categoriesOptions.set(categories)
 		});
 

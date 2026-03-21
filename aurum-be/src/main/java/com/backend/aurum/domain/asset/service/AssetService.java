@@ -7,6 +7,7 @@ import com.backend.aurum.domain.asset.repository.SnapshotRepository;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -29,7 +30,7 @@ public class AssetService {
 
 	public Asset findById(UUID id, UUID userId) {
 		Asset asset = assetRepository
-			.findById(id)
+			.findById(Objects.requireNonNull(id))
 			.orElseThrow(() -> new RuntimeException("Asset not found"));
 
 		if (!asset.getUser().getId().equals(userId)) {
@@ -41,14 +42,14 @@ public class AssetService {
 
 	@Transactional
 	public Asset save(Asset asset, BigDecimal initialValue, LocalDate referenceDate) {
-		Asset savedAsset = assetRepository.save(asset);
+		Asset savedAsset = assetRepository.save(Objects.requireNonNull(asset));
 
 		if (initialValue != null && referenceDate != null) {
 			Snapshot snapshot = new Snapshot();
 			snapshot.setAsset(savedAsset);
 			snapshot.setAmountOriginalCurrency(initialValue);
 			snapshot.setReferenceDate(referenceDate);
-			snapshotRepository.save(snapshot);
+			snapshotRepository.save(Objects.requireNonNull(snapshot));
 			savedAsset.getSnapshots().add(snapshot);
 		}
 
@@ -76,12 +77,12 @@ public class AssetService {
 			asset.setIsFavorite(false);
 		}
 
-		return assetRepository.save(asset);
+		return assetRepository.save(Objects.requireNonNull(asset));
 	}
 
 	@Transactional
 	public void delete(UUID id, UUID userId) {
 		Asset asset = findById(id, userId);
-		assetRepository.delete(asset);
+		assetRepository.delete(Objects.requireNonNull(asset));
 	}
 }

@@ -21,6 +21,8 @@ export interface AssetCategory {
 	id: string;
 	name: string;
 	type: AssetType;
+	icon: string | null;
+	isDefault: boolean;
 }
 
 export interface Asset {
@@ -28,6 +30,7 @@ export interface Asset {
 	name: string;
 	categoryId: string;
 	categoryName: string;
+	categoryIcon: string | null;
 	type: AssetType;
 	originalCurrency: Currency;
 	isActive: boolean;
