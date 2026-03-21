@@ -20,14 +20,17 @@ public class AssetService {
 	private final AssetRepository assetRepository;
 	private final SnapshotRepository snapshotRepository;
 
+	@Transactional(readOnly = true)
 	public List<Asset> findAll(UUID userId) {
 		return assetRepository.findByUserIdOrderByCreatedAtDesc(userId);
 	}
 
+	@Transactional(readOnly = true)
 	public List<Asset> findAllActive(UUID userId) {
 		return assetRepository.findByUserIdAndIsActiveTrueOrderByCreatedAtDesc(userId);
 	}
 
+	@Transactional(readOnly = true)
 	public Asset findById(UUID id, UUID userId) {
 		Asset asset = assetRepository
 			.findById(Objects.requireNonNull(id))

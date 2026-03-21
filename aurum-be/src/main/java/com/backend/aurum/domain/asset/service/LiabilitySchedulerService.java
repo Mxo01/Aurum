@@ -34,9 +34,8 @@ public class LiabilitySchedulerService {
 	@Transactional
 	public void processAutomaticLiabilityPayments() {
 		log.info("Running automatic liability payment processor...");
-		List<Asset> automaticLiabilities = assetRepository.findAllByIsActiveTrueAndLiabilityType(
-			LiabilityType.AUTOMATIC
-		);
+		List<Asset> automaticLiabilities =
+			assetRepository.findAllByIsActiveTrueAndLiabilityTypeWithSnapshots(LiabilityType.AUTOMATIC);
 
 		LocalDate today = LocalDate.now();
 

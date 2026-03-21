@@ -3,12 +3,16 @@ package com.backend.aurum.domain.asset.controller;
 import com.backend.aurum.domain.asset.dto.AssetDTO;
 import com.backend.aurum.domain.asset.mapper.AssetMapper;
 import com.backend.aurum.domain.asset.model.Asset;
+import com.backend.aurum.domain.asset.model.Snapshot;
+import com.backend.aurum.domain.asset.repository.SnapshotRepository;
 import com.backend.aurum.domain.asset.service.AssetService;
 import com.backend.aurum.domain.asset.validation.AssetValidationService;
 import com.backend.aurum.domain.user.model.UserPrincipal;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -23,14 +27,29 @@ public class AssetController {
 	private final AssetService assetService;
 	private final AssetValidationService validationService;
 	private final AssetMapper mapper;
+	private final SnapshotRepository snapshotRepository;
 
 	@GetMapping
 	public ResponseEntity<List<AssetDTO>> getAllAssets(
 		@AuthenticationPrincipal UserPrincipal principal
 	) {
 		UUID userId = principal.user().getId();
-		List<AssetDTO> assets = assetService.findAll(userId).stream().map(mapper::toDto).toList();
-		return ResponseEntity.ok(assets);
+		List<Asset> assets = assetService.findAll(userId);
+
+		// Single bulk query — load all snapshots ordered DESC, group, keep latest 2 per asset
+		Map<UUID, List<Snapshot>> latestTwoByAsset = snapshotRepository
+			.findByAssetUserIdOrderByReferenceDateDesc(userId)
+			.stream()
+			.collect(Collectors.groupingBy(s -> s.getAsset().getId()))
+			.entrySet()
+			.stream()
+			.collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().stream().limit(2).toList()));
+
+		List<AssetDTO> dtos = assets
+			.stream()
+			.map(a -> mapper.toDtoLight(a, latestTwoByAsset))
+			.toList();
+		return ResponseEntity.ok(dtos);
 	}
 
 	@GetMapping("/{id}")

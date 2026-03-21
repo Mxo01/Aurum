@@ -2,10 +2,9 @@ package com.backend.aurum.domain.mcp.model;
 
 import com.backend.aurum.domain.user.model.User;
 import jakarta.persistence.*;
-import lombok.*;
-
 import java.time.LocalDateTime;
 import java.util.UUID;
+import lombok.*;
 
 @Entity
 @Table(name = "api_keys")

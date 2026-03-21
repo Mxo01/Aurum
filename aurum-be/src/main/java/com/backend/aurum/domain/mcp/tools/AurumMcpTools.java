@@ -55,8 +55,11 @@ public class AurumMcpTools {
 	) {
 		User user = currentUser();
 		UUID id = UUID.fromString(assetId);
-		assetService.findById(id, user.getId());
-		return snapshotService.findByAssetId(id).stream().map(snapshotMapper::toDto).toList();
+		return snapshotService
+			.findByAssetId(id, user.getId())
+			.stream()
+			.map(snapshotMapper::toDto)
+			.toList();
 	}
 
 	@Tool(
@@ -69,11 +72,11 @@ public class AurumMcpTools {
 	@Tool(description = "Get all financial targets/goals for the current user")
 	public List<TargetDTO> getTargets() {
 		User user = currentUser();
-		BigDecimal currentNetWorth = analyticsService.getSummary(user.getId()).getTotalNetWorth();
+		BigDecimal netWorth = analyticsService.getSummary(user.getId()).getTotalNetWorth();
 		return targetService
-			.findAll(user.getId())
+			.findAll(user.getId(), netWorth)
 			.stream()
-			.map(t -> targetMapper.toDto(t, currentNetWorth))
+			.map(t -> targetMapper.toDto(t, netWorth))
 			.toList();
 	}
 
@@ -105,8 +108,8 @@ public class AurumMcpTools {
 		User user = currentUser();
 		dto.setIsCompleted(false);
 		Target target = targetMapper.toEntity(dto, user.getId());
-		Target saved = targetService.save(target);
 		BigDecimal netWorth = analyticsService.getSummary(user.getId()).getTotalNetWorth();
+		Target saved = targetService.save(target, netWorth);
 		return targetMapper.toDto(saved, netWorth);
 	}
 

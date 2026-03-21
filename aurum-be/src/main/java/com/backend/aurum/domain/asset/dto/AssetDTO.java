@@ -23,6 +23,9 @@ public class AssetDTO {
 	private Boolean isActive;
 	private Boolean isFavorite;
 	private List<SnapshotDTO> snapshots;
+	private BigDecimal latestValue;
+	private BigDecimal latestValueBase;
+	private BigDecimal previousValue;
 	private BigDecimal initialValue;
 	private LocalDate referenceDate;
 	private LiabilityType liabilityType;

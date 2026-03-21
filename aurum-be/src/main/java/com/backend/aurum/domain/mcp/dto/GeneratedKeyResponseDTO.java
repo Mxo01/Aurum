@@ -1,4 +1,3 @@
 package com.backend.aurum.domain.mcp.dto;
 
-public record GeneratedKeyResponseDTO(String key) {
-}
+public record GeneratedKeyResponseDTO(String key) {}

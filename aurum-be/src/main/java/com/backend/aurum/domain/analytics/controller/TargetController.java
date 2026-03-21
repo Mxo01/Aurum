@@ -32,11 +32,11 @@ public class TargetController {
 		@AuthenticationPrincipal UserPrincipal principal
 	) {
 		UUID userId = principal.user().getId();
-		BigDecimal currentNetWorth = analyticsService.getSummary(userId).getTotalNetWorth();
+		BigDecimal netWorth = analyticsService.getSummary(userId).getTotalNetWorth();
 		List<TargetDTO> targets = targetService
-			.findAll(userId)
+			.findAll(userId, netWorth)
 			.stream()
-			.map(t -> mapper.toDto(t, currentNetWorth))
+			.map(t -> mapper.toDto(t, netWorth))
 			.toList();
 		return ResponseEntity.ok(targets);
 	}
@@ -49,9 +49,9 @@ public class TargetController {
 		UUID userId = principal.user().getId();
 		validationService.validate(targetDto);
 		Target target = mapper.toEntity(targetDto, userId);
-		Target savedTarget = targetService.save(target);
-		BigDecimal currentNetWorth = analyticsService.getSummary(userId).getTotalNetWorth();
-		return ResponseEntity.ok(mapper.toDto(savedTarget, currentNetWorth));
+		BigDecimal netWorth = analyticsService.getSummary(userId).getTotalNetWorth();
+		Target savedTarget = targetService.save(target, netWorth);
+		return ResponseEntity.ok(mapper.toDto(savedTarget, netWorth));
 	}
 
 	@PutMapping("/{id}")
@@ -63,9 +63,9 @@ public class TargetController {
 		UUID userId = principal.user().getId();
 		validationService.validate(targetDto);
 		Target targetDetails = mapper.toEntity(targetDto, userId);
-		Target updatedTarget = targetService.update(id, targetDetails);
-		BigDecimal currentNetWorth = analyticsService.getSummary(userId).getTotalNetWorth();
-		return ResponseEntity.ok(mapper.toDto(updatedTarget, currentNetWorth));
+		BigDecimal netWorth = analyticsService.getSummary(userId).getTotalNetWorth();
+		Target updatedTarget = targetService.update(id, targetDetails, netWorth);
+		return ResponseEntity.ok(mapper.toDto(updatedTarget, netWorth));
 	}
 
 	@DeleteMapping("/{id}")
