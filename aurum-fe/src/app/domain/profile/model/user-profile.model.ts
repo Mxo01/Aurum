@@ -6,4 +6,5 @@ export interface UserProfile {
 	email: string;
 	currency: Currency;
 	locale: Locale;
+	picture?: string;
 }

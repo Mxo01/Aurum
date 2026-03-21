@@ -17,10 +17,12 @@ Monorepo with two apps:
 
 ### Full Stack
 ```bash
-make start    # Start frontend + backend + Docker PostgreSQL
+make start    # Start frontend + backend + Docker PostgreSQL (uses local Spring profile for backend)
 make stop     # Stop all services
 make restart  # Restart all services
 ```
+
+> `make start` passes `--spring.profiles.active=local` to the backend, which loads secrets from `aurum-be/src/main/resources/application-local.properties`. This file is gitignored and must be created locally with the required secret values (see Secret Variables below).
 
 ### Frontend (`aurum-fe/`)
 ```bash
@@ -85,14 +87,67 @@ Assets have `LiabilityType` (MANUAL/AUTOMATIC) and `PaymentFrequency` (WEEKLY/MO
 - All endpoints require auth except Swagger paths
 
 ### Database
-- PostgreSQL 17 via Docker (`compose.yaml`)
+- PostgreSQL 17 via Docker Compose (`compose.yaml`) — same setup for local dev and production (Hetzner VPS)
 - Migrations managed with **Liquibase** YAML files in `src/main/resources/db/changelog/changes/`
-- Connection: `localhost:5432/aurum`, user: `user`, password: `password`
+- Local connection: `localhost:5432/aurum`, user: `user`, password: `password`
 
 ## Key Conventions
 
 - Backend uses **Lombok** extensively — `@Data`, `@Builder`, `@RequiredArgsConstructor` on models/DTOs
 - Frontend uses **standalone Angular components** (no NgModules)
-- Frontend UI is **PrimeNG 21** + **Tailwind CSS 4** — use PrimeNG components for consistency
+- Frontend UI is **PrimeNG 21** + **Tailwind CSS 4** — **always prefer PrimeNG components over custom HTML/CSS implementations**; only build custom components when PrimeNG has no equivalent
 - Currency amounts use `BigDecimal` on the backend; format with user's locale/currency on the frontend
-- Git pre-commit hook runs ESLint + Prettier via lint-staged (husky)
+- Git pre-commit hook runs ESLint + Prettier via lint-staged (husky) for the frontend, and `spotless:apply` for any staged Java files in the backend
+- Backend Java formatting uses **Prettier + prettier-plugin-java** (same tool as frontend), reading `prettier.config.cjs` at the repo root — run `npx prettier --write 'aurum-be/src/**/*.java'` manually or let the pre-commit hook handle it
+
+## Branching Rules
+
+**Never commit directly to `main`.** When starting any edit and the current branch is `main`, always create a new branch first:
+
+- Feature or enhancement → `feat/<short-name>`
+- Bug fix → `fix/<short-name>`
+
+Use a concise kebab-case short name that describes the change (e.g., `feat/target-progress-bar`, `fix/snapshot-currency-display`).
+
+## Hosting
+
+- **Frontend** — deployed on **Vercel** (connected to the GitHub repo, auto-deploys on push to `main`)
+- **Backend + Database** — deployed on a **Hetzner VPS** via Docker Compose (same `compose.yaml` used locally, with production environment variables injected on the server)
+
+## Secret Variables
+
+Secrets are never committed. They are managed via environment-specific config:
+
+### Backend
+- Local: `aurum-be/src/main/resources/application-local.properties` (gitignored) — loaded when `spring.profiles.active=local` (i.e., via `make start`)
+- Production: set as environment variables on Render
+
+Key secrets required:
+```
+# Auth0
+spring.security.oauth2.resourceserver.jwt.issuer-uri=
+auth0.management.domain=
+auth0.management.client-id=
+auth0.management.client-secret=
+auth0.management.audience=
+
+# Exchange rate API
+exchange.api.key=
+
+# Database (production Hetzner VPS — local uses Docker defaults)
+spring.datasource.url=
+spring.datasource.username=
+spring.datasource.password=
+```
+
+### Frontend
+- Local: `aurum-fe/src/environments/environment.ts` (gitignored for sensitive values)
+- Production: set as environment variables on Vercel
+
+Key secrets required:
+```
+AUTH0_DOMAIN=
+AUTH0_CLIENT_ID=
+AUTH0_AUDIENCE=
+API_BASE_URL=
+```

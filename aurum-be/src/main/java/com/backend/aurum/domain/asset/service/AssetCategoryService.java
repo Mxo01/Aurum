@@ -2,12 +2,11 @@ package com.backend.aurum.domain.asset.service;
 
 import com.backend.aurum.domain.asset.model.AssetCategory;
 import com.backend.aurum.domain.asset.repository.AssetCategoryRepository;
+import java.util.List;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -24,8 +23,9 @@ public class AssetCategoryService {
 	}
 
 	public AssetCategory findById(UUID id) {
-		return categoryRepository.findById(id)
-				.orElseThrow(() -> new RuntimeException("Category not found"));
+		return categoryRepository
+			.findById(id)
+			.orElseThrow(() -> new RuntimeException("Category not found"));
 	}
 
 	@Transactional

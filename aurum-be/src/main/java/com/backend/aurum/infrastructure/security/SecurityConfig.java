@@ -1,5 +1,9 @@
 package com.backend.aurum.infrastructure.security;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -23,15 +27,11 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
-
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
 public class SecurityConfig {
+
 	@Value("${spring.security.oauth2.resourceserver.jwt.issuer-uri}")
 	private String issuerUri;
 
@@ -43,51 +43,52 @@ public class SecurityConfig {
 
 	@Bean
 	@Order(1)
-	public SecurityFilterChain mcpFilterChain(HttpSecurity http, ApiKeyAuthFilter apiKeyAuthFilter) throws Exception {
+	public SecurityFilterChain mcpFilterChain(HttpSecurity http, ApiKeyAuthFilter apiKeyAuthFilter)
+		throws Exception {
 		http
-				.securityMatcher("/mcp/**")
-				.csrf(AbstractHttpConfigurer::disable)
-				.cors(cors -> cors.configurationSource(corsConfigurationSource()))
-				.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-				.addFilterBefore(apiKeyAuthFilter, UsernamePasswordAuthenticationFilter.class)
-				.authorizeHttpRequests(auth -> auth.anyRequest().authenticated());
+			.securityMatcher("/mcp/**")
+			.csrf(AbstractHttpConfigurer::disable)
+			.cors(cors -> cors.configurationSource(corsConfigurationSource()))
+			.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+			.addFilterBefore(apiKeyAuthFilter, UsernamePasswordAuthenticationFilter.class)
+			.authorizeHttpRequests(auth -> auth.anyRequest().authenticated());
 		return http.build();
 	}
 
 	@Bean
 	@Order(2)
-	public SecurityFilterChain filterChain(HttpSecurity http, JwtConverter jwtConverter) throws Exception {
+	public SecurityFilterChain filterChain(HttpSecurity http, JwtConverter jwtConverter)
+		throws Exception {
 		http
-				.csrf(AbstractHttpConfigurer::disable)
-				.cors(cors -> cors.configurationSource(corsConfigurationSource()))
-				.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-				.authorizeHttpRequests(auth -> auth
-						.requestMatchers(
-								"/v3/api-docs/**",
-								"/swagger-ui/**",
-								"/swagger-ui.html")
-						.permitAll()
-						.anyRequest().authenticated())
-				.oauth2ResourceServer(oauth2 -> oauth2
-						.jwt(jwt -> jwt
-								.decoder(jwtDecoder())
-								.jwtAuthenticationConverter(jwtConverter)));
+			.csrf(AbstractHttpConfigurer::disable)
+			.cors(cors -> cors.configurationSource(corsConfigurationSource()))
+			.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+			.authorizeHttpRequests(auth ->
+				auth
+					.requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html")
+					.permitAll()
+					.anyRequest()
+					.authenticated()
+			)
+			.oauth2ResourceServer(oauth2 ->
+				oauth2.jwt(jwt -> jwt.decoder(jwtDecoder()).jwtAuthenticationConverter(jwtConverter))
+			);
 
 		return http.build();
 	}
 
 	@Bean
 	public JwtDecoder jwtDecoder() {
-		NimbusJwtDecoder jwtDecoder = NimbusJwtDecoder
-				.withIssuerLocation(issuerUri)
-				.build();
+		NimbusJwtDecoder jwtDecoder = NimbusJwtDecoder.withIssuerLocation(issuerUri).build();
 		OAuth2TokenValidator<Jwt> issuerValidator = JwtValidators.createDefaultWithIssuer(issuerUri);
 		OAuth2TokenValidator<Jwt> audienceValidator = new JwtClaimValidator<Collection<String>>(
-				JwtClaimNames.AUD,
-				aud -> aud != null && aud.contains(audience));
+			JwtClaimNames.AUD,
+			aud -> aud != null && aud.contains(audience)
+		);
 
 		jwtDecoder.setJwtValidator(
-				new DelegatingOAuth2TokenValidator<>(issuerValidator, audienceValidator));
+			new DelegatingOAuth2TokenValidator<>(issuerValidator, audienceValidator)
+		);
 
 		return jwtDecoder;
 	}

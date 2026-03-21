@@ -7,15 +7,15 @@ import org.springframework.util.StringUtils;
 @Service
 public class AssetValidationService {
 
-    public void validate(AssetDTO dto) {
-        if (dto == null) {
-            throw new IllegalArgumentException("Asset data cannot be null");
-        }
-        if (!StringUtils.hasText(dto.getName())) {
-            throw new IllegalArgumentException("Asset name is required");
-        }
-        if (dto.getCategoryId() == null) {
-            throw new IllegalArgumentException("Asset category is required");
-        }
-    }
+	public void validate(AssetDTO dto) {
+		if (dto == null) {
+			throw new IllegalArgumentException("Asset data cannot be null");
+		}
+		if (!StringUtils.hasText(dto.getName())) {
+			throw new IllegalArgumentException("Asset name is required");
+		}
+		if (dto.getCategoryId() == null) {
+			throw new IllegalArgumentException("Asset category is required");
+		}
+	}
 }
