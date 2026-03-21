@@ -7,6 +7,6 @@ echo "--- Checking Aurum FE ---"
 echo "--- Checking Aurum BE ---"
 STAGED_JAVA=$(git diff --cached --name-only | grep "aurum-be/.*\.java$" || true)
 if [ -n "$STAGED_JAVA" ]; then
-  echo "$STAGED_JAVA" | xargs npx --prefix . prettier --write
+  echo "$STAGED_JAVA" | xargs ./node_modules/.bin/prettier --write
   echo "$STAGED_JAVA" | xargs git add
 fi
