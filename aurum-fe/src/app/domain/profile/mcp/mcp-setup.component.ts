@@ -91,8 +91,9 @@ export class McpSetupComponent implements OnInit {
 		}
 	}
 
-	copyJson() {
-		navigator.clipboard.writeText(this.configJson());
+	copyJson(variant: "header" | "param") {
+		const text = variant === "header" ? this.configJsonWithHeader() : this.configJsonWithParam();
+		navigator.clipboard.writeText(text);
 		this.messageService.add({ severity: "success", summary: "Copied", detail: "Config JSON copied" });
 	}
 
@@ -101,19 +102,26 @@ export class McpSetupComponent implements OnInit {
 		this.generatedKey.set(null);
 	}
 
-	configJson(): string {
+	configJsonWithHeader(): string {
 		const key = this.generatedKey();
 		return JSON.stringify(
 			{
 				mcpServers: {
 					aurum: {
 						url: this.sseUrl,
-						headers: {
-							Authorization: `Bearer ${key ?? "<your-api-key>"}`
-						}
+						headers: { Authorization: `Bearer ${key ?? "<your-api-key>"}` }
 					}
 				}
 			},
+			null,
+			2
+		);
+	}
+
+	configJsonWithParam(): string {
+		const key = this.generatedKey() ?? "<your-api-key>";
+		return JSON.stringify(
+			{ mcpServers: { aurum: { url: `${this.sseUrl}?key=${key}` } } },
 			null,
 			2
 		);

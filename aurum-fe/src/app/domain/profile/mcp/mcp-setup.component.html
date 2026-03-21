@@ -71,24 +71,48 @@
 			/>
 		</div>
 
-		<div class="flex flex-col gap-2">
+		<div class="flex flex-col gap-3">
 			<span class="text-sm font-medium">Paste this into your MCP Client's config file:</span>
-			<div class="relative rounded-lg border">
-				<pre class="overflow-x-auto p-4 text-xs leading-relaxed">{{ configJson() }}</pre>
-				<p-button
-					icon="pi pi-copy"
-					[text]="true"
-					size="small"
-					severity="secondary"
-					class="absolute right-2 top-2"
-					pTooltip="Copy JSON"
-					(onClick)="copyJson()"
-				/>
+
+			<div class="flex flex-col gap-1">
+				<span class="text-xs text-gray-500">
+					Desktop clients (Claude Desktop, Cursor, Windsurf) — supports custom headers:
+				</span>
+				<div class="relative rounded-lg border">
+					<pre class="overflow-x-auto p-4 text-xs leading-relaxed">{{ configJsonWithHeader() }}</pre>
+					<p-button
+						icon="pi pi-copy"
+						[text]="true"
+						size="small"
+						severity="secondary"
+						class="absolute right-2 top-2"
+						pTooltip="Copy JSON"
+						(onClick)="copyJson('header')"
+					/>
+				</div>
+			</div>
+
+			<div class="flex flex-col gap-1">
+				<span class="text-xs text-gray-500">
+					Mobile clients (Claude iOS/Android) — key embedded in URL:
+				</span>
+				<div class="relative rounded-lg border">
+					<pre class="overflow-x-auto p-4 text-xs leading-relaxed">{{ configJsonWithParam() }}</pre>
+					<p-button
+						icon="pi pi-copy"
+						[text]="true"
+						size="small"
+						severity="secondary"
+						class="absolute right-2 top-2"
+						pTooltip="Copy JSON"
+						(onClick)="copyJson('param')"
+					/>
+				</div>
 			</div>
 		</div>
 
 		<div class="flex flex-col gap-1 text-sm text-gray-500">
-			<span><span class="font-medium text-gray-400">1.</span> Paste the config above into your client's JSON file</span>
+			<span><span class="font-medium text-gray-400">1.</span> Paste the right config into your client's JSON file</span>
 			<span><span class="font-medium text-gray-400">2.</span> Restart your MCP Client</span>
 		</div>
 	</div>
