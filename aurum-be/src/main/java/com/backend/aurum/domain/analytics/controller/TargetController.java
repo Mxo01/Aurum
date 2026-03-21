@@ -1,6 +1,5 @@
 package com.backend.aurum.domain.analytics.controller;
 
-import com.backend.aurum.domain.analytics.dto.AnalyticsSummaryDTO;
 import com.backend.aurum.domain.analytics.dto.TargetDTO;
 import com.backend.aurum.domain.analytics.mapper.TargetMapper;
 import com.backend.aurum.domain.analytics.model.Target;
@@ -33,11 +32,9 @@ public class TargetController {
 		@AuthenticationPrincipal UserPrincipal principal
 	) {
 		UUID userId = principal.user().getId();
-		AnalyticsSummaryDTO summary = analyticsService.getSummary(userId);
-		BigDecimal netWorth = summary.getTotalNetWorth();
-		BigDecimal grossAssets = summary.getTotalGrossAssets();
+		BigDecimal netWorth = analyticsService.getSummary(userId).getTotalNetWorth();
 		List<TargetDTO> targets = targetService
-			.findAll(userId, grossAssets, netWorth)
+			.findAll(userId, netWorth)
 			.stream()
 			.map(t -> mapper.toDto(t, netWorth))
 			.toList();
@@ -52,10 +49,8 @@ public class TargetController {
 		UUID userId = principal.user().getId();
 		validationService.validate(targetDto);
 		Target target = mapper.toEntity(targetDto, userId);
-		AnalyticsSummaryDTO summary = analyticsService.getSummary(userId);
-		BigDecimal netWorth = summary.getTotalNetWorth();
-		BigDecimal grossAssets = summary.getTotalGrossAssets();
-		Target savedTarget = targetService.save(target, grossAssets, netWorth);
+		BigDecimal netWorth = analyticsService.getSummary(userId).getTotalNetWorth();
+		Target savedTarget = targetService.save(target, netWorth);
 		return ResponseEntity.ok(mapper.toDto(savedTarget, netWorth));
 	}
 
@@ -68,10 +63,8 @@ public class TargetController {
 		UUID userId = principal.user().getId();
 		validationService.validate(targetDto);
 		Target targetDetails = mapper.toEntity(targetDto, userId);
-		AnalyticsSummaryDTO summary = analyticsService.getSummary(userId);
-		BigDecimal netWorth = summary.getTotalNetWorth();
-		BigDecimal grossAssets = summary.getTotalGrossAssets();
-		Target updatedTarget = targetService.update(id, targetDetails, grossAssets, netWorth);
+		BigDecimal netWorth = analyticsService.getSummary(userId).getTotalNetWorth();
+		Target updatedTarget = targetService.update(id, targetDetails, netWorth);
 		return ResponseEntity.ok(mapper.toDto(updatedTarget, netWorth));
 	}
 

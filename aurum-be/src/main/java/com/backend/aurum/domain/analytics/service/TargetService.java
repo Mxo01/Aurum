@@ -18,28 +18,28 @@ public class TargetService {
 
 	private final TargetRepository targetRepository;
 
-	public List<Target> findAll(UUID userId, BigDecimal grossAssets, BigDecimal netWorth) {
+	public List<Target> findAll(UUID userId, BigDecimal netWorth) {
 		List<Target> targets = targetRepository.findByUserId(userId);
-		targets.forEach(t -> checkAndSyncCompletion(t, grossAssets, netWorth));
+		targets.forEach(t -> checkAndSyncCompletion(t, netWorth));
 		return targets;
 	}
 
-	public Target findById(UUID id, BigDecimal grossAssets, BigDecimal netWorth) {
+	public Target findById(UUID id, BigDecimal netWorth) {
 		Target target = targetRepository
 			.findById(Objects.requireNonNull(id))
 			.orElseThrow(() -> new RuntimeException("Target not found"));
-		checkAndSyncCompletion(target, grossAssets, netWorth);
+		checkAndSyncCompletion(target, netWorth);
 		return target;
 	}
 
 	@Transactional
-	public Target save(Target target, BigDecimal grossAssets, BigDecimal netWorth) {
-		checkAndSyncCompletion(target, grossAssets, netWorth);
+	public Target save(Target target, BigDecimal netWorth) {
+		checkAndSyncCompletion(target, netWorth);
 		return targetRepository.save(target);
 	}
 
 	@Transactional
-	public Target update(UUID id, Target targetDetails, BigDecimal grossAssets, BigDecimal netWorth) {
+	public Target update(UUID id, Target targetDetails, BigDecimal netWorth) {
 		Target target = targetRepository
 			.findById(Objects.requireNonNull(id))
 			.orElseThrow(() -> new RuntimeException("Target not found"));
@@ -50,7 +50,7 @@ public class TargetService {
 		target.setDeadline(targetDetails.getDeadline());
 		// Type is immutable after creation
 
-		checkAndSyncCompletion(target, grossAssets, netWorth);
+		checkAndSyncCompletion(target, netWorth);
 
 		return targetRepository.save(target);
 	}
@@ -60,7 +60,7 @@ public class TargetService {
 		targetRepository.deleteById(Objects.requireNonNull(id));
 	}
 
-	private void checkAndSyncCompletion(Target target, BigDecimal grossAssets, BigDecimal netWorth) {
+	private void checkAndSyncCompletion(Target target, BigDecimal netWorth) {
 		if (Boolean.TRUE.equals(target.getIsCompleted())) {
 			return;
 		}

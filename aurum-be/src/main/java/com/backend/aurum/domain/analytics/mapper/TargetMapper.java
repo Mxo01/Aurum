@@ -73,7 +73,7 @@ public class TargetMapper {
 				.doubleValue();
 		}
 
-		double cappedPercentage = Math.min(100.0, percentage);
+		double cappedPercentage = Math.max(0.0, Math.min(100.0, percentage));
 		dto.setCompletionPercentage(cappedPercentage);
 
 		boolean isFinished = cappedPercentage >= 100.0;
