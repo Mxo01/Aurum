@@ -15,17 +15,22 @@ public class OpenAPIConfig {
 	public OpenAPI customOpenAPI() {
 		final String securitySchemeName = "bearerAuth";
 		return new OpenAPI()
-				.addSecurityItem(new SecurityRequirement().addList(securitySchemeName))
-				.components(new Components()
-						.addSecuritySchemes(securitySchemeName,
-								new SecurityScheme()
-										.name(securitySchemeName)
-										.type(SecurityScheme.Type.HTTP)
-										.scheme("bearer")
-										.bearerFormat("JWT")))
-				.info(new Info()
-						.title("Aurum API")
-						.version("1.0")
-						.description("Backend API for the Aurum wealth tracking application."));
+			.addSecurityItem(new SecurityRequirement().addList(securitySchemeName))
+			.components(
+				new Components().addSecuritySchemes(
+					securitySchemeName,
+					new SecurityScheme()
+						.name(securitySchemeName)
+						.type(SecurityScheme.Type.HTTP)
+						.scheme("bearer")
+						.bearerFormat("JWT")
+				)
+			)
+			.info(
+				new Info()
+					.title("Aurum API")
+					.version("1.0")
+					.description("Backend API for the Aurum wealth tracking application.")
+			);
 	}
 }
