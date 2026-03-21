@@ -17,42 +17,32 @@ import org.springframework.transaction.annotation.Transactional;
 public class TargetService {
 
 	private final TargetRepository targetRepository;
-	private final AnalyticsService analyticsService;
 
-	public List<Target> findAll(UUID userId) {
+	public List<Target> findAll(UUID userId, BigDecimal grossAssets, BigDecimal netWorth) {
 		List<Target> targets = targetRepository.findByUserId(userId);
-		BigDecimal grossAssets = analyticsService.getSummary(userId).getTotalGrossAssets();
-
-		targets.forEach(t -> checkAndSyncCompletion(t, grossAssets));
-
+		targets.forEach(t -> checkAndSyncCompletion(t, grossAssets, netWorth));
 		return targets;
 	}
 
-	public Target findById(UUID id) {
+	public Target findById(UUID id, BigDecimal grossAssets, BigDecimal netWorth) {
 		Target target = targetRepository
 			.findById(Objects.requireNonNull(id))
 			.orElseThrow(() -> new RuntimeException("Target not found"));
-
-		BigDecimal grossAssets = analyticsService
-			.getSummary(target.getUser().getId())
-			.getTotalGrossAssets();
-		checkAndSyncCompletion(target, grossAssets);
-
+		checkAndSyncCompletion(target, grossAssets, netWorth);
 		return target;
 	}
 
 	@Transactional
-	public Target save(Target target) {
-		BigDecimal grossAssets = analyticsService
-			.getSummary(target.getUser().getId())
-			.getTotalGrossAssets();
-		checkAndSyncCompletion(target, grossAssets);
+	public Target save(Target target, BigDecimal grossAssets, BigDecimal netWorth) {
+		checkAndSyncCompletion(target, grossAssets, netWorth);
 		return targetRepository.save(target);
 	}
 
 	@Transactional
-	public Target update(UUID id, Target targetDetails) {
-		Target target = findById(id);
+	public Target update(UUID id, Target targetDetails, BigDecimal grossAssets, BigDecimal netWorth) {
+		Target target = targetRepository
+			.findById(Objects.requireNonNull(id))
+			.orElseThrow(() -> new RuntimeException("Target not found"));
 
 		target.setName(targetDetails.getName());
 		target.setTargetAmount(targetDetails.getTargetAmount());
@@ -60,10 +50,7 @@ public class TargetService {
 		target.setDeadline(targetDetails.getDeadline());
 		// Type is immutable after creation
 
-		BigDecimal grossAssets = analyticsService
-			.getSummary(target.getUser().getId())
-			.getTotalGrossAssets();
-		checkAndSyncCompletion(target, grossAssets);
+		checkAndSyncCompletion(target, grossAssets, netWorth);
 
 		return targetRepository.save(target);
 	}
@@ -73,14 +60,14 @@ public class TargetService {
 		targetRepository.deleteById(Objects.requireNonNull(id));
 	}
 
-	private void checkAndSyncCompletion(Target target, BigDecimal grossAssets) {
+	private void checkAndSyncCompletion(Target target, BigDecimal grossAssets, BigDecimal netWorth) {
 		if (Boolean.TRUE.equals(target.getIsCompleted())) {
 			return;
 		}
 
 		BigDecimal currentAmount =
 			target.getType() == TargetType.NET_WORTH
-				? grossAssets
+				? netWorth
 				: (target.getCurrentAmount() != null ? target.getCurrentAmount() : BigDecimal.ZERO);
 
 		if (target.getTargetAmount().compareTo(BigDecimal.ZERO) > 0) {

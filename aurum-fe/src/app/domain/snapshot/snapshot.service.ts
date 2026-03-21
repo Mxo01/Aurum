@@ -14,13 +14,13 @@ export class SnapshotService {
 
 	private readonly snapshotsUrl = `${environment.apiUrl}/snapshots`;
 
-	getAllSnapshots() {
-		return this.http.get<Snapshot[]>(this.snapshotsUrl);
+	getSnapshotsByAssetId(assetId: string) {
+		return this.http.get<Snapshot[]>(`${this.snapshotsUrl}?assetId=${assetId}`);
 	}
 
 	saveSnapshot(snapshot: Snapshot) {
 		return this.http.post<Snapshot>(this.snapshotsUrl, snapshot).pipe(
-			switchMap(() => this.getAllSnapshots()),
+			switchMap(() => this.getSnapshotsByAssetId(snapshot.assetId)),
 			tap({
 				next: () => {
 					this.messageService.add({
@@ -42,7 +42,7 @@ export class SnapshotService {
 
 	deleteSnapshotsBulk(assetId: string, ids: string[]) {
 		return this.http.delete(`${this.snapshotsUrl}/bulk?assetId=${assetId}`, { body: ids }).pipe(
-			switchMap(() => this.getAllSnapshots()),
+			switchMap(() => this.getSnapshotsByAssetId(assetId)),
 			tap({
 				next: () => {
 					this.messageService.add({

@@ -33,15 +33,21 @@ public class SnapshotController {
 	private final ExchangeRateService exchangeRateService;
 
 	@GetMapping
-	public ResponseEntity<List<SnapshotDTO>> getAllSnapshots(
-		@AuthenticationPrincipal UserPrincipal principal
+	public ResponseEntity<List<SnapshotDTO>> getSnapshots(
+		@AuthenticationPrincipal UserPrincipal principal,
+		@RequestParam(required = false) UUID assetId
 	) {
 		UUID userId = principal.user().getId();
-		List<SnapshotDTO> snapshots = snapshotService
-			.findAll(userId)
-			.stream()
-			.map(mapper::toDto)
-			.toList();
+		List<SnapshotDTO> snapshots;
+		if (assetId != null) {
+			snapshots = snapshotService
+				.findByAssetId(assetId, userId)
+				.stream()
+				.map(mapper::toDto)
+				.toList();
+		} else {
+			snapshots = snapshotService.findAll(userId).stream().map(mapper::toDto).toList();
+		}
 		return ResponseEntity.ok(snapshots);
 	}
 

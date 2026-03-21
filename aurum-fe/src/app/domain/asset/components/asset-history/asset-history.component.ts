@@ -1,5 +1,5 @@
 import { FormsModule } from "@angular/forms";
-import { Component, computed, inject, input, model, output, signal } from "@angular/core";
+import { Component, computed, effect, inject, input, model, output, signal } from "@angular/core";
 import { Dialog } from "primeng/dialog";
 import { TableModule } from "primeng/table";
 import { Button } from "primeng/button";
@@ -61,19 +61,32 @@ export class AssetHistoryComponent {
 	protected newSnapshotValue = signal<number | null>(null);
 	protected newSnapshotDate = signal<Date>(new Date());
 
+	private readonly snapshots = signal<Snapshot[]>([]);
+
+	constructor() {
+		effect(() => {
+			const asset = this.selectedAsset();
+			if (asset?.id) {
+				this.snapshotService.getSnapshotsByAssetId(asset.id).subscribe({
+					next: snapshots => this.snapshots.set(snapshots)
+				});
+			} else {
+				this.snapshots.set([]);
+			}
+		});
+	}
+
 	protected readonly isAutomaticLiability = computed(() => {
 		const asset = this.selectedAsset();
 		return asset?.liabilityType === LiabilityType.AUTOMATIC;
 	});
 
-	protected readonly snapshotsForSelectedAsset = computed(() => {
-		const asset = this.selectedAsset();
-		if (!asset || !asset.snapshots) return [];
-
-		return asset.snapshots.toSorted(
+	protected readonly snapshotsForSelectedAsset = computed(() =>
+		this.snapshots().toSorted(
 			(a, b) => new Date(a.referenceDate).getTime() - new Date(b.referenceDate).getTime()
-		);
-	});
+		)
+	);
+
 	protected readonly chartData = computed(() =>
 		mapSnapshotsToChartData(
 			this.snapshotsForSelectedAsset(),
@@ -117,7 +130,8 @@ export class AssetHistoryComponent {
 		};
 
 		this.snapshotService.saveSnapshot(snapshot).subscribe({
-			next: () => {
+			next: snapshots => {
+				this.snapshots.set(snapshots);
 				this.snapshotsChanged.emit();
 				this.newSnapshotValue.set(null);
 				this.newSnapshotDate.set(new Date());
@@ -133,7 +147,8 @@ export class AssetHistoryComponent {
 		if (!assetId || !ids.length) return;
 
 		this.snapshotService.deleteSnapshotsBulk(assetId, ids).subscribe({
-			next: () => {
+			next: snapshots => {
+				this.snapshots.set(snapshots);
 				this.snapshotsChanged.emit();
 				this.selectedSnapshotsHistory.set([]);
 			}

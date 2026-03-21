@@ -2,6 +2,7 @@ package com.backend.aurum.domain.asset.service;
 
 import com.backend.aurum.domain.asset.model.Asset;
 import com.backend.aurum.domain.asset.model.Snapshot;
+import com.backend.aurum.domain.asset.repository.AssetRepository;
 import com.backend.aurum.domain.asset.repository.SnapshotRepository;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -18,15 +19,25 @@ import org.springframework.transaction.annotation.Transactional;
 public class SnapshotService {
 
 	private final SnapshotRepository snapshotRepository;
+	private final AssetRepository assetRepository;
 
+	@Transactional(readOnly = true)
 	public List<Snapshot> findAll(UUID userId) {
 		return snapshotRepository.findByAssetUserId(userId);
 	}
 
-	public List<Snapshot> findByAssetId(UUID assetId) {
+	@Transactional(readOnly = true)
+	public List<Snapshot> findByAssetId(UUID assetId, UUID userId) {
+		Asset asset = assetRepository
+			.findById(Objects.requireNonNull(assetId))
+			.orElseThrow(() -> new RuntimeException("Asset not found"));
+		if (!asset.getUser().getId().equals(userId)) {
+			throw new RuntimeException("Access denied: Asset does not belong to user");
+		}
 		return snapshotRepository.findByAssetId(assetId);
 	}
 
+	@Transactional(readOnly = true)
 	public Snapshot findById(UUID id, UUID userId) {
 		Snapshot snapshot = snapshotRepository
 			.findById(Objects.requireNonNull(id))
@@ -38,14 +49,12 @@ public class SnapshotService {
 		return snapshot;
 	}
 
+	@Transactional(readOnly = true)
 	public List<Snapshot> findByDateRange(UUID userId, LocalDate start, LocalDate end) {
-		return snapshotRepository
-			.findByAssetUserId(userId)
-			.stream()
-			.filter(s -> !s.getReferenceDate().isBefore(start) && !s.getReferenceDate().isAfter(end))
-			.toList();
+		return snapshotRepository.findByAssetUserIdAndReferenceDateBetween(userId, start, end);
 	}
 
+	@Transactional(readOnly = true)
 	public Optional<Snapshot> findExistingForMonth(UUID assetId, LocalDate referenceDate) {
 		LocalDate startOfMonth = referenceDate.withDayOfMonth(1);
 		LocalDate endOfMonth = referenceDate.withDayOfMonth(referenceDate.lengthOfMonth());

@@ -12,6 +12,12 @@ import org.springframework.stereotype.Repository;
 public interface SnapshotRepository extends JpaRepository<Snapshot, UUID> {
 	List<Snapshot> findByAssetId(UUID assetId);
 	List<Snapshot> findByAssetUserId(UUID userId);
+	List<Snapshot> findByAssetUserIdOrderByReferenceDateDesc(UUID userId);
+	List<Snapshot> findByAssetUserIdAndReferenceDateBetween(
+		UUID userId,
+		LocalDate start,
+		LocalDate end
+	);
 	Optional<Snapshot> findFirstByAssetIdAndReferenceDateBetween(
 		UUID assetId,
 		LocalDate start,

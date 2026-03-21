@@ -369,7 +369,7 @@ public class AnalyticsService {
 	) {
 		return assets
 			.stream()
-			.filter(a -> a.getCategory().getType() != AssetType.LIABILITY)
+			.filter(a -> a.getCategory() != null && a.getCategory().getType() != AssetType.LIABILITY)
 			.sorted((a, b) -> {
 				BigDecimal valA = getLatestSnapshotValue(
 					snapshotsByAsset.getOrDefault(a.getId(), List.of())
@@ -380,7 +380,7 @@ public class AnalyticsService {
 				return valB.compareTo(valA);
 			})
 			.limit(limit)
-			.map(assetMapper::toDto)
+			.map(a -> assetMapper.toDtoLight(a, snapshotsByAsset))
 			.toList();
 	}
 
