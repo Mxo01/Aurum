@@ -89,6 +89,11 @@ public class McpController {
 			return ResponseEntity.badRequest().build();
 		}
 
+		User requester = currentUser();
+		if (!session.user().getId().equals(requester.getId())) {
+			return ResponseEntity.status(403).build();
+		}
+
 		Thread.ofVirtual().start(() -> {
 			try {
 				processMessage(session, body);
