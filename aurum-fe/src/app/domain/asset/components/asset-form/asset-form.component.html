@@ -55,7 +55,9 @@
 						placeholder="Select type"
 						size="small"
 					/>
-					@if (assetForm.controls.liabilityType.invalid && assetForm.controls.liabilityType.touched) {
+					@if (
+						assetForm.controls.liabilityType.invalid && assetForm.controls.liabilityType.touched
+					) {
 						<small class="text-red-500 text-xs">Liability type is required</small>
 					}
 				</div>

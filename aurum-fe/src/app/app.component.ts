@@ -1,4 +1,11 @@
-import { ChangeDetectionStrategy, Component, DOCUMENT, inject, OnInit } from "@angular/core";
+import {
+	ChangeDetectionStrategy,
+	Component,
+	computed,
+	DOCUMENT,
+	inject,
+	OnInit
+} from "@angular/core";
 import { RouterOutlet, RouterLinkActive, RouterLink } from "@angular/router";
 import { ButtonModule } from "primeng/button";
 import { Avatar } from "primeng/avatar";
@@ -10,6 +17,7 @@ import { ThemeService } from "./shared/services/theme/theme.service";
 import { ConfirmDialog } from "primeng/confirmdialog";
 import { Toast } from "primeng/toast";
 import { paths } from "./app.routes";
+import { ProfileService } from "./domain/profile/profile.service";
 
 @Component({
 	selector: "app-root",
@@ -30,6 +38,7 @@ import { paths } from "./app.routes";
 export class App implements OnInit {
 	private readonly authService = inject(AuthService);
 	private readonly themeService = inject(ThemeService);
+	private readonly profileService = inject(ProfileService);
 	private readonly document = inject(DOCUMENT);
 
 	protected readonly user = toSignal(this.authService.user$);
@@ -37,9 +46,17 @@ export class App implements OnInit {
 		([path]) => path !== "/profile" && path !== "/assets/categories"
 	);
 
+	protected readonly avatarUrl = computed(() => {
+		const customPic = this.profileService.profile()?.picture;
+		if (customPic) return `data:image/jpeg;base64,${customPic}`;
+		return this.user()?.picture;
+	});
+
 	ngOnInit() {
 		if (this.themeService.isDarkMode())
 			this.document.documentElement.classList.add(darkModeSelector);
+
+		this.profileService.getProfile().subscribe();
 	}
 
 	logout() {

@@ -48,6 +48,9 @@ public class User {
 	@Column(nullable = false)
 	private Locale locale;
 
+	@Column(columnDefinition = "TEXT")
+	private String picture;
+
 	@OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
 	@JsonManagedReference
 	private List<Asset> assets = new ArrayList<>();
