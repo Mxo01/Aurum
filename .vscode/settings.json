@@ -1,6 +1,12 @@
 {
 	"java.compile.nullAnalysis.mode": "automatic",
 	"java.configuration.updateBuildConfiguration": "automatic",
+	"prettier.documentSelectors": ["**/*.java"],
+	"editor.formatOnSave": true,
+	"editor.defaultFormatter": "esbenp.prettier-vscode",
+	"[java]": {
+		"editor.defaultFormatter": "esbenp.prettier-vscode"
+	},
 	"sqltools.connections": [
 		{
 			"ssh": "Disabled",

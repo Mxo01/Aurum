@@ -11,19 +11,10 @@ import com.backend.aurum.domain.user.enums.Locale;
 import com.backend.aurum.domain.user.model.User;
 import com.backend.aurum.domain.user.model.UserPrincipal;
 import com.backend.aurum.domain.user.repository.UserRepository;
-
-import lombok.RequiredArgsConstructor;
-
 import com.drew.imaging.ImageMetadataReader;
 import com.drew.imaging.ImageProcessingException;
 import com.drew.metadata.Metadata;
 import com.drew.metadata.exif.ExifIFD0Directory;
-
-import javax.imageio.IIOImage;
-import javax.imageio.ImageIO;
-import javax.imageio.ImageWriteParam;
-import javax.imageio.ImageWriter;
-import javax.imageio.stream.ImageOutputStream;
 import java.awt.*;
 import java.awt.geom.AffineTransform;
 import java.awt.image.AffineTransformOp;
@@ -33,7 +24,12 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Base64;
 import java.util.UUID;
-
+import javax.imageio.IIOImage;
+import javax.imageio.ImageIO;
+import javax.imageio.ImageWriteParam;
+import javax.imageio.ImageWriter;
+import javax.imageio.stream.ImageOutputStream;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -41,25 +37,27 @@ import org.springframework.web.multipart.MultipartFile;
 @Service
 @RequiredArgsConstructor
 public class UserService {
+
 	private final UserRepository userRepository;
 	private final Auth0ManagementService auth0ManagementService;
 
 	public User findOrCreate(String jwtId, String email) {
 		return userRepository
-				.findByJwtId(jwtId)
-				.orElseGet(() -> {
-					try {
-						User newUser = new User();
-						newUser.setJwtId(jwtId);
-						newUser.setEmail(email);
-						newUser.setCurrency(Currency.EUR);
-						newUser.setLocale(Locale.EN_US);
-						return userRepository.saveAndFlush(newUser);
-					} catch (Exception e) {
-						return userRepository.findByJwtId(jwtId)
-								.orElseThrow(() -> new RuntimeException("Failed to find or create user", e));
-					}
-				});
+			.findByJwtId(jwtId)
+			.orElseGet(() -> {
+				try {
+					User newUser = new User();
+					newUser.setJwtId(jwtId);
+					newUser.setEmail(email);
+					newUser.setCurrency(Currency.EUR);
+					newUser.setLocale(Locale.EN_US);
+					return userRepository.saveAndFlush(newUser);
+				} catch (Exception e) {
+					return userRepository
+						.findByJwtId(jwtId)
+						.orElseThrow(() -> new RuntimeException("Failed to find or create user", e));
+				}
+			});
 	}
 
 	@Transactional
@@ -156,7 +154,10 @@ public class UserService {
 		// Resize to 200x200
 		BufferedImage resized = new BufferedImage(200, 200, BufferedImage.TYPE_INT_RGB);
 		Graphics2D g = resized.createGraphics();
-		g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
+		g.setRenderingHint(
+			RenderingHints.KEY_INTERPOLATION,
+			RenderingHints.VALUE_INTERPOLATION_BICUBIC
+		);
 		g.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
 		g.drawImage(cropped, 0, 0, 200, 200, null);
 		g.dispose();
@@ -178,8 +179,7 @@ public class UserService {
 	}
 
 	private BufferedImage applyOrientation(BufferedImage image, int orientation) {
-		if (orientation == 1)
-			return image;
+		if (orientation == 1) return image;
 
 		int w = image.getWidth();
 		int h = image.getHeight();
@@ -213,7 +213,7 @@ public class UserService {
 				t.scale(-1, 1);
 				t.translate(-h, 0);
 				t.translate(0, w);
-				t.rotate(3 * Math.PI / 2);
+				t.rotate((3 * Math.PI) / 2);
 			}
 			case 8 -> {
 				t.translate(0, w);
