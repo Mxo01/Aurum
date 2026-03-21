@@ -7,13 +7,18 @@ import com.backend.aurum.domain.analytics.model.Target;
 import com.backend.aurum.domain.analytics.model.TargetType;
 import com.backend.aurum.domain.analytics.service.AnalyticsService;
 import com.backend.aurum.domain.analytics.service.TargetService;
+import com.backend.aurum.domain.asset.dto.AssetCategoryDTO;
 import com.backend.aurum.domain.asset.dto.AssetDTO;
 import com.backend.aurum.domain.asset.dto.SnapshotDTO;
+import com.backend.aurum.domain.asset.mapper.AssetCategoryMapper;
 import com.backend.aurum.domain.asset.mapper.AssetMapper;
 import com.backend.aurum.domain.asset.mapper.SnapshotMapper;
 import com.backend.aurum.domain.asset.model.Asset;
+import com.backend.aurum.domain.asset.model.AssetCategory;
+import com.backend.aurum.domain.asset.model.AssetType;
 import com.backend.aurum.domain.asset.model.Snapshot;
 import com.backend.aurum.domain.asset.repository.AssetRepository;
+import com.backend.aurum.domain.asset.service.AssetCategoryService;
 import com.backend.aurum.domain.asset.service.AssetService;
 import com.backend.aurum.domain.asset.service.SnapshotService;
 import com.backend.aurum.domain.user.enums.Currency;
@@ -23,14 +28,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import lombok.RequiredArgsConstructor;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
-
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -39,6 +36,13 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 @RestController
 @RequestMapping("/mcp")
@@ -54,6 +58,8 @@ public class McpController {
 	private final AnalyticsService analyticsService;
 	private final AssetRepository assetRepository;
 	private final ExchangeRateService exchangeRateService;
+	private final AssetCategoryService categoryService;
+	private final AssetCategoryMapper categoryMapper;
 	private final ObjectMapper objectMapper;
 
 	private record McpSession(SseEmitter emitter, User user) {}
@@ -72,9 +78,7 @@ public class McpController {
 		emitter.onError(e -> sessions.remove(sessionId));
 
 		try {
-			emitter.send(SseEmitter.event()
-					.name("endpoint")
-					.data("/mcp/message?sessionId=" + sessionId));
+			emitter.send(SseEmitter.event().name("endpoint").data("/mcp/message?sessionId=" + sessionId));
 		} catch (IOException e) {
 			emitter.completeWithError(e);
 		}
@@ -83,7 +87,10 @@ public class McpController {
 	}
 
 	@PostMapping("/message")
-	public ResponseEntity<Void> handleMessage(@RequestParam String sessionId, @RequestBody String body) {
+	public ResponseEntity<Void> handleMessage(
+		@RequestParam String sessionId,
+		@RequestBody String body
+	) {
 		McpSession session = sessions.get(sessionId);
 		if (session == null) {
 			return ResponseEntity.badRequest().build();
@@ -92,8 +99,7 @@ public class McpController {
 		Thread.ofVirtual().start(() -> {
 			try {
 				processMessage(session, body);
-			} catch (Exception ignored) {
-			}
+			} catch (Exception ignored) {}
 		});
 
 		return ResponseEntity.ok().build();
@@ -130,12 +136,13 @@ public class McpController {
 		response.set("id", id);
 		response.set("result", result);
 
-		session.emitter().send(SseEmitter.event()
-				.name("message")
-				.data(objectMapper.writeValueAsString(response)));
+		session
+			.emitter()
+			.send(SseEmitter.event().name("message").data(objectMapper.writeValueAsString(response)));
 	}
 
-	private void sendError(SseEmitter emitter, JsonNode id, int code, String message) throws Exception {
+	private void sendError(SseEmitter emitter, JsonNode id, int code, String message)
+		throws Exception {
 		ObjectNode errorObj = objectMapper.createObjectNode();
 		errorObj.put("code", code);
 		errorObj.put("message", message);
@@ -145,9 +152,9 @@ public class McpController {
 		response.set("id", id);
 		response.set("error", errorObj);
 
-		emitter.send(SseEmitter.event()
-				.name("message")
-				.data(objectMapper.writeValueAsString(response)));
+		emitter.send(
+			SseEmitter.event().name("message").data(objectMapper.writeValueAsString(response))
+		);
 	}
 
 	private ObjectNode handleInitialize() {
@@ -167,20 +174,53 @@ public class McpController {
 
 	private ObjectNode handleToolsList() {
 		ArrayNode tools = objectMapper.createArrayNode();
-		tools.add(buildTool("get_assets", "Get all assets for the current user",
-				buildSchema()));
-		tools.add(buildTool("get_snapshots", "Get all value snapshots for a specific asset",
-				buildSchema("assetId", "string", "UUID of the asset", true)));
-		tools.add(buildTool("get_kpis", "Get financial KPIs: net worth, gross assets, liabilities, allocations, variations",
-				buildSchema()));
-		tools.add(buildTool("get_targets", "Get all financial targets/goals for the current user",
-				buildSchema()));
-		tools.add(buildTool("add_asset", "Create a new financial asset",
-				buildAddAssetSchema()));
-		tools.add(buildTool("add_snapshot", "Add a value snapshot to an existing asset",
-				buildAddSnapshotSchema()));
-		tools.add(buildTool("add_target", "Create a new financial target/goal",
-				buildAddTargetSchema()));
+		tools.add(buildTool("get_assets", "Get all assets for the current user", buildSchema()));
+		tools.add(
+			buildTool(
+				"get_snapshots",
+				"Get all value snapshots for a specific asset",
+				buildSchema("assetId", "string", "UUID of the asset", true)
+			)
+		);
+		tools.add(
+			buildTool(
+				"get_kpis",
+				"Get financial KPIs: net worth, gross assets, liabilities, allocations, variations",
+				buildSchema()
+			)
+		);
+		tools.add(
+			buildTool(
+				"get_targets",
+				"Get all financial targets/goals for the current user",
+				buildSchema()
+			)
+		);
+		tools.add(buildTool("add_asset", "Create a new financial asset", buildAddAssetSchema()));
+		tools.add(
+			buildTool(
+				"add_snapshot",
+				"Add a value snapshot to an existing asset",
+				buildAddSnapshotSchema()
+			)
+		);
+		tools.add(
+			buildTool("add_target", "Create a new financial target/goal", buildAddTargetSchema())
+		);
+		tools.add(
+			buildTool(
+				"get_categories",
+				"Get all asset categories (system-wide and user-defined)",
+				buildSchema()
+			)
+		);
+		tools.add(
+			buildTool(
+				"add_category",
+				"Create a new user-defined asset category",
+				buildAddCategorySchema()
+			)
+		);
 
 		ObjectNode result = objectMapper.createObjectNode();
 		result.set("tools", tools);
@@ -202,6 +242,8 @@ public class McpController {
 				case "add_asset" -> addAsset(user, args);
 				case "add_snapshot" -> addSnapshot(user, args);
 				case "add_target" -> addTarget(user, args);
+				case "get_categories" -> getCategories(user);
+				case "add_category" -> addCategory(user, args);
 				default -> throw new IllegalArgumentException("Unknown tool: " + name);
 			};
 		} catch (Exception e) {
@@ -230,9 +272,11 @@ public class McpController {
 	// --- Tool implementations ---
 
 	private String getAssets(User user) throws Exception {
-		List<AssetDTO> assets = assetService.findAll(user.getId()).stream()
-				.map(assetMapper::toDto)
-				.toList();
+		List<AssetDTO> assets = assetService
+			.findAll(user.getId())
+			.stream()
+			.map(assetMapper::toDto)
+			.toList();
 		return objectMapper.writeValueAsString(assets);
 	}
 
@@ -240,9 +284,11 @@ public class McpController {
 		UUID assetId = UUID.fromString(args.path("assetId").asText());
 		// Ownership check
 		assetService.findById(assetId, user.getId());
-		List<SnapshotDTO> snapshots = snapshotService.findByAssetId(assetId).stream()
-				.map(snapshotMapper::toDto)
-				.toList();
+		List<SnapshotDTO> snapshots = snapshotService
+			.findByAssetId(assetId)
+			.stream()
+			.map(snapshotMapper::toDto)
+			.toList();
 		return objectMapper.writeValueAsString(snapshots);
 	}
 
@@ -253,9 +299,11 @@ public class McpController {
 
 	private String getTargets(User user) throws Exception {
 		BigDecimal currentNetWorth = analyticsService.getSummary(user.getId()).getTotalNetWorth();
-		List<TargetDTO> targets = targetService.findAll(user.getId()).stream()
-				.map(t -> targetMapper.toDto(t, currentNetWorth))
-				.toList();
+		List<TargetDTO> targets = targetService
+			.findAll(user.getId())
+			.stream()
+			.map(t -> targetMapper.toDto(t, currentNetWorth))
+			.toList();
 		return objectMapper.writeValueAsString(targets);
 	}
 
@@ -344,6 +392,24 @@ public class McpController {
 		return objectMapper.writeValueAsString(targetMapper.toDto(saved, netWorth));
 	}
 
+	private String getCategories(User user) throws Exception {
+		List<AssetCategoryDTO> categories = categoryService
+			.findAll(user.getId())
+			.stream()
+			.map(categoryMapper::toDto)
+			.toList();
+		return objectMapper.writeValueAsString(categories);
+	}
+
+	private String addCategory(User user, JsonNode args) throws Exception {
+		AssetCategoryDTO dto = new AssetCategoryDTO();
+		dto.setName(args.path("name").asText());
+		dto.setType(AssetType.valueOf(args.path("type").asText()));
+		AssetCategory category = categoryMapper.toEntity(dto, user.getId());
+		AssetCategory saved = categoryService.save(category);
+		return objectMapper.writeValueAsString(categoryMapper.toDto(saved));
+	}
+
 	// --- Schema helpers ---
 
 	private ObjectNode buildTool(String name, String description, ObjectNode inputSchema) {
@@ -362,7 +428,12 @@ public class McpController {
 		return schema;
 	}
 
-	private ObjectNode buildSchema(String fieldName, String type, String description, boolean required) {
+	private ObjectNode buildSchema(
+		String fieldName,
+		String type,
+		String description,
+		boolean required
+	) {
 		ObjectNode schema = objectMapper.createObjectNode();
 		schema.put("type", "object");
 		ObjectNode props = objectMapper.createObjectNode();
@@ -384,7 +455,10 @@ public class McpController {
 		schema.put("type", "object");
 		ObjectNode props = objectMapper.createObjectNode();
 		props.set("name", field("string", "Name of the asset"));
-		props.set("categoryId", field("string", "UUID of the asset category (use get_assets to discover existing categories)"));
+		props.set(
+			"categoryId",
+			field("string", "UUID of the asset category (use get_assets to discover existing categories)")
+		);
 		props.set("originalCurrency", field("string", "ISO currency code e.g. EUR, USD"));
 		props.set("initialValue", field("number", "Initial value in the asset's original currency"));
 		props.set("referenceDate", field("string", "Reference date in ISO format YYYY-MM-DD"));
@@ -402,12 +476,29 @@ public class McpController {
 		props.set("assetId", field("string", "UUID of the asset"));
 		props.set("amountOriginalCurrency", field("number", "Value in the asset's original currency"));
 		props.set("referenceDate", field("string", "Reference date in ISO format YYYY-MM-DD"));
-		props.set("exchangeRateToBase", field("number", "Exchange rate to user's base currency (auto-fetched if omitted)"));
+		props.set(
+			"exchangeRateToBase",
+			field("number", "Exchange rate to user's base currency (auto-fetched if omitted)")
+		);
 		schema.set("properties", props);
 		ArrayNode required = objectMapper.createArrayNode();
 		required.add("assetId");
 		required.add("amountOriginalCurrency");
 		required.add("referenceDate");
+		schema.set("required", required);
+		return schema;
+	}
+
+	private ObjectNode buildAddCategorySchema() {
+		ObjectNode schema = objectMapper.createObjectNode();
+		schema.put("type", "object");
+		ObjectNode props = objectMapper.createObjectNode();
+		props.set("name", field("string", "Name of the category"));
+		props.set("type", field("string", "Category type: ASSET or LIABILITY"));
+		schema.set("properties", props);
+		ArrayNode required = objectMapper.createArrayNode();
+		required.add("name");
+		required.add("type");
 		schema.set("required", required);
 		return schema;
 	}
