@@ -2,6 +2,10 @@
 	"dependencies": {
 		"husky": "^9.1.7"
 	},
+	"devDependencies": {
+		"prettier": "^3.8.1",
+		"prettier-plugin-java": "^2.8.1"
+	},
 	"scripts": {
 		"prepare": "husky"
 	}

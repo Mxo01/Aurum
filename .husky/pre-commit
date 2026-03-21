@@ -3,3 +3,10 @@ export NVM_DIR="$HOME/.nvm"
 
 echo "--- Checking Aurum FE ---"
 (cd aurum-fe && npx lint-staged)
+
+echo "--- Checking Aurum BE ---"
+STAGED_JAVA=$(git diff --cached --name-only | grep "aurum-be/.*\.java$" || true)
+if [ -n "$STAGED_JAVA" ]; then
+  echo "$STAGED_JAVA" | xargs npx --prefix . prettier --write
+  echo "$STAGED_JAVA" | xargs git add
+fi
