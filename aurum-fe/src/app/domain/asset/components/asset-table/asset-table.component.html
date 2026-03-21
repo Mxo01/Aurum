@@ -30,6 +30,7 @@
 						size="small"
 						[icon]="expanded ? 'pi pi-chevron-down' : 'pi pi-chevron-right'"
 					/>
+					<i class="pi {{ asset.categoryIcon || 'pi-question' }} text-sm text-surface-500"></i>
 					<span class="font-bold">{{ asset.categoryName }}</span>
 					<p-badge
 						[value]="categoryCounts()[asset.categoryName]?.toString()"

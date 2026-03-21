@@ -3,10 +3,6 @@ package com.backend.aurum.domain.mcp.service;
 import com.backend.aurum.domain.mcp.model.ApiKey;
 import com.backend.aurum.domain.mcp.repository.ApiKeyRepository;
 import com.backend.aurum.domain.user.model.User;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -14,8 +10,12 @@ import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.Base64;
 import java.util.HexFormat;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -32,23 +32,25 @@ public class ApiKeyService {
 		String plainKey = KEY_PREFIX + generateToken();
 
 		ApiKey apiKey = ApiKey.builder()
-				.user(user)
-				.keyHash(hashKey(plainKey))
-				.name("default")
-				.createdAt(LocalDateTime.now())
-				.build();
+			.user(user)
+			.keyHash(hashKey(plainKey))
+			.name("default")
+			.createdAt(LocalDateTime.now())
+			.build();
 
-		apiKeyRepository.save(apiKey);
+		apiKeyRepository.save(Objects.requireNonNull(apiKey));
 		return plainKey;
 	}
 
 	@Transactional
 	public Optional<User> resolveUser(String plainKey) {
 		String hash = hashKey(plainKey);
-		return apiKeyRepository.findByKeyHash(hash).map(key -> {
-			key.setLastUsedAt(LocalDateTime.now());
-			return key.getUser();
-		});
+		return apiKeyRepository
+			.findByKeyHash(hash)
+			.map(key -> {
+				key.setLastUsedAt(LocalDateTime.now());
+				return key.getUser();
+			});
 	}
 
 	public Optional<ApiKey> getKeyMeta(UUID userId) {

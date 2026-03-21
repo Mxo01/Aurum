@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -22,16 +23,16 @@ public class ApiKeyAuthFilter extends OncePerRequestFilter {
 	private final ApiKeyService apiKeyService;
 
 	@Override
-	protected boolean shouldNotFilter(HttpServletRequest request) {
+	protected boolean shouldNotFilter(@NonNull HttpServletRequest request) {
 		String uri = request.getRequestURI();
 		return !uri.equals("/mcp/message") && !uri.equals("/sse");
 	}
 
 	@Override
 	protected void doFilterInternal(
-		HttpServletRequest request,
-		HttpServletResponse response,
-		FilterChain chain
+		@NonNull HttpServletRequest request,
+		@NonNull HttpServletResponse response,
+		@NonNull FilterChain chain
 	) throws ServletException, IOException {
 		String header = request.getHeader("Authorization");
 

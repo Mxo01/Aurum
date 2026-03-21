@@ -7,6 +7,7 @@ import com.backend.aurum.domain.asset.repository.AssetCategoryRepository;
 import com.backend.aurum.domain.user.enums.Currency;
 import com.backend.aurum.domain.user.model.User;
 import com.backend.aurum.domain.user.repository.UserRepository;
+import java.util.Objects;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -42,7 +43,7 @@ public class AssetMapper {
 
 		if (dto.getCategoryId() != null) {
 			AssetCategory category = categoryRepository
-				.findById(dto.getCategoryId())
+				.findById(Objects.requireNonNull(dto.getCategoryId()))
 				.orElseThrow(() -> new RuntimeException("Category not found"));
 
 			if (
@@ -69,6 +70,7 @@ public class AssetMapper {
 		if (entity.getCategory() != null) {
 			dto.setCategoryId(entity.getCategory().getId());
 			dto.setCategoryName(entity.getCategory().getName());
+			dto.setCategoryIcon(entity.getCategory().getIcon());
 			dto.setType(entity.getCategory().getType());
 		}
 

@@ -17,6 +17,7 @@ public class AssetDTO {
 	private String name;
 	private UUID categoryId;
 	private String categoryName;
+	private String categoryIcon;
 	private AssetType type;
 	private Currency originalCurrency;
 	private Boolean isActive;

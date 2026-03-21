@@ -37,19 +37,6 @@ public class AssetCategoryController {
 		return ResponseEntity.ok(categories);
 	}
 
-	@GetMapping("/user")
-	public ResponseEntity<List<AssetCategoryDTO>> getUserAssetCategories(
-		@AuthenticationPrincipal UserPrincipal principal
-	) {
-		UUID userId = principal.user().getId();
-		List<AssetCategoryDTO> categories = categoryService
-			.findByUserId(userId)
-			.stream()
-			.map(mapper::toDto)
-			.toList();
-		return ResponseEntity.ok(categories);
-	}
-
 	@PostMapping
 	public ResponseEntity<AssetCategoryDTO> createCategory(
 		@RequestBody AssetCategoryDTO categoryDto,
@@ -71,13 +58,17 @@ public class AssetCategoryController {
 		UUID userId = principal.user().getId();
 		validationService.validate(categoryDto);
 		AssetCategory categoryDetails = mapper.toEntity(categoryDto, userId);
-		AssetCategory updatedCategory = categoryService.update(id, categoryDetails);
+		AssetCategory updatedCategory = categoryService.update(id, categoryDetails, userId);
 		return ResponseEntity.ok(mapper.toDto(updatedCategory));
 	}
 
 	@DeleteMapping("/{id}")
-	public ResponseEntity<Void> deleteCategory(@PathVariable UUID id) {
-		categoryService.delete(id);
+	public ResponseEntity<Void> deleteCategory(
+		@PathVariable UUID id,
+		@AuthenticationPrincipal UserPrincipal principal
+	) {
+		UUID userId = principal.user().getId();
+		categoryService.delete(id, userId);
 		return ResponseEntity.noContent().build();
 	}
 }

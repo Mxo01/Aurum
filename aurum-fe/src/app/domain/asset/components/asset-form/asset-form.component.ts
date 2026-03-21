@@ -90,10 +90,12 @@ export class AssetFormComponent implements OnInit, OnDestroy {
 			if (selectedAsset) {
 				this.assetForm.patchValue({
 					name: selectedAsset.name,
-					category: {
+					category: this.categoriesOptions().find(c => c.id === selectedAsset.categoryId) ?? {
 						id: selectedAsset.categoryId,
 						name: selectedAsset.categoryName,
-						type: selectedAsset.type
+						type: selectedAsset.type,
+						icon: null,
+						isDefault: false
 					},
 					type: selectedAsset.type,
 					currency: selectedAsset.originalCurrency,
@@ -122,6 +124,9 @@ export class AssetFormComponent implements OnInit, OnDestroy {
 			next: isActive => {
 				if (!isActive) {
 					this.assetForm.controls.isFavorite.setValue(false);
+					this.assetForm.controls.isFavorite.disable();
+				} else {
+					this.assetForm.controls.isFavorite.enable();
 				}
 			}
 		});
@@ -181,6 +186,7 @@ export class AssetFormComponent implements OnInit, OnDestroy {
 			name: form.name,
 			categoryId: form.category.id,
 			categoryName: form.category.name,
+			categoryIcon: form.category.icon ?? null,
 			type: form.type,
 			originalCurrency: form.currency,
 			isActive: !!form.isActive,

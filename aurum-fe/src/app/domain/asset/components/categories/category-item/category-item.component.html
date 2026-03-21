@@ -1,0 +1,27 @@
+<p-button
+	size="small"
+	[fluid]="true"
+	[outlined]="true"
+	(onClick)="category().isDefault ? null : edit.emit(category())"
+>
+	<div class="flex items-center gap-3 w-full">
+		<p-avatar
+			[style]="{
+				'background-color': categoryColors().bg
+			}"
+			shape="circle"
+			[icon]="
+				'text-[' +
+				categoryColors().text +
+				']' +
+				(category().icon ? ' pi ' + category().icon : ' pi pi-question')
+			"
+		/>
+		<span class="font-medium truncate">{{ category().name }}</span>
+	</div>
+	<i
+		[class]="
+			'pi ' + (category().isDefault ? 'pi-lock' : 'pi-pencil') + ' shrink-0 text-surface-400'
+		"
+	></i>
+</p-button>

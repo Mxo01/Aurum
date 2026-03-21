@@ -23,6 +23,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Base64;
+import java.util.Objects;
 import java.util.UUID;
 import javax.imageio.IIOImage;
 import javax.imageio.ImageIO;
@@ -62,12 +63,12 @@ public class UserService {
 
 	@Transactional
 	public User getUserById(UUID userId) {
-		return userRepository.findById(userId).orElseThrow();
+		return userRepository.findById(Objects.requireNonNull(userId)).orElseThrow();
 	}
 
 	@Transactional
 	public void deleteUser(UUID userId, String jwtId) {
-		userRepository.deleteById(userId);
+		userRepository.deleteById(Objects.requireNonNull(userId));
 
 		try {
 			ManagementAPI managementApi = auth0ManagementService.getManagementAPI();
@@ -91,14 +92,14 @@ public class UserService {
 
 	@Transactional
 	public void updateCurrency(UUID userId, UpdateCurrencyDTO dto) {
-		User user = userRepository.findById(userId).orElseThrow();
+		User user = userRepository.findById(Objects.requireNonNull(userId)).orElseThrow();
 		user.setCurrency(dto.currency());
 		userRepository.save(user);
 	}
 
 	@Transactional
 	public void updateLocale(UUID userId, UpdateLocaleDTO dto) {
-		User user = userRepository.findById(userId).orElseThrow();
+		User user = userRepository.findById(Objects.requireNonNull(userId)).orElseThrow();
 		user.setLocale(dto.locale());
 		userRepository.save(user);
 	}
@@ -107,7 +108,7 @@ public class UserService {
 	public void updatePicture(UUID userId, MultipartFile file) {
 		try {
 			String encoded = processImage(file);
-			User user = userRepository.findById(userId).orElseThrow();
+			User user = userRepository.findById(Objects.requireNonNull(userId)).orElseThrow();
 			user.setPicture(encoded);
 			userRepository.save(user);
 		} catch (IOException e) {
@@ -117,7 +118,7 @@ public class UserService {
 
 	@Transactional
 	public void deletePicture(UUID userId) {
-		User user = userRepository.findById(userId).orElseThrow();
+		User user = userRepository.findById(Objects.requireNonNull(userId)).orElseThrow();
 		user.setPicture(null);
 		userRepository.save(user);
 	}

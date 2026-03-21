@@ -4,6 +4,7 @@ import com.backend.aurum.domain.asset.dto.SnapshotDTO;
 import com.backend.aurum.domain.asset.model.Asset;
 import com.backend.aurum.domain.asset.repository.AssetRepository;
 import java.math.BigDecimal;
+import java.util.Objects;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -35,7 +36,7 @@ public class SnapshotValidationService {
 		}
 
 		Asset asset = assetRepository
-			.findById(dto.getAssetId())
+			.findById(Objects.requireNonNull(dto.getAssetId()))
 			.orElseThrow(() -> new IllegalArgumentException("Asset not found"));
 
 		if (userId != null && !asset.getUser().getId().equals(userId)) {
