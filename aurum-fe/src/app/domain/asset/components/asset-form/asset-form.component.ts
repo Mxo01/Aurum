@@ -15,13 +15,24 @@ import { InputText } from "primeng/inputtext";
 import { Select } from "primeng/select";
 import { InputNumber } from "primeng/inputnumber";
 import { DatePicker } from "primeng/datepicker";
-import { currencyOptions, typeOptions, liabilityTypeOptions, paymentFrequencyOptions } from "./asset-form.utils";
+import {
+	currencyOptions,
+	typeOptions,
+	liabilityTypeOptions,
+	paymentFrequencyOptions
+} from "./asset-form.utils";
 import { Button } from "primeng/button";
 import { Drawer } from "primeng/drawer";
 import { Subscription } from "rxjs";
 import { Currency } from "../../../profile/model/currency.model";
 import { Locale } from "../../../profile/model/locale.model";
-import { Asset, AssetCategory, AssetType, LiabilityType, PaymentFrequency } from "../../model/asset.model";
+import {
+	Asset,
+	AssetCategory,
+	AssetType,
+	LiabilityType,
+	PaymentFrequency
+} from "../../model/asset.model";
 
 @Component({
 	selector: "app-asset-form",
