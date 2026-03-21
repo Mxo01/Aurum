@@ -1,8 +1,6 @@
 {
 	"java.compile.nullAnalysis.mode": "automatic",
 	"java.configuration.updateBuildConfiguration": "automatic",
-	"prettier.prettierPath": "${workspaceFolder}/aurum-fe/node_modules/prettier",
-	"prettier.plugins": ["${workspaceFolder}/aurum-fe/node_modules/prettier-plugin-java"],
 	"prettier.documentSelectors": ["**/*.java"],
 	"editor.formatOnSave": true,
 	"editor.defaultFormatter": "esbenp.prettier-vscode",
