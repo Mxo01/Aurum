@@ -8,11 +8,12 @@ import { Tooltip } from "primeng/tooltip";
 import { MessageService } from "primeng/api";
 import { finalize, switchMap } from "rxjs";
 import { Message } from "primeng/message";
+import { Highlight } from "ngx-highlightjs";
 
 @Component({
 	selector: "app-mcp-setup",
 	standalone: true,
-	imports: [Button, Dialog, DatePipe, Tooltip, Message],
+	imports: [Button, Dialog, DatePipe, Tooltip, Message, Highlight],
 	templateUrl: "./mcp-setup.component.html",
 	changeDetection: ChangeDetectionStrategy.OnPush
 })

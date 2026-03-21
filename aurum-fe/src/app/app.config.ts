@@ -15,6 +15,7 @@ import { provideHttpClient, withInterceptors } from "@angular/common/http";
 import { provideAuth0, authHttpInterceptorFn } from "@auth0/auth0-angular";
 
 import { routes } from "./app.routes";
+import { provideHighlightOptions } from "ngx-highlightjs";
 import { providePrimeNG } from "primeng/config";
 import { primengPreset, auth0Config, darkModeSelector } from "./app.utils";
 import { ConfirmationService, MessageService } from "primeng/api";
@@ -31,6 +32,9 @@ export const appConfig: ApplicationConfig = {
 		provideRouter(routes),
 		provideHttpClient(withInterceptors([authHttpInterceptorFn])),
 		provideAuth0(auth0Config),
+		provideHighlightOptions({
+			fullLibraryLoader: () => import("highlight.js")
+		}),
 		providePrimeNG({
 			theme: {
 				preset: primengPreset,

@@ -64,8 +64,12 @@
 
 		<div class="flex flex-col gap-2">
 			<span class="text-sm font-medium">Paste this into your MCP Client's config file:</span>
-			<div class="relative rounded-lg border border-gray-600">
-				<pre class="overflow-x-auto p-4 text-xs leading-relaxed">{{ configJson() }}</pre>
+			<div class="relative rounded-lg border border-gray-600 overflow-hidden">
+				<pre class="overflow-x-auto text-xs! leading-relaxed! m-0! rounded-lg!"><code 
+					[highlight]="configJson()" 
+					language="json" 
+					style="font-family: '0xProto', monospace;"
+				></code></pre>
 				<p-button
 					icon="pi pi-copy"
 					[text]="true"

@@ -1,4 +1,32 @@
 @import "primeicons/primeicons.css";
+@import "highlight.js/styles/atom-one-dark.css";
+
+@font-face {
+	font-family: "0xProto";
+	src: url("https://cdn.jsdelivr.net/gh/0xType/0xProto@2.502/fonts/0xProto-Regular.woff2")
+		format("woff2");
+	font-weight: 400;
+	font-style: normal;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: "0xProto";
+	src: url("https://cdn.jsdelivr.net/gh/0xType/0xProto@2.502/fonts/0xProto-Bold.woff2")
+		format("woff2");
+	font-weight: 700;
+	font-style: normal;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: "0xProto";
+	src: url("https://cdn.jsdelivr.net/gh/0xType/0xProto@2.502/fonts/0xProto-Italic.woff2")
+		format("woff2");
+	font-weight: 400;
+	font-style: italic;
+	font-display: swap;
+}
 
 html,
 body {
