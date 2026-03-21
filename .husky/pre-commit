@@ -6,7 +6,11 @@ echo "--- Checking Aurum FE ---"
 
 echo "--- Checking Aurum BE ---"
 STAGED_JAVA=$(git diff --cached --name-only | grep "aurum-be/.*\.java$" || true)
+echo "Staged Java files: '$STAGED_JAVA'"
 if [ -n "$STAGED_JAVA" ]; then
-  echo "$STAGED_JAVA" | xargs ./node_modules/.bin/prettier --write
+  echo "$STAGED_JAVA" | xargs ./node_modules/.bin/prettier --write --log-level log
   echo "$STAGED_JAVA" | xargs git add
+  echo "Done formatting and re-staging"
+else
+  echo "No staged Java files, skipping"
 fi
