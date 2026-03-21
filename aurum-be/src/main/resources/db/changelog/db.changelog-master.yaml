@@ -20,3 +20,6 @@ databaseChangeLog:
   - include:
       file: db/changelog/changes/2026-03-20-add-picture-to-users.sql
       relativeToChangelogFile: false
+  - include:
+      file: db/changelog/changes/2026-03-21-add-api-keys.sql
+      relativeToChangelogFile: false

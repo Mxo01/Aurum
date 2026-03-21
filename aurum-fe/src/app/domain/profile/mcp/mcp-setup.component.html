@@ -1,0 +1,97 @@
+<div class="flex flex-col gap-3">
+	<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+		<div class="flex flex-col">
+			<span>Connect your MCP Client</span>
+			<span class="text-xs text-gray-500">
+				@if (keyMeta()) {
+					Key active · last used
+					{{ keyMeta()!.lastUsedAt ? (keyMeta()!.lastUsedAt | date: "dd MMM yyyy") : "never" }}
+				} @else {
+					No key generated yet
+				}
+			</span>
+		</div>
+
+		<div class="flex gap-2 sm:shrink-0">
+			@if (keyMeta()) {
+				<p-button
+					label="Regenerate"
+					icon="pi pi-refresh"
+					size="small"
+					severity="secondary"
+					[loading]="isGenerating()"
+					(onClick)="generateKey()"
+				/>
+				<p-button
+					label="Revoke"
+					icon="pi pi-trash"
+					size="small"
+					severity="danger"
+					[text]="true"
+					[loading]="isRevoking()"
+					(onClick)="revokeKey()"
+				/>
+			} @else {
+				<p-button
+					label="Generate API Key"
+					icon="pi pi-key"
+					size="small"
+					[loading]="isGenerating()"
+					(onClick)="generateKey()"
+				/>
+			}
+		</div>
+	</div>
+</div>
+
+<p-dialog
+	[visible]="isApiKeyInstructionsDialogVisible()"
+	[closable]="false"
+	[modal]="true"
+	[draggable]="false"
+	[resizable]="false"
+	header="Your API Key"
+	styleClass="w-full max-w-2xl"
+>
+	<div class="flex flex-col gap-5">
+		<p-message
+			class="mt-3"
+			severity="warn"
+			icon="pi pi-exclamation-triangle"
+		>
+			Copy this key now — it will not be shown again.
+		</p-message>
+
+		<div class="flex flex-col gap-2">
+			<span class="text-sm font-medium">Paste this into your MCP Client's config file:</span>
+			<div class="relative rounded-lg border border-gray-600 overflow-hidden">
+				<pre class="overflow-x-auto text-xs! leading-relaxed! m-0! rounded-lg!"><code 
+					[highlight]="configJson()" 
+					language="json" 
+					style="font-family: '0xProto', monospace;"
+				></code></pre>
+				<p-button
+					icon="pi pi-copy"
+					[text]="true"
+					size="small"
+					severity="secondary"
+					class="absolute right-2 top-2"
+					pTooltip="Copy JSON"
+					(onClick)="copyJson()"
+				/>
+			</div>
+		</div>
+
+		<span class="text-gray-400 italic text-sm">
+			Restart your MCP Client once you've saved the config.
+		</span>
+	</div>
+
+	<ng-template #footer>
+		<p-button
+			label="Ok, I saved my API Key"
+			icon="pi pi-check"
+			(onClick)="confirmSaved()"
+		/>
+	</ng-template>
+</p-dialog>

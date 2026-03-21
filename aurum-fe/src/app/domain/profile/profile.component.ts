@@ -7,6 +7,7 @@ import {
 	signal,
 	OnInit
 } from "@angular/core";
+import { McpSetupComponent } from "./mcp/mcp-setup.component";
 import { toSignal } from "@angular/core/rxjs-interop";
 import { AuthService } from "@auth0/auth0-angular";
 import { Card } from "primeng/card";
@@ -47,7 +48,8 @@ import { currencyOptions, localeOptions } from "./profile.utils";
 		SelectButton,
 		Select,
 		RouterLink,
-		Divider
+		Divider,
+		McpSetupComponent
 	],
 	templateUrl: "./profile.component.html",
 	changeDetection: ChangeDetectionStrategy.OnPush
