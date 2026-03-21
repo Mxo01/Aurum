@@ -51,9 +51,13 @@ public class TargetMapper {
 		TargetType type = entity.getType() != null ? entity.getType() : TargetType.MANUAL;
 		dto.setType(type);
 
-		BigDecimal currentAmount = (entity.getType() == TargetType.NET_WORTH)
+		BigDecimal rawAmount = (entity.getType() == TargetType.NET_WORTH)
 			? (currentNetWorth != null ? currentNetWorth : BigDecimal.ZERO)
 			: (entity.getCurrentAmount() != null ? entity.getCurrentAmount() : BigDecimal.ZERO);
+
+		// NET_WORTH targets floor at zero — negative net worth means no progress, not debt toward target
+		BigDecimal currentAmount =
+			entity.getType() == TargetType.NET_WORTH ? rawAmount.max(BigDecimal.ZERO) : rawAmount;
 
 		dto.setCurrentAmount(currentAmount);
 
