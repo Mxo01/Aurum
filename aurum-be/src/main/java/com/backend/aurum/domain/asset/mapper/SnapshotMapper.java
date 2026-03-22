@@ -1,5 +1,6 @@
 package com.backend.aurum.domain.asset.mapper;
 
+import com.backend.aurum.domain.asset.dto.CreateSnapshotDTO;
 import com.backend.aurum.domain.asset.dto.SnapshotDTO;
 import com.backend.aurum.domain.asset.model.Asset;
 import com.backend.aurum.domain.asset.model.Snapshot;
@@ -15,6 +16,29 @@ import org.springframework.stereotype.Component;
 public class SnapshotMapper {
 
 	private final AssetRepository assetRepository;
+
+	public Snapshot toEntity(CreateSnapshotDTO dto, UUID userId) {
+		if (dto == null) return null;
+		Snapshot snapshot = new Snapshot();
+		snapshot.setReferenceDate(dto.getReferenceDate());
+		snapshot.setAmountOriginalCurrency(dto.getAmountOriginalCurrency());
+		snapshot.setExchangeRateToBase(
+			dto.getExchangeRateToBase() != null ? dto.getExchangeRateToBase() : BigDecimal.ONE
+		);
+
+		if (dto.getAssetId() != null) {
+			Asset asset = assetRepository
+				.findById(Objects.requireNonNull(dto.getAssetId()))
+				.orElseThrow(() -> new RuntimeException("Asset not found"));
+
+			if (userId != null && !asset.getUser().getId().equals(userId)) {
+				throw new RuntimeException("Asset does not belong to the user");
+			}
+			snapshot.setAsset(asset);
+		}
+
+		return snapshot;
+	}
 
 	public Snapshot toEntity(SnapshotDTO dto, UUID userId) {
 		if (dto == null) return null;
