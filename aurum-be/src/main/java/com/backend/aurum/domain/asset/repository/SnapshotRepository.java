@@ -23,4 +23,6 @@ public interface SnapshotRepository extends JpaRepository<Snapshot, UUID> {
 		LocalDate start,
 		LocalDate end
 	);
+
+	List<Snapshot> findTop2ByAssetIdOrderByReferenceDateDesc(UUID assetId);
 }

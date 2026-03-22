@@ -53,7 +53,7 @@ public class TargetController {
 		log.info("TargetController#createTarget - Request to create target for userId={}", userId);
 		validationService.validate(targetDto);
 		Target target = mapper.toEntity(targetDto, userId);
-		BigDecimal netWorth = analyticsService.getSummary(userId).getTotalNetWorth();
+		BigDecimal netWorth = analyticsService.getNetWorth(userId);
 		Target savedTarget = targetService.save(target, netWorth);
 		log.info(
 			"TargetController#createTarget - Target created successfully: targetId={}",
@@ -76,7 +76,7 @@ public class TargetController {
 		);
 		validationService.validate(targetDto);
 		Target targetDetails = mapper.toEntity(targetDto, userId);
-		BigDecimal netWorth = analyticsService.getSummary(userId).getTotalNetWorth();
+		BigDecimal netWorth = analyticsService.getNetWorth(userId);
 		Target updatedTarget = targetService.update(id, targetDetails, netWorth);
 		log.info("TargetController#updateTarget - Target updated successfully: targetId={}", id);
 		return ResponseEntity.ok(mapper.toDto(updatedTarget, netWorth));

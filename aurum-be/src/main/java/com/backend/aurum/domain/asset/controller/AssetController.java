@@ -106,7 +106,8 @@ public class AssetController {
 		Asset assetDetails = mapper.toEntity(assetDto, userId);
 		Asset updatedAsset = assetService.update(id, assetDetails, userId);
 		log.info("AssetController#updateAsset - Asset updated successfully: assetId={}", id);
-		return ResponseEntity.ok(mapper.toDto(updatedAsset));
+		List<Snapshot> latestTwo = snapshotRepository.findTop2ByAssetIdOrderByReferenceDateDesc(id);
+		return ResponseEntity.ok(mapper.toDtoLight(updatedAsset, latestTwo));
 	}
 
 	@DeleteMapping("/{id}")
