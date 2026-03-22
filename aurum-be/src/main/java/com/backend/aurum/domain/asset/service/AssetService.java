@@ -10,9 +10,11 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AssetService {
@@ -22,38 +24,71 @@ public class AssetService {
 
 	@Transactional(readOnly = true)
 	public List<Asset> findAll(UUID userId) {
-		return assetRepository.findByUserIdOrderByCreatedAtDesc(userId);
+		log.debug("AssetService#findAll - Fetching all assets for userId={}", userId);
+		List<Asset> assets = assetRepository.findByUserIdOrderByCreatedAtDesc(userId);
+		log.debug("AssetService#findAll - Found {} asset(s) for userId={}", assets.size(), userId);
+		return assets;
 	}
 
 	@Transactional(readOnly = true)
 	public List<Asset> findAllActive(UUID userId) {
-		return assetRepository.findByUserIdAndIsActiveTrueOrderByCreatedAtDesc(userId);
+		log.debug("AssetService#findAllActive - Fetching active assets for userId={}", userId);
+		List<Asset> assets = assetRepository.findByUserIdAndIsActiveTrueOrderByCreatedAtDesc(userId);
+		log.debug(
+			"AssetService#findAllActive - Found {} active asset(s) for userId={}",
+			assets.size(),
+			userId
+		);
+		return assets;
 	}
 
 	@Transactional(readOnly = true)
 	public Asset findById(UUID id, UUID userId) {
+		log.debug("AssetService#findById - Looking up assetId={} for userId={}", id, userId);
 		Asset asset = assetRepository
 			.findById(Objects.requireNonNull(id))
-			.orElseThrow(() -> new RuntimeException("Asset not found"));
+			.orElseThrow(() -> {
+				log.warn("AssetService#findById - Asset not found: assetId={}", id);
+				return new RuntimeException("Asset not found");
+			});
 
 		if (!asset.getUser().getId().equals(userId)) {
+			log.warn(
+				"AssetService#findById - Access denied: assetId={} does not belong to userId={}",
+				id,
+				userId
+			);
 			throw new RuntimeException("Access denied: Asset does not belong to user");
 		}
 
+		log.debug("AssetService#findById - Asset found: assetId={}, name={}", id, asset.getName());
 		return asset;
 	}
 
 	@Transactional
 	public Asset save(Asset asset, BigDecimal initialValue, LocalDate referenceDate) {
+		log.debug("AssetService#save - Persisting new asset: name={}", asset.getName());
 		Asset savedAsset = assetRepository.save(Objects.requireNonNull(asset));
+		log.info(
+			"AssetService#save - Asset created: assetId={}, name={}",
+			savedAsset.getId(),
+			savedAsset.getName()
+		);
 
 		if (initialValue != null && referenceDate != null) {
+			log.debug(
+				"AssetService#save - Creating initial snapshot for assetId={}, amount={}, date={}",
+				savedAsset.getId(),
+				initialValue,
+				referenceDate
+			);
 			Snapshot snapshot = new Snapshot();
 			snapshot.setAsset(savedAsset);
 			snapshot.setAmountOriginalCurrency(initialValue);
 			snapshot.setReferenceDate(referenceDate);
 			snapshotRepository.save(Objects.requireNonNull(snapshot));
 			savedAsset.getSnapshots().add(snapshot);
+			log.debug("AssetService#save - Initial snapshot saved for assetId={}", savedAsset.getId());
 		}
 
 		return savedAsset;
@@ -61,6 +96,7 @@ public class AssetService {
 
 	@Transactional
 	public Asset update(UUID id, Asset assetDetails, UUID userId) {
+		log.debug("AssetService#update - Updating assetId={} for userId={}", id, userId);
 		Asset asset = findById(id, userId);
 		asset.setName(assetDetails.getName());
 		asset.setCategory(assetDetails.getCategory());
@@ -80,12 +116,20 @@ public class AssetService {
 			asset.setIsFavorite(false);
 		}
 
-		return assetRepository.save(Objects.requireNonNull(asset));
+		Asset updated = assetRepository.save(Objects.requireNonNull(asset));
+		log.info(
+			"AssetService#update - Asset updated: assetId={}, name={}",
+			updated.getId(),
+			updated.getName()
+		);
+		return updated;
 	}
 
 	@Transactional
 	public void delete(UUID id, UUID userId) {
+		log.debug("AssetService#delete - Deleting assetId={} for userId={}", id, userId);
 		Asset asset = findById(id, userId);
 		assetRepository.delete(Objects.requireNonNull(asset));
+		log.info("AssetService#delete - Asset deleted: assetId={}", id);
 	}
 }

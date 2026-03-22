@@ -31,10 +31,12 @@ import javax.imageio.ImageWriteParam;
 import javax.imageio.ImageWriter;
 import javax.imageio.stream.ImageOutputStream;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class UserService {
@@ -43,17 +45,32 @@ public class UserService {
 	private final Auth0ManagementService auth0ManagementService;
 
 	public User findOrCreate(String jwtId, String email) {
+		log.debug("UserService#findOrCreate - Looking up user by jwtId={}", jwtId);
 		return userRepository
 			.findByJwtId(jwtId)
 			.orElseGet(() -> {
+				log.info(
+					"UserService#findOrCreate - No existing user found, creating new user for jwtId={}",
+					jwtId
+				);
 				try {
 					User newUser = new User();
 					newUser.setJwtId(jwtId);
 					newUser.setEmail(email);
 					newUser.setCurrency(Currency.EUR);
 					newUser.setLocale(Locale.EN_US);
-					return userRepository.saveAndFlush(newUser);
+					User created = userRepository.saveAndFlush(newUser);
+					log.info(
+						"UserService#findOrCreate - New user created: userId={}, email={}",
+						created.getId(),
+						email
+					);
+					return created;
 				} catch (Exception e) {
+					log.warn(
+						"UserService#findOrCreate - Concurrent insert detected for jwtId={}, retrying lookup",
+						jwtId
+					);
 					return userRepository
 						.findByJwtId(jwtId)
 						.orElseThrow(() -> new RuntimeException("Failed to find or create user", e));
@@ -63,67 +80,110 @@ public class UserService {
 
 	@Transactional
 	public User getUserById(UUID userId) {
+		log.debug("UserService#getUserById - Fetching user: userId={}", userId);
 		return userRepository.findById(Objects.requireNonNull(userId)).orElseThrow();
 	}
 
 	@Transactional
 	public void deleteUser(UUID userId, String jwtId) {
+		log.info("UserService#deleteUser - Deleting user: userId={}, jwtId={}", userId, jwtId);
 		userRepository.deleteById(Objects.requireNonNull(userId));
+		log.debug(
+			"UserService#deleteUser - Local user record deleted, proceeding to delete Auth0 user"
+		);
 
 		try {
 			ManagementAPI managementApi = auth0ManagementService.getManagementAPI();
 			managementApi.users().delete(jwtId).execute();
+			log.info("UserService#deleteUser - Auth0 user deleted successfully: jwtId={}", jwtId);
 		} catch (Auth0Exception e) {
+			log.error("UserService#deleteUser - Failed to delete Auth0 user: jwtId={}", jwtId, e);
 			throw new RuntimeException("Error during Auth0 user deletion", e);
 		}
 	}
 
 	@Transactional
 	public void updateAuth0Name(String jwtId, UpdateNameDTO dto) {
+		log.debug("UserService#updateAuth0Name - Updating name for jwtId={}", jwtId);
 		try {
 			ManagementAPI mgmt = auth0ManagementService.getManagementAPI();
 			com.auth0.json.mgmt.users.User auth0User = new com.auth0.json.mgmt.users.User();
 			auth0User.setName(dto.name());
 			mgmt.users().update(jwtId, auth0User).execute();
+			log.info("UserService#updateAuth0Name - Name updated in Auth0 for jwtId={}", jwtId);
 		} catch (Auth0Exception e) {
+			log.error("UserService#updateAuth0Name - Failed to update name in Auth0: jwtId={}", jwtId, e);
 			throw new RuntimeException("Error during Auth0 name update: " + e.getMessage());
 		}
 	}
 
 	@Transactional
 	public void updateCurrency(UUID userId, UpdateCurrencyDTO dto) {
+		log.debug(
+			"UserService#updateCurrency - Updating currency for userId={}, newCurrency={}",
+			userId,
+			dto.currency()
+		);
 		User user = userRepository.findById(Objects.requireNonNull(userId)).orElseThrow();
 		user.setCurrency(dto.currency());
 		userRepository.save(user);
+		log.info(
+			"UserService#updateCurrency - Currency updated: userId={}, currency={}",
+			userId,
+			dto.currency()
+		);
 	}
 
 	@Transactional
 	public void updateLocale(UUID userId, UpdateLocaleDTO dto) {
+		log.debug(
+			"UserService#updateLocale - Updating locale for userId={}, newLocale={}",
+			userId,
+			dto.locale()
+		);
 		User user = userRepository.findById(Objects.requireNonNull(userId)).orElseThrow();
 		user.setLocale(dto.locale());
 		userRepository.save(user);
+		log.info(
+			"UserService#updateLocale - Locale updated: userId={}, locale={}",
+			userId,
+			dto.locale()
+		);
 	}
 
 	@Transactional
 	public void updatePicture(UUID userId, MultipartFile file) {
+		log.debug(
+			"UserService#updatePicture - Processing picture upload for userId={}, fileName={}",
+			userId,
+			file.getOriginalFilename()
+		);
 		try {
 			String encoded = processImage(file);
 			User user = userRepository.findById(Objects.requireNonNull(userId)).orElseThrow();
 			user.setPicture(encoded);
 			userRepository.save(user);
+			log.info("UserService#updatePicture - Profile picture updated for userId={}", userId);
 		} catch (IOException e) {
+			log.error("UserService#updatePicture - Failed to process image for userId={}", userId, e);
 			throw new RuntimeException("Failed to process image", e);
 		}
 	}
 
 	@Transactional
 	public void deletePicture(UUID userId) {
+		log.debug("UserService#deletePicture - Removing profile picture for userId={}", userId);
 		User user = userRepository.findById(Objects.requireNonNull(userId)).orElseThrow();
 		user.setPicture(null);
 		userRepository.save(user);
+		log.info("UserService#deletePicture - Profile picture removed for userId={}", userId);
 	}
 
 	private String processImage(MultipartFile file) throws IOException {
+		log.debug(
+			"UserService#processImage - Reading image bytes, originalName={}",
+			file.getOriginalFilename()
+		);
 		byte[] bytes = file.getBytes();
 
 		// Read EXIF orientation before decoding the image
@@ -140,8 +200,16 @@ public class UserService {
 
 		BufferedImage original = ImageIO.read(new ByteArrayInputStream(bytes));
 		if (original == null) {
+			log.warn("UserService#processImage - Could not decode image, unsupported format");
 			throw new IllegalArgumentException("Invalid or unsupported image format");
 		}
+
+		log.debug(
+			"UserService#processImage - Image decoded: {}x{}, EXIF orientation={}",
+			original.getWidth(),
+			original.getHeight(),
+			orientation
+		);
 
 		// Apply EXIF orientation correction
 		BufferedImage oriented = applyOrientation(original, orientation);

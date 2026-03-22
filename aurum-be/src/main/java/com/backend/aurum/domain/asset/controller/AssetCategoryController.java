@@ -10,10 +10,12 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+@Slf4j
 @RestController
 @RequestMapping("/categories")
 @RequiredArgsConstructor
@@ -29,6 +31,10 @@ public class AssetCategoryController {
 		@AuthenticationPrincipal UserPrincipal principal
 	) {
 		UUID userId = principal.user().getId();
+		log.debug(
+			"AssetCategoryController#getAllCategories - Request to list categories for userId={}",
+			userId
+		);
 		List<AssetCategoryDTO> categories = categoryService
 			.findAll(userId)
 			.stream()
@@ -43,9 +49,17 @@ public class AssetCategoryController {
 		@AuthenticationPrincipal UserPrincipal principal
 	) {
 		UUID userId = principal.user().getId();
+		log.info(
+			"AssetCategoryController#createCategory - Request to create category for userId={}",
+			userId
+		);
 		validationService.validate(categoryDto);
 		AssetCategory category = mapper.toEntity(categoryDto, userId);
 		AssetCategory savedCategory = categoryService.save(category);
+		log.info(
+			"AssetCategoryController#createCategory - Category created: categoryId={}",
+			savedCategory.getId()
+		);
 		return ResponseEntity.ok(mapper.toDto(savedCategory));
 	}
 
@@ -56,9 +70,18 @@ public class AssetCategoryController {
 		@AuthenticationPrincipal UserPrincipal principal
 	) {
 		UUID userId = principal.user().getId();
+		log.info(
+			"AssetCategoryController#updateCategory - Request to update categoryId={} for userId={}",
+			id,
+			userId
+		);
 		validationService.validate(categoryDto);
 		AssetCategory categoryDetails = mapper.toEntity(categoryDto, userId);
 		AssetCategory updatedCategory = categoryService.update(id, categoryDetails, userId);
+		log.info(
+			"AssetCategoryController#updateCategory - Category updated successfully: categoryId={}",
+			id
+		);
 		return ResponseEntity.ok(mapper.toDto(updatedCategory));
 	}
 
@@ -68,7 +91,16 @@ public class AssetCategoryController {
 		@AuthenticationPrincipal UserPrincipal principal
 	) {
 		UUID userId = principal.user().getId();
+		log.info(
+			"AssetCategoryController#deleteCategory - Request to delete categoryId={} for userId={}",
+			id,
+			userId
+		);
 		categoryService.delete(id, userId);
+		log.info(
+			"AssetCategoryController#deleteCategory - Category deleted successfully: categoryId={}",
+			id
+		);
 		return ResponseEntity.noContent().build();
 	}
 }

@@ -16,9 +16,11 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ApiKeyService {
@@ -38,8 +40,13 @@ public class ApiKeyService {
 
 	@Transactional
 	public String generateKey(User user) {
+		log.info("ApiKeyService#generateKey - Generating new API key for userId={}", user.getId());
 		evictByUserId(user.getId());
 		apiKeyRepository.deleteByUserId(user.getId());
+		log.debug(
+			"ApiKeyService#generateKey - Old API key revoked and cache evicted for userId={}",
+			user.getId()
+		);
 
 		String plainKey = KEY_PREFIX + generateToken();
 		String hash = hashKey(plainKey);
@@ -52,6 +59,7 @@ public class ApiKeyService {
 			.build();
 
 		apiKeyRepository.save(Objects.requireNonNull(apiKey));
+		log.info("ApiKeyService#generateKey - New API key persisted for userId={}", user.getId());
 		return plainKey;
 	}
 
@@ -60,20 +68,28 @@ public class ApiKeyService {
 		String hash = hashKey(plainKey);
 		CacheEntry cached = keyCache.get(hash);
 		if (cached != null && cached.expiresAt().isAfter(Instant.now())) {
+			log.debug(
+				"ApiKeyService#resolveUser - Cache hit for API key, resolved userId={}",
+				cached.user().getId()
+			);
 			return Optional.of(cached.user());
 		}
 
+		log.debug("ApiKeyService#resolveUser - Cache miss for API key, querying database");
 		return resolveFromDb(hash);
 	}
 
 	public Optional<ApiKey> getKeyMeta(UUID userId) {
+		log.debug("ApiKeyService#getKeyMeta - Fetching API key metadata for userId={}", userId);
 		return apiKeyRepository.findByUserId(userId).stream().findFirst();
 	}
 
 	@Transactional
 	public void revokeKey(UUID userId) {
+		log.info("ApiKeyService#revokeKey - Revoking API key for userId={}", userId);
 		evictByUserId(userId);
 		apiKeyRepository.deleteByUserId(userId);
+		log.info("ApiKeyService#revokeKey - API key revoked and cache evicted for userId={}", userId);
 	}
 
 	private Optional<User> resolveFromDb(String hash) {
@@ -85,13 +101,20 @@ public class ApiKeyService {
 				Instant expiresAt = Instant.now().plusSeconds(CACHE_TTL_SECONDS);
 				keyCache.put(hash, new CacheEntry(user, expiresAt));
 				userHashIndex.put(user.getId(), hash);
+				log.debug(
+					"ApiKeyService#resolveFromDb - API key resolved from DB, cached for userId={}",
+					user.getId()
+				);
 				return user;
 			});
 	}
 
 	private void evictByUserId(UUID userId) {
 		String oldHash = userHashIndex.remove(userId);
-		if (oldHash != null) keyCache.remove(oldHash);
+		if (oldHash != null) {
+			keyCache.remove(oldHash);
+			log.debug("ApiKeyService#evictByUserId - Cache entry evicted for userId={}", userId);
+		}
 	}
 
 	private String hashKey(String plainKey) {

@@ -14,10 +14,12 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+@Slf4j
 @RestController
 @RequestMapping("/assets")
 @RequiredArgsConstructor
@@ -34,6 +36,7 @@ public class AssetController {
 		@AuthenticationPrincipal UserPrincipal principal
 	) {
 		UUID userId = principal.user().getId();
+		log.debug("AssetController#getAllAssets - Request to list all assets for userId={}", userId);
 		List<Asset> assets = assetService.findAll(userId);
 
 		// Single bulk query — load all snapshots ordered DESC, group, keep latest 2 per asset
@@ -57,6 +60,11 @@ public class AssetController {
 		@PathVariable UUID id,
 		@AuthenticationPrincipal UserPrincipal principal
 	) {
+		log.debug(
+			"AssetController#getAssetById - Request to get assetId={} for userId={}",
+			id,
+			principal.user().getId()
+		);
 		Asset asset = assetService.findById(id, principal.user().getId());
 		return ResponseEntity.ok(mapper.toDto(asset));
 	}
@@ -67,12 +75,17 @@ public class AssetController {
 		@AuthenticationPrincipal UserPrincipal principal
 	) {
 		UUID userId = principal.user().getId();
+		log.info("AssetController#createAsset - Request to create asset for userId={}", userId);
 		validationService.validate(assetDto);
 		Asset asset = mapper.toEntity(assetDto, userId);
 		Asset savedAsset = assetService.save(
 			asset,
 			assetDto.getInitialValue(),
 			assetDto.getReferenceDate()
+		);
+		log.info(
+			"AssetController#createAsset - Asset created successfully: assetId={}",
+			savedAsset.getId()
 		);
 		return ResponseEntity.ok(mapper.toDto(savedAsset));
 	}
@@ -84,9 +97,15 @@ public class AssetController {
 		@AuthenticationPrincipal UserPrincipal principal
 	) {
 		UUID userId = principal.user().getId();
+		log.info(
+			"AssetController#updateAsset - Request to update assetId={} for userId={}",
+			id,
+			userId
+		);
 		validationService.validate(assetDto);
 		Asset assetDetails = mapper.toEntity(assetDto, userId);
 		Asset updatedAsset = assetService.update(id, assetDetails, userId);
+		log.info("AssetController#updateAsset - Asset updated successfully: assetId={}", id);
 		return ResponseEntity.ok(mapper.toDto(updatedAsset));
 	}
 
@@ -95,7 +114,13 @@ public class AssetController {
 		@PathVariable UUID id,
 		@AuthenticationPrincipal UserPrincipal principal
 	) {
+		log.info(
+			"AssetController#deleteAsset - Request to delete assetId={} for userId={}",
+			id,
+			principal.user().getId()
+		);
 		assetService.delete(id, principal.user().getId());
+		log.info("AssetController#deleteAsset - Asset deleted successfully: assetId={}", id);
 		return ResponseEntity.noContent().build();
 	}
 }
