@@ -41,21 +41,33 @@ public class AnalyticsService {
 		List<Asset> assets = assetRepository.findByUserIdAndIsActiveTrueOrderByCreatedAtDesc(userId);
 		Map<UUID, List<Snapshot>> snapshotsByAsset = loadSnapshotsByAsset(userId);
 
+		// Anchor variations at the latest snapshot date so that months without data
+		// don't collapse the delta to zero via carry-forward.
+		// e.g. if latest snapshot is Feb 2026 and today is Mar 2026:
+		//   1M = Feb vs Jan, not (Mar carry-forward=Feb) vs (Feb carry-forward=Feb)
+		LocalDate latestDataDate = snapshotsByAsset
+			.values()
+			.stream()
+			.flatMap(List::stream)
+			.map(Snapshot::getReferenceDate)
+			.max(LocalDate::compareTo)
+			.orElse(now);
+
 		BigDecimal currentNetWorth = calculateNetWorthAt(assets, snapshotsByAsset, now);
 		BigDecimal oneMonthAgoNetWorth = calculateNetWorthAt(
 			assets,
 			snapshotsByAsset,
-			now.minusMonths(1)
+			latestDataDate.minusMonths(1)
 		);
 		BigDecimal sixMonthsAgoNetWorth = calculateNetWorthAt(
 			assets,
 			snapshotsByAsset,
-			now.minusMonths(6)
+			latestDataDate.minusMonths(6)
 		);
 		BigDecimal oneYearAgoNetWorth = calculateNetWorthAt(
 			assets,
 			snapshotsByAsset,
-			now.minusYears(1)
+			latestDataDate.minusYears(1)
 		);
 
 		BigDecimal totalLiabilities = calculateTotalLiabilities(assets, snapshotsByAsset);
@@ -65,17 +77,17 @@ public class AnalyticsService {
 		BigDecimal oneMonthAgoGrossAssets = calculateGrossAssetsAt(
 			assets,
 			snapshotsByAsset,
-			now.minusMonths(1)
+			latestDataDate.minusMonths(1)
 		);
 		BigDecimal sixMonthsAgoGrossAssets = calculateGrossAssetsAt(
 			assets,
 			snapshotsByAsset,
-			now.minusMonths(6)
+			latestDataDate.minusMonths(6)
 		);
 		BigDecimal oneYearAgoGrossAssets = calculateGrossAssetsAt(
 			assets,
 			snapshotsByAsset,
-			now.minusYears(1)
+			latestDataDate.minusYears(1)
 		);
 
 		log.debug(
