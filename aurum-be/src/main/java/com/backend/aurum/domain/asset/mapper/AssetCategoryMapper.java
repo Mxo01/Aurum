@@ -17,7 +17,6 @@ public class AssetCategoryMapper {
 	public AssetCategory toEntity(AssetCategoryDTO dto, UUID userId) {
 		if (dto == null) return null;
 		AssetCategory category = new AssetCategory();
-		category.setId(dto.getId());
 		category.setName(dto.getName());
 		category.setType(dto.getType());
 		category.setIcon(dto.getIcon());

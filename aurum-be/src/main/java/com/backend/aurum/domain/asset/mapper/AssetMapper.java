@@ -26,7 +26,6 @@ public class AssetMapper {
 	public Asset toEntity(AssetDTO dto, UUID userId) {
 		if (dto == null) return null;
 		Asset asset = new Asset();
-		asset.setId(dto.getId());
 		asset.setName(dto.getName());
 		asset.setIsActive(dto.getIsActive() != null ? dto.getIsActive() : true);
 		asset.setIsFavorite(dto.getIsFavorite() != null ? dto.getIsFavorite() : false);

@@ -19,7 +19,6 @@ public class SnapshotMapper {
 	public Snapshot toEntity(SnapshotDTO dto, UUID userId) {
 		if (dto == null) return null;
 		Snapshot snapshot = new Snapshot();
-		snapshot.setId(dto.getId());
 		snapshot.setReferenceDate(dto.getReferenceDate());
 		snapshot.setAmountOriginalCurrency(dto.getAmountOriginalCurrency());
 		snapshot.setExchangeRateToBase(

@@ -22,7 +22,6 @@ public class TargetMapper {
 	public Target toEntity(TargetDTO dto, UUID userId) {
 		if (dto == null) return null;
 		Target target = new Target();
-		target.setId(dto.getId());
 
 		if (userId != null) {
 			User user = userRepository
