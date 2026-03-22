@@ -1,6 +1,7 @@
 package com.backend.aurum.domain.mcp.tools;
 
 import com.backend.aurum.domain.analytics.dto.AnalyticsSummaryDTO;
+import com.backend.aurum.domain.analytics.dto.CreateTargetDTO;
 import com.backend.aurum.domain.analytics.dto.TargetDTO;
 import com.backend.aurum.domain.analytics.mapper.TargetMapper;
 import com.backend.aurum.domain.analytics.model.Target;
@@ -8,6 +9,9 @@ import com.backend.aurum.domain.analytics.service.AnalyticsService;
 import com.backend.aurum.domain.analytics.service.TargetService;
 import com.backend.aurum.domain.asset.dto.AssetCategoryDTO;
 import com.backend.aurum.domain.asset.dto.AssetDTO;
+import com.backend.aurum.domain.asset.dto.CreateAssetCategoryDTO;
+import com.backend.aurum.domain.asset.dto.CreateAssetDTO;
+import com.backend.aurum.domain.asset.dto.CreateSnapshotDTO;
 import com.backend.aurum.domain.asset.dto.SnapshotDTO;
 import com.backend.aurum.domain.asset.mapper.AssetCategoryMapper;
 import com.backend.aurum.domain.asset.mapper.AssetMapper;
@@ -81,7 +85,7 @@ public class AurumMcpTools {
 	}
 
 	@Tool(description = "Create a new financial asset")
-	public AssetDTO addAsset(AssetDTO dto) {
+	public AssetDTO addAsset(CreateAssetDTO dto) {
 		User user = currentUser();
 		Asset asset = assetMapper.toEntity(dto, user.getId());
 		Asset saved = assetService.save(asset, dto.getInitialValue(), dto.getReferenceDate());
@@ -89,10 +93,15 @@ public class AurumMcpTools {
 	}
 
 	@Tool(description = "Add a value snapshot to an existing asset")
-	public SnapshotDTO addSnapshot(SnapshotDTO dto) {
+	public SnapshotDTO addSnapshot(CreateSnapshotDTO dto) {
 		User user = currentUser();
 		Asset asset = assetService.findById(dto.getAssetId(), user.getId());
-		BigDecimal exchangeRate = resolveExchangeRate(asset, user, dto);
+		BigDecimal exchangeRate = resolveExchangeRate(
+			asset,
+			user,
+			dto.getExchangeRateToBase(),
+			dto.getReferenceDate()
+		);
 		return snapshotMapper.toDto(
 			snapshotService.saveOrUpdate(
 				asset,
@@ -104,9 +113,8 @@ public class AurumMcpTools {
 	}
 
 	@Tool(description = "Create a new financial target/goal")
-	public TargetDTO addTarget(TargetDTO dto) {
+	public TargetDTO addTarget(CreateTargetDTO dto) {
 		User user = currentUser();
-		dto.setIsCompleted(false);
 		Target target = targetMapper.toEntity(dto, user.getId());
 		BigDecimal netWorth = analyticsService.getSummary(user.getId()).getTotalNetWorth();
 		Target saved = targetService.save(target, netWorth);
@@ -123,19 +131,24 @@ public class AurumMcpTools {
 	}
 
 	@Tool(description = "Create a new user-defined asset category")
-	public AssetCategoryDTO addCategory(AssetCategoryDTO dto) {
+	public AssetCategoryDTO addCategory(CreateAssetCategoryDTO dto) {
 		User user = currentUser();
 		AssetCategory category = categoryMapper.toEntity(dto, user.getId());
 		return categoryMapper.toDto(categoryService.save(category));
 	}
 
-	private BigDecimal resolveExchangeRate(Asset asset, User user, SnapshotDTO dto) {
-		if (dto.getExchangeRateToBase() != null) return dto.getExchangeRateToBase();
+	private BigDecimal resolveExchangeRate(
+		Asset asset,
+		User user,
+		BigDecimal explicitRate,
+		java.time.LocalDate referenceDate
+	) {
+		if (explicitRate != null) return explicitRate;
 		String assetCurrency = asset.getOriginalCurrency().getValue();
 		String userCurrency = user.getCurrency().getValue();
 		return assetCurrency.equals(userCurrency)
 			? BigDecimal.ONE
-			: exchangeRateService.getRate(assetCurrency, userCurrency, dto.getReferenceDate());
+			: exchangeRateService.getRate(assetCurrency, userCurrency, referenceDate);
 	}
 
 	private User currentUser() {

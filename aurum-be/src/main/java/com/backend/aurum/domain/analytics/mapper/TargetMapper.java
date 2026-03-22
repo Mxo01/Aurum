@@ -1,5 +1,6 @@
 package com.backend.aurum.domain.analytics.mapper;
 
+import com.backend.aurum.domain.analytics.dto.CreateTargetDTO;
 import com.backend.aurum.domain.analytics.dto.TargetDTO;
 import com.backend.aurum.domain.analytics.model.Target;
 import com.backend.aurum.domain.analytics.model.TargetStatus;
@@ -19,10 +20,29 @@ public class TargetMapper {
 
 	private final UserRepository userRepository;
 
+	public Target toEntity(CreateTargetDTO dto, UUID userId) {
+		if (dto == null) return null;
+		Target target = new Target();
+
+		if (userId != null) {
+			User user = userRepository
+				.findById(userId)
+				.orElseThrow(() -> new RuntimeException("User not found"));
+			target.setUser(user);
+		}
+
+		target.setName(dto.getName());
+		target.setTargetAmount(dto.getTargetAmount());
+		target.setCurrentAmount(dto.getCurrentAmount());
+		target.setType(dto.getType() != null ? dto.getType() : TargetType.MANUAL);
+		target.setDeadline(dto.getDeadline());
+		target.setIsCompleted(false);
+		return target;
+	}
+
 	public Target toEntity(TargetDTO dto, UUID userId) {
 		if (dto == null) return null;
 		Target target = new Target();
-		target.setId(dto.getId());
 
 		if (userId != null) {
 			User user = userRepository

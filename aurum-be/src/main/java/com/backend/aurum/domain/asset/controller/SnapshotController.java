@@ -1,5 +1,6 @@
 package com.backend.aurum.domain.asset.controller;
 
+import com.backend.aurum.domain.asset.dto.CreateSnapshotDTO;
 import com.backend.aurum.domain.asset.dto.SnapshotDTO;
 import com.backend.aurum.domain.asset.mapper.SnapshotMapper;
 import com.backend.aurum.domain.asset.model.Asset;
@@ -60,7 +61,7 @@ public class SnapshotController {
 
 	@PostMapping
 	public ResponseEntity<SnapshotDTO> createSnapshot(
-		@RequestBody SnapshotDTO snapshotDto,
+		@RequestBody CreateSnapshotDTO snapshotDto,
 		@AuthenticationPrincipal UserPrincipal principal
 	) {
 		UUID userId = principal.user().getId();
