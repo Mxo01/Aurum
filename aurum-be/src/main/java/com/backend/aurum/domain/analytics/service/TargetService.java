@@ -3,85 +3,81 @@ package com.backend.aurum.domain.analytics.service;
 import com.backend.aurum.domain.analytics.model.Target;
 import com.backend.aurum.domain.analytics.model.TargetType;
 import com.backend.aurum.domain.analytics.repository.TargetRepository;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
 public class TargetService {
 
-    private final TargetRepository targetRepository;
-    private final AnalyticsService analyticsService;
+	private final TargetRepository targetRepository;
 
-    public List<Target> findAll(UUID userId) {
-        List<Target> targets = targetRepository.findByUserId(userId);
-        BigDecimal grossAssets = analyticsService.getSummary(userId).getTotalGrossAssets();
+	public List<Target> findAll(UUID userId, BigDecimal netWorth) {
+		List<Target> targets = targetRepository.findByUserId(userId);
+		targets.forEach(t -> checkAndSyncCompletion(t, netWorth));
+		return targets;
+	}
 
-        targets.forEach(t -> checkAndSyncCompletion(t, grossAssets));
+	public Target findById(UUID id, BigDecimal netWorth) {
+		Target target = targetRepository
+			.findById(Objects.requireNonNull(id))
+			.orElseThrow(() -> new RuntimeException("Target not found"));
+		checkAndSyncCompletion(target, netWorth);
+		return target;
+	}
 
-        return targets;
-    }
+	@Transactional
+	public Target save(Target target, BigDecimal netWorth) {
+		checkAndSyncCompletion(target, netWorth);
+		return targetRepository.save(target);
+	}
 
-    public Target findById(UUID id) {
-        Target target = targetRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Target not found"));
+	@Transactional
+	public Target update(UUID id, Target targetDetails, BigDecimal netWorth) {
+		Target target = targetRepository
+			.findById(Objects.requireNonNull(id))
+			.orElseThrow(() -> new RuntimeException("Target not found"));
 
-        BigDecimal grossAssets = analyticsService.getSummary(target.getUser().getId()).getTotalGrossAssets();
-        checkAndSyncCompletion(target, grossAssets);
+		target.setName(targetDetails.getName());
+		target.setTargetAmount(targetDetails.getTargetAmount());
+		target.setCurrentAmount(targetDetails.getCurrentAmount());
+		target.setDeadline(targetDetails.getDeadline());
+		// Type is immutable after creation
 
-        return target;
-    }
+		checkAndSyncCompletion(target, netWorth);
 
-    @Transactional
-    public Target save(Target target) {
-        BigDecimal grossAssets = analyticsService.getSummary(target.getUser().getId()).getTotalGrossAssets();
-        checkAndSyncCompletion(target, grossAssets);
-        return targetRepository.save(target);
-    }
+		return targetRepository.save(target);
+	}
 
-    @Transactional
-    public Target update(UUID id, Target targetDetails) {
-        Target target = findById(id);
+	@Transactional
+	public void delete(UUID id) {
+		targetRepository.deleteById(Objects.requireNonNull(id));
+	}
 
-        target.setName(targetDetails.getName());
-        target.setTargetAmount(targetDetails.getTargetAmount());
-        target.setCurrentAmount(targetDetails.getCurrentAmount());
-        target.setDeadline(targetDetails.getDeadline());
-        // Type is immutable after creation
+	private void checkAndSyncCompletion(Target target, BigDecimal netWorth) {
+		if (Boolean.TRUE.equals(target.getIsCompleted())) {
+			return;
+		}
 
-        BigDecimal grossAssets = analyticsService.getSummary(target.getUser().getId()).getTotalGrossAssets();
-        checkAndSyncCompletion(target, grossAssets);
+		BigDecimal currentAmount =
+			target.getType() == TargetType.NET_WORTH
+				? netWorth
+				: (target.getCurrentAmount() != null ? target.getCurrentAmount() : BigDecimal.ZERO);
 
-        return targetRepository.save(target);
-    }
+		if (target.getTargetAmount().compareTo(BigDecimal.ZERO) > 0) {
+			BigDecimal percentage = currentAmount
+				.multiply(new BigDecimal("100"))
+				.divide(target.getTargetAmount(), 2, RoundingMode.HALF_UP);
 
-    @Transactional
-    public void delete(UUID id) {
-        targetRepository.deleteById(id);
-    }
-
-    private void checkAndSyncCompletion(Target target, BigDecimal grossAssets) {
-        if (Boolean.TRUE.equals(target.getIsCompleted())) {
-            return;
-        }
-
-        BigDecimal currentAmount = target.getType() == TargetType.NET_WORTH
-                ? grossAssets
-                : (target.getCurrentAmount() != null ? target.getCurrentAmount() : BigDecimal.ZERO);
-
-        if (target.getTargetAmount().compareTo(BigDecimal.ZERO) > 0) {
-            BigDecimal percentage = currentAmount.multiply(new BigDecimal("100"))
-                    .divide(target.getTargetAmount(), 2, RoundingMode.HALF_UP);
-            
-            if (percentage.compareTo(new BigDecimal("100")) >= 0) {
-                target.setIsCompleted(true);
-            }
-        }
-    }
+			if (percentage.compareTo(new BigDecimal("100")) >= 0) {
+				target.setIsCompleted(true);
+			}
+		}
+	}
 }

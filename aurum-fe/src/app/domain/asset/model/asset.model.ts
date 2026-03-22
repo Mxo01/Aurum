@@ -1,5 +1,4 @@
 import { Currency } from "../../profile/model/currency.model";
-import { Snapshot } from "../../snapshot/model/snapshot.model";
 
 export enum AssetType {
 	LIABILITY = "LIABILITY",
@@ -21,6 +20,8 @@ export interface AssetCategory {
 	id: string;
 	name: string;
 	type: AssetType;
+	icon: string | null;
+	isDefault: boolean;
 }
 
 export interface Asset {
@@ -28,11 +29,14 @@ export interface Asset {
 	name: string;
 	categoryId: string;
 	categoryName: string;
+	categoryIcon: string | null;
 	type: AssetType;
 	originalCurrency: Currency;
 	isActive: boolean;
 	isFavorite: boolean;
-	snapshots?: Snapshot[];
+	latestValue?: number | null;
+	latestValueBase?: number | null;
+	previousValue?: number | null;
 	initialValue?: number | null;
 	referenceDate?: string | Date | null;
 	liabilityType?: LiabilityType | null;

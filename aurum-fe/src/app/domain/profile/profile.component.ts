@@ -77,16 +77,27 @@ export class ProfileComponent implements OnInit {
 	]);
 	protected readonly user = toSignal(this.authService.user$);
 	protected readonly theme = computed(() => this.themeService.isDarkMode());
-	protected readonly profile = toSignal(this.profileService.getProfile());
+	protected readonly profile = this.profileService.profile;
 	protected readonly hasGoogleProfile = computed(() => this.user()?.sub?.includes("google"));
 	protected readonly isUpdatingName = signal(false);
+	protected readonly isUploadingPicture = signal(false);
 	protected readonly currencyOptions = signal(currencyOptions);
 	protected readonly localeOptions = signal(localeOptions);
 	protected readonly isDeletingProfile = signal(false);
 
+	protected readonly pictureUrl = computed(() => {
+		const customPic = this.profile()?.picture;
+		if (customPic) return `data:image/jpeg;base64,${customPic}`;
+		return this.user()?.picture ?? null;
+	});
+
+	protected readonly hasPicture = computed(() => !!this.profile()?.picture);
+
 	private readonly nameTrigger$ = new Subject<string>();
 
 	ngOnInit() {
+		this.profileService.getProfile().subscribe();
+
 		this.nameTrigger$
 			.pipe(debounceTime(500), distinctUntilChanged())
 			.pipe(
@@ -116,6 +127,21 @@ export class ProfileComponent implements OnInit {
 
 	toggleTheme() {
 		this.themeService.toggleTheme();
+	}
+
+	onFileSelected(event: Event) {
+		const file = (event.target as HTMLInputElement).files?.[0];
+		if (!file) return;
+
+		this.isUploadingPicture.set(true);
+		this.profileService
+			.updatePicture(file)
+			.pipe(finalize(() => this.isUploadingPicture.set(false)))
+			.subscribe();
+	}
+
+	clearPicture() {
+		this.profileService.deletePicture().subscribe();
 	}
 
 	deleteProfile(event: Event) {

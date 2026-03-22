@@ -15,6 +15,59 @@
 				Personal Details
 			</span>
 
+			@if (!hasGoogleProfile()) {
+				<div class="flex flex-col gap-3">
+					<span>Profile Picture</span>
+					<div class="flex items-center gap-4">
+						<div class="relative w-16 h-16 shrink-0">
+							@if (pictureUrl()) {
+								<img
+									[src]="pictureUrl()"
+									alt="Profile picture"
+									class="w-16 h-16 rounded-full object-cover"
+								/>
+							} @else {
+								<div
+									class="w-16 h-16 rounded-full bg-surface-200 dark:bg-surface-700 flex items-center justify-center"
+								>
+									<i class="pi pi-user text-2xl text-surface-500"></i>
+								</div>
+							}
+						</div>
+						<div class="flex gap-4">
+							<div class="flex flex-col gap-1">
+								<p-button
+									label="Upload picture"
+									icon="pi pi-upload"
+									size="small"
+									[loading]="isUploadingPicture()"
+									(onClick)="fileInput.click()"
+								/>
+								<span class="text-xs text-surface-400">JPG or PNG · max 5 MB</span>
+							</div>
+							@if (hasPicture()) {
+								<p-button
+									(onClick)="clearPicture()"
+									icon="pi pi-times"
+									label="Clear"
+									size="small"
+									[text]="true"
+								/>
+							}
+						</div>
+					</div>
+					<input
+						#fileInput
+						type="file"
+						accept="image/jpeg,image/png"
+						class="hidden"
+						(change)="onFileSelected($event)"
+					/>
+				</div>
+			}
+
+			<p-divider />
+
 			<div class="flex flex-col gap-2">
 				<label for="username">Name</label>
 				<p-iconfield>

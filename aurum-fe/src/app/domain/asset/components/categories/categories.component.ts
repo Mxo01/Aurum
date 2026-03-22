@@ -1,20 +1,27 @@
-import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from "@angular/core";
+import {
+	ChangeDetectionStrategy,
+	Component,
+	computed,
+	inject,
+	OnInit,
+	signal
+} from "@angular/core";
 import { Button } from "primeng/button";
 import { RouterLink } from "@angular/router";
 import { ConfirmationService } from "primeng/api";
 import { finalize } from "rxjs";
 import { AssetService } from "../../asset.service";
-import { AssetCategory, AssetType } from "../../model/asset.model";
+import { AssetCategory } from "../../model/asset.model";
 import { CategoryFormComponent } from "../category-form/category-form.component";
-import { Tag } from "primeng/tag";
 import { NavigationService } from "../../../../shared/services/navigation/navigation.service";
 import { paths } from "../../../../app.routes";
+import { CategoryItemComponent } from "./category-item/category-item.component";
 
 @Component({
 	selector: "app-categories",
 	standalone: true,
 	templateUrl: "./categories.component.html",
-	imports: [Button, RouterLink, CategoryFormComponent, Tag],
+	imports: [Button, RouterLink, CategoryFormComponent, CategoryItemComponent],
 	changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class CategoriesComponent implements OnInit {
@@ -24,15 +31,16 @@ export class CategoriesComponent implements OnInit {
 
 	protected readonly paths = paths;
 	protected readonly previousRoute = this.navigationService.previousRoute;
-	protected readonly AssetType = AssetType;
 	protected readonly categories = signal<AssetCategory[]>([]);
+	protected readonly defaultCategories = computed(() => this.categories().filter(c => c.isDefault));
+	protected readonly customCategories = computed(() => this.categories().filter(c => !c.isDefault));
 	protected readonly isDialogVisible = signal(false);
 	protected readonly selectedCategory = signal<AssetCategory | null>(null);
 	protected readonly isSaveLoading = signal(false);
 	protected readonly isDeleteLoading = signal(false);
 
 	ngOnInit() {
-		this.assetService.getUserAssetCategories().subscribe({
+		this.assetService.getAssetCategories().subscribe({
 			next: categories => this.categories.set(categories)
 		});
 	}

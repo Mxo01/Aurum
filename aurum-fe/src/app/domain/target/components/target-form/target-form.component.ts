@@ -89,6 +89,14 @@ export class TargetFormComponent {
 
 	protected onHide() {
 		this.selectedTarget.set(null);
+		this.targetForm.reset({
+			name: "",
+			type: TargetType.MANUAL,
+			targetAmount: null,
+			currentAmount: 0,
+			deadline: new Date()
+		});
+		this.targetForm.get("type")?.enable();
 	}
 
 	protected onSubmit() {

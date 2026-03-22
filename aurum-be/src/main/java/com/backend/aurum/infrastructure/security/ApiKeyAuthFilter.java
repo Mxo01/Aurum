@@ -7,15 +7,15 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletRequestWrapper;
 import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.util.List;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
-
-import java.io.IOException;
-import java.util.List;
-import java.util.Optional;
 
 @Component
 @RequiredArgsConstructor
@@ -24,10 +24,17 @@ public class ApiKeyAuthFilter extends OncePerRequestFilter {
 	private final ApiKeyService apiKeyService;
 
 	@Override
-	protected void doFilterInternal(HttpServletRequest request,
-			HttpServletResponse response,
-			FilterChain chain) throws ServletException, IOException {
+	protected boolean shouldNotFilter(@NonNull HttpServletRequest request) {
+		String uri = request.getRequestURI();
+		return !uri.equals("/mcp/message") && !uri.equals("/sse");
+	}
 
+	@Override
+	protected void doFilterInternal(
+		@NonNull HttpServletRequest request,
+		@NonNull HttpServletResponse response,
+		@NonNull FilterChain chain
+	) throws ServletException, IOException {
 		String plainKey = extractKey(request);
 
 		if (plainKey == null) {
@@ -42,7 +49,10 @@ public class ApiKeyAuthFilter extends OncePerRequestFilter {
 		}
 
 		UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
-				userOpt.get(), null, List.of());
+			userOpt.get(),
+			null,
+			List.of()
+		);
 		SecurityContextHolder.getContext().setAuthentication(auth);
 
 		chain.doFilter(new RedactedKeyRequest(request), response);
@@ -58,6 +68,7 @@ public class ApiKeyAuthFilter extends OncePerRequestFilter {
 
 	/** Wraps the request so any downstream logging sees key=REDACTED in the query string. */
 	private static final class RedactedKeyRequest extends HttpServletRequestWrapper {
+
 		RedactedKeyRequest(HttpServletRequest request) {
 			super(request);
 		}

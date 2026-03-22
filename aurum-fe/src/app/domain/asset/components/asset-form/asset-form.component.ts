@@ -15,13 +15,24 @@ import { InputText } from "primeng/inputtext";
 import { Select } from "primeng/select";
 import { InputNumber } from "primeng/inputnumber";
 import { DatePicker } from "primeng/datepicker";
-import { currencyOptions, typeOptions, liabilityTypeOptions, paymentFrequencyOptions } from "./asset-form.utils";
+import {
+	currencyOptions,
+	typeOptions,
+	liabilityTypeOptions,
+	paymentFrequencyOptions
+} from "./asset-form.utils";
 import { Button } from "primeng/button";
 import { Drawer } from "primeng/drawer";
 import { Subscription } from "rxjs";
 import { Currency } from "../../../profile/model/currency.model";
 import { Locale } from "../../../profile/model/locale.model";
-import { Asset, AssetCategory, AssetType, LiabilityType, PaymentFrequency } from "../../model/asset.model";
+import {
+	Asset,
+	AssetCategory,
+	AssetType,
+	LiabilityType,
+	PaymentFrequency
+} from "../../model/asset.model";
 
 @Component({
 	selector: "app-asset-form",
@@ -79,10 +90,12 @@ export class AssetFormComponent implements OnInit, OnDestroy {
 			if (selectedAsset) {
 				this.assetForm.patchValue({
 					name: selectedAsset.name,
-					category: {
+					category: this.categoriesOptions().find(c => c.id === selectedAsset.categoryId) ?? {
 						id: selectedAsset.categoryId,
 						name: selectedAsset.categoryName,
-						type: selectedAsset.type
+						type: selectedAsset.type,
+						icon: null,
+						isDefault: false
 					},
 					type: selectedAsset.type,
 					currency: selectedAsset.originalCurrency,
@@ -111,6 +124,9 @@ export class AssetFormComponent implements OnInit, OnDestroy {
 			next: isActive => {
 				if (!isActive) {
 					this.assetForm.controls.isFavorite.setValue(false);
+					this.assetForm.controls.isFavorite.disable();
+				} else {
+					this.assetForm.controls.isFavorite.enable();
 				}
 			}
 		});
@@ -170,6 +186,7 @@ export class AssetFormComponent implements OnInit, OnDestroy {
 			name: form.name,
 			categoryId: form.category.id,
 			categoryName: form.category.name,
+			categoryIcon: form.category.icon ?? null,
 			type: form.type,
 			originalCurrency: form.currency,
 			isActive: !!form.isActive,
