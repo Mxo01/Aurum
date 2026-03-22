@@ -35,7 +35,7 @@ public class ApiKeyAuthFilter extends OncePerRequestFilter {
 		@NonNull HttpServletResponse response,
 		@NonNull FilterChain chain
 	) throws ServletException, IOException {
-		String plainKey = extractKey(request);
+		String plainKey = request.getParameter("key");
 
 		if (plainKey == null) {
 			response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Missing API key");
@@ -56,14 +56,6 @@ public class ApiKeyAuthFilter extends OncePerRequestFilter {
 		SecurityContextHolder.getContext().setAuthentication(auth);
 
 		chain.doFilter(new RedactedKeyRequest(request), response);
-	}
-
-	private String extractKey(HttpServletRequest request) {
-		String header = request.getHeader("Authorization");
-		if (header != null && header.startsWith("Bearer ")) {
-			return header.substring("Bearer ".length()).trim();
-		}
-		return request.getParameter("key");
 	}
 
 	/** Wraps the request so any downstream logging sees key=REDACTED in the query string. */
