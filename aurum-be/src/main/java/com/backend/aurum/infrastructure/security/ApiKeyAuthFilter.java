@@ -17,12 +17,14 @@ import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class ApiKeyAuthFilter extends OncePerRequestFilter {
@@ -56,20 +58,27 @@ public class ApiKeyAuthFilter extends OncePerRequestFilter {
 		HttpServletResponse response,
 		FilterChain chain
 	) throws ServletException, IOException {
+		log.debug("ApiKeyAuthFilter#handleSse - Incoming SSE connection, validating API key");
 		String plainKey = request.getParameter("key");
 
 		if (plainKey == null) {
+			log.warn("ApiKeyAuthFilter#handleSse - SSE request rejected: missing API key");
 			response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Missing API key");
 			return;
 		}
 
 		Optional<User> userOpt = apiKeyService.resolveUser(plainKey);
 		if (userOpt.isEmpty()) {
+			log.warn("ApiKeyAuthFilter#handleSse - SSE request rejected: invalid API key");
 			response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Invalid API key");
 			return;
 		}
 
 		User user = userOpt.get();
+		log.info(
+			"ApiKeyAuthFilter#handleSse - SSE connection authenticated for userId={}",
+			user.getId()
+		);
 		setAuthentication(user);
 
 		SessionCapturingResponseWrapper wrapper = new SessionCapturingResponseWrapper(
@@ -85,30 +94,50 @@ public class ApiKeyAuthFilter extends OncePerRequestFilter {
 		HttpServletResponse response,
 		FilterChain chain
 	) throws ServletException, IOException {
+		log.debug("ApiKeyAuthFilter#handleMcpMessage - Processing MCP message request");
 		// Prefer sessionId-based auth (key was already validated at SSE connect time)
 		String sessionId = request.getParameter("sessionId");
 		if (sessionId != null) {
+			log.debug(
+				"ApiKeyAuthFilter#handleMcpMessage - Attempting session-based auth for sessionId={}",
+				sessionId
+			);
 			Optional<User> userOpt = mcpSessionRegistry.getUser(sessionId);
 			if (userOpt.isPresent()) {
+				log.debug(
+					"ApiKeyAuthFilter#handleMcpMessage - Session auth successful for sessionId={}, userId={}",
+					sessionId,
+					userOpt.get().getId()
+				);
 				setAuthentication(userOpt.get());
 				chain.doFilter(request, response);
 				return;
 			}
+			log.warn(
+				"ApiKeyAuthFilter#handleMcpMessage - Session not found or expired for sessionId={}, falling back to key auth",
+				sessionId
+			);
 		}
 
 		// Fallback: key-based auth
 		String plainKey = request.getParameter("key");
 		if (plainKey == null) {
+			log.warn("ApiKeyAuthFilter#handleMcpMessage - MCP message rejected: missing API key");
 			response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Missing API key");
 			return;
 		}
 
 		Optional<User> userOpt = apiKeyService.resolveUser(plainKey);
 		if (userOpt.isEmpty()) {
+			log.warn("ApiKeyAuthFilter#handleMcpMessage - MCP message rejected: invalid API key");
 			response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Invalid API key");
 			return;
 		}
 
+		log.debug(
+			"ApiKeyAuthFilter#handleMcpMessage - Key-based auth successful for userId={}",
+			userOpt.get().getId()
+		);
 		setAuthentication(userOpt.get());
 		chain.doFilter(new RedactedKeyRequest(request), response);
 	}

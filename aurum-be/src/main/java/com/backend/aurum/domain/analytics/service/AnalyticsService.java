@@ -17,9 +17,11 @@ import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+@Slf4j
 @Service
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
@@ -30,6 +32,7 @@ public class AnalyticsService {
 	private final AssetMapper assetMapper;
 
 	public AnalyticsSummaryDTO getSummary(UUID userId) {
+		log.debug("AnalyticsService#getSummary - Computing analytics summary for userId={}", userId);
 		LocalDate now = LocalDate.now();
 
 		List<Asset> assets = assetRepository.findByUserIdAndIsActiveTrueOrderByCreatedAtDesc(userId);
@@ -72,6 +75,13 @@ public class AnalyticsService {
 			now.minusYears(1)
 		);
 
+		log.debug(
+			"AnalyticsService#getSummary - Summary computed for userId={}: netWorth={}, grossAssets={}, liabilities={}",
+			userId,
+			currentNetWorth,
+			currentGrossAssets,
+			totalLiabilities
+		);
 		return AnalyticsSummaryDTO.builder()
 			.totalNetWorth(currentNetWorth)
 			.totalGrossAssets(currentGrossAssets)
@@ -102,18 +112,34 @@ public class AnalyticsService {
 	}
 
 	public ChartDataDTO getChartDataForYear(UUID userId, int year) {
+		log.debug(
+			"AnalyticsService#getChartDataForYear - Building chart data for userId={}, year={}",
+			userId,
+			year
+		);
 		LocalDate start = LocalDate.of(year, 1, 1);
 		LocalDate end = LocalDate.of(year, 12, 31);
 		return getChartDataForPeriod(userId, start, end);
 	}
 
 	public ChartDataDTO getChartData(UUID userId, boolean allHistory) {
+		log.debug(
+			"AnalyticsService#getChartData - Building chart data for userId={}, allHistory={}",
+			userId,
+			allHistory
+		);
 		LocalDate end = LocalDate.now();
 		LocalDate start = allHistory ? end.minusYears(10) : end.minusYears(1);
 		return getChartDataForPeriod(userId, start, end);
 	}
 
 	private ChartDataDTO getChartDataForPeriod(UUID userId, LocalDate start, LocalDate end) {
+		log.debug(
+			"AnalyticsService#getChartDataForPeriod - Computing chart data for userId={} from {} to {}",
+			userId,
+			start,
+			end
+		);
 		List<Asset> assets = assetRepository.findByUserIdAndIsActiveTrueOrderByCreatedAtDesc(userId);
 		Map<UUID, List<Snapshot>> snapshotsByAsset = loadSnapshotsByAsset(userId);
 
@@ -165,6 +191,12 @@ public class AnalyticsService {
 	}
 
 	public Map<Integer, BigDecimal> getProjections(UUID userId, int years, boolean assetsOnly) {
+		log.debug(
+			"AnalyticsService#getProjections - Computing projections for userId={}, years={}, assetsOnly={}",
+			userId,
+			years,
+			assetsOnly
+		);
 		List<Asset> assets = assetRepository.findByUserIdAndIsActiveTrueOrderByCreatedAtDesc(userId);
 		Map<UUID, List<Snapshot>> snapshotsByAsset = loadSnapshotsByAsset(userId);
 

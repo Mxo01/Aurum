@@ -9,10 +9,12 @@ import java.math.BigDecimal;
 import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+@Slf4j
 @RestController
 @RequestMapping("/analytics")
 @RequiredArgsConstructor
@@ -26,6 +28,10 @@ public class AnalyticsController {
 		@AuthenticationPrincipal UserPrincipal principal
 	) {
 		UUID userId = principal.user().getId();
+		log.debug(
+			"AnalyticsController#getSummary - Request for analytics summary for userId={}",
+			userId
+		);
 		return ResponseEntity.ok(analyticsService.getSummary(userId));
 	}
 
@@ -36,6 +42,12 @@ public class AnalyticsController {
 		@AuthenticationPrincipal UserPrincipal principal
 	) {
 		UUID userId = principal.user().getId();
+		log.debug(
+			"AnalyticsController#getChartData - Request for chart data: userId={}, year={}, allHistory={}",
+			userId,
+			year,
+			allHistory
+		);
 		ChartDataDTO chartData;
 		if (year != null) {
 			chartData = analyticsService.getChartDataForYear(userId, year);
@@ -52,6 +64,12 @@ public class AnalyticsController {
 		@AuthenticationPrincipal UserPrincipal principal
 	) {
 		UUID userId = principal.user().getId();
+		log.debug(
+			"AnalyticsController#getProjections - Request for projections: userId={}, years={}, assetsOnly={}",
+			userId,
+			years,
+			assetsOnly
+		);
 		return ResponseEntity.ok(analyticsService.getProjections(userId, years, assetsOnly));
 	}
 }
