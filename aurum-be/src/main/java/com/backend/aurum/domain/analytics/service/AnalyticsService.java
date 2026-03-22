@@ -82,6 +82,14 @@ public class AnalyticsService {
 			currentGrossAssets,
 			totalLiabilities
 		);
+		Integer oldestSnapshotYear = snapshotsByAsset
+			.values()
+			.stream()
+			.flatMap(List::stream)
+			.map(s -> s.getReferenceDate().getYear())
+			.min(Integer::compareTo)
+			.orElse(null);
+
 		return AnalyticsSummaryDTO.builder()
 			.totalNetWorth(currentNetWorth)
 			.totalGrossAssets(currentGrossAssets)
@@ -104,6 +112,7 @@ public class AnalyticsService {
 			.totalLiabilities(totalLiabilities)
 			.debtToAssetRatio(calculateDebtToAssetRatio(totalLiabilities, totalGrossAssets))
 			.topAssets(calculateTopAssets(assets, snapshotsByAsset, 5))
+			.oldestSnapshotYear(oldestSnapshotYear)
 			.build();
 	}
 
@@ -406,6 +415,19 @@ public class AnalyticsService {
 		Map<UUID, List<Snapshot>> snapshotsByAsset,
 		int limit
 	) {
+		// Build a map with the latest 2 snapshots per asset (desc by date),
+		// matching what AssetController does for the main asset list.
+		Map<UUID, List<Snapshot>> latestTwoByAsset = new HashMap<>();
+		for (Map.Entry<UUID, List<Snapshot>> entry : snapshotsByAsset.entrySet()) {
+			List<Snapshot> sorted = entry
+				.getValue()
+				.stream()
+				.sorted(Comparator.comparing(Snapshot::getReferenceDate).reversed())
+				.limit(2)
+				.toList();
+			latestTwoByAsset.put(entry.getKey(), sorted);
+		}
+
 		return assets
 			.stream()
 			.filter(a -> a.getCategory() != null && a.getCategory().getType() != AssetType.LIABILITY)
@@ -419,7 +441,7 @@ public class AnalyticsService {
 				return valB.compareTo(valA);
 			})
 			.limit(limit)
-			.map(a -> assetMapper.toDtoLight(a, snapshotsByAsset))
+			.map(a -> assetMapper.toDtoLight(a, latestTwoByAsset))
 			.toList();
 	}
 

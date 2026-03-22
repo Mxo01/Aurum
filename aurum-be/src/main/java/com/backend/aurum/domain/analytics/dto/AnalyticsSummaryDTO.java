@@ -20,4 +20,5 @@ public class AnalyticsSummaryDTO {
 	private BigDecimal totalLiabilities;
 	private BigDecimal debtToAssetRatio;
 	private List<AssetDTO> topAssets;
+	private Integer oldestSnapshotYear;
 }

@@ -21,6 +21,7 @@ export interface AnalyticsSummary {
 	totalLiabilities: number;
 	debtToAssetRatio: number;
 	topAssets: Asset[];
+	oldestSnapshotYear: number | null;
 }
 
 export type Projections = { [year: number]: number };

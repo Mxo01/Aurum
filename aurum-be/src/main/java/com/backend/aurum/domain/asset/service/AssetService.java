@@ -99,7 +99,9 @@ public class AssetService {
 		log.debug("AssetService#update - Updating assetId={} for userId={}", id, userId);
 		Asset asset = findById(id, userId);
 		asset.setName(assetDetails.getName());
-		asset.setCategory(assetDetails.getCategory());
+		if (assetDetails.getCategory() != null) {
+			asset.setCategory(assetDetails.getCategory());
+		}
 		asset.setOriginalCurrency(assetDetails.getOriginalCurrency());
 		asset.setIsActive(assetDetails.getIsActive());
 		asset.setUser(assetDetails.getUser());
