@@ -107,6 +107,13 @@ public class AnalyticsService {
 			.build();
 	}
 
+	public BigDecimal getNetWorth(UUID userId) {
+		log.debug("AnalyticsService#getNetWorth - Computing net worth for userId={}", userId);
+		List<Asset> assets = assetRepository.findByUserIdAndIsActiveTrueOrderByCreatedAtDesc(userId);
+		Map<UUID, List<Snapshot>> snapshotsByAsset = loadSnapshotsByAsset(userId);
+		return calculateNetWorthAt(assets, snapshotsByAsset, LocalDate.now());
+	}
+
 	public ChartDataDTO getChartData(UUID userId) {
 		return getChartData(userId, false);
 	}
