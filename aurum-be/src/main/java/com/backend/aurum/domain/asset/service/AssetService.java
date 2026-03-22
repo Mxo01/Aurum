@@ -1,8 +1,10 @@
 package com.backend.aurum.domain.asset.service;
 
 import com.backend.aurum.domain.asset.model.Asset;
+import com.backend.aurum.domain.asset.model.AssetStatusLog;
 import com.backend.aurum.domain.asset.model.Snapshot;
 import com.backend.aurum.domain.asset.repository.AssetRepository;
+import com.backend.aurum.domain.asset.repository.AssetStatusLogRepository;
 import com.backend.aurum.domain.asset.repository.SnapshotRepository;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -21,6 +23,7 @@ public class AssetService {
 
 	private final AssetRepository assetRepository;
 	private final SnapshotRepository snapshotRepository;
+	private final AssetStatusLogRepository statusLogRepository;
 
 	@Transactional(readOnly = true)
 	public List<Asset> findAll(UUID userId) {
@@ -109,6 +112,7 @@ public class AssetService {
 		asset.setPaymentFrequency(assetDetails.getPaymentFrequency());
 		asset.setPaymentAmount(assetDetails.getPaymentAmount());
 
+		boolean wasActive = Boolean.TRUE.equals(asset.getIsActive());
 		boolean willBeActive = Boolean.TRUE.equals(assetDetails.getIsActive());
 		if (!willBeActive) {
 			asset.setIsFavorite(false);
@@ -119,6 +123,19 @@ public class AssetService {
 		}
 
 		Asset updated = assetRepository.save(Objects.requireNonNull(asset));
+
+		if (wasActive != willBeActive) {
+			AssetStatusLog statusLog = new AssetStatusLog();
+			statusLog.setAsset(updated);
+			statusLog.setChangedAt(LocalDate.now());
+			statusLog.setIsActive(willBeActive);
+			statusLogRepository.save(statusLog);
+			log.debug(
+				"AssetService#update - Status change logged: assetId={}, isActive={}",
+				updated.getId(),
+				willBeActive
+			);
+		}
 		log.info(
 			"AssetService#update - Asset updated: assetId={}, name={}",
 			updated.getId(),

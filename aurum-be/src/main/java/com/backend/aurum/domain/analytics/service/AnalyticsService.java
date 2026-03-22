@@ -7,9 +7,11 @@ import com.backend.aurum.domain.analytics.dto.VariationDTO;
 import com.backend.aurum.domain.asset.dto.AssetDTO;
 import com.backend.aurum.domain.asset.mapper.AssetMapper;
 import com.backend.aurum.domain.asset.model.Asset;
+import com.backend.aurum.domain.asset.model.AssetStatusLog;
 import com.backend.aurum.domain.asset.model.AssetType;
 import com.backend.aurum.domain.asset.model.Snapshot;
 import com.backend.aurum.domain.asset.repository.AssetRepository;
+import com.backend.aurum.domain.asset.repository.AssetStatusLogRepository;
 import com.backend.aurum.domain.asset.repository.SnapshotRepository;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -29,6 +31,7 @@ public class AnalyticsService {
 
 	private final SnapshotRepository snapshotRepository;
 	private final AssetRepository assetRepository;
+	private final AssetStatusLogRepository statusLogRepository;
 	private final AssetMapper assetMapper;
 
 	public AnalyticsSummaryDTO getSummary(UUID userId) {
@@ -156,10 +159,20 @@ public class AnalyticsService {
 			start,
 			end
 		);
-		List<Asset> assets = assetRepository.findByUserIdAndIsActiveTrueOrderByCreatedAtDesc(userId);
+		List<Asset> allAssets = assetRepository.findByUserIdOrderByCreatedAtDesc(userId);
 		Map<UUID, List<Snapshot>> snapshotsByAsset = loadSnapshotsByAsset(userId);
 
-		List<Asset> favoriteAssets = assets.stream().filter(Asset::getIsFavorite).toList();
+		List<UUID> assetIds = allAssets.stream().map(Asset::getId).toList();
+		Map<UUID, List<AssetStatusLog>> statusLogsByAsset = statusLogRepository
+			.findByAssetIdIn(assetIds)
+			.stream()
+			.collect(Collectors.groupingBy(l -> l.getAsset().getId()));
+
+		// Favorites are a current concept — only active assets shown as individual series
+		List<Asset> favoriteAssets = allAssets
+			.stream()
+			.filter(a -> Boolean.TRUE.equals(a.getIsActive()) && Boolean.TRUE.equals(a.getIsFavorite()))
+			.toList();
 
 		List<String> labels = new ArrayList<>();
 		List<BigDecimal> totalSeries = new ArrayList<>();
@@ -175,9 +188,15 @@ public class AnalyticsService {
 
 		LocalDate current = start;
 		while (!current.isAfter(end)) {
+			final LocalDate datePoint = current;
+			List<Asset> activeAtDate = allAssets
+				.stream()
+				.filter(a -> wasActiveAt(a, statusLogsByAsset, datePoint))
+				.toList();
+
 			labels.add(formatDateLabel(current));
-			totalSeries.add(calculateNetWorthAt(assets, snapshotsByAsset, current));
-			assetsOnlySeries.add(calculateGrossAssetsAt(assets, snapshotsByAsset, current));
+			totalSeries.add(calculateNetWorthAt(activeAtDate, snapshotsByAsset, current));
+			assetsOnlySeries.add(calculateGrossAssetsAt(activeAtDate, snapshotsByAsset, current));
 			for (Asset asset : favoriteAssets) {
 				List<Snapshot> snapshots = snapshotsByAsset.getOrDefault(asset.getId(), List.of());
 				BigDecimal value = calculateAssetValueAt(snapshots, current);
@@ -443,6 +462,24 @@ public class AnalyticsService {
 			.limit(limit)
 			.map(a -> assetMapper.toDtoLight(a, latestTwoByAsset))
 			.toList();
+	}
+
+	/**
+	 * Returns true if the asset was active on the given date, based on the status log.
+	 * If no log entry exists before the date, we default to active (pre-log assets).
+	 */
+	private boolean wasActiveAt(
+		Asset asset,
+		Map<UUID, List<AssetStatusLog>> statusLogsByAsset,
+		LocalDate date
+	) {
+		List<AssetStatusLog> logs = statusLogsByAsset.getOrDefault(asset.getId(), List.of());
+		return logs
+			.stream()
+			.filter(l -> !l.getChangedAt().isAfter(date))
+			.max(Comparator.comparing(AssetStatusLog::getChangedAt))
+			.map(AssetStatusLog::getIsActive)
+			.orElse(true);
 	}
 
 	private BigDecimal getLatestSnapshotValue(List<Snapshot> snapshots) {
