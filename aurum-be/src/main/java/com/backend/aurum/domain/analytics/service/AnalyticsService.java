@@ -7,9 +7,11 @@ import com.backend.aurum.domain.analytics.dto.VariationDTO;
 import com.backend.aurum.domain.asset.dto.AssetDTO;
 import com.backend.aurum.domain.asset.mapper.AssetMapper;
 import com.backend.aurum.domain.asset.model.Asset;
+import com.backend.aurum.domain.asset.model.AssetStatusLog;
 import com.backend.aurum.domain.asset.model.AssetType;
 import com.backend.aurum.domain.asset.model.Snapshot;
 import com.backend.aurum.domain.asset.repository.AssetRepository;
+import com.backend.aurum.domain.asset.repository.AssetStatusLogRepository;
 import com.backend.aurum.domain.asset.repository.SnapshotRepository;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -29,6 +31,7 @@ public class AnalyticsService {
 
 	private final SnapshotRepository snapshotRepository;
 	private final AssetRepository assetRepository;
+	private final AssetStatusLogRepository statusLogRepository;
 	private final AssetMapper assetMapper;
 
 	public AnalyticsSummaryDTO getSummary(UUID userId) {
@@ -38,21 +41,33 @@ public class AnalyticsService {
 		List<Asset> assets = assetRepository.findByUserIdAndIsActiveTrueOrderByCreatedAtDesc(userId);
 		Map<UUID, List<Snapshot>> snapshotsByAsset = loadSnapshotsByAsset(userId);
 
+		// Anchor variations at the latest snapshot date so that months without data
+		// don't collapse the delta to zero via carry-forward.
+		// e.g. if latest snapshot is Feb 2026 and today is Mar 2026:
+		//   1M = Feb vs Jan, not (Mar carry-forward=Feb) vs (Feb carry-forward=Feb)
+		LocalDate latestDataDate = snapshotsByAsset
+			.values()
+			.stream()
+			.flatMap(List::stream)
+			.map(Snapshot::getReferenceDate)
+			.max(LocalDate::compareTo)
+			.orElse(now);
+
 		BigDecimal currentNetWorth = calculateNetWorthAt(assets, snapshotsByAsset, now);
 		BigDecimal oneMonthAgoNetWorth = calculateNetWorthAt(
 			assets,
 			snapshotsByAsset,
-			now.minusMonths(1)
+			latestDataDate.minusMonths(1)
 		);
 		BigDecimal sixMonthsAgoNetWorth = calculateNetWorthAt(
 			assets,
 			snapshotsByAsset,
-			now.minusMonths(6)
+			latestDataDate.minusMonths(6)
 		);
 		BigDecimal oneYearAgoNetWorth = calculateNetWorthAt(
 			assets,
 			snapshotsByAsset,
-			now.minusYears(1)
+			latestDataDate.minusYears(1)
 		);
 
 		BigDecimal totalLiabilities = calculateTotalLiabilities(assets, snapshotsByAsset);
@@ -62,17 +77,17 @@ public class AnalyticsService {
 		BigDecimal oneMonthAgoGrossAssets = calculateGrossAssetsAt(
 			assets,
 			snapshotsByAsset,
-			now.minusMonths(1)
+			latestDataDate.minusMonths(1)
 		);
 		BigDecimal sixMonthsAgoGrossAssets = calculateGrossAssetsAt(
 			assets,
 			snapshotsByAsset,
-			now.minusMonths(6)
+			latestDataDate.minusMonths(6)
 		);
 		BigDecimal oneYearAgoGrossAssets = calculateGrossAssetsAt(
 			assets,
 			snapshotsByAsset,
-			now.minusYears(1)
+			latestDataDate.minusYears(1)
 		);
 
 		log.debug(
@@ -82,6 +97,14 @@ public class AnalyticsService {
 			currentGrossAssets,
 			totalLiabilities
 		);
+		Integer oldestSnapshotYear = snapshotsByAsset
+			.values()
+			.stream()
+			.flatMap(List::stream)
+			.map(s -> s.getReferenceDate().getYear())
+			.min(Integer::compareTo)
+			.orElse(null);
+
 		return AnalyticsSummaryDTO.builder()
 			.totalNetWorth(currentNetWorth)
 			.totalGrossAssets(currentGrossAssets)
@@ -104,6 +127,7 @@ public class AnalyticsService {
 			.totalLiabilities(totalLiabilities)
 			.debtToAssetRatio(calculateDebtToAssetRatio(totalLiabilities, totalGrossAssets))
 			.topAssets(calculateTopAssets(assets, snapshotsByAsset, 5))
+			.oldestSnapshotYear(oldestSnapshotYear)
 			.build();
 	}
 
@@ -147,10 +171,20 @@ public class AnalyticsService {
 			start,
 			end
 		);
-		List<Asset> assets = assetRepository.findByUserIdAndIsActiveTrueOrderByCreatedAtDesc(userId);
+		List<Asset> allAssets = assetRepository.findByUserIdOrderByCreatedAtDesc(userId);
 		Map<UUID, List<Snapshot>> snapshotsByAsset = loadSnapshotsByAsset(userId);
 
-		List<Asset> favoriteAssets = assets.stream().filter(Asset::getIsFavorite).toList();
+		List<UUID> assetIds = allAssets.stream().map(Asset::getId).toList();
+		Map<UUID, List<AssetStatusLog>> statusLogsByAsset = statusLogRepository
+			.findByAssetIdIn(assetIds)
+			.stream()
+			.collect(Collectors.groupingBy(l -> l.getAsset().getId()));
+
+		// Favorites are a current concept — only active assets shown as individual series
+		List<Asset> favoriteAssets = allAssets
+			.stream()
+			.filter(a -> Boolean.TRUE.equals(a.getIsActive()) && Boolean.TRUE.equals(a.getIsFavorite()))
+			.toList();
 
 		List<String> labels = new ArrayList<>();
 		List<BigDecimal> totalSeries = new ArrayList<>();
@@ -166,9 +200,15 @@ public class AnalyticsService {
 
 		LocalDate current = start;
 		while (!current.isAfter(end)) {
+			final LocalDate datePoint = current;
+			List<Asset> activeAtDate = allAssets
+				.stream()
+				.filter(a -> wasActiveAt(a, statusLogsByAsset, datePoint))
+				.toList();
+
 			labels.add(formatDateLabel(current));
-			totalSeries.add(calculateNetWorthAt(assets, snapshotsByAsset, current));
-			assetsOnlySeries.add(calculateGrossAssetsAt(assets, snapshotsByAsset, current));
+			totalSeries.add(calculateNetWorthAt(activeAtDate, snapshotsByAsset, current));
+			assetsOnlySeries.add(calculateGrossAssetsAt(activeAtDate, snapshotsByAsset, current));
 			for (Asset asset : favoriteAssets) {
 				List<Snapshot> snapshots = snapshotsByAsset.getOrDefault(asset.getId(), List.of());
 				BigDecimal value = calculateAssetValueAt(snapshots, current);
@@ -406,6 +446,19 @@ public class AnalyticsService {
 		Map<UUID, List<Snapshot>> snapshotsByAsset,
 		int limit
 	) {
+		// Build a map with the latest 2 snapshots per asset (desc by date),
+		// matching what AssetController does for the main asset list.
+		Map<UUID, List<Snapshot>> latestTwoByAsset = new HashMap<>();
+		for (Map.Entry<UUID, List<Snapshot>> entry : snapshotsByAsset.entrySet()) {
+			List<Snapshot> sorted = entry
+				.getValue()
+				.stream()
+				.sorted(Comparator.comparing(Snapshot::getReferenceDate).reversed())
+				.limit(2)
+				.toList();
+			latestTwoByAsset.put(entry.getKey(), sorted);
+		}
+
 		return assets
 			.stream()
 			.filter(a -> a.getCategory() != null && a.getCategory().getType() != AssetType.LIABILITY)
@@ -419,8 +472,26 @@ public class AnalyticsService {
 				return valB.compareTo(valA);
 			})
 			.limit(limit)
-			.map(a -> assetMapper.toDtoLight(a, snapshotsByAsset))
+			.map(a -> assetMapper.toDtoLight(a, latestTwoByAsset))
 			.toList();
+	}
+
+	/**
+	 * Returns true if the asset was active on the given date, based on the status log.
+	 * If no log entry exists before the date, we default to active (pre-log assets).
+	 */
+	private boolean wasActiveAt(
+		Asset asset,
+		Map<UUID, List<AssetStatusLog>> statusLogsByAsset,
+		LocalDate date
+	) {
+		List<AssetStatusLog> logs = statusLogsByAsset.getOrDefault(asset.getId(), List.of());
+		return logs
+			.stream()
+			.filter(l -> !l.getChangedAt().isAfter(date))
+			.max(Comparator.comparing(AssetStatusLog::getChangedAt))
+			.map(AssetStatusLog::getIsActive)
+			.orElse(true);
 	}
 
 	private BigDecimal getLatestSnapshotValue(List<Snapshot> snapshots) {

@@ -102,7 +102,7 @@ public class AssetController {
 			id,
 			userId
 		);
-		validationService.validate(assetDto);
+		validationService.validateForUpdate(assetDto);
 		Asset assetDetails = mapper.toEntity(assetDto, userId);
 		Asset updatedAsset = assetService.update(id, assetDetails, userId);
 		log.info("AssetController#updateAsset - Asset updated successfully: assetId={}", id);

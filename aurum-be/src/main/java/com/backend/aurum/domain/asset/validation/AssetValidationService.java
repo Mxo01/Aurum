@@ -18,4 +18,13 @@ public class AssetValidationService {
 			throw new IllegalArgumentException("Asset category is required");
 		}
 	}
+
+	public void validateForUpdate(AssetDTO dto) {
+		if (dto == null) {
+			throw new IllegalArgumentException("Asset data cannot be null");
+		}
+		if (!StringUtils.hasText(dto.getName())) {
+			throw new IllegalArgumentException("Asset name is required");
+		}
+	}
 }

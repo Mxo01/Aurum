@@ -43,6 +43,7 @@ export class NetworthChartComponent {
 
 	data = input<ChartData | null>(null);
 	summary = input<AnalyticsSummary | null>(null);
+	minYear = input<number | null>(null);
 	currency = input.required<Currency>();
 	locale = input<string>(Locale.EN_US);
 
@@ -50,7 +51,10 @@ export class NetworthChartComponent {
 
 	protected readonly percentageView = signal<boolean>(true);
 	protected readonly selectedDate = signal<Date | null>(null);
-	protected readonly minDate = signal<Date>(new Date());
+	protected readonly minDate = computed(() => {
+		const year = this.minYear();
+		return new Date(year ?? new Date().getFullYear(), 0, 1);
+	});
 	protected readonly maxDate = signal<Date>(new Date());
 	protected readonly isSpecificYearSelected = computed(() => this.selectedDate() !== null);
 	protected readonly totalAmount = computed(() => this.summary()?.totalGrossAssets ?? 0);
