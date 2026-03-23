@@ -64,7 +64,6 @@ export class AssetFormComponent implements OnInit, OnDestroy {
 		category: new FormControl<AssetCategory | null>(null, Validators.required),
 		type: new FormControl<AssetType | null>({ value: null, disabled: true }, Validators.required),
 		currency: new FormControl<Currency>(Currency.EUR, Validators.required),
-		isActive: new FormControl<boolean>(true),
 		isFavorite: new FormControl<boolean>(false),
 		initialValue: new FormControl<number | null>(null),
 		referenceDate: new FormControl<Date>(new Date()),
@@ -80,7 +79,6 @@ export class AssetFormComponent implements OnInit, OnDestroy {
 	protected readonly LiabilityType = LiabilityType;
 
 	private categoryCtrlSub?: Subscription;
-	private isActiveCtrlSub?: Subscription;
 	private liabilityTypeCtrlSub?: Subscription;
 
 	constructor() {
@@ -99,16 +97,24 @@ export class AssetFormComponent implements OnInit, OnDestroy {
 					},
 					type: selectedAsset.type,
 					currency: selectedAsset.originalCurrency,
-					isActive: selectedAsset.isActive,
 					isFavorite: selectedAsset.isFavorite,
 					liabilityType: selectedAsset.liabilityType ?? null,
 					paymentFrequency: selectedAsset.paymentFrequency ?? null,
 					paymentAmount: selectedAsset.paymentAmount ?? null
 				});
 				this.assetForm.controls.currency.disable();
+
+				if (!selectedAsset.isActive) {
+					this.assetForm.controls.isFavorite.setValue(false);
+					this.assetForm.controls.isFavorite.disable();
+				} else {
+					this.assetForm.controls.isFavorite.enable();
+				}
+
 				this.updateLiabilityValidators(selectedAsset.liabilityType ?? null);
 			} else {
 				this.assetForm.controls.currency.enable();
+				this.assetForm.controls.isFavorite.enable();
 				this.resetForm();
 			}
 		});
@@ -120,16 +126,6 @@ export class AssetFormComponent implements OnInit, OnDestroy {
 				if (category) this.assetForm.controls.type.setValue(category.type);
 			}
 		});
-		this.isActiveCtrlSub = this.assetForm.controls.isActive.valueChanges.subscribe({
-			next: isActive => {
-				if (!isActive) {
-					this.assetForm.controls.isFavorite.setValue(false);
-					this.assetForm.controls.isFavorite.disable();
-				} else {
-					this.assetForm.controls.isFavorite.enable();
-				}
-			}
-		});
 		this.liabilityTypeCtrlSub = this.assetForm.controls.liabilityType.valueChanges.subscribe({
 			next: liabilityType => {
 				this.updateLiabilityValidators(liabilityType);
@@ -139,7 +135,6 @@ export class AssetFormComponent implements OnInit, OnDestroy {
 
 	ngOnDestroy() {
 		this.categoryCtrlSub?.unsubscribe();
-		this.isActiveCtrlSub?.unsubscribe();
 		this.liabilityTypeCtrlSub?.unsubscribe();
 	}
 
@@ -164,7 +159,6 @@ export class AssetFormComponent implements OnInit, OnDestroy {
 	resetForm() {
 		this.assetForm.reset({
 			currency: Currency.EUR,
-			isActive: true,
 			referenceDate: new Date()
 		});
 	}
@@ -189,7 +183,7 @@ export class AssetFormComponent implements OnInit, OnDestroy {
 			categoryIcon: form.category.icon ?? null,
 			type: form.type,
 			originalCurrency: form.currency,
-			isActive: !!form.isActive,
+			isActive: this.selectedAsset()?.isActive ?? true,
 			isFavorite: !!form.isFavorite,
 			initialValue: isNewAsset ? form.initialValue : null,
 			referenceDate:
