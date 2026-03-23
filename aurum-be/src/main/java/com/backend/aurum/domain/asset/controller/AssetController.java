@@ -1,6 +1,7 @@
 package com.backend.aurum.domain.asset.controller;
 
 import com.backend.aurum.domain.asset.dto.AssetDTO;
+import com.backend.aurum.domain.asset.dto.AssetStatusDTO;
 import com.backend.aurum.domain.asset.mapper.AssetMapper;
 import com.backend.aurum.domain.asset.model.Asset;
 import com.backend.aurum.domain.asset.model.Snapshot;
@@ -106,6 +107,36 @@ public class AssetController {
 		Asset assetDetails = mapper.toEntity(assetDto, userId);
 		Asset updatedAsset = assetService.update(id, assetDetails, userId);
 		log.info("AssetController#updateAsset - Asset updated successfully: assetId={}", id);
+		List<Snapshot> latestTwo = snapshotRepository.findTop2ByAssetIdOrderByReferenceDateDesc(id);
+		return ResponseEntity.ok(mapper.toDtoLight(updatedAsset, latestTwo));
+	}
+
+	@PatchMapping("/{id}/status")
+	public ResponseEntity<AssetDTO> patchAssetStatus(
+		@PathVariable UUID id,
+		@RequestBody AssetStatusDTO statusDto,
+		@AuthenticationPrincipal UserPrincipal principal
+	) {
+		UUID userId = principal.user().getId();
+		log.info(
+			"AssetController#patchAssetStatus - Request to patch status of assetId={} for userId={}, isActive={}",
+			id,
+			userId,
+			statusDto.getIsActive()
+		);
+		if (statusDto.getIsActive() == null) {
+			throw new IllegalArgumentException("isActive is required");
+		}
+		Asset updatedAsset = assetService.patchStatus(
+			id,
+			statusDto.getIsActive(),
+			statusDto.getChangedAt(),
+			userId
+		);
+		log.info(
+			"AssetController#patchAssetStatus - Asset status patched successfully: assetId={}",
+			id
+		);
 		List<Snapshot> latestTwo = snapshotRepository.findTop2ByAssetIdOrderByReferenceDateDesc(id);
 		return ResponseEntity.ok(mapper.toDtoLight(updatedAsset, latestTwo));
 	}

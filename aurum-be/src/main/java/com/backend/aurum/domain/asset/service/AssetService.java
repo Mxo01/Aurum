@@ -101,6 +101,9 @@ public class AssetService {
 	public Asset update(UUID id, Asset assetDetails, UUID userId) {
 		log.debug("AssetService#update - Updating assetId={} for userId={}", id, userId);
 		Asset asset = findById(id, userId);
+		boolean wasActive = Boolean.TRUE.equals(asset.getIsActive());
+		boolean willBeActive = Boolean.TRUE.equals(assetDetails.getIsActive());
+
 		asset.setName(assetDetails.getName());
 		if (assetDetails.getCategory() != null) {
 			asset.setCategory(assetDetails.getCategory());
@@ -112,8 +115,6 @@ public class AssetService {
 		asset.setPaymentFrequency(assetDetails.getPaymentFrequency());
 		asset.setPaymentAmount(assetDetails.getPaymentAmount());
 
-		boolean wasActive = Boolean.TRUE.equals(asset.getIsActive());
-		boolean willBeActive = Boolean.TRUE.equals(assetDetails.getIsActive());
 		if (!willBeActive) {
 			asset.setIsFavorite(false);
 		} else if (Boolean.TRUE.equals(assetDetails.getIsFavorite())) {
@@ -140,6 +141,46 @@ public class AssetService {
 			"AssetService#update - Asset updated: assetId={}, name={}",
 			updated.getId(),
 			updated.getName()
+		);
+		return updated;
+	}
+
+	@Transactional
+	public Asset patchStatus(UUID id, boolean isActive, LocalDate changedAt, UUID userId) {
+		log.debug(
+			"AssetService#patchStatus - Patching status of assetId={} for userId={}, isActive={}, changedAt={}",
+			id,
+			userId,
+			isActive,
+			changedAt
+		);
+		Asset asset = findById(id, userId);
+		LocalDate effectiveDate = changedAt != null ? changedAt : LocalDate.now();
+
+		AssetStatusLog statusLog = new AssetStatusLog();
+		statusLog.setAsset(asset);
+		statusLog.setChangedAt(effectiveDate);
+		statusLog.setIsActive(isActive);
+		statusLogRepository.save(statusLog);
+		log.debug(
+			"AssetService#patchStatus - Status log entry created: assetId={}, isActive={}, changedAt={}",
+			id,
+			isActive,
+			effectiveDate
+		);
+
+		// Always apply the explicitly requested status — the changedAt date is for historical
+		// logging only and does not drive the current asset state.
+		asset.setIsActive(isActive);
+		if (!isActive) {
+			asset.setIsFavorite(false);
+		}
+
+		Asset updated = assetRepository.save(asset);
+		log.info(
+			"AssetService#patchStatus - Asset status updated: assetId={}, isActive={}",
+			updated.getId(),
+			isActive
 		);
 		return updated;
 	}
