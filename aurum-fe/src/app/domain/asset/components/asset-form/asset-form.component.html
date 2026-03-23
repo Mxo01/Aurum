@@ -5,6 +5,13 @@
 	position="right"
 >
 	<ng-template #content>
+		@if (selectedAsset()?.isActive === false) {
+			<p-message
+				severity="warn"
+				text="This asset is archived and is excluded from all calculations and dashboard charts."
+				styleClass="w-full mb-4"
+			/>
+		}
 		<form
 			class="flex flex-col gap-5"
 			[formGroup]="assetForm"
@@ -143,11 +150,6 @@
 						onIcon="pi pi-bookmark-fill"
 						size="small"
 					/>
-					@if (selectedAsset()?.isActive === false) {
-						<small class="text-stone-400 text-xs">
-							Archived assets cannot be tracked in the dashboard.
-						</small>
-					}
 				</div>
 			}
 

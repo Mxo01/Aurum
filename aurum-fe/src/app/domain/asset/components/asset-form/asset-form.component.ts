@@ -1,3 +1,4 @@
+import { Message } from "primeng/message";
 import { ToggleButton } from "primeng/togglebutton";
 import {
 	ChangeDetectionStrategy,
@@ -46,7 +47,8 @@ import {
 		InputNumber,
 		DatePicker,
 		Button,
-		Drawer
+		Drawer,
+		Message
 	],
 	changeDetection: ChangeDetectionStrategy.OnPush
 })
