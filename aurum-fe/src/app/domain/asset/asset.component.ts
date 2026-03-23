@@ -16,6 +16,8 @@ import { paths } from "../../app.routes";
 import { AssetFormComponent } from "./components/asset-form/asset-form.component";
 import { AssetHistoryComponent } from "./components/asset-history/asset-history.component";
 import { AssetTableComponent } from "./components/asset-table/asset-table.component";
+import { Dialog } from "primeng/dialog";
+import { DatePicker } from "primeng/datepicker";
 
 @Component({
 	selector: "app-asset",
@@ -29,7 +31,9 @@ import { AssetTableComponent } from "./components/asset-table/asset-table.compon
 		ReactiveFormsModule,
 		RouterLink,
 		AssetHistoryComponent,
-		AssetTableComponent
+		AssetTableComponent,
+		Dialog,
+		DatePicker
 	],
 	changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -52,6 +56,12 @@ export class AssetComponent implements OnInit {
 	protected readonly isDeletePermanentlyLoading = signal(false);
 	protected readonly isSaveLoading = signal(false);
 	protected readonly selectedAsset = signal<Asset | null>(null);
+
+	protected readonly isStatusDialogVisible = signal(false);
+	protected readonly pendingStatusToggle = signal<{ asset: Asset; newStatus: boolean } | null>(
+		null
+	);
+	protected statusChangeDate: Date = new Date();
 
 	ngOnInit() {
 		this.profileService.getProfile().subscribe({
@@ -103,12 +113,39 @@ export class AssetComponent implements OnInit {
 	}
 
 	protected toggleAssetStatus(asset: Asset) {
-		const updatedAsset: Asset = {
-			...asset,
-			isActive: !asset.isActive
-		};
+		this.pendingStatusToggle.set({ asset, newStatus: !asset.isActive });
+		this.statusChangeDate = new Date();
+		this.isStatusDialogVisible.set(true);
+	}
 
-		this.saveAssetAndSnapshot(updatedAsset);
+	protected cancelStatusToggle() {
+		this.isStatusDialogVisible.set(false);
+		this.pendingStatusToggle.set(null);
+	}
+
+	protected confirmStatusToggle() {
+		const pending = this.pendingStatusToggle();
+		if (!pending) return;
+
+		const { asset, newStatus } = pending;
+		const d = this.statusChangeDate;
+		const changedAt =
+			d.getFullYear() +
+			"-" +
+			String(d.getMonth() + 1).padStart(2, "0") +
+			"-" +
+			String(d.getDate()).padStart(2, "0");
+
+		this.isStatusDialogVisible.set(false);
+		this.pendingStatusToggle.set(null);
+		this.isSaveLoading.set(true);
+
+		this.assetService
+			.patchAssetStatus(asset.id, newStatus, changedAt)
+			.pipe(finalize(() => this.isSaveLoading.set(false)))
+			.subscribe({
+				next: assets => this.assets.set(assets)
+			});
 	}
 
 	protected deleteAsset({ event, asset }: { event: MenuItemCommandEvent; asset: Asset }) {
