@@ -51,7 +51,7 @@ public class UserService {
 	private final AssetCategoryRepository categoryRepository;
 	private final TargetRepository targetRepository;
 
-	public User findOrCreate(String jwtId, String email) {
+	public User findOrCreate(String jwtId) {
 		log.debug("UserService#findOrCreate - Looking up user by jwtId={}", jwtId);
 		return userRepository
 			.findByJwtId(jwtId)
@@ -63,15 +63,10 @@ public class UserService {
 				try {
 					User newUser = new User();
 					newUser.setJwtId(jwtId);
-					newUser.setEmail(email);
 					newUser.setCurrency(Currency.EUR);
 					newUser.setLocale(Locale.EN_US);
 					User created = userRepository.saveAndFlush(newUser);
-					log.info(
-						"UserService#findOrCreate - New user created: userId={}, email={}",
-						created.getId(),
-						email
-					);
+					log.info("UserService#findOrCreate - New user created: userId={}", created.getId());
 					return created;
 				} catch (Exception e) {
 					log.warn(
@@ -306,13 +301,13 @@ public class UserService {
 	}
 
 	@Transactional(readOnly = true)
-	public UserExportDTO exportUserData(UUID userId) {
+	public UserExportDTO exportUserData(UUID userId, String email) {
 		log.info("UserService#exportUserData - Exporting data for userId={}", userId);
 		User user = userRepository.findById(Objects.requireNonNull(userId)).orElseThrow();
 
 		var profile = new UserExportDTO.ProfileExport(
 			user.getId(),
-			user.getEmail(),
+			email,
 			user.getCurrency().name(),
 			user.getLocale().name()
 		);

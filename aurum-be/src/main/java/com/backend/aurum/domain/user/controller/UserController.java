@@ -10,6 +10,7 @@ import com.backend.aurum.domain.user.service.UserService;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -22,6 +23,9 @@ import org.springframework.web.multipart.MultipartFile;
 @RequestMapping("/users")
 @RequiredArgsConstructor
 public class UserController {
+
+	@Value("${spring.security.oauth2.resourceserver.jwt.audiences}")
+	private String audience;
 
 	private final UserService userService;
 
@@ -38,8 +42,9 @@ public class UserController {
 		@AuthenticationPrincipal UserPrincipal principal
 	) {
 		UUID userId = principal.user().getId();
+		String email = principal.jwt().getClaimAsString(audience + "/email");
 		log.info("UserController#exportUserData - Request to export data for userId={}", userId);
-		return ResponseEntity.ok(userService.exportUserData(userId));
+		return ResponseEntity.ok(userService.exportUserData(userId, email));
 	}
 
 	@DeleteMapping

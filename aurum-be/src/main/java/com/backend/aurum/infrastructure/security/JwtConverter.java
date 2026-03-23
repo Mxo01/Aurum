@@ -24,9 +24,8 @@ public class JwtConverter implements Converter<Jwt, AbstractAuthenticationToken>
 	@Override
 	public AbstractAuthenticationToken convert(@NonNull Jwt jwt) {
 		String jwtId = jwt.getSubject();
-		String email = jwt.getClaimAsString(audience + "/email");
 
-		User user = userService.findOrCreate(jwtId, email);
+		User user = userService.findOrCreate(jwtId);
 
 		UserPrincipal principal = new UserPrincipal(user, jwt);
 

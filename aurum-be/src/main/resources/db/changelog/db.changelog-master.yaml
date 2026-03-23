@@ -41,3 +41,6 @@ databaseChangeLog:
   - include:
       file: db/changelog/changes/2026-03-22-add-asset-status-log.sql
       relativeToChangelogFile: false
+  - include:
+      file: db/changelog/changes/2026-03-23-drop-user-email.sql
+      relativeToChangelogFile: false
