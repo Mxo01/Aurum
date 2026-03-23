@@ -84,6 +84,7 @@ export class ProfileComponent implements OnInit {
 	protected readonly currencyOptions = signal(currencyOptions);
 	protected readonly localeOptions = signal(localeOptions);
 	protected readonly isDeletingProfile = signal(false);
+	protected readonly isExportingData = signal(false);
 
 	protected readonly pictureUrl = computed(() => {
 		const customPic = this.profile()?.picture;
@@ -142,6 +143,14 @@ export class ProfileComponent implements OnInit {
 
 	clearPicture() {
 		this.profileService.deletePicture().subscribe();
+	}
+
+	exportData() {
+		this.isExportingData.set(true);
+		this.profileService
+			.exportData()
+			.pipe(finalize(() => this.isExportingData.set(false)))
+			.subscribe();
 	}
 
 	deleteProfile(event: Event) {

@@ -154,6 +154,35 @@ export class ProfileService {
 		);
 	}
 
+	exportData() {
+		return this.http.get(`${this.userApiUrl}/export`).pipe(
+			tap({
+				next: data => {
+					const blob = new Blob([JSON.stringify(data, null, 2)], {
+						type: "application/json"
+					});
+					const url = URL.createObjectURL(blob);
+					const a = document.createElement("a");
+					a.href = url;
+					a.download = `aurum-export-${new Date().toISOString().slice(0, 10)}.json`;
+					a.click();
+					URL.revokeObjectURL(url);
+					this.messageService.add({
+						severity: "success",
+						summary: "Export ready",
+						detail: "Your data has been downloaded"
+					});
+				},
+				error: () =>
+					this.messageService.add({
+						severity: "error",
+						summary: "Error",
+						detail: "Failed to export data"
+					})
+			})
+		);
+	}
+
 	private refreshAccessToken() {
 		return this.authService.getAccessTokenSilently({ cacheMode: "off" });
 	}
