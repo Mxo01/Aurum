@@ -3,6 +3,7 @@ package com.backend.aurum.domain.user.controller;
 import com.backend.aurum.domain.user.dto.UpdateCurrencyDTO;
 import com.backend.aurum.domain.user.dto.UpdateLocaleDTO;
 import com.backend.aurum.domain.user.dto.UpdateNameDTO;
+import com.backend.aurum.domain.user.dto.UserExportDTO;
 import com.backend.aurum.domain.user.model.User;
 import com.backend.aurum.domain.user.model.UserPrincipal;
 import com.backend.aurum.domain.user.service.UserService;
@@ -30,6 +31,15 @@ public class UserController {
 		log.debug("UserController#getUser - Request to fetch user profile for userId={}", userId);
 		User user = userService.getUserById(userId);
 		return ResponseEntity.ok(user);
+	}
+
+	@GetMapping("/export")
+	public ResponseEntity<UserExportDTO> exportUserData(
+		@AuthenticationPrincipal UserPrincipal principal
+	) {
+		UUID userId = principal.user().getId();
+		log.info("UserController#exportUserData - Request to export data for userId={}", userId);
+		return ResponseEntity.ok(userService.exportUserData(userId));
 	}
 
 	@DeleteMapping

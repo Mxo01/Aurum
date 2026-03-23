@@ -52,6 +52,11 @@ export const routes: Routes = [
 		]
 	},
 	{
+		path: "privacy",
+		loadComponent: () =>
+			import("./domain/legal/privacy-policy.component").then(m => m.PrivacyPolicyComponent)
+	},
+	{
 		path: "",
 		redirectTo: "dashboard",
 		pathMatch: "full"
