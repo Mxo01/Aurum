@@ -18,7 +18,7 @@ import { ConfirmDialog } from "primeng/confirmdialog";
 import { Toast } from "primeng/toast";
 import { paths } from "./app.routes";
 import { ProfileService } from "./domain/profile/profile.service";
-import { GdprConsentComponent } from "./shared/components/gdpr-consent/gdpr-consent.component";
+import { GdprConsentComponent } from "./domain/legal/gdpr-consent/gdpr-consent.component";
 
 @Component({
 	selector: "app-root",
