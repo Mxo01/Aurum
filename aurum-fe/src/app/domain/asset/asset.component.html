@@ -74,23 +74,19 @@
 			[(ngModel)]="statusChangeDate"
 			[showIcon]="true"
 			dateFormat="dd/mm/yy"
+			[showOnFocus]="false"
 			[maxDate]="$any(null)"
 			placeholder="Select date"
-			styleClass="w-full"
+			appendTo="body"
 		/>
 	</div>
 	<ng-template #footer>
 		<p-button
-			label="Cancel"
-			severity="secondary"
-			[text]="true"
-			(onClick)="cancelStatusToggle()"
-		/>
-		<p-button
 			[label]="pendingStatusToggle()?.newStatus ? 'Activate' : 'Archive'"
-			[severity]="pendingStatusToggle()?.newStatus ? 'success' : 'warn'"
-			(onClick)="confirmStatusToggle()"
+			[severity]="pendingStatusToggle()?.newStatus ? 'primary' : 'danger'"
+			[icon]="pendingStatusToggle()?.newStatus ? 'pi pi-check-circle' : 'pi pi-inbox'"
 			[loading]="isSaveLoading()"
+			(onClick)="confirmStatusToggle()"
 		/>
 	</ng-template>
 </p-dialog>

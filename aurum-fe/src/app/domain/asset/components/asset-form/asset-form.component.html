@@ -8,9 +8,13 @@
 		@if (selectedAsset()?.isActive === false) {
 			<p-message
 				severity="warn"
-				text="This asset is archived and is excluded from all calculations and dashboard charts."
+				icon="pi pi-info-circle"
 				styleClass="w-full mb-4"
-			/>
+			>
+				<span class="text-sm">
+					This asset is archived and is excluded from all calculations and dashboard charts.
+				</span>
+			</p-message>
 		}
 		<form
 			class="flex flex-col gap-5"

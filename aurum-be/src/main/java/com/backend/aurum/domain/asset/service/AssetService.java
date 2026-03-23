@@ -169,14 +169,10 @@ public class AssetService {
 			effectiveDate
 		);
 
-		// Recompute isActive from the latest log entry by date
-		boolean newIsActive = statusLogRepository
-			.findTopByAssetIdOrderByChangedAtDesc(asset.getId())
-			.map(AssetStatusLog::getIsActive)
-			.orElse(isActive);
-
-		asset.setIsActive(newIsActive);
-		if (!newIsActive) {
+		// Always apply the explicitly requested status — the changedAt date is for historical
+		// logging only and does not drive the current asset state.
+		asset.setIsActive(isActive);
+		if (!isActive) {
 			asset.setIsFavorite(false);
 		}
 
@@ -184,7 +180,7 @@ public class AssetService {
 		log.info(
 			"AssetService#patchStatus - Asset status updated: assetId={}, isActive={}",
 			updated.getId(),
-			newIsActive
+			isActive
 		);
 		return updated;
 	}
