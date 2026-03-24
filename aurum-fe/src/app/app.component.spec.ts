@@ -13,7 +13,7 @@ import { Currency } from "./domain/profile/model/currency.model";
 import { Locale } from "./domain/profile/model/locale.model";
 import { darkModeSelector } from "./app.utils";
 import { RouterLink, RouterLinkActive, RouterOutlet } from "@angular/router";
-import { Button } from "primeng/button";
+import { Button, ButtonDirective } from "primeng/button";
 import { Avatar } from "primeng/avatar";
 import { Toolbar } from "primeng/toolbar";
 import { ConfirmDialog } from "primeng/confirmdialog";
@@ -48,6 +48,7 @@ describe("App", () => {
 				App,
 				MockDirective(RouterOutlet),
 				MockComponent(Button),
+				MockDirective(ButtonDirective),
 				MockComponent(Avatar),
 				MockComponent(Toolbar),
 				MockDirective(RouterLink),

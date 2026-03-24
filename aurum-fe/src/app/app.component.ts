@@ -7,7 +7,7 @@ import {
 	OnInit
 } from "@angular/core";
 import { RouterOutlet, RouterLinkActive, RouterLink } from "@angular/router";
-import { Button } from "primeng/button";
+import { Button, ButtonDirective } from "primeng/button";
 import { Avatar } from "primeng/avatar";
 import { AuthService } from "@auth0/auth0-angular";
 import { toSignal } from "@angular/core/rxjs-interop";
@@ -26,6 +26,7 @@ import { GdprConsentComponent } from "./domain/legal/gdpr-consent/gdpr-consent.c
 	imports: [
 		RouterOutlet,
 		Button,
+		ButtonDirective,
 		Avatar,
 		Toolbar,
 		RouterLink,
