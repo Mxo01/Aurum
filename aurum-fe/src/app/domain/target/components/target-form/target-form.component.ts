@@ -35,13 +35,13 @@ export class TargetFormComponent {
 
 	save = output<Target>();
 
-	protected readonly TargetType = TargetType;
-	protected readonly typeOptions = [
+	readonly TargetType = TargetType;
+	readonly typeOptions = [
 		{ label: "Net Worth", value: TargetType.NET_WORTH },
 		{ label: "Manual", value: TargetType.MANUAL }
 	];
 
-	protected readonly targetForm = new FormGroup({
+	readonly targetForm = new FormGroup({
 		name: new FormControl<string>("", {
 			validators: [Validators.required],
 			nonNullable: true
@@ -87,7 +87,7 @@ export class TargetFormComponent {
 		});
 	}
 
-	protected onHide() {
+	onHide() {
 		this.selectedTarget.set(null);
 		this.targetForm.reset({
 			name: "",
@@ -99,7 +99,7 @@ export class TargetFormComponent {
 		this.targetForm.get("type")?.enable();
 	}
 
-	protected onSubmit() {
+	onSubmit() {
 		if (this.targetForm.invalid) return;
 
 		const formValue = this.targetForm.getRawValue();

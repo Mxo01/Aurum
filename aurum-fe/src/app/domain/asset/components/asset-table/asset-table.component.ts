@@ -28,22 +28,20 @@ export class AssetTableComponent {
 	toggleAssetStatus = output<Asset>();
 	deleteAsset = output<{ event: MenuItemCommandEvent; asset: Asset }>();
 
-	protected readonly Currency = Currency;
-	protected readonly AssetType = AssetType;
+	readonly Currency = Currency;
+	readonly AssetType = AssetType;
 
-	protected readonly rowMenuItems = signal<MenuItem[]>([]);
-	protected expandedRowGroups: string[] = [];
-	protected readonly assetsWithBalance = computed(() =>
-		mapAssetsToAssetsWithBalance(this.assets())
-	);
-	protected readonly categoryCounts = computed(() => {
+	readonly rowMenuItems = signal<MenuItem[]>([]);
+	expandedRowGroups: string[] = [];
+	readonly assetsWithBalance = computed(() => mapAssetsToAssetsWithBalance(this.assets()));
+	readonly categoryCounts = computed(() => {
 		const counts: Record<string, number> = {};
 		for (const asset of this.assetsWithBalance()) {
 			counts[asset.categoryName] = (counts[asset.categoryName] ?? 0) + 1;
 		}
 		return counts;
 	});
-	protected readonly categoryTotals = computed(() => {
+	readonly categoryTotals = computed(() => {
 		const totals: Record<string, number> = {};
 
 		for (const asset of this.assetsWithBalance()) {
@@ -54,7 +52,7 @@ export class AssetTableComponent {
 		return totals;
 	});
 
-	protected showMenu(event: MouseEvent, menu: Menu, asset: Asset) {
+	showMenu(event: MouseEvent, menu: Menu, asset: Asset) {
 		this.rowMenuItems.set([
 			{
 				label: "Edit",

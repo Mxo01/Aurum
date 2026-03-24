@@ -42,14 +42,14 @@ import { ThemeService } from "../../../../shared/services/theme/theme.service";
 	changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class TargetWidgetComponent {
-	protected readonly themeService = inject(ThemeService);
+	readonly themeService = inject(ThemeService);
 	private readonly targetService = inject(TargetService);
 
 	targets = model.required<Target[]>();
 	currency = input.required<Currency>();
 	locale = input<Locale>(Locale.EN_US);
 
-	protected readonly menuItems = computed<MenuItem[]>(() => [
+	readonly menuItems = computed<MenuItem[]>(() => [
 		{
 			label: this.activeTarget() ? "Edit Target" : "Set Target",
 			icon: this.activeTarget() ? "pi pi-pencil" : "pi pi-plus",
@@ -69,27 +69,27 @@ export class TargetWidgetComponent {
 		}
 	]);
 
-	protected readonly isFormVisible = signal(false);
-	protected readonly isListVisible = signal(false);
-	protected readonly selectedTarget = signal<Target | null>(null);
-	protected readonly isSaving = signal(false);
+	readonly isFormVisible = signal(false);
+	readonly isListVisible = signal(false);
+	readonly selectedTarget = signal<Target | null>(null);
+	readonly isSaving = signal(false);
 
-	protected readonly activeTarget = computed(() => {
+	readonly activeTarget = computed(() => {
 		const list = this.targets();
 		return list.length > 0 ? list[0] : null;
 	});
 
-	protected onAddTarget() {
+	onAddTarget() {
 		this.selectedTarget.set(null);
 		this.isFormVisible.set(true);
 	}
 
-	protected onEditTarget(target: Target) {
+	onEditTarget(target: Target) {
 		this.selectedTarget.set(target);
 		this.isFormVisible.set(true);
 	}
 
-	protected onSaveTarget(target: Target) {
+	onSaveTarget(target: Target) {
 		this.isSaving.set(true);
 
 		this.targetService
@@ -103,7 +103,7 @@ export class TargetWidgetComponent {
 			});
 	}
 
-	protected onDeleteTarget(id: string) {
+	onDeleteTarget(id: string) {
 		this.targetService.deleteTarget(id).subscribe({
 			next: targets => this.targets.set(targets)
 		});

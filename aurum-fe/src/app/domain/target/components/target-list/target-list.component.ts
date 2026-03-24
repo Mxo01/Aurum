@@ -25,7 +25,7 @@ export class TargetListComponent {
 	edit = output<Target>();
 	delete = output<string>();
 
-	protected statusLabel(status?: TargetStatus): string {
+	statusLabel(status?: TargetStatus): string {
 		switch (status) {
 			case TargetStatus.COMPLETED:
 				return "Completed";
@@ -38,7 +38,7 @@ export class TargetListComponent {
 		}
 	}
 
-	protected statusSeverity(status?: TargetStatus): "success" | "secondary" | "danger" | "warn" {
+	statusSeverity(status?: TargetStatus): "success" | "secondary" | "danger" | "warn" {
 		switch (status) {
 			case TargetStatus.COMPLETED:
 				return "success";

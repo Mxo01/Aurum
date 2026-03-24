@@ -44,24 +44,22 @@ export class AssetComponent implements OnInit {
 	private readonly profileService = inject(ProfileService);
 	private readonly themeService = inject(ThemeService);
 
-	protected readonly paths = paths;
-	protected readonly previousRoute = this.navigationService.previousRoute;
-	protected readonly assets = signal<Asset[]>([]);
-	protected readonly userCurrency = signal<Currency>(Currency.EUR);
-	protected readonly userLocale = signal<Locale>(Locale.EN_US);
-	protected readonly areAssetsLoading = signal(false);
-	protected readonly categoriesOptions = signal<AssetCategory[]>([]);
-	protected readonly isHistoryDialogVisible = signal(false);
-	protected readonly isDrawerVisible = signal(false);
-	protected readonly isDeletePermanentlyLoading = signal(false);
-	protected readonly isSaveLoading = signal(false);
-	protected readonly selectedAsset = signal<Asset | null>(null);
+	readonly paths = paths;
+	readonly previousRoute = this.navigationService.previousRoute;
+	readonly assets = signal<Asset[]>([]);
+	readonly userCurrency = signal<Currency>(Currency.EUR);
+	readonly userLocale = signal<Locale>(Locale.EN_US);
+	readonly areAssetsLoading = signal(false);
+	readonly categoriesOptions = signal<AssetCategory[]>([]);
+	readonly isHistoryDialogVisible = signal(false);
+	readonly isDrawerVisible = signal(false);
+	readonly isDeletePermanentlyLoading = signal(false);
+	readonly isSaveLoading = signal(false);
+	readonly selectedAsset = signal<Asset | null>(null);
 
-	protected readonly isStatusDialogVisible = signal(false);
-	protected readonly pendingStatusToggle = signal<{ asset: Asset; newStatus: boolean } | null>(
-		null
-	);
-	protected statusChangeDate: Date = new Date();
+	readonly isStatusDialogVisible = signal(false);
+	readonly pendingStatusToggle = signal<{ asset: Asset; newStatus: boolean } | null>(null);
+	statusChangeDate: Date = new Date();
 
 	ngOnInit() {
 		this.profileService.getProfile().subscribe({
@@ -79,7 +77,7 @@ export class AssetComponent implements OnInit {
 		this.refreshAssets();
 	}
 
-	protected refreshAssets() {
+	refreshAssets() {
 		this.getAssets().subscribe();
 	}
 
@@ -102,28 +100,28 @@ export class AssetComponent implements OnInit {
 		);
 	}
 
-	protected viewHistory(asset: Asset) {
+	viewHistory(asset: Asset) {
 		this.selectedAsset.set(asset);
 		this.isHistoryDialogVisible.set(true);
 	}
 
-	protected editAsset(asset: Asset) {
+	editAsset(asset: Asset) {
 		this.selectedAsset.set(asset);
 		this.isDrawerVisible.set(true);
 	}
 
-	protected toggleAssetStatus(asset: Asset) {
+	toggleAssetStatus(asset: Asset) {
 		this.pendingStatusToggle.set({ asset, newStatus: !asset.isActive });
 		this.statusChangeDate = new Date();
 		this.isStatusDialogVisible.set(true);
 	}
 
-	protected cancelStatusToggle() {
+	cancelStatusToggle() {
 		this.isStatusDialogVisible.set(false);
 		this.pendingStatusToggle.set(null);
 	}
 
-	protected confirmStatusToggle() {
+	confirmStatusToggle() {
 		const pending = this.pendingStatusToggle();
 		if (!pending) return;
 
@@ -148,7 +146,7 @@ export class AssetComponent implements OnInit {
 			});
 	}
 
-	protected deleteAsset({ event, asset }: { event: MenuItemCommandEvent; asset: Asset }) {
+	deleteAsset({ event, asset }: { event: MenuItemCommandEvent; asset: Asset }) {
 		const id = asset.id;
 		const target = event?.originalEvent?.target;
 
@@ -180,7 +178,7 @@ export class AssetComponent implements OnInit {
 		});
 	}
 
-	protected saveAssetAndSnapshot(asset: Asset) {
+	saveAssetAndSnapshot(asset: Asset) {
 		this.isSaveLoading.set(true);
 
 		this.assetService

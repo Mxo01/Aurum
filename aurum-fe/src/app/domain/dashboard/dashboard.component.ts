@@ -44,35 +44,31 @@ export class DashboardComponent implements OnInit {
 	private readonly router = inject(Router);
 	private readonly themeService = inject(ThemeService);
 
-	protected readonly userCurrency = signal<Currency>(Currency.EUR);
-	protected readonly userLocale = signal<Locale>(Locale.EN_US);
-	protected readonly summary = signal<AnalyticsSummary | null>(null);
-	protected readonly chartData = signal<ChartData | null>(null);
-	protected readonly projections = signal<Projections | null>(null);
-	protected readonly projectedNetWorth = computed<number>(() => this.projections()?.[1] ?? 0);
-	protected readonly projectedGrowthVariation = computed<number | undefined>(() => {
+	readonly userCurrency = signal<Currency>(Currency.EUR);
+	readonly userLocale = signal<Locale>(Locale.EN_US);
+	readonly summary = signal<AnalyticsSummary | null>(null);
+	readonly chartData = signal<ChartData | null>(null);
+	readonly projections = signal<Projections | null>(null);
+	readonly projectedNetWorth = computed<number>(() => this.projections()?.[1] ?? 0);
+	readonly projectedGrowthVariation = computed<number | undefined>(() => {
 		const current = this.summary()?.totalGrossAssets;
 		const projected = this.projections()?.[1];
 		if (!current || !projected || current === 0) return undefined;
 		return +(((projected - current) / current) * 100).toFixed(2);
 	});
-	protected readonly targets = signal<Target[]>([]);
-	protected readonly topAssets = signal<Asset[]>([]);
-	protected readonly totalLiabilities = computed<number>(
-		() => this.summary()?.totalLiabilities ?? 0
-	);
-	protected readonly currencyImpact = computed<number>(() => this.summary()?.currencyImpact ?? 0);
-	protected readonly assetGrowth1Y = computed<number>(
+	readonly targets = signal<Target[]>([]);
+	readonly topAssets = signal<Asset[]>([]);
+	readonly totalLiabilities = computed<number>(() => this.summary()?.totalLiabilities ?? 0);
+	readonly currencyImpact = computed<number>(() => this.summary()?.currencyImpact ?? 0);
+	readonly assetGrowth1Y = computed<number>(
 		() => this.summary()?.assetVariations.oneYear.absolute ?? 0
 	);
-	protected readonly assetGrowth1YVariation = computed<number | undefined>(() => {
+	readonly assetGrowth1YVariation = computed<number | undefined>(() => {
 		const pct = this.summary()?.assetVariations.oneYear.percentage;
 		return pct !== undefined ? +pct.toFixed(2) : undefined;
 	});
-	protected readonly debtToAssetRatio = computed<number>(
-		() => this.summary()?.debtToAssetRatio ?? 0
-	);
-	protected readonly liabilitiesSparkline = computed<number[]>(() => {
+	readonly debtToAssetRatio = computed<number>(() => this.summary()?.debtToAssetRatio ?? 0);
+	readonly liabilitiesSparkline = computed<number[]>(() => {
 		const chart = this.chartData();
 		if (!chart?.totalAssetsOnly || !chart?.totalNetWorth) return [];
 		const liabilities = chart.totalAssetsOnly.map((a, i) => a - Math.abs(chart.totalNetWorth[i]));
@@ -86,7 +82,7 @@ export class DashboardComponent implements OnInit {
 		this.loadData();
 	}
 
-	protected loadData() {
+	loadData() {
 		forkJoin({
 			profile: this.profileService.getProfile().pipe(catchError(() => of(null))),
 			summary: this.dashboardService.getSummary().pipe(catchError(() => of(null))),
@@ -109,11 +105,11 @@ export class DashboardComponent implements OnInit {
 		});
 	}
 
-	protected navigateToAssets() {
+	navigateToAssets() {
 		this.router.navigate(["/assets"]);
 	}
 
-	protected onYearChanged(year: number | null) {
+	onYearChanged(year: number | null) {
 		if (year === null) {
 			this.loadData();
 		} else {

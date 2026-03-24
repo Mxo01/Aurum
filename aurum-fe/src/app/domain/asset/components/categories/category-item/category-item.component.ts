@@ -14,9 +14,9 @@ export class CategoryItemComponent {
 
 	edit = output<AssetCategory>();
 
-	protected readonly AssetType = AssetType;
+	readonly AssetType = AssetType;
 
-	protected readonly categoryColors = computed(() => ({
+	readonly categoryColors = computed(() => ({
 		bg:
 			this.category().type === AssetType.ASSET
 				? "color-mix(in srgb, #0ea5e9,transparent 84%)"

@@ -41,7 +41,7 @@ import { Message } from "primeng/message";
 	]
 })
 export class AssetHistoryComponent {
-	protected readonly themeService = inject(ThemeService);
+	readonly themeService = inject(ThemeService);
 	private readonly snapshotService = inject(SnapshotService);
 
 	isVisible = model.required<boolean>();
@@ -49,17 +49,17 @@ export class AssetHistoryComponent {
 	locale = input<Locale>(Locale.EN_US);
 	snapshotsChanged = output<void>();
 
-	protected readonly ViewMode = ViewMode;
-	protected readonly LiabilityType = LiabilityType;
+	readonly ViewMode = ViewMode;
+	readonly LiabilityType = LiabilityType;
 
-	protected viewMode = signal<ViewMode>(ViewMode.Table);
-	protected viewModeOptions = signal<SelectItem<ViewMode>[]>([
+	viewMode = signal<ViewMode>(ViewMode.Table);
+	viewModeOptions = signal<SelectItem<ViewMode>[]>([
 		{ label: "Table", value: ViewMode.Table, icon: "pi pi-table" },
 		{ label: "Chart", value: ViewMode.Chart, icon: "pi pi-chart-line" }
 	]);
-	protected selectedSnapshotsHistory = signal<Snapshot[]>([]);
-	protected newSnapshotValue = signal<number | null>(null);
-	protected newSnapshotDate = signal<Date>(new Date());
+	selectedSnapshotsHistory = signal<Snapshot[]>([]);
+	newSnapshotValue = signal<number | null>(null);
+	newSnapshotDate = signal<Date>(new Date());
 
 	private readonly snapshots = signal<Snapshot[]>([]);
 
@@ -76,25 +76,25 @@ export class AssetHistoryComponent {
 		});
 	}
 
-	protected readonly isAutomaticLiability = computed(() => {
+	readonly isAutomaticLiability = computed(() => {
 		const asset = this.selectedAsset();
 		return asset?.liabilityType === LiabilityType.AUTOMATIC;
 	});
 
-	protected readonly snapshotsForSelectedAsset = computed(() =>
+	readonly snapshotsForSelectedAsset = computed(() =>
 		this.snapshots().toSorted(
 			(a, b) => new Date(a.referenceDate).getTime() - new Date(b.referenceDate).getTime()
 		)
 	);
 
-	protected readonly chartData = computed(() =>
+	readonly chartData = computed(() =>
 		mapSnapshotsToChartData(
 			this.snapshotsForSelectedAsset(),
 			this.themeService.isDarkMode(),
 			this.locale()
 		)
 	);
-	protected readonly chartOptions = computed(() =>
+	readonly chartOptions = computed(() =>
 		getChartOptions(
 			getCurrencySymbol(this.selectedAsset()?.originalCurrency || Currency.EUR),
 			this.themeService.isDarkMode(),
@@ -102,14 +102,14 @@ export class AssetHistoryComponent {
 		)
 	);
 
-	protected onHideDrawer() {
+	onHideDrawer() {
 		this.selectedSnapshotsHistory.set([]);
 		this.newSnapshotValue.set(null);
 		this.newSnapshotDate.set(new Date());
 		this.selectedAsset.set(null);
 	}
 
-	protected addSnapshotFromHistory() {
+	addSnapshotFromHistory() {
 		const assetId = this.selectedAsset()?.id;
 		const amount = this.newSnapshotValue();
 		const date = this.newSnapshotDate();
@@ -139,7 +139,7 @@ export class AssetHistoryComponent {
 		});
 	}
 
-	protected deleteSelectedSnapshotsHistory() {
+	deleteSelectedSnapshotsHistory() {
 		const assetId = this.selectedAsset()?.id;
 		const ids = this.selectedSnapshotsHistory()
 			.map(s => s.id)

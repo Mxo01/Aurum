@@ -38,10 +38,10 @@ export class CategoryFormComponent {
 	save = output<AssetCategory>();
 	delete = output<{ target: EventTarget; id: string }>();
 
-	protected readonly typeOptions = signal(typeOptions);
-	protected readonly icons = signal(categoryIcons);
-	protected readonly selectedIcon = signal<string | null>(null);
-	protected readonly categoryForm = new FormGroup({
+	readonly typeOptions = signal(typeOptions);
+	readonly icons = signal(categoryIcons);
+	readonly selectedIcon = signal<string | null>(null);
+	readonly categoryForm = new FormGroup({
 		name: new FormControl<string>("", Validators.required),
 		type: new FormControl<AssetType | null>(null, Validators.required),
 		icon: new FormControl<string | null>(null)

@@ -53,6 +53,10 @@ export const routes: Routes = [
 	},
 	{
 		path: "privacy",
+		data: {
+			label: "Privacy Policy",
+			icon: "pi pi-shield"
+		},
 		loadComponent: () =>
 			import("./domain/legal/privacy-policy/privacy-policy.component").then(
 				m => m.PrivacyPolicyComponent
