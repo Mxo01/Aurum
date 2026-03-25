@@ -61,9 +61,9 @@ export class ProfileComponent implements OnInit {
 	private readonly confirmationService = inject(ConfirmationService);
 	private readonly navigationService = inject(NavigationService);
 
-	protected readonly paths = paths;
-	protected readonly previousRoute = this.navigationService.previousRoute;
-	protected readonly themeOptions = signal([
+	readonly paths = paths;
+	readonly previousRoute = this.navigationService.previousRoute;
+	readonly themeOptions = signal([
 		{
 			label: "Dark",
 			value: true,
@@ -75,24 +75,24 @@ export class ProfileComponent implements OnInit {
 			icon: "pi pi-sun"
 		}
 	]);
-	protected readonly user = toSignal(this.authService.user$);
-	protected readonly theme = computed(() => this.themeService.isDarkMode());
-	protected readonly profile = this.profileService.profile;
-	protected readonly hasGoogleProfile = computed(() => this.user()?.sub?.includes("google"));
-	protected readonly isUpdatingName = signal(false);
-	protected readonly isUploadingPicture = signal(false);
-	protected readonly currencyOptions = signal(currencyOptions);
-	protected readonly localeOptions = signal(localeOptions);
-	protected readonly isDeletingProfile = signal(false);
-	protected readonly isExportingData = signal(false);
+	readonly user = toSignal(this.authService.user$);
+	readonly theme = computed(() => this.themeService.isDarkMode());
+	readonly profile = this.profileService.profile;
+	readonly hasGoogleProfile = computed(() => this.user()?.sub?.includes("google"));
+	readonly isUpdatingName = signal(false);
+	readonly isUploadingPicture = signal(false);
+	readonly currencyOptions = signal(currencyOptions);
+	readonly localeOptions = signal(localeOptions);
+	readonly isDeletingProfile = signal(false);
+	readonly isExportingData = signal(false);
 
-	protected readonly pictureUrl = computed(() => {
+	readonly pictureUrl = computed(() => {
 		const customPic = this.profile()?.picture;
 		if (customPic) return `data:image/jpeg;base64,${customPic}`;
 		return this.user()?.picture ?? null;
 	});
 
-	protected readonly hasPicture = computed(() => !!this.profile()?.picture);
+	readonly hasPicture = computed(() => !!this.profile()?.picture);
 
 	private readonly nameTrigger$ = new Subject<string>();
 

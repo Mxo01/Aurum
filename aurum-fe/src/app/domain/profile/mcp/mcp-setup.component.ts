@@ -30,18 +30,18 @@ export class McpSetupComponent implements OnInit {
 	private readonly mcpService = inject(McpService);
 	private readonly messageService = inject(MessageService);
 
-	protected readonly sseUrl = this.mcpService.mcpSseUrl;
-	protected readonly isMcpDesktop = signal(true);
-	protected readonly mcpPlatformOptions = signal<SelectItem<boolean>[]>([
+	readonly sseUrl = this.mcpService.mcpSseUrl;
+	readonly isMcpDesktop = signal(true);
+	readonly mcpPlatformOptions = signal<SelectItem<boolean>[]>([
 		{ label: "Desktop", value: true },
 		{ label: "Mobile/Web", value: false }
 	]);
-	protected readonly keyMeta = signal<ApiKeyMeta | null>(null);
-	protected readonly generatedKey = signal<string | null>(null);
-	protected readonly isApiKeyInstructionsDialogVisible = signal(false);
-	protected readonly isGenerating = signal(false);
-	protected readonly isRevoking = signal(false);
-	protected readonly mcpConfig = computed(() => {
+	readonly keyMeta = signal<ApiKeyMeta | null>(null);
+	readonly generatedKey = signal<string | null>(null);
+	readonly isApiKeyInstructionsDialogVisible = signal(false);
+	readonly isGenerating = signal(false);
+	readonly isRevoking = signal(false);
+	readonly mcpConfig = computed(() => {
 		const key = this.generatedKey() ?? "<your-api-key>";
 		const sseUrl = `${this.sseUrl}?key=${key}`;
 		return this.isMcpDesktop()

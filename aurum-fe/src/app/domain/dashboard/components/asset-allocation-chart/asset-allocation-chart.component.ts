@@ -13,5 +13,5 @@ import { mapSummaryToMeterItems } from "./asset-allocation-chart.utils";
 export class AssetAllocationChartComponent {
 	summary = input.required<AnalyticsSummary | null>();
 
-	protected readonly meterItems = computed(() => mapSummaryToMeterItems(this.summary()));
+	readonly meterItems = computed(() => mapSummaryToMeterItems(this.summary()));
 }

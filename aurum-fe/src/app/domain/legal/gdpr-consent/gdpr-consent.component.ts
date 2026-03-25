@@ -12,7 +12,7 @@ const CONSENT_KEY = "gdpr_consent_accepted";
 	changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class GdprConsentComponent {
-	protected readonly visible = signal(!localStorage.getItem(CONSENT_KEY));
+	readonly visible = signal(!localStorage.getItem(CONSENT_KEY));
 
 	accept() {
 		localStorage.setItem(CONSENT_KEY, "true");

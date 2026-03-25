@@ -19,11 +19,11 @@ export class KpiCardComponent {
 	invertVariation = input<boolean>(false);
 	sparklineData = input<number[]>();
 
-	protected readonly isPositive = computed(() =>
+	readonly isPositive = computed(() =>
 		this.invertVariation() ? (this.variation() ?? 0) < 0 : (this.variation() ?? 0) >= 0
 	);
 
-	protected readonly sparklineColor = computed(() => {
+	readonly sparklineColor = computed(() => {
 		const data = this.sparklineData();
 		if (!data || data.length < 2) return "#6b7280";
 		const diff = data[data.length - 1] - data[0];
@@ -31,7 +31,7 @@ export class KpiCardComponent {
 		return isGood ? "#22c55e" : "#ef4444";
 	});
 
-	protected readonly sparklineChartData = computed(() => {
+	readonly sparklineChartData = computed(() => {
 		const color = this.sparklineColor();
 		return {
 			labels: (this.sparklineData() ?? []).map(() => ""),
@@ -49,7 +49,7 @@ export class KpiCardComponent {
 		};
 	});
 
-	protected readonly sparklineOptions = {
+	readonly sparklineOptions = {
 		responsive: false,
 		animation: false,
 		plugins: {

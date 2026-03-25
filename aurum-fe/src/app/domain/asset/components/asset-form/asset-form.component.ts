@@ -61,7 +61,7 @@ export class AssetFormComponent implements OnInit, OnDestroy {
 
 	save = output<Asset>();
 
-	protected readonly assetForm = new FormGroup({
+	readonly assetForm = new FormGroup({
 		name: new FormControl<string>("", Validators.required),
 		category: new FormControl<AssetCategory | null>(null, Validators.required),
 		type: new FormControl<AssetType | null>({ value: null, disabled: true }, Validators.required),
@@ -73,12 +73,12 @@ export class AssetFormComponent implements OnInit, OnDestroy {
 		paymentFrequency: new FormControl<PaymentFrequency | null>(null),
 		paymentAmount: new FormControl<number | null>(null)
 	});
-	protected readonly currencyOptions = signal(currencyOptions);
-	protected readonly typeOptions = signal(typeOptions);
-	protected readonly liabilityTypeOptions = signal(liabilityTypeOptions);
-	protected readonly paymentFrequencyOptions = signal(paymentFrequencyOptions);
-	protected readonly AssetType = AssetType;
-	protected readonly LiabilityType = LiabilityType;
+	readonly currencyOptions = signal(currencyOptions);
+	readonly typeOptions = signal(typeOptions);
+	readonly liabilityTypeOptions = signal(liabilityTypeOptions);
+	readonly paymentFrequencyOptions = signal(paymentFrequencyOptions);
+	readonly AssetType = AssetType;
+	readonly LiabilityType = LiabilityType;
 
 	private categoryCtrlSub?: Subscription;
 	private liabilityTypeCtrlSub?: Subscription;

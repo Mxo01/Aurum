@@ -7,7 +7,7 @@ import {
 	OnInit
 } from "@angular/core";
 import { RouterOutlet, RouterLinkActive, RouterLink } from "@angular/router";
-import { ButtonModule } from "primeng/button";
+import { Button, ButtonDirective } from "primeng/button";
 import { Avatar } from "primeng/avatar";
 import { AuthService } from "@auth0/auth0-angular";
 import { toSignal } from "@angular/core/rxjs-interop";
@@ -25,7 +25,8 @@ import { GdprConsentComponent } from "./domain/legal/gdpr-consent/gdpr-consent.c
 	standalone: true,
 	imports: [
 		RouterOutlet,
-		ButtonModule,
+		Button,
+		ButtonDirective,
 		Avatar,
 		Toolbar,
 		RouterLink,
@@ -43,12 +44,12 @@ export class App implements OnInit {
 	private readonly profileService = inject(ProfileService);
 	private readonly document = inject(DOCUMENT);
 
-	protected readonly user = toSignal(this.authService.user$);
-	protected readonly paths = Object.entries(paths).filter(
-		([path]) => path !== "/profile" && path !== "/assets/categories"
+	readonly user = toSignal(this.authService.user$);
+	readonly paths = Object.entries(paths).filter(
+		([path]) => path !== "/profile" && path !== "/assets/categories" && path !== "/privacy"
 	);
 
-	protected readonly avatarUrl = computed(() => {
+	readonly avatarUrl = computed(() => {
 		const customPic = this.profileService.profile()?.picture;
 		if (customPic) return `data:image/jpeg;base64,${customPic}`;
 		return this.user()?.picture;

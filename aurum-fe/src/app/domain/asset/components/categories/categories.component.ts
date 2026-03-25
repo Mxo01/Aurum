@@ -29,15 +29,15 @@ export class CategoriesComponent implements OnInit {
 	private readonly confirmationService = inject(ConfirmationService);
 	private readonly navigationService = inject(NavigationService);
 
-	protected readonly paths = paths;
-	protected readonly previousRoute = this.navigationService.previousRoute;
-	protected readonly categories = signal<AssetCategory[]>([]);
-	protected readonly defaultCategories = computed(() => this.categories().filter(c => c.isDefault));
-	protected readonly customCategories = computed(() => this.categories().filter(c => !c.isDefault));
-	protected readonly isDialogVisible = signal(false);
-	protected readonly selectedCategory = signal<AssetCategory | null>(null);
-	protected readonly isSaveLoading = signal(false);
-	protected readonly isDeleteLoading = signal(false);
+	readonly paths = paths;
+	readonly previousRoute = this.navigationService.previousRoute;
+	readonly categories = signal<AssetCategory[]>([]);
+	readonly defaultCategories = computed(() => this.categories().filter(c => c.isDefault));
+	readonly customCategories = computed(() => this.categories().filter(c => !c.isDefault));
+	readonly isDialogVisible = signal(false);
+	readonly selectedCategory = signal<AssetCategory | null>(null);
+	readonly isSaveLoading = signal(false);
+	readonly isDeleteLoading = signal(false);
 
 	ngOnInit() {
 		this.assetService.getAssetCategories().subscribe({
@@ -45,17 +45,17 @@ export class CategoriesComponent implements OnInit {
 		});
 	}
 
-	protected openAdd() {
+	openAdd() {
 		this.selectedCategory.set(null);
 		this.isDialogVisible.set(true);
 	}
 
-	protected openEdit(category: AssetCategory) {
+	openEdit(category: AssetCategory) {
 		this.selectedCategory.set({ ...category });
 		this.isDialogVisible.set(true);
 	}
 
-	protected saveCategory(category: AssetCategory) {
+	saveCategory(category: AssetCategory) {
 		this.isSaveLoading.set(true);
 
 		this.assetService
@@ -69,7 +69,7 @@ export class CategoriesComponent implements OnInit {
 			});
 	}
 
-	protected deleteCategory(event: { target: EventTarget; id: string }) {
+	deleteCategory(event: { target: EventTarget; id: string }) {
 		const { id, target } = event;
 		this.confirmationService.confirm({
 			target,

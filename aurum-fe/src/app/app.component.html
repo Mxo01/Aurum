@@ -11,6 +11,17 @@
 			class="rounded-none! bg-white/30! border-gray-300/30! shadow-sm! dark:bg-zinc-900/40! dark:border-zinc-800/70! dark:shadow-2xl! backdrop-blur-md!"
 		>
 			<ng-template #start>
+				<div class="flex items-center gap-1">
+					<img
+						src="favicon.svg"
+						alt="Aurum Logo"
+						class="w-8 h-8 mr-2"
+					/>
+					<span class="max-sm:hidden text-xl font-bold font-mono">Aurum</span>
+				</div>
+			</ng-template>
+
+			<ng-template #center>
 				@for (path of paths; track path[0]) {
 					<a
 						[routerLink]="path[0]"
@@ -18,7 +29,7 @@
 						[routerLinkActiveOptions]="{ exact: true }"
 						severity="secondary"
 						[text]="true"
-						class="mr-3"
+						[class.mr-3]="!$last"
 						pButton
 					>
 						<span class="flex items-center gap-2">
@@ -39,10 +50,18 @@
 						<span class="text-primary text-sm font-bold">{{ user()?.name }}</span>
 						<span class="text-xs">{{ user()?.email }}</span>
 					</div>
-					<p-avatar
-						[image]="avatarUrl()"
-						shape="circle"
-					/>
+					@if (avatarUrl()) {
+						<p-avatar
+							[image]="avatarUrl()"
+							shape="circle"
+						/>
+					} @else {
+						<p-avatar
+							icon="pi pi-user"
+							class="bg-surface-200! dark:bg-surface-700!"
+							shape="circle"
+						/>
+					}
 				</p-button>
 
 				<p-button

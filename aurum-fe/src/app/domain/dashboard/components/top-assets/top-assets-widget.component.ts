@@ -33,9 +33,7 @@ export class TopAssetsWidgetComponent {
 	currency = input<Currency>(Currency.EUR);
 	viewMore = output<void>();
 
-	protected readonly AssetType = AssetType;
+	readonly AssetType = AssetType;
 
-	protected readonly assetsWithBalance = computed(() =>
-		mapAssetsToAssetsWithBalance(this.assets())
-	);
+	readonly assetsWithBalance = computed(() => mapAssetsToAssetsWithBalance(this.assets()));
 }

@@ -100,6 +100,150 @@ Assets have `LiabilityType` (MANUAL/AUTOMATIC) and `PaymentFrequency` (WEEKLY/MO
 - Git pre-commit hook runs ESLint + Prettier via lint-staged (husky) for the frontend, and `spotless:apply` for any staged Java files in the backend
 - Backend Java formatting uses **Prettier + prettier-plugin-java** (same tool as frontend), reading `prettier.config.cjs` at the repo root — run `npx prettier --write 'aurum-be/src/**/*.java'` manually or let the pre-commit hook handle it
 
+## Frontend Testing
+
+### Setup
+- Test runner: **Vitest** via `@angular/build:unit-test` — run with `npm test` (or `npm run test:watch`)
+- Coverage: **@vitest/coverage-v8** — run with `npm test -- --coverage`
+- Mocking Angular schematics (services, components, directives, pipes): **ng-mocks** (`MockProvider`, `MockComponent`, etc.)
+- Random test data generation: **@faker-js/faker**
+
+### Rules
+
+- **No comments** except `// GIVEN`, `// WHEN`, `// THEN` block separators
+- **No `any`** — never use `any` for casting or accessing members
+- **No private method testing** — test behavior through public API only
+- **Test subject naming** — the class under test must always be assigned to a variable named `testSubject`
+- **Mock everything** — all dependencies must be mocked; never rely on real implementations
+- **No `MockBuilder`** — use `TestBed.configureTestingModule` with `MockProvider`, `MockComponent`, `MockDirective`, `MockModule` instead
+- **No `protected` / no `*Internals`** — never use `protected` on component fields/methods accessed in tests; never cast with `as unknown as XxxInternals` to reach members; access all members directly via `testSubject`
+- **Single `beforeEach`** — one `beforeEach` per describe block containing all `configureTestingModule`, `TestBed.inject`, and fixture/testSubject assignments
+- **`TestBed.inject` once in `beforeEach`** — inject services into describe-scoped variables inside `beforeEach`; do not inject inside individual `it` blocks (exception: when a fresh instance is needed per test, e.g. constructor-time state)
+- **Component isolation via mocked imports** — never use `NO_ERRORS_SCHEMA` and never use `TestBed.overrideComponent`; instead, mirror the component's own `imports` array in `configureTestingModule` by replacing every entry except the component under test with the matching ng-mocks wrapper:
+  - Angular/PrimeNG/custom **components** → `MockComponent(Foo)`
+  - Angular/PrimeNG/custom **directives** (including `RouterLink`, `RouterLinkActive`, `RouterOutlet`) → `MockDirective(Foo)`
+  - **Modules** (`FormsModule`, `ReactiveFormsModule`, `TableModule`, etc.) → `MockModule(Foo)`
+  - **Pipes** → `MockPipe(Foo)`
+  - Because mocked sub-components carry no real DI tree, transitive service dependencies are never needed in `providers`
+  - **Exception — aliased signal inputs**: if a third-party directive uses `input(null, { alias: 'foo' })` (e.g. `Highlight` from `ngx-highlightjs`), `MockDirective` cannot replicate the alias and Angular will throw `NG0303`. In this case, declare a minimal inline stub in the spec file and use it instead:
+    ```typescript
+    @Directive({ selector: '[highlight]', standalone: true })
+    class HighlightStub { @Input() highlight!: string | null; }
+    ```
+- **GIVEN naming** — mock object instances: `mock<Name>` (e.g. `mockAsset`); stub return values: `stubbed<Name>` (e.g. `stubbedAssets`)
+- **THEN naming** — resolved/actual values: `expected<Name>` (e.g. `const expectedAssets = await result`)
+- **HTTP success AND error** — for every HTTP-backed method write both a success case and an error case; in success tests assert the result: `expect(expectedResult).toEqual(stubbedResult)`
+- **HTTP calls** — use `lastValueFrom()` with `async/await` and `HttpTestingController`; always call `httpController.verify()` in `afterEach`; match requests by URL suffix (`req.url.endsWith(...)`) or `req.urlWithParams` for query params
+- **No `vi.mock`** — the Angular unit-test runner does not support `vi.mock` for relative imports; use TestBed providers for all mocking
+- **Form controls** — access form control values via `form.controls.<name>.value`, not `form.get("")?.value`
+- **Max 1 nesting level** — at most one level of nested `describe` inside the outer `describe` of the class; do not add a second layer of `describe` blocks
+- **BDD structure** — use `describe` blocks for grouping and `it` descriptions that read as sentences from the subject's perspective
+
+### Example — Service
+
+```typescript
+vi.mock("../../../environments/environment", () => ({
+  environment: { apiUrl: "http://test-api" }
+}));
+
+describe("MyService", () => {
+  let testSubject: MyService;
+  let httpController: HttpTestingController;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      providers: [MyService, MockProvider(SomeDep), provideHttpClient(), provideHttpClientTesting()]
+    });
+    testSubject = TestBed.inject(MyService);
+    httpController = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => httpController.verify());
+
+  describe("getItems", () => {
+    it("should return items on success", async () => {
+      // GIVEN
+      const stubbedItems = [buildMockItem()];
+
+      // WHEN
+      const result = lastValueFrom(testSubject.getItems());
+      httpController.expectOne(req => req.method === "GET" && req.url.endsWith("/items")).flush(stubbedItems);
+
+      // THEN
+      const expectedItems = await result;
+      expect(expectedItems).toEqual(stubbedItems);
+    });
+
+    it("should throw on error", async () => {
+      // WHEN
+      const result = lastValueFrom(testSubject.getItems());
+      httpController.expectOne(req => req.method === "GET").flush(null, { status: 500, statusText: "Server Error" });
+
+      // THEN
+      await expect(result).rejects.toThrow();
+    });
+  });
+});
+```
+
+### Example — Component
+
+Suppose `MyComponent` is declared as:
+
+```typescript
+@Component({
+  standalone: true,
+  imports: [SomeChildComponent, RouterLink, FormsModule, SomePipe]
+  // ...
+})
+export class MyComponent {
+  private readonly myService = inject(MyService);
+  // ...
+}
+```
+
+The spec mirrors the `imports` array, replacing every entry (except `MyComponent` itself) with its ng-mocks wrapper:
+
+```typescript
+describe("MyComponent", () => {
+  let fixture: ComponentFixture<MyComponent>;
+  let testSubject: MyComponent;
+  let mockMyService: MyService;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      imports: [
+        MyComponent,
+        MockComponent(SomeChildComponent),
+        MockDirective(RouterLink),
+        MockModule(FormsModule),
+        MockPipe(SomePipe)
+      ],
+      providers: [MockProvider(MyService, { getData: vi.fn().mockReturnValue(of([])) })]
+    });
+    fixture = TestBed.createComponent(MyComponent);
+    testSubject = fixture.componentInstance;
+    mockMyService = TestBed.inject(MyService);
+    fixture.detectChanges();
+  });
+
+  describe("someMethod", () => {
+    it("should update state on success", () => {
+      // GIVEN
+      const stubbedData = [buildMockItem()];
+      vi.spyOn(mockMyService, "getData").mockReturnValue(of(stubbedData));
+
+      // WHEN
+      testSubject.someMethod();
+      fixture.detectChanges();
+
+      // THEN
+      expect(testSubject.items()).toHaveLength(stubbedData.length);
+    });
+  });
+});
+```
+
 ## Branching Rules
 
 **Never commit directly to `main`.** When starting any edit and the current branch is `main`, always create a new branch first:

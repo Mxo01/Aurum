@@ -49,29 +49,27 @@ export class NetworthChartComponent {
 
 	yearChanged = output<number | null>();
 
-	protected readonly percentageView = signal<boolean>(true);
-	protected readonly selectedDate = signal<Date | null>(null);
-	protected readonly minDate = computed(() => {
+	readonly percentageView = signal<boolean>(true);
+	readonly selectedDate = signal<Date | null>(null);
+	readonly minDate = computed(() => {
 		const year = this.minYear();
 		return new Date(year ?? new Date().getFullYear(), 0, 1);
 	});
-	protected readonly maxDate = signal<Date>(new Date());
-	protected readonly isSpecificYearSelected = computed(() => this.selectedDate() !== null);
-	protected readonly totalAmount = computed(() => this.summary()?.totalGrossAssets ?? 0);
-	protected readonly variation = computed(
-		() => this.summary()?.assetVariations?.[this.selectedPeriod()]
-	);
-	protected readonly hasEnoughDataToDisplayChart = computed(() =>
+	readonly maxDate = signal<Date>(new Date());
+	readonly isSpecificYearSelected = computed(() => this.selectedDate() !== null);
+	readonly totalAmount = computed(() => this.summary()?.totalGrossAssets ?? 0);
+	readonly variation = computed(() => this.summary()?.assetVariations?.[this.selectedPeriod()]);
+	readonly hasEnoughDataToDisplayChart = computed(() =>
 		this.data()?.totalAssetsOnly?.some(value => value !== 0)
 	);
-	protected readonly timePeriods = signal<SelectItem<keyof Variation>[]>([
+	readonly timePeriods = signal<SelectItem<keyof Variation>[]>([
 		{ label: "1M", value: "oneMonth" },
 		{ label: "6M", value: "sixMonths" },
 		{ label: "1Y", value: "oneYear" }
 	]);
-	protected readonly selectedPeriod = signal<keyof Variation>("oneMonth");
-	protected readonly chartData = computed(() => mapDataIntoNetworthChartData(this.data()));
-	protected readonly chartOptions = computed(() =>
+	readonly selectedPeriod = signal<keyof Variation>("oneMonth");
+	readonly chartData = computed(() => mapDataIntoNetworthChartData(this.data()));
+	readonly chartOptions = computed(() =>
 		getNetworthChartOptions(
 			getCurrencySymbol(this.currency()),
 			this.themeService.isDarkMode(),
@@ -79,7 +77,7 @@ export class NetworthChartComponent {
 		)
 	);
 
-	protected onDateChange() {
+	onDateChange() {
 		const date = this.selectedDate();
 		const year = date ? date.getFullYear() : null;
 		this.yearChanged.emit(year);
