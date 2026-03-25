@@ -56,6 +56,13 @@ public class AssetFacade {
 		validationService.validate(dto);
 		Asset assetDetails = mapper.toEntity(dto, userId);
 		Asset updated = assetService.update(id, assetDetails, userId);
+		return mapper.toDto(updated);
+	}
+
+	public AssetDTO updateAssetLight(UUID id, UpdateAssetDTO dto, UUID userId) {
+		validationService.validate(dto);
+		Asset assetDetails = mapper.toEntity(dto, userId);
+		Asset updated = assetService.update(id, assetDetails, userId);
 		List<Snapshot> latestTwo = snapshotRepository.findTop2ByAssetIdOrderByReferenceDateDesc(id);
 		return mapper.toDtoLight(updated, latestTwo);
 	}

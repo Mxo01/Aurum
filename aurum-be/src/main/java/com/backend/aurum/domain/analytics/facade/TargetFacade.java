@@ -48,6 +48,32 @@ public class TargetFacade {
 		return mapper.toDto(updated, netWorth);
 	}
 
+	public List<TargetDTO> bulkCreateTargets(List<CreateTargetDTO> dtos, UUID userId) {
+		BigDecimal netWorth = analyticsService.getNetWorth(userId);
+		return dtos
+			.stream()
+			.map(dto -> {
+				validationService.validate(dto);
+				Target target = mapper.toEntity(dto, userId);
+				Target saved = targetService.save(target, netWorth);
+				return mapper.toDto(saved, netWorth);
+			})
+			.toList();
+	}
+
+	public List<TargetDTO> bulkUpdateTargets(List<UpdateTargetDTO> dtos, UUID userId) {
+		BigDecimal netWorth = analyticsService.getNetWorth(userId);
+		return dtos
+			.stream()
+			.map(dto -> {
+				validationService.validate(dto);
+				Target targetDetails = mapper.toEntity(dto, userId);
+				Target updated = targetService.update(dto.getId(), targetDetails, netWorth);
+				return mapper.toDto(updated, netWorth);
+			})
+			.toList();
+	}
+
 	public void deleteTarget(UUID id) {
 		targetService.delete(id);
 	}

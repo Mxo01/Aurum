@@ -73,7 +73,7 @@ public class AssetController {
 			id,
 			userId
 		);
-		AssetDTO result = assetFacade.updateAsset(id, dto, userId);
+		AssetDTO result = assetFacade.updateAssetLight(id, dto, userId);
 		log.info("AssetController#updateAsset - Asset updated successfully: assetId={}", id);
 		return ResponseEntity.ok(result);
 	}

@@ -143,10 +143,7 @@ public class AurumMcpTools {
 	public List<TargetDTO> bulkAddTargets(
 		@ToolParam(description = "List of targets to create") List<CreateTargetDTO> targets
 	) {
-		return targets
-			.stream()
-			.map(dto -> targetFacade.createTarget(dto, currentUser().getId()))
-			.toList();
+		return targetFacade.bulkCreateTargets(targets, currentUser().getId());
 	}
 
 	@Tool(description = "Update an existing financial target/goal")
@@ -162,10 +159,7 @@ public class AurumMcpTools {
 			UpdateTargetDTO
 		> targets
 	) {
-		return targets
-			.stream()
-			.map(dto -> targetFacade.updateTarget(dto.getId(), dto, currentUser().getId()))
-			.toList();
+		return targetFacade.bulkUpdateTargets(targets, currentUser().getId());
 	}
 
 	@Tool(description = "Get all asset categories (system-wide and user-defined)")
