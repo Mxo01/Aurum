@@ -1,9 +1,13 @@
 import { ComponentFixture, TestBed } from "@angular/core/testing";
-import { MockProvider } from "ng-mocks";
+import { MockComponent, MockDirective, MockProvider } from "ng-mocks";
+import { provideRouter, RouterLink } from "@angular/router";
 import { faker } from "@faker-js/faker";
 import { of } from "rxjs";
+import { Button } from "primeng/button";
 import { ConfirmationService } from "primeng/api";
 import { CategoriesComponent } from "./categories.component";
+import { CategoryFormComponent } from "../category-form/category-form.component";
+import { CategoryItemComponent } from "./category-item/category-item.component";
 import { AssetService } from "../../asset.service";
 import { NavigationService } from "../../../../shared/services/navigation/navigation.service";
 import { AssetCategory, AssetType } from "../../model/asset.model";
@@ -21,11 +25,17 @@ describe("CategoriesComponent", () => {
 	let fixture: ComponentFixture<CategoriesComponent>;
 	let testSubject: CategoriesComponent;
 	let mockAssetService: AssetService;
+	let mockConfirmationService: ConfirmationService;
 
 	beforeEach(() => {
-		TestBed.overrideComponent(CategoriesComponent, { set: { template: "", imports: [] } });
 		TestBed.configureTestingModule({
-			imports: [CategoriesComponent],
+			imports: [
+				CategoriesComponent,
+				MockComponent(Button),
+				MockDirective(RouterLink),
+				MockComponent(CategoryFormComponent),
+				MockComponent(CategoryItemComponent)
+			],
 			providers: [
 				MockProvider(AssetService, {
 					getAssetCategories: vi.fn().mockReturnValue(of([])),
@@ -33,12 +43,14 @@ describe("CategoriesComponent", () => {
 					deleteCategory: vi.fn().mockReturnValue(of({ categories: [], assets: [] }))
 				}),
 				MockProvider(NavigationService, { previousRoute: "/assets" }),
-				MockProvider(ConfirmationService)
+				MockProvider(ConfirmationService),
+				provideRouter([])
 			]
 		});
 		fixture = TestBed.createComponent(CategoriesComponent);
 		testSubject = fixture.componentInstance;
 		mockAssetService = TestBed.inject(AssetService);
+		mockConfirmationService = TestBed.inject(ConfirmationService);
 		fixture.detectChanges();
 	});
 
@@ -47,13 +59,12 @@ describe("CategoriesComponent", () => {
 			// GIVEN
 			const stubbedCategories = [buildMockCategory(), buildMockCategory()];
 			vi.spyOn(mockAssetService, "getAssetCategories").mockReturnValue(of(stubbedCategories));
-			fixture = TestBed.createComponent(CategoriesComponent);
 
 			// WHEN
-			fixture.detectChanges();
+			testSubject.ngOnInit();
 
 			// THEN
-			expect(fixture.componentInstance.categories()).toHaveLength(2);
+			expect(testSubject.categories()).toHaveLength(2);
 		});
 	});
 
@@ -65,14 +76,13 @@ describe("CategoriesComponent", () => {
 			vi.spyOn(mockAssetService, "getAssetCategories").mockReturnValue(
 				of([mockDefault, mockCustom])
 			);
-			fixture = TestBed.createComponent(CategoriesComponent);
 
 			// WHEN
-			fixture.detectChanges();
+			testSubject.ngOnInit();
 
 			// THEN
-			expect(fixture.componentInstance.defaultCategories()).toHaveLength(1);
-			expect(fixture.componentInstance.customCategories()).toHaveLength(1);
+			expect(testSubject.defaultCategories()).toHaveLength(1);
+			expect(testSubject.customCategories()).toHaveLength(1);
 		});
 	});
 
@@ -102,19 +112,20 @@ describe("CategoriesComponent", () => {
 	});
 
 	describe("saveCategory", () => {
-		it("should call assetService.saveCategory and update the categories list on success", () => {
+		it("should call assetService.saveCategory with the category and update the categories list on success", () => {
 			// GIVEN
 			const mockCategory = buildMockCategory();
 			const stubbedCategories = [mockCategory];
-			vi.spyOn(mockAssetService, "saveCategory").mockReturnValue(
-				of({ categories: stubbedCategories, assets: [] })
-			);
+			const saveCategory = vi
+				.spyOn(mockAssetService, "saveCategory")
+				.mockReturnValue(of({ categories: stubbedCategories, assets: [] }));
 
 			// WHEN
 			testSubject.saveCategory(mockCategory);
 			fixture.detectChanges();
 
 			// THEN
+			expect(saveCategory).toHaveBeenCalledWith(mockCategory);
 			expect(testSubject.categories()).toHaveLength(1);
 			expect(testSubject.isDialogVisible()).toBe(false);
 		});
@@ -125,7 +136,6 @@ describe("CategoriesComponent", () => {
 			// GIVEN
 			const mockCategory = buildMockCategory();
 			const stubbedCategories: AssetCategory[] = [];
-			const mockConfirmationService = TestBed.inject(ConfirmationService);
 			vi.spyOn(mockConfirmationService, "confirm").mockImplementation(({ accept }) => accept?.());
 			vi.spyOn(mockAssetService, "deleteCategory").mockReturnValue(
 				of({ categories: stubbedCategories, assets: [] })
@@ -137,6 +147,18 @@ describe("CategoriesComponent", () => {
 
 			// THEN
 			expect(testSubject.categories()).toHaveLength(0);
+		});
+
+		it("should not call assetService.deleteCategory when id is empty", () => {
+			// GIVEN
+			vi.spyOn(mockConfirmationService, "confirm").mockImplementation(({ accept }) => accept?.());
+			const deleteCategory = vi.spyOn(mockAssetService, "deleteCategory");
+
+			// WHEN
+			testSubject.deleteCategory({ target: document.body as EventTarget, id: "" });
+
+			// THEN
+			expect(deleteCategory).not.toHaveBeenCalled();
 		});
 	});
 });

@@ -117,9 +117,19 @@ Assets have `LiabilityType` (MANUAL/AUTOMATIC) and `PaymentFrequency` (WEEKLY/MO
 - **Mock everything** — all dependencies must be mocked; never rely on real implementations
 - **No `MockBuilder`** — use `TestBed.configureTestingModule` with `MockProvider`, `MockComponent`, `MockDirective`, `MockModule` instead
 - **No `protected` / no `*Internals`** — never use `protected` on component fields/methods accessed in tests; never cast with `as unknown as XxxInternals` to reach members; access all members directly via `testSubject`
-- **Single `beforeEach`** — one `beforeEach` per describe block containing all `TestBed.overrideComponent`, `configureTestingModule`, `TestBed.inject`, and fixture/testSubject assignments
+- **Single `beforeEach`** — one `beforeEach` per describe block containing all `configureTestingModule`, `TestBed.inject`, and fixture/testSubject assignments
 - **`TestBed.inject` once in `beforeEach`** — inject services into describe-scoped variables inside `beforeEach`; do not inject inside individual `it` blocks (exception: when a fresh instance is needed per test, e.g. constructor-time state)
-- **Component isolation** — always call `TestBed.overrideComponent(Comp, { set: { template: "", imports: [] } })` before `configureTestingModule` to blank both template and imports, fully isolating component logic from template compilation
+- **Component isolation via mocked imports** — never use `NO_ERRORS_SCHEMA` and never use `TestBed.overrideComponent`; instead, mirror the component's own `imports` array in `configureTestingModule` by replacing every entry except the component under test with the matching ng-mocks wrapper:
+  - Angular/PrimeNG/custom **components** → `MockComponent(Foo)`
+  - Angular/PrimeNG/custom **directives** (including `RouterLink`, `RouterLinkActive`, `RouterOutlet`) → `MockDirective(Foo)`
+  - **Modules** (`FormsModule`, `ReactiveFormsModule`, `TableModule`, etc.) → `MockModule(Foo)`
+  - **Pipes** → `MockPipe(Foo)`
+  - Because mocked sub-components carry no real DI tree, transitive service dependencies are never needed in `providers`
+  - **Exception — aliased signal inputs**: if a third-party directive uses `input(null, { alias: 'foo' })` (e.g. `Highlight` from `ngx-highlightjs`), `MockDirective` cannot replicate the alias and Angular will throw `NG0303`. In this case, declare a minimal inline stub in the spec file and use it instead:
+    ```typescript
+    @Directive({ selector: '[highlight]', standalone: true })
+    class HighlightStub { @Input() highlight!: string | null; }
+    ```
 - **GIVEN naming** — mock object instances: `mock<Name>` (e.g. `mockAsset`); stub return values: `stubbed<Name>` (e.g. `stubbedAssets`)
 - **THEN naming** — resolved/actual values: `expected<Name>` (e.g. `const expectedAssets = await result`)
 - **HTTP success AND error** — for every HTTP-backed method write both a success case and an error case; in success tests assert the result: `expect(expectedResult).toEqual(stubbedResult)`
@@ -178,6 +188,22 @@ describe("MyService", () => {
 
 ### Example — Component
 
+Suppose `MyComponent` is declared as:
+
+```typescript
+@Component({
+  standalone: true,
+  imports: [SomeChildComponent, RouterLink, FormsModule, SomePipe]
+  // ...
+})
+export class MyComponent {
+  private readonly myService = inject(MyService);
+  // ...
+}
+```
+
+The spec mirrors the `imports` array, replacing every entry (except `MyComponent` itself) with its ng-mocks wrapper:
+
 ```typescript
 describe("MyComponent", () => {
   let fixture: ComponentFixture<MyComponent>;
@@ -185,9 +211,14 @@ describe("MyComponent", () => {
   let mockMyService: MyService;
 
   beforeEach(() => {
-    TestBed.overrideComponent(MyComponent, { set: { template: "", imports: [] } });
     TestBed.configureTestingModule({
-      imports: [MyComponent],
+      imports: [
+        MyComponent,
+        MockComponent(SomeChildComponent),
+        MockDirective(RouterLink),
+        MockModule(FormsModule),
+        MockPipe(SomePipe)
+      ],
       providers: [MockProvider(MyService, { getData: vi.fn().mockReturnValue(of([])) })]
     });
     fixture = TestBed.createComponent(MyComponent);

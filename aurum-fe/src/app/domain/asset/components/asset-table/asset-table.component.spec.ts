@@ -1,5 +1,12 @@
 import { ComponentFixture, TestBed } from "@angular/core/testing";
 import { faker } from "@faker-js/faker";
+import { MockComponent, MockModule, MockPipe } from "ng-mocks";
+import { CurrencyPipe, DecimalPipe } from "@angular/common";
+import { TableModule } from "primeng/table";
+import { Tag } from "primeng/tag";
+import { Badge } from "primeng/badge";
+import { Button } from "primeng/button";
+import { Menu } from "primeng/menu";
 import { AssetTableComponent } from "./asset-table.component";
 import { Asset, AssetType } from "../../model/asset.model";
 import { Currency } from "../../../profile/model/currency.model";
@@ -24,8 +31,18 @@ describe("AssetTableComponent", () => {
 	let testSubject: AssetTableComponent;
 
 	beforeEach(() => {
-		TestBed.overrideComponent(AssetTableComponent, { set: { template: "", imports: [] } });
-		TestBed.configureTestingModule({ imports: [AssetTableComponent] });
+		TestBed.configureTestingModule({
+			imports: [
+				AssetTableComponent,
+				MockModule(TableModule),
+				MockComponent(Tag),
+				MockComponent(Badge),
+				MockComponent(Button),
+				MockPipe(CurrencyPipe),
+				MockPipe(DecimalPipe),
+				MockComponent(Menu)
+			]
+		});
 		fixture = TestBed.createComponent(AssetTableComponent);
 		testSubject = fixture.componentInstance;
 		fixture.componentRef.setInput("assets", []);

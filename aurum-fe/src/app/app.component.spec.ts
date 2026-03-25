@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from "@angular/core/testing";
 import { WritableSignal, signal } from "@angular/core";
 import { MockComponent, MockDirective, MockProvider } from "ng-mocks";
 import { faker } from "@faker-js/faker";
-import { of, EMPTY } from "rxjs";
+import { BehaviorSubject, of } from "rxjs";
 import { AuthService } from "@auth0/auth0-angular";
 import { DOCUMENT } from "@angular/common";
 import { App } from "./app.component";
@@ -38,10 +38,12 @@ describe("App", () => {
 	let doc: Document;
 	let mockProfile: WritableSignal<UserProfile | undefined>;
 	let mockIsDarkMode: WritableSignal<boolean>;
+	let userSubject: BehaviorSubject<{ picture?: string } | null>;
 
 	beforeEach(() => {
 		mockProfile = signal<UserProfile | undefined>(undefined);
 		mockIsDarkMode = signal<boolean>(false);
+		userSubject = new BehaviorSubject<{ picture?: string } | null>(null);
 
 		TestBed.configureTestingModule({
 			imports: [
@@ -58,7 +60,7 @@ describe("App", () => {
 				MockComponent(GdprConsentComponent)
 			],
 			providers: [
-				MockProvider(AuthService, { user$: EMPTY, logout: vi.fn() }),
+				MockProvider(AuthService, { user$: userSubject.asObservable(), logout: vi.fn() }),
 				MockProvider(ThemeService, { isDarkMode: mockIsDarkMode }),
 				MockProvider(ProfileService, {
 					profile: mockProfile,
@@ -125,6 +127,19 @@ describe("App", () => {
 
 			// THEN
 			expect(testSubject.avatarUrl()).toBeFalsy();
+		});
+
+		it("should return the auth user picture when profile has no custom picture but user has one", () => {
+			// GIVEN
+			const stubbedPictureUrl = "http://example.com/user-pic.jpg";
+			mockProfile.set(undefined);
+
+			// WHEN
+			userSubject.next({ picture: stubbedPictureUrl });
+			fixture.detectChanges();
+
+			// THEN
+			expect(testSubject.avatarUrl()).toBe(stubbedPictureUrl);
 		});
 	});
 

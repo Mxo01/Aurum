@@ -1,5 +1,14 @@
 import { ComponentFixture, TestBed } from "@angular/core/testing";
 import { faker } from "@faker-js/faker";
+import { MockComponent, MockDirective, MockModule } from "ng-mocks";
+import { CommonModule } from "@angular/common";
+import { ReactiveFormsModule } from "@angular/forms";
+import { InputText } from "primeng/inputtext";
+import { InputNumber } from "primeng/inputnumber";
+import { DatePicker } from "primeng/datepicker";
+import { Button } from "primeng/button";
+import { Dialog } from "primeng/dialog";
+import { SelectButton } from "primeng/selectbutton";
 import { TargetFormComponent } from "./target-form.component";
 import { Target, TargetType } from "../../model/target.model";
 import { Currency } from "../../../profile/model/currency.model";
@@ -19,8 +28,19 @@ describe("TargetFormComponent", () => {
 	let testSubject: TargetFormComponent;
 
 	beforeEach(() => {
-		TestBed.overrideComponent(TargetFormComponent, { set: { template: "", imports: [] } });
-		TestBed.configureTestingModule({ imports: [TargetFormComponent] });
+		TestBed.configureTestingModule({
+			imports: [
+				TargetFormComponent,
+				MockModule(CommonModule),
+				MockModule(ReactiveFormsModule),
+				MockDirective(InputText),
+				MockComponent(InputNumber),
+				MockComponent(DatePicker),
+				MockComponent(Button),
+				MockComponent(Dialog),
+				MockComponent(SelectButton)
+			]
+		});
 		fixture = TestBed.createComponent(TargetFormComponent);
 		testSubject = fixture.componentInstance;
 		fixture.componentRef.setInput("isVisible", true);
@@ -30,32 +50,41 @@ describe("TargetFormComponent", () => {
 	describe("effect — selectedTarget patching", () => {
 		it("should patch the form with the selected target values when a target is provided", () => {
 			// GIVEN
-			const mockTarget = buildMockTarget({ type: TargetType.MANUAL });
+			const mockTarget = buildMockTarget({ type: TargetType.MANUAL, currentAmount: 500 });
 			fixture.componentRef.setInput("selectedTarget", mockTarget);
 
 			// WHEN
-			TestBed.flushEffects();
 			fixture.detectChanges();
 
 			// THEN
-			expect(testSubject.targetForm.controls["name"].value).toBe(mockTarget.name);
-			expect(testSubject.targetForm.controls["targetAmount"].value).toBe(mockTarget.targetAmount);
+			expect(testSubject.targetForm.controls.name.value).toBe(mockTarget.name);
+			expect(testSubject.targetForm.controls.targetAmount.value).toBe(mockTarget.targetAmount);
+		});
+
+		it("should default currentAmount to 0 when the target has a falsy currentAmount", () => {
+			// GIVEN
+			const mockTarget = buildMockTarget({ currentAmount: 0 });
+			fixture.componentRef.setInput("selectedTarget", mockTarget);
+
+			// WHEN
+			fixture.detectChanges();
+
+			// THEN
+			expect(testSubject.targetForm.controls.currentAmount.value).toBe(0);
 		});
 
 		it("should reset the form when selectedTarget is null", () => {
 			// GIVEN
 			const mockTarget = buildMockTarget();
 			fixture.componentRef.setInput("selectedTarget", mockTarget);
-			TestBed.flushEffects();
 
 			// WHEN
 			fixture.componentRef.setInput("selectedTarget", null);
-			TestBed.flushEffects();
 			fixture.detectChanges();
 
 			// THEN
-			expect(testSubject.targetForm.controls["name"].value).toBe("");
-			expect(testSubject.targetForm.controls["targetAmount"].value).toBeNull();
+			expect(testSubject.targetForm.controls.name.value).toBe("");
+			expect(testSubject.targetForm.controls.targetAmount.value).toBeNull();
 		});
 
 		it("should disable the type control when editing an existing target", () => {
@@ -64,11 +93,10 @@ describe("TargetFormComponent", () => {
 			fixture.componentRef.setInput("selectedTarget", mockTarget);
 
 			// WHEN
-			TestBed.flushEffects();
 			fixture.detectChanges();
 
 			// THEN
-			expect(testSubject.targetForm.controls["type"].disabled).toBe(true);
+			expect(testSubject.targetForm.controls.type.disabled).toBe(true);
 		});
 	});
 
@@ -76,7 +104,6 @@ describe("TargetFormComponent", () => {
 		it("should emit the save output with the correctly formatted target", () => {
 			// GIVEN
 			fixture.componentRef.setInput("selectedTarget", null);
-			TestBed.flushEffects();
 			fixture.detectChanges();
 			testSubject.targetForm.setValue({
 				name: "Retirement Fund",
@@ -96,12 +123,13 @@ describe("TargetFormComponent", () => {
 			expect(emitted[0].name).toBe("Retirement Fund");
 			expect(emitted[0].targetAmount).toBe(50000);
 			expect(emitted[0].deadline).toBe("2030-01-01");
+			expect(testSubject.isVisible()).toBe(false);
+			expect(testSubject.selectedTarget()).toBeNull();
 		});
 
 		it("should set currentAmount to undefined for NET_WORTH type targets", () => {
 			// GIVEN
 			fixture.componentRef.setInput("selectedTarget", null);
-			TestBed.flushEffects();
 			fixture.detectChanges();
 			testSubject.targetForm.setValue({
 				name: "Net Worth Goal",
@@ -123,7 +151,6 @@ describe("TargetFormComponent", () => {
 		it("should not emit when the form is invalid", () => {
 			// GIVEN
 			fixture.componentRef.setInput("selectedTarget", null);
-			TestBed.flushEffects();
 			fixture.detectChanges();
 			testSubject.targetForm.patchValue({ name: "", targetAmount: null });
 			const emitted: Target[] = [];
@@ -142,7 +169,6 @@ describe("TargetFormComponent", () => {
 			// GIVEN
 			const mockTarget = buildMockTarget();
 			fixture.componentRef.setInput("selectedTarget", mockTarget);
-			TestBed.flushEffects();
 			fixture.detectChanges();
 
 			// WHEN
@@ -150,7 +176,7 @@ describe("TargetFormComponent", () => {
 			fixture.detectChanges();
 
 			// THEN
-			expect(testSubject.targetForm.controls["name"].value).toBe("");
+			expect(testSubject.targetForm.controls.name.value).toBe("");
 			expect(testSubject.selectedTarget()).toBeNull();
 		});
 	});

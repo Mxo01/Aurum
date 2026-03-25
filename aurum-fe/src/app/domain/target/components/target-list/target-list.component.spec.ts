@@ -1,5 +1,12 @@
 import { ComponentFixture, TestBed } from "@angular/core/testing";
 import { faker } from "@faker-js/faker";
+import { MockComponent, MockModule, MockPipe } from "ng-mocks";
+import { CommonModule, CurrencyPipe, DecimalPipe } from "@angular/common";
+import { TableModule } from "primeng/table";
+import { Tag } from "primeng/tag";
+import { Button } from "primeng/button";
+import { Dialog } from "primeng/dialog";
+import { ProgressBar } from "primeng/progressbar";
 import { TargetListComponent } from "./target-list.component";
 import { Target, TargetStatus, TargetType } from "../../model/target.model";
 import { Currency } from "../../../profile/model/currency.model";
@@ -18,8 +25,19 @@ describe("TargetListComponent", () => {
 	let testSubject: TargetListComponent;
 
 	beforeEach(() => {
-		TestBed.overrideComponent(TargetListComponent, { set: { template: "", imports: [] } });
-		TestBed.configureTestingModule({ imports: [TargetListComponent] });
+		TestBed.configureTestingModule({
+			imports: [
+				TargetListComponent,
+				MockModule(CommonModule),
+				MockModule(TableModule),
+				MockComponent(Tag),
+				MockComponent(Button),
+				MockComponent(Dialog),
+				MockComponent(ProgressBar),
+				MockPipe(CurrencyPipe),
+				MockPipe(DecimalPipe)
+			]
+		});
 		fixture = TestBed.createComponent(TargetListComponent);
 		testSubject = fixture.componentInstance;
 		fixture.componentRef.setInput("isVisible", true);

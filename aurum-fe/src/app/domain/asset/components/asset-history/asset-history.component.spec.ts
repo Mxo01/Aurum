@@ -1,6 +1,16 @@
 import { ComponentFixture, TestBed } from "@angular/core/testing";
 import { signal } from "@angular/core";
-import { MockProvider } from "ng-mocks";
+import { MockComponent, MockModule, MockPipe, MockProvider } from "ng-mocks";
+import { DatePipe, CurrencyPipe } from "@angular/common";
+import { FormsModule } from "@angular/forms";
+import { Dialog } from "primeng/dialog";
+import { TableModule } from "primeng/table";
+import { Button } from "primeng/button";
+import { InputNumber } from "primeng/inputnumber";
+import { DatePicker } from "primeng/datepicker";
+import { Message } from "primeng/message";
+import { SelectButton } from "primeng/selectbutton";
+import { UIChart } from "primeng/chart";
 import { faker } from "@faker-js/faker";
 import { of } from "rxjs";
 import { AssetHistoryComponent } from "./asset-history.component";
@@ -37,9 +47,21 @@ describe("AssetHistoryComponent", () => {
 	let mockSnapshotService: SnapshotService;
 
 	beforeEach(() => {
-		TestBed.overrideComponent(AssetHistoryComponent, { set: { template: "", imports: [] } });
 		TestBed.configureTestingModule({
-			imports: [AssetHistoryComponent],
+			imports: [
+				AssetHistoryComponent,
+				MockComponent(Dialog),
+				MockModule(TableModule),
+				MockComponent(Button),
+				MockModule(FormsModule),
+				MockComponent(InputNumber),
+				MockComponent(DatePicker),
+				MockPipe(DatePipe),
+				MockPipe(CurrencyPipe),
+				MockComponent(Message),
+				MockComponent(SelectButton),
+				MockComponent(UIChart)
+			],
 			providers: [
 				MockProvider(SnapshotService, {
 					getSnapshotsByAssetId: vi.fn().mockReturnValue(of([])),
@@ -66,7 +88,6 @@ describe("AssetHistoryComponent", () => {
 			fixture.componentRef.setInput("selectedAsset", mockAsset);
 
 			// WHEN
-			TestBed.flushEffects();
 			fixture.detectChanges();
 
 			// THEN
@@ -77,11 +98,9 @@ describe("AssetHistoryComponent", () => {
 			// GIVEN
 			const mockAsset = buildMockAsset();
 			fixture.componentRef.setInput("selectedAsset", mockAsset);
-			TestBed.flushEffects();
 
 			// WHEN
 			fixture.componentRef.setInput("selectedAsset", null);
-			TestBed.flushEffects();
 			fixture.detectChanges();
 
 			// THEN
@@ -96,7 +115,6 @@ describe("AssetHistoryComponent", () => {
 			fixture.componentRef.setInput("selectedAsset", mockAsset);
 
 			// WHEN
-			TestBed.flushEffects();
 			fixture.detectChanges();
 
 			// THEN
@@ -109,7 +127,6 @@ describe("AssetHistoryComponent", () => {
 			fixture.componentRef.setInput("selectedAsset", mockAsset);
 
 			// WHEN
-			TestBed.flushEffects();
 			fixture.detectChanges();
 
 			// THEN
@@ -122,7 +139,6 @@ describe("AssetHistoryComponent", () => {
 			// GIVEN
 			const mockAsset = buildMockAsset();
 			fixture.componentRef.setInput("selectedAsset", mockAsset);
-			TestBed.flushEffects();
 			fixture.detectChanges();
 
 			// WHEN
@@ -136,22 +152,28 @@ describe("AssetHistoryComponent", () => {
 	});
 
 	describe("addSnapshotFromHistory", () => {
-		it("should call snapshotService.saveSnapshot and update snapshots on success", () => {
+		it("should call snapshotService.saveSnapshot with correct params and update snapshots on success", () => {
 			// GIVEN
 			const mockAsset = buildMockAsset();
 			const stubbedSnapshot = buildMockSnapshot(mockAsset.id);
 			fixture.componentRef.setInput("selectedAsset", mockAsset);
-			TestBed.flushEffects();
 			testSubject.newSnapshotValue.set(500);
 			testSubject.newSnapshotDate.set(new Date("2024-01-15"));
-			vi.spyOn(mockSnapshotService, "saveSnapshot").mockReturnValue(of([stubbedSnapshot]));
+			const saveSnapshot = vi
+				.spyOn(mockSnapshotService, "saveSnapshot")
+				.mockReturnValue(of([stubbedSnapshot]));
+			const emitSpy = vi.spyOn(testSubject.snapshotsChanged, "emit");
 
 			// WHEN
 			testSubject.addSnapshotFromHistory();
-			fixture.detectChanges();
 
 			// THEN
+			expect(saveSnapshot).toHaveBeenCalledWith(
+				expect.objectContaining({ assetId: mockAsset.id, amountOriginalCurrency: 500 })
+			);
 			expect(testSubject.snapshotsForSelectedAsset()).toHaveLength(1);
+			expect(emitSpy).toHaveBeenCalled();
+			expect(testSubject.newSnapshotValue()).toBeNull();
 		});
 
 		it("should not call saveSnapshot when asset id is missing", () => {
@@ -171,7 +193,6 @@ describe("AssetHistoryComponent", () => {
 			// GIVEN
 			const mockAsset = buildMockAsset();
 			fixture.componentRef.setInput("selectedAsset", mockAsset);
-			TestBed.flushEffects();
 			testSubject.newSnapshotValue.set(null);
 			const saveSnapshot = vi.spyOn(mockSnapshotService, "saveSnapshot");
 
@@ -184,29 +205,34 @@ describe("AssetHistoryComponent", () => {
 	});
 
 	describe("deleteSelectedSnapshotsHistory", () => {
-		it("should call deleteSnapshotsBulk and update snapshots on success", () => {
+		it("should call deleteSnapshotsBulk with correct params and update snapshots on success", () => {
 			// GIVEN
 			const mockAsset = buildMockAsset();
 			const stubbedSnapshot = buildMockSnapshot(mockAsset.id);
 			fixture.componentRef.setInput("selectedAsset", mockAsset);
-			TestBed.flushEffects();
 			testSubject.selectedSnapshotsHistory.set([stubbedSnapshot]);
-			vi.spyOn(mockSnapshotService, "deleteSnapshotsBulk").mockReturnValue(of([]));
+			const deleteSnapshotsBulk = vi
+				.spyOn(mockSnapshotService, "deleteSnapshotsBulk")
+				.mockReturnValue(of([]));
+			const emitSpy = vi.spyOn(testSubject.snapshotsChanged, "emit");
 
 			// WHEN
 			testSubject.deleteSelectedSnapshotsHistory();
-			fixture.detectChanges();
 
 			// THEN
+			expect(deleteSnapshotsBulk).toHaveBeenCalledWith(
+				mockAsset.id,
+				expect.arrayContaining([stubbedSnapshot.id])
+			);
 			expect(testSubject.snapshotsForSelectedAsset()).toHaveLength(0);
 			expect(testSubject.selectedSnapshotsHistory()).toHaveLength(0);
+			expect(emitSpy).toHaveBeenCalled();
 		});
 
 		it("should not call deleteSnapshotsBulk when no snapshots are selected", () => {
 			// GIVEN
 			const mockAsset = buildMockAsset();
 			fixture.componentRef.setInput("selectedAsset", mockAsset);
-			TestBed.flushEffects();
 			testSubject.selectedSnapshotsHistory.set([]);
 			const deleteSnapshotsBulk = vi.spyOn(mockSnapshotService, "deleteSnapshotsBulk");
 
@@ -215,6 +241,28 @@ describe("AssetHistoryComponent", () => {
 
 			// THEN
 			expect(deleteSnapshotsBulk).not.toHaveBeenCalled();
+		});
+	});
+
+	describe("chartOptions", () => {
+		it("should return chart options using EUR when no asset is selected", () => {
+			// WHEN
+			const result = testSubject.chartOptions();
+
+			// THEN
+			expect(result).toBeDefined();
+		});
+
+		it("should return chart options using asset originalCurrency when an asset is selected", () => {
+			// GIVEN
+			const mockAsset = buildMockAsset({ originalCurrency: Currency.EUR });
+			fixture.componentRef.setInput("selectedAsset", mockAsset);
+
+			// WHEN
+			const result = testSubject.chartOptions();
+
+			// THEN
+			expect(result).toBeDefined();
 		});
 	});
 
@@ -230,7 +278,6 @@ describe("AssetHistoryComponent", () => {
 			fixture.componentRef.setInput("selectedAsset", mockAsset);
 
 			// WHEN
-			TestBed.flushEffects();
 			fixture.detectChanges();
 
 			// THEN

@@ -1,6 +1,13 @@
 import { ComponentFixture, TestBed } from "@angular/core/testing";
 import { faker } from "@faker-js/faker";
+import { MockComponent, MockModule, MockPipe } from "ng-mocks";
+import { CommonModule, DecimalPipe } from "@angular/common";
+import { TableModule } from "primeng/table";
+import { ButtonModule } from "primeng/button";
+import { Card } from "primeng/card";
+import { Divider } from "primeng/divider";
 import { TopAssetsWidgetComponent } from "./top-assets-widget.component";
+import { AssetAllocationChartComponent } from "../asset-allocation-chart/asset-allocation-chart.component";
 import { Asset, AssetType } from "../../../asset/model/asset.model";
 import { Currency } from "../../../profile/model/currency.model";
 
@@ -24,8 +31,18 @@ describe("TopAssetsWidgetComponent", () => {
 	let testSubject: TopAssetsWidgetComponent;
 
 	beforeEach(() => {
-		TestBed.overrideComponent(TopAssetsWidgetComponent, { set: { template: "", imports: [] } });
-		TestBed.configureTestingModule({ imports: [TopAssetsWidgetComponent] });
+		TestBed.configureTestingModule({
+			imports: [
+				TopAssetsWidgetComponent,
+				MockModule(CommonModule),
+				MockModule(TableModule),
+				MockModule(ButtonModule),
+				MockComponent(Card),
+				MockPipe(DecimalPipe),
+				MockComponent(AssetAllocationChartComponent),
+				MockComponent(Divider)
+			]
+		});
 		fixture = TestBed.createComponent(TopAssetsWidgetComponent);
 		testSubject = fixture.componentInstance;
 		fixture.componentRef.setInput("assets", []);

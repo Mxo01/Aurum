@@ -1,5 +1,21 @@
 import { ComponentFixture, TestBed } from "@angular/core/testing";
-import { MockProvider } from "ng-mocks";
+import { Directive, Input } from "@angular/core";
+import { MockComponent, MockDirective, MockModule, MockPipe, MockProvider } from "ng-mocks";
+import { DatePipe } from "@angular/common";
+import { FormsModule } from "@angular/forms";
+import { Button } from "primeng/button";
+import { Dialog } from "primeng/dialog";
+import { Tooltip } from "primeng/tooltip";
+import { Message } from "primeng/message";
+import { SelectButton } from "primeng/selectbutton";
+import { provideHighlightOptions } from "ngx-highlightjs";
+
+// eslint-disable-next-line @angular-eslint/directive-selector
+@Directive({ selector: "[highlight]", standalone: true })
+class HighlightStub {
+	@Input() highlight!: string | null;
+	@Input() language!: string;
+}
 import { faker } from "@faker-js/faker";
 import { of, throwError } from "rxjs";
 import { McpSetupComponent } from "./mcp-setup.component";
@@ -21,6 +37,7 @@ describe("McpSetupComponent", () => {
 	let fixture: ComponentFixture<McpSetupComponent>;
 	let testSubject: McpSetupComponent;
 	let mockMcpService: McpService;
+	let mockMessageService: MessageService;
 
 	beforeEach(() => {
 		mockClipboard.writeText.mockReset();
@@ -29,9 +46,18 @@ describe("McpSetupComponent", () => {
 			writable: true,
 			value: { clipboard: mockClipboard }
 		});
-		TestBed.overrideComponent(McpSetupComponent, { set: { template: "", imports: [] } });
 		TestBed.configureTestingModule({
-			imports: [McpSetupComponent],
+			imports: [
+				McpSetupComponent,
+				MockComponent(Button),
+				MockComponent(Dialog),
+				MockPipe(DatePipe),
+				MockDirective(Tooltip),
+				MockComponent(Message),
+				HighlightStub,
+				MockComponent(SelectButton),
+				MockModule(FormsModule)
+			],
 			providers: [
 				MockProvider(McpService, {
 					getKeyMeta: vi.fn().mockReturnValue(of(null)),
@@ -39,12 +65,14 @@ describe("McpSetupComponent", () => {
 					revokeKey: vi.fn().mockReturnValue(of({})),
 					mcpSseUrl: "http://test-api/sse"
 				}),
-				MockProvider(MessageService, { add: vi.fn() })
+				MockProvider(MessageService, { add: vi.fn() }),
+				provideHighlightOptions({ fullLibraryLoader: () => Promise.resolve({}) })
 			]
 		});
 		fixture = TestBed.createComponent(McpSetupComponent);
 		testSubject = fixture.componentInstance;
 		mockMcpService = TestBed.inject(McpService);
+		mockMessageService = TestBed.inject(MessageService);
 		fixture.detectChanges();
 	});
 
@@ -53,13 +81,12 @@ describe("McpSetupComponent", () => {
 			// GIVEN
 			const mockMeta = buildMockKeyMeta();
 			vi.spyOn(mockMcpService, "getKeyMeta").mockReturnValue(of(mockMeta));
-			fixture = TestBed.createComponent(McpSetupComponent);
 
 			// WHEN
-			fixture.detectChanges();
+			testSubject.ngOnInit();
 
 			// THEN
-			expect(fixture.componentInstance.keyMeta()?.id).toBe(mockMeta.id);
+			expect(testSubject.keyMeta()).toEqual(mockMeta);
 		});
 
 		it("should set keyMeta to null when getKeyMeta returns an error", () => {
@@ -67,23 +94,23 @@ describe("McpSetupComponent", () => {
 			vi.spyOn(mockMcpService, "getKeyMeta").mockReturnValue(
 				throwError(() => new Error("not found"))
 			);
-			fixture = TestBed.createComponent(McpSetupComponent);
 
 			// WHEN
-			fixture.detectChanges();
+			testSubject.ngOnInit();
 
 			// THEN
-			expect(fixture.componentInstance.keyMeta()).toBeNull();
+			expect(testSubject.keyMeta()).toBeNull();
 		});
 	});
 
 	describe("generateKey", () => {
-		it("should set generatedKey and open instructions dialog on success", () => {
+		it("should set generatedKey, open instructions dialog, and update keyMeta on success", () => {
 			// GIVEN
+			const mockMeta = buildMockKeyMeta();
 			vi.spyOn(mockMcpService, "generateKey").mockReturnValue(
 				of({ key: "new-key" } as GeneratedKey)
 			);
-			vi.spyOn(mockMcpService, "getKeyMeta").mockReturnValue(of(buildMockKeyMeta()));
+			vi.spyOn(mockMcpService, "getKeyMeta").mockReturnValue(of(mockMeta));
 
 			// WHEN
 			testSubject.generateKey();
@@ -92,11 +119,12 @@ describe("McpSetupComponent", () => {
 			// THEN
 			expect(testSubject.generatedKey()).toBe("new-key");
 			expect(testSubject.isApiKeyInstructionsDialogVisible()).toBe(true);
+			expect(testSubject.keyMeta()).toEqual(mockMeta);
+			expect(testSubject.isGenerating()).toBe(false);
 		});
 
-		it("should add an error message when key generation fails", () => {
+		it("should add an error message and reset isGenerating when key generation fails", () => {
 			// GIVEN
-			const mockMessageService = TestBed.inject(MessageService);
 			vi.spyOn(mockMcpService, "generateKey").mockReturnValue(throwError(() => new Error("fail")));
 
 			// WHEN
@@ -107,11 +135,12 @@ describe("McpSetupComponent", () => {
 			expect(mockMessageService.add).toHaveBeenCalledWith(
 				expect.objectContaining({ severity: "error" })
 			);
+			expect(testSubject.isGenerating()).toBe(false);
 		});
 	});
 
 	describe("revokeKey", () => {
-		it("should clear keyMeta on successful revocation", () => {
+		it("should clear keyMeta, add a success message, and reset isRevoking on successful revocation", () => {
 			// GIVEN
 			vi.spyOn(mockMcpService, "revokeKey").mockReturnValue(of({}));
 			testSubject.keyMeta.set(buildMockKeyMeta());
@@ -122,11 +151,14 @@ describe("McpSetupComponent", () => {
 
 			// THEN
 			expect(testSubject.keyMeta()).toBeNull();
+			expect(mockMessageService.add).toHaveBeenCalledWith(
+				expect.objectContaining({ severity: "success" })
+			);
+			expect(testSubject.isRevoking()).toBe(false);
 		});
 
-		it("should add an error message when revocation fails", () => {
+		it("should add an error message and reset isRevoking when revocation fails", () => {
 			// GIVEN
-			const mockMessageService = TestBed.inject(MessageService);
 			vi.spyOn(mockMcpService, "revokeKey").mockReturnValue(throwError(() => new Error("fail")));
 
 			// WHEN
@@ -137,6 +169,7 @@ describe("McpSetupComponent", () => {
 			expect(mockMessageService.add).toHaveBeenCalledWith(
 				expect.objectContaining({ severity: "error" })
 			);
+			expect(testSubject.isRevoking()).toBe(false);
 		});
 	});
 
@@ -166,7 +199,6 @@ describe("McpSetupComponent", () => {
 
 		it("should add a success message after copy", async () => {
 			// GIVEN
-			const mockMessageService = TestBed.inject(MessageService);
 			testSubject.generatedKey.set("my-api-key");
 
 			// WHEN
@@ -181,7 +213,6 @@ describe("McpSetupComponent", () => {
 
 		it("should add an error message when copy fails", async () => {
 			// GIVEN
-			const mockMessageService = TestBed.inject(MessageService);
 			mockClipboard.writeText.mockRejectedValue(new Error("denied"));
 			testSubject.generatedKey.set("my-api-key");
 
@@ -211,9 +242,6 @@ describe("McpSetupComponent", () => {
 		});
 
 		it("should add a success message after config copy", async () => {
-			// GIVEN
-			const mockMessageService = TestBed.inject(MessageService);
-
 			// WHEN
 			testSubject.copyConfig();
 			await Promise.resolve();
@@ -226,7 +254,6 @@ describe("McpSetupComponent", () => {
 
 		it("should add an error message when config copy fails", async () => {
 			// GIVEN
-			const mockMessageService = TestBed.inject(MessageService);
 			mockClipboard.writeText.mockRejectedValue(new Error("denied"));
 
 			// WHEN
@@ -278,6 +305,30 @@ describe("McpSetupComponent", () => {
 			// THEN
 			expect(expectedConfig).not.toContain("mcpServers");
 			expect(expectedConfig).toContain("/sse");
+		});
+
+		it("should embed the generated key in the config URL when available", () => {
+			// GIVEN
+			testSubject.generatedKey.set("actual-key");
+			testSubject.isMcpDesktop.set(false);
+
+			// WHEN
+			const expectedConfig = testSubject.mcpConfig();
+
+			// THEN
+			expect(expectedConfig).toContain("actual-key");
+		});
+
+		it("should use the placeholder key in the config URL when no generated key is set", () => {
+			// GIVEN
+			testSubject.generatedKey.set(null);
+			testSubject.isMcpDesktop.set(false);
+
+			// WHEN
+			const expectedConfig = testSubject.mcpConfig();
+
+			// THEN
+			expect(expectedConfig).toContain("<your-api-key>");
 		});
 	});
 });

@@ -1,5 +1,15 @@
 import { ComponentFixture, TestBed } from "@angular/core/testing";
 import { faker } from "@faker-js/faker";
+import { MockComponent, MockDirective, MockModule } from "ng-mocks";
+import { ReactiveFormsModule } from "@angular/forms";
+import { InputText } from "primeng/inputtext";
+import { ToggleButton } from "primeng/togglebutton";
+import { Select } from "primeng/select";
+import { InputNumber } from "primeng/inputnumber";
+import { DatePicker } from "primeng/datepicker";
+import { Button } from "primeng/button";
+import { Drawer } from "primeng/drawer";
+import { Message } from "primeng/message";
 import { AssetFormComponent } from "./asset-form.component";
 import { Asset, AssetCategory, AssetType, LiabilityType } from "../../model/asset.model";
 import { Currency } from "../../../profile/model/currency.model";
@@ -32,10 +42,24 @@ describe("AssetFormComponent", () => {
 	const mockCategory = buildMockCategory({ type: AssetType.ASSET });
 
 	beforeEach(() => {
-		TestBed.overrideComponent(AssetFormComponent, { set: { template: "", imports: [] } });
-		TestBed.configureTestingModule({ imports: [AssetFormComponent] });
+		TestBed.configureTestingModule({
+			imports: [
+				AssetFormComponent,
+				MockModule(ReactiveFormsModule),
+				MockDirective(InputText),
+				MockComponent(ToggleButton),
+				MockComponent(Select),
+				MockComponent(InputNumber),
+				MockComponent(DatePicker),
+				MockComponent(Button),
+				MockComponent(Drawer),
+				MockComponent(Message)
+			]
+		});
+
 		fixture = TestBed.createComponent(AssetFormComponent);
 		testSubject = fixture.componentInstance;
+
 		fixture.componentRef.setInput("isVisible", true);
 		fixture.componentRef.setInput("categoriesOptions", [mockCategory]);
 	});
@@ -51,11 +75,10 @@ describe("AssetFormComponent", () => {
 			fixture.componentRef.setInput("selectedAsset", mockAsset);
 
 			// WHEN
-			TestBed.flushEffects();
 			fixture.detectChanges();
 
 			// THEN
-			expect(testSubject.assetForm.controls["name"].value).toBe("My Asset");
+			expect(testSubject.assetForm.controls.name.value).toBe("My Asset");
 		});
 
 		it("should disable the currency control when editing an existing asset", () => {
@@ -64,26 +87,23 @@ describe("AssetFormComponent", () => {
 			fixture.componentRef.setInput("selectedAsset", mockAsset);
 
 			// WHEN
-			TestBed.flushEffects();
 			fixture.detectChanges();
 
 			// THEN
-			expect(testSubject.assetForm.controls["currency"].disabled).toBe(true);
+			expect(testSubject.assetForm.controls.currency.disabled).toBe(true);
 		});
 
 		it("should reset the form when selectedAsset is null", () => {
 			// GIVEN
 			const mockAsset = buildMockAsset({ categoryId: mockCategory.id, name: "Some Asset" });
 			fixture.componentRef.setInput("selectedAsset", mockAsset);
-			TestBed.flushEffects();
 
 			// WHEN
 			fixture.componentRef.setInput("selectedAsset", null);
-			TestBed.flushEffects();
 			fixture.detectChanges();
 
 			// THEN
-			expect(testSubject.assetForm.controls["name"].value).toBeFalsy();
+			expect(testSubject.assetForm.controls.name.value).toBeFalsy();
 		});
 
 		it("should disable isFavorite for an inactive asset", () => {
@@ -92,11 +112,10 @@ describe("AssetFormComponent", () => {
 			fixture.componentRef.setInput("selectedAsset", mockAsset);
 
 			// WHEN
-			TestBed.flushEffects();
 			fixture.detectChanges();
 
 			// THEN
-			expect(testSubject.assetForm.controls["isFavorite"].disabled).toBe(true);
+			expect(testSubject.assetForm.controls.isFavorite.disabled).toBe(true);
 		});
 	});
 
@@ -104,30 +123,28 @@ describe("AssetFormComponent", () => {
 		it("should add required validators on paymentFrequency and paymentAmount for AUTOMATIC liability", () => {
 			// GIVEN
 			fixture.componentRef.setInput("selectedAsset", null);
-			TestBed.flushEffects();
 			fixture.detectChanges();
 
 			// WHEN
-			testSubject.assetForm.controls["liabilityType"].setValue(LiabilityType.AUTOMATIC);
+			testSubject.assetForm.controls.liabilityType.setValue(LiabilityType.AUTOMATIC);
 
 			// THEN
-			expect(testSubject.assetForm.controls["paymentFrequency"].validator).not.toBeNull();
-			expect(testSubject.assetForm.controls["paymentAmount"].validator).not.toBeNull();
+			expect(testSubject.assetForm.controls.paymentFrequency.validator).not.toBeNull();
+			expect(testSubject.assetForm.controls.paymentAmount.validator).not.toBeNull();
 		});
 
 		it("should clear validators and reset paymentFrequency and paymentAmount for non-AUTOMATIC liability", () => {
 			// GIVEN
 			fixture.componentRef.setInput("selectedAsset", null);
-			TestBed.flushEffects();
 			fixture.detectChanges();
-			testSubject.assetForm.controls["liabilityType"].setValue(LiabilityType.AUTOMATIC);
+			testSubject.assetForm.controls.liabilityType.setValue(LiabilityType.AUTOMATIC);
 
 			// WHEN
-			testSubject.assetForm.controls["liabilityType"].setValue(LiabilityType.MANUAL);
+			testSubject.assetForm.controls.liabilityType.setValue(LiabilityType.MANUAL);
 
 			// THEN
-			expect(testSubject.assetForm.controls["paymentFrequency"].value).toBeNull();
-			expect(testSubject.assetForm.controls["paymentAmount"].value).toBeNull();
+			expect(testSubject.assetForm.controls.paymentFrequency.value).toBeNull();
+			expect(testSubject.assetForm.controls.paymentAmount.value).toBeNull();
 		});
 	});
 
@@ -135,7 +152,6 @@ describe("AssetFormComponent", () => {
 		it("should emit the save output with the correctly formatted asset for a new asset", () => {
 			// GIVEN
 			fixture.componentRef.setInput("selectedAsset", null);
-			TestBed.flushEffects();
 			fixture.detectChanges();
 			testSubject.assetForm.patchValue({
 				name: "New Asset",
@@ -145,7 +161,7 @@ describe("AssetFormComponent", () => {
 				isFavorite: false,
 				referenceDate: new Date("2024-01-15")
 			});
-			testSubject.assetForm.controls["type"].enable();
+			testSubject.assetForm.controls.type.enable();
 			const emitted: Asset[] = [];
 			testSubject.save.subscribe(a => emitted.push(a));
 
@@ -161,7 +177,6 @@ describe("AssetFormComponent", () => {
 		it("should not emit when required fields are missing", () => {
 			// GIVEN
 			fixture.componentRef.setInput("selectedAsset", null);
-			TestBed.flushEffects();
 			fixture.detectChanges();
 			const emitted: Asset[] = [];
 			testSubject.save.subscribe(a => emitted.push(a));
@@ -177,9 +192,8 @@ describe("AssetFormComponent", () => {
 			// GIVEN
 			const mockAsset = buildMockAsset({ categoryId: mockCategory.id });
 			fixture.componentRef.setInput("selectedAsset", mockAsset);
-			TestBed.flushEffects();
 			fixture.detectChanges();
-			testSubject.assetForm.controls["type"].enable();
+			testSubject.assetForm.controls.type.enable();
 			testSubject.assetForm.patchValue({
 				name: mockAsset.name,
 				category: mockCategory,
@@ -204,7 +218,6 @@ describe("AssetFormComponent", () => {
 			// GIVEN
 			const mockAsset = buildMockAsset({ categoryId: mockCategory.id });
 			fixture.componentRef.setInput("selectedAsset", mockAsset);
-			TestBed.flushEffects();
 			fixture.detectChanges();
 
 			// WHEN
@@ -220,15 +233,14 @@ describe("AssetFormComponent", () => {
 		it("should auto-set the type control when a category is selected", () => {
 			// GIVEN
 			fixture.componentRef.setInput("selectedAsset", null);
-			TestBed.flushEffects();
 			fixture.detectChanges();
 			const mockLiabilityCategory = buildMockCategory({ type: AssetType.LIABILITY });
 
 			// WHEN
-			testSubject.assetForm.controls["category"].setValue(mockLiabilityCategory);
+			testSubject.assetForm.controls.category.setValue(mockLiabilityCategory);
 
 			// THEN
-			expect(testSubject.assetForm.controls["type"].value).toBe(AssetType.LIABILITY);
+			expect(testSubject.assetForm.controls.type.value).toBe(AssetType.LIABILITY);
 		});
 	});
 });

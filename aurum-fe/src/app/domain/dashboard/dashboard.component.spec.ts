@@ -1,10 +1,15 @@
 import { ComponentFixture, TestBed } from "@angular/core/testing";
 import { signal } from "@angular/core";
-import { MockProvider } from "ng-mocks";
+import { MockComponent, MockModule, MockPipe, MockProvider } from "ng-mocks";
+import { CommonModule, CurrencyPipe } from "@angular/common";
 import { faker } from "@faker-js/faker";
 import { of, throwError } from "rxjs";
 import { Router } from "@angular/router";
 import { DashboardComponent } from "./dashboard.component";
+import { NetworthChartComponent } from "./components/networth-chart/networth-chart.component";
+import { TopAssetsWidgetComponent } from "./components/top-assets/top-assets-widget.component";
+import { TargetWidgetComponent } from "./components/target-widget/target-widget.component";
+import { KpiCardComponent } from "./components/kpi-card/kpi-card.component";
 import { DashboardService } from "./dashboard.service";
 import { ProfileService } from "../profile/profile.service";
 import { TargetService } from "../target/target.service";
@@ -59,9 +64,16 @@ describe("DashboardComponent", () => {
 	let mockRouter: Router;
 
 	beforeEach(() => {
-		TestBed.overrideComponent(DashboardComponent, { set: { template: "", imports: [] } });
 		TestBed.configureTestingModule({
-			imports: [DashboardComponent],
+			imports: [
+				DashboardComponent,
+				MockModule(CommonModule),
+				MockComponent(NetworthChartComponent),
+				MockComponent(TopAssetsWidgetComponent),
+				MockComponent(TargetWidgetComponent),
+				MockComponent(KpiCardComponent),
+				MockPipe(CurrencyPipe)
+			],
 			providers: [
 				MockProvider(ProfileService, {
 					getProfile: vi.fn().mockReturnValue(of(buildMockProfile()))
@@ -89,13 +101,12 @@ describe("DashboardComponent", () => {
 			// GIVEN
 			const stubbedSummary = buildMockSummary();
 			vi.spyOn(mockDashboardService, "getSummary").mockReturnValue(of(stubbedSummary));
-			fixture = TestBed.createComponent(DashboardComponent);
 
 			// WHEN
-			fixture.detectChanges();
+			testSubject.ngOnInit();
 
 			// THEN
-			expect(fixture.componentInstance.summary()).not.toBeNull();
+			expect(testSubject.summary()).not.toBeNull();
 		});
 
 		it("should leave signals null when all services throw errors", () => {
@@ -115,13 +126,12 @@ describe("DashboardComponent", () => {
 			vi.spyOn(TestBed.inject(ProfileService), "getProfile").mockReturnValue(
 				throwError(() => new Error("fail"))
 			);
-			fixture = TestBed.createComponent(DashboardComponent);
 
 			// WHEN
-			fixture.detectChanges();
+			testSubject.ngOnInit();
 
 			// THEN
-			expect(fixture.componentInstance.summary()).toBeNull();
+			expect(testSubject.summary()).toBeNull();
 		});
 	});
 
@@ -165,6 +175,32 @@ describe("DashboardComponent", () => {
 			// THEN
 			expect(testSubject.projectedGrowthVariation()).toBeUndefined();
 		});
+
+		it("should return undefined when projections is null", () => {
+			// GIVEN
+			const mockSummary = buildMockSummary();
+			mockSummary.totalGrossAssets = 10000;
+
+			// WHEN
+			testSubject.summary.set(mockSummary);
+			testSubject.projections.set(null);
+
+			// THEN
+			expect(testSubject.projectedGrowthVariation()).toBeUndefined();
+		});
+
+		it("should return undefined when totalGrossAssets is zero", () => {
+			// GIVEN
+			const mockSummary = buildMockSummary();
+			mockSummary.totalGrossAssets = 0;
+
+			// WHEN
+			testSubject.summary.set(mockSummary);
+			testSubject.projections.set({ 1: 12000, 2: 15000 });
+
+			// THEN
+			expect(testSubject.projectedGrowthVariation()).toBeUndefined();
+		});
 	});
 
 	describe("debtToAssetRatio", () => {
@@ -200,6 +236,14 @@ describe("DashboardComponent", () => {
 
 			// THEN
 			expect(testSubject.assetGrowth1Y()).toBe(5000);
+		});
+
+		it("should return 0 when summary is null", () => {
+			// WHEN
+			testSubject.summary.set(null);
+
+			// THEN
+			expect(testSubject.assetGrowth1Y()).toBe(0);
 		});
 	});
 
@@ -285,6 +329,14 @@ describe("DashboardComponent", () => {
 
 			// THEN
 			expect(testSubject.liabilitiesSparkline().length).toBeGreaterThan(0);
+		});
+
+		it("should return an empty array when chartData is null", () => {
+			// WHEN
+			testSubject.chartData.set(null);
+
+			// THEN
+			expect(testSubject.liabilitiesSparkline()).toHaveLength(0);
 		});
 	});
 

@@ -1,18 +1,30 @@
 import { ComponentFixture, TestBed } from "@angular/core/testing";
 import { WritableSignal, signal } from "@angular/core";
-import { MockProvider } from "ng-mocks";
+import { MockComponent, MockDirective, MockModule, MockProvider } from "ng-mocks";
+import { FormsModule } from "@angular/forms";
+import { RouterLink, provideRouter } from "@angular/router";
+import { Button } from "primeng/button";
+import { IconField } from "primeng/iconfield";
+import { InputIcon } from "primeng/inputicon";
+import { Card } from "primeng/card";
+import { InputText } from "primeng/inputtext";
+import { SelectButton } from "primeng/selectbutton";
+import { Select, SelectChangeEvent } from "primeng/select";
+import { Divider } from "primeng/divider";
 import { faker } from "@faker-js/faker";
-import { of, EMPTY, throwError } from "rxjs";
+import { of, throwError } from "rxjs";
 import { AuthService } from "@auth0/auth0-angular";
+import { MessageService, ConfirmationService } from "primeng/api";
+import { McpService } from "./mcp/mcp.service";
+import { McpSetupComponent } from "./mcp/mcp-setup.component";
+import { GeneratedKey } from "./mcp/model/mcp.model";
 import { ProfileComponent } from "./profile.component";
 import { ProfileService } from "./profile.service";
 import { ThemeService } from "../../shared/services/theme/theme.service";
 import { NavigationService } from "../../shared/services/navigation/navigation.service";
-import { ConfirmationService } from "primeng/api";
 import { Currency } from "./model/currency.model";
 import { Locale } from "./model/locale.model";
 import { UserProfile } from "./model/user-profile.model";
-import { SelectChangeEvent } from "primeng/select";
 
 const buildMockProfile = (overrides: Partial<UserProfile> = {}): UserProfile => ({
 	id: faker.string.uuid(),
@@ -26,18 +38,31 @@ describe("ProfileComponent", () => {
 	let fixture: ComponentFixture<ProfileComponent>;
 	let testSubject: ProfileComponent;
 	let mockProfileService: ProfileService;
+	let mockConfirmationService: ConfirmationService;
 	let profileSignal: WritableSignal<UserProfile | undefined>;
 
 	beforeEach(() => {
 		profileSignal = signal<UserProfile | undefined>(undefined);
-		TestBed.overrideComponent(ProfileComponent, { set: { template: "", imports: [] } });
 		TestBed.configureTestingModule({
-			imports: [ProfileComponent],
+			imports: [
+				ProfileComponent,
+				MockComponent(Button),
+				MockComponent(IconField),
+				MockComponent(InputIcon),
+				MockComponent(Card),
+				MockModule(FormsModule),
+				MockDirective(InputText),
+				MockComponent(SelectButton),
+				MockComponent(Select),
+				MockDirective(RouterLink),
+				MockComponent(Divider),
+				MockComponent(McpSetupComponent)
+			],
 			providers: [
 				MockProvider(ProfileService, {
 					profile: profileSignal,
 					getProfile: vi.fn().mockReturnValue(of(buildMockProfile())),
-					updateName: vi.fn().mockReturnValue(of(buildMockProfile())),
+					updateName: vi.fn().mockReturnValue(of("mock-token")),
 					updateCurrency: vi.fn().mockReturnValue(of(buildMockProfile())),
 					updateLocale: vi.fn().mockReturnValue(of(buildMockProfile())),
 					updatePicture: vi.fn().mockReturnValue(of(buildMockProfile())),
@@ -45,15 +70,24 @@ describe("ProfileComponent", () => {
 					exportData: vi.fn().mockReturnValue(of({})),
 					deleteProfile: vi.fn().mockReturnValue(of(undefined))
 				}),
-				MockProvider(AuthService, { user$: EMPTY }),
+				MockProvider(AuthService, { user$: of(null), logout: vi.fn() }),
 				MockProvider(ThemeService, { isDarkMode: signal(false), toggleTheme: vi.fn() }),
 				MockProvider(NavigationService, { previousRoute: "/assets" }),
-				MockProvider(ConfirmationService)
+				MockProvider(ConfirmationService),
+				MockProvider(McpService, {
+					getKeyMeta: vi.fn().mockReturnValue(of(null)),
+					generateKey: vi.fn().mockReturnValue(of({ key: "test-key" } as GeneratedKey)),
+					revokeKey: vi.fn().mockReturnValue(of({})),
+					mcpSseUrl: "http://test-api/sse"
+				}),
+				MockProvider(MessageService, { add: vi.fn() }),
+				provideRouter([])
 			]
 		});
 		fixture = TestBed.createComponent(ProfileComponent);
 		testSubject = fixture.componentInstance;
 		mockProfileService = TestBed.inject(ProfileService);
+		mockConfirmationService = TestBed.inject(ConfirmationService);
 		fixture.detectChanges();
 	});
 
@@ -63,10 +97,9 @@ describe("ProfileComponent", () => {
 			const getProfile = vi
 				.spyOn(mockProfileService, "getProfile")
 				.mockReturnValue(of(buildMockProfile()));
-			fixture = TestBed.createComponent(ProfileComponent);
 
 			// WHEN
-			fixture.detectChanges();
+			testSubject.ngOnInit();
 
 			// THEN
 			expect(getProfile).toHaveBeenCalled();
@@ -83,7 +116,7 @@ describe("ProfileComponent", () => {
 			expect(testSubject.pictureUrl()).toContain("data:image/jpeg;base64,abc123");
 		});
 
-		it("should return a falsy pictureUrl when there is no profile picture", () => {
+		it("should return a falsy pictureUrl when there is no profile picture and no auth user", () => {
 			// GIVEN
 			profileSignal.set(buildMockProfile({ picture: undefined }));
 			fixture.detectChanges();
@@ -142,7 +175,7 @@ describe("ProfileComponent", () => {
 	});
 
 	describe("exportData", () => {
-		it("should call profileService.exportData", () => {
+		it("should call profileService.exportData and reset isExportingData after completion", () => {
 			// GIVEN
 			const exportData = vi.spyOn(mockProfileService, "exportData").mockReturnValue(of({}));
 
@@ -151,6 +184,7 @@ describe("ProfileComponent", () => {
 
 			// THEN
 			expect(exportData).toHaveBeenCalled();
+			expect(testSubject.isExportingData()).toBe(false);
 		});
 	});
 
@@ -221,7 +255,7 @@ describe("ProfileComponent", () => {
 	});
 
 	describe("onFileSelected", () => {
-		it("should call profileService.updatePicture with the selected file", () => {
+		it("should call profileService.updatePicture with the selected file and reset isUploadingPicture", () => {
 			// GIVEN
 			const mockFile = new File(["content"], "photo.jpg", { type: "image/jpeg" });
 			const updatePicture = vi
@@ -234,6 +268,7 @@ describe("ProfileComponent", () => {
 
 			// THEN
 			expect(updatePicture).toHaveBeenCalledWith(mockFile);
+			expect(testSubject.isUploadingPicture()).toBe(false);
 		});
 
 		it("should not call updatePicture when no file is selected", () => {
@@ -252,7 +287,7 @@ describe("ProfileComponent", () => {
 	describe("deleteProfile", () => {
 		it("should call confirmationService.confirm", () => {
 			// GIVEN
-			const confirm = vi.spyOn(TestBed.inject(ConfirmationService), "confirm");
+			const confirm = vi.spyOn(mockConfirmationService, "confirm");
 
 			// WHEN
 			testSubject.deleteProfile(new MouseEvent("click"));
@@ -261,9 +296,8 @@ describe("ProfileComponent", () => {
 			expect(confirm).toHaveBeenCalled();
 		});
 
-		it("should call profileService.deleteProfile when the user confirms", () => {
+		it("should call profileService.deleteProfile and reset isDeletingProfile when the user confirms", () => {
 			// GIVEN
-			const mockConfirmationService = TestBed.inject(ConfirmationService);
 			vi.spyOn(mockConfirmationService, "confirm").mockImplementation(({ accept }) => accept?.());
 			const deleteProfile = vi
 				.spyOn(mockProfileService, "deleteProfile")
@@ -274,6 +308,7 @@ describe("ProfileComponent", () => {
 
 			// THEN
 			expect(deleteProfile).toHaveBeenCalled();
+			expect(testSubject.isDeletingProfile()).toBe(false);
 		});
 	});
 });

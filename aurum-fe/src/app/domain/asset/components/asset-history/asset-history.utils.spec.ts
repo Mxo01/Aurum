@@ -12,6 +12,11 @@ const buildMockSnapshot = (referenceDate: string, overrides: Partial<Snapshot> =
 	...overrides
 });
 
+const buildMockCanvas = () => {
+	const canvas = document.createElement("canvas");
+	return canvas;
+};
+
 describe("mapSnapshotsToChartData", () => {
 	it("should sort snapshots in chronological order by referenceDate", () => {
 		// GIVEN
@@ -107,5 +112,82 @@ describe("getChartOptions", () => {
 
 		// THEN
 		expect((result.scales as { x: { ticks: { color: string } } }).x.ticks.color).toBe("#000000");
+	});
+
+	it("should set tooltip opacity to 0 when tooltip opacity is 0", () => {
+		// GIVEN
+		const options = getChartOptions("€", false, Locale.EN_US);
+		const external = options.plugins.tooltip.external;
+		const mockCanvas = buildMockCanvas();
+
+		// WHEN
+		external({
+			chart: { id: 8001, canvas: mockCanvas },
+			tooltip: { opacity: 0, caretX: 0, caretY: 0 }
+		});
+
+		// THEN
+		const el = document.getElementById("chartjs-tooltip-8001");
+		expect(el?.style.opacity).toBe("0");
+	});
+
+	it("should render tooltip HTML when opacity is non-zero", () => {
+		// GIVEN
+		const options = getChartOptions("€", false, Locale.EN_US);
+		const external = options.plugins.tooltip.external;
+		const mockCanvas = buildMockCanvas();
+
+		// WHEN
+		external({
+			chart: { id: 8002, canvas: mockCanvas },
+			tooltip: {
+				opacity: 1,
+				title: ["15/01/2024"],
+				dataPoints: [
+					{ dataset: { label: "Value (Base)", borderColor: "#ff0000" }, parsed: { y: 5000 } }
+				],
+				caretX: 10,
+				caretY: 10
+			}
+		});
+
+		// THEN
+		const el = document.getElementById("chartjs-tooltip-8002");
+		expect(el?.innerHTML).toBeTruthy();
+	});
+
+	it("should fall back to muted color when dataset borderColor is undefined", () => {
+		// GIVEN
+		const options = getChartOptions("€", false, Locale.EN_US);
+		const external = options.plugins.tooltip.external;
+		const mockCanvas = buildMockCanvas();
+
+		// WHEN / THEN — no exception thrown
+		expect(() =>
+			external({
+				chart: { id: 8003, canvas: mockCanvas },
+				tooltip: {
+					opacity: 1,
+					dataPoints: [{ dataset: { label: "Value (Base)" }, parsed: { y: 100 } }],
+					caretX: 0,
+					caretY: 0
+				}
+			})
+		).not.toThrow();
+	});
+
+	it("should use empty string fallbacks when title and dataPoints are absent", () => {
+		// GIVEN
+		const options = getChartOptions("€", false, Locale.EN_US);
+		const external = options.plugins.tooltip.external;
+		const mockCanvas = buildMockCanvas();
+
+		// WHEN / THEN — no exception thrown
+		expect(() =>
+			external({
+				chart: { id: 8004, canvas: mockCanvas },
+				tooltip: { opacity: 1, caretX: 0, caretY: 0 }
+			})
+		).not.toThrow();
 	});
 });

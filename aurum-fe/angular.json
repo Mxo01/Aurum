@@ -84,7 +84,9 @@
 					"builder": "@angular/build:unit-test",
 					"options": {
 						"tsConfig": "tsconfig.spec.json",
-						"runner": "vitest"
+						"runner": "vitest",
+						"coverage": true,
+						"coverageExclude": ["**/*.html"]
 					}
 				}
 			}

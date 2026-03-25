@@ -1,4 +1,7 @@
 import { ComponentFixture, TestBed } from "@angular/core/testing";
+import { MockComponent, MockDirective } from "ng-mocks";
+import { RouterLink } from "@angular/router";
+import { Button } from "primeng/button";
 import { GdprConsentComponent } from "./gdpr-consent.component";
 
 describe("GdprConsentComponent", () => {
@@ -6,8 +9,9 @@ describe("GdprConsentComponent", () => {
 	let testSubject: GdprConsentComponent;
 
 	beforeEach(() => {
-		TestBed.overrideComponent(GdprConsentComponent, { set: { template: "", imports: [] } });
-		TestBed.configureTestingModule({ imports: [GdprConsentComponent] });
+		TestBed.configureTestingModule({
+			imports: [GdprConsentComponent, MockDirective(RouterLink), MockComponent(Button)]
+		});
 	});
 
 	afterEach(() => {

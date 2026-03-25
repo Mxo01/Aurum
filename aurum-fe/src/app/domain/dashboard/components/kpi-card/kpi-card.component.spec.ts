@@ -1,5 +1,9 @@
 import { ComponentFixture, TestBed } from "@angular/core/testing";
 import { faker } from "@faker-js/faker";
+import { MockComponent, MockModule } from "ng-mocks";
+import { CommonModule } from "@angular/common";
+import { Card } from "primeng/card";
+import { ChartModule } from "primeng/chart";
 import { KpiCardComponent } from "./kpi-card.component";
 
 describe("KpiCardComponent", () => {
@@ -7,8 +11,14 @@ describe("KpiCardComponent", () => {
 	let testSubject: KpiCardComponent;
 
 	beforeEach(() => {
-		TestBed.overrideComponent(KpiCardComponent, { set: { template: "", imports: [] } });
-		TestBed.configureTestingModule({ imports: [KpiCardComponent] });
+		TestBed.configureTestingModule({
+			imports: [
+				KpiCardComponent,
+				MockModule(CommonModule),
+				MockComponent(Card),
+				MockModule(ChartModule)
+			]
+		});
 		fixture = TestBed.createComponent(KpiCardComponent);
 		testSubject = fixture.componentInstance;
 		fixture.componentRef.setInput("label", faker.lorem.word());

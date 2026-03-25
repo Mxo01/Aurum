@@ -1,9 +1,17 @@
 import { ComponentFixture, TestBed } from "@angular/core/testing";
 import { signal } from "@angular/core";
-import { MockProvider } from "ng-mocks";
+import { MockComponent, MockModule, MockPipe, MockProvider } from "ng-mocks";
+import { CommonModule, CurrencyPipe, DecimalPipe } from "@angular/common";
+import { KnobModule } from "primeng/knob";
+import { ButtonModule } from "primeng/button";
+import { FormsModule } from "@angular/forms";
+import { Card } from "primeng/card";
+import { Menu } from "primeng/menu";
 import { faker } from "@faker-js/faker";
 import { of } from "rxjs";
 import { TargetWidgetComponent } from "./target-widget.component";
+import { TargetFormComponent } from "../../../target/components/target-form/target-form.component";
+import { TargetListComponent } from "../../../target/components/target-list/target-list.component";
 import { TargetService } from "../../../target/target.service";
 import { ThemeService } from "../../../../shared/services/theme/theme.service";
 import { Target, TargetType } from "../../../target/model/target.model";
@@ -25,9 +33,20 @@ describe("TargetWidgetComponent", () => {
 	let mockTargetService: TargetService;
 
 	beforeEach(() => {
-		TestBed.overrideComponent(TargetWidgetComponent, { set: { template: "", imports: [] } });
 		TestBed.configureTestingModule({
-			imports: [TargetWidgetComponent],
+			imports: [
+				TargetWidgetComponent,
+				MockModule(CommonModule),
+				MockModule(KnobModule),
+				MockModule(ButtonModule),
+				MockModule(FormsModule),
+				MockPipe(CurrencyPipe),
+				MockPipe(DecimalPipe),
+				MockComponent(Card),
+				MockComponent(TargetFormComponent),
+				MockComponent(TargetListComponent),
+				MockComponent(Menu)
+			],
 			providers: [
 				MockProvider(TargetService, {
 					saveTarget: vi.fn().mockReturnValue(of([])),
@@ -95,19 +114,23 @@ describe("TargetWidgetComponent", () => {
 	});
 
 	describe("onSaveTarget", () => {
-		it("should call targetService.saveTarget and update targets list on success", () => {
+		it("should call targetService.saveTarget with the target, update targets list and reset isSaving on success", () => {
 			// GIVEN
 			const mockTarget = buildMockTarget();
 			const stubbedTargets = [mockTarget];
-			vi.spyOn(mockTargetService, "saveTarget").mockReturnValue(of(stubbedTargets));
+			const saveTarget = vi
+				.spyOn(mockTargetService, "saveTarget")
+				.mockReturnValue(of(stubbedTargets));
 
 			// WHEN
 			testSubject.onSaveTarget(mockTarget);
 			fixture.detectChanges();
 
 			// THEN
+			expect(saveTarget).toHaveBeenCalledWith(mockTarget);
 			expect(testSubject.targets()).toHaveLength(1);
 			expect(testSubject.isFormVisible()).toBe(false);
+			expect(testSubject.isSaving()).toBe(false);
 		});
 	});
 
@@ -163,17 +186,18 @@ describe("TargetWidgetComponent", () => {
 	});
 
 	describe("onDeleteTarget", () => {
-		it("should call targetService.deleteTarget and update targets list on success", () => {
+		it("should call targetService.deleteTarget with the id and update targets list on success", () => {
 			// GIVEN
 			const mockTarget = buildMockTarget();
 			fixture.componentRef.setInput("targets", [mockTarget]);
-			vi.spyOn(mockTargetService, "deleteTarget").mockReturnValue(of([]));
+			const deleteTarget = vi.spyOn(mockTargetService, "deleteTarget").mockReturnValue(of([]));
 
 			// WHEN
 			testSubject.onDeleteTarget(mockTarget.id!);
 			fixture.detectChanges();
 
 			// THEN
+			expect(deleteTarget).toHaveBeenCalledWith(mockTarget.id);
 			expect(testSubject.targets()).toHaveLength(0);
 		});
 	});

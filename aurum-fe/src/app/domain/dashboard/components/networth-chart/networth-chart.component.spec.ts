@@ -1,6 +1,13 @@
 import { ComponentFixture, TestBed } from "@angular/core/testing";
 import { signal } from "@angular/core";
-import { MockProvider } from "ng-mocks";
+import { MockComponent, MockModule, MockPipe, MockProvider } from "ng-mocks";
+import { CommonModule, DecimalPipe } from "@angular/common";
+import { ChartModule } from "primeng/chart";
+import { SelectButtonModule } from "primeng/selectbutton";
+import { DatePicker } from "primeng/datepicker";
+import { FormsModule } from "@angular/forms";
+import { Card } from "primeng/card";
+import { Button } from "primeng/button";
 import { NetworthChartComponent } from "./networth-chart.component";
 import { ThemeService } from "../../../../shared/services/theme/theme.service";
 import { Currency } from "../../../profile/model/currency.model";
@@ -19,9 +26,18 @@ describe("NetworthChartComponent", () => {
 	let testSubject: NetworthChartComponent;
 
 	beforeEach(() => {
-		TestBed.overrideComponent(NetworthChartComponent, { set: { template: "", imports: [] } });
 		TestBed.configureTestingModule({
-			imports: [NetworthChartComponent],
+			imports: [
+				NetworthChartComponent,
+				MockModule(CommonModule),
+				MockModule(ChartModule),
+				MockModule(SelectButtonModule),
+				MockComponent(DatePicker),
+				MockModule(FormsModule),
+				MockComponent(Card),
+				MockPipe(DecimalPipe),
+				MockComponent(Button)
+			],
 			providers: [MockProvider(ThemeService, { isDarkMode: signal(false) })]
 		});
 		fixture = TestBed.createComponent(NetworthChartComponent);
