@@ -1,10 +1,9 @@
 package com.backend.aurum.domain.asset.controller;
 
 import com.backend.aurum.domain.asset.dto.AssetCategoryDTO;
-import com.backend.aurum.domain.asset.mapper.AssetCategoryMapper;
-import com.backend.aurum.domain.asset.model.AssetCategory;
-import com.backend.aurum.domain.asset.service.AssetCategoryService;
-import com.backend.aurum.domain.asset.validation.AssetCategoryValidationService;
+import com.backend.aurum.domain.asset.dto.CreateAssetCategoryDTO;
+import com.backend.aurum.domain.asset.dto.UpdateAssetCategoryDTO;
+import com.backend.aurum.domain.asset.facade.AssetCategoryFacade;
 import com.backend.aurum.domain.user.model.UserPrincipal;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
@@ -22,9 +21,7 @@ import org.springframework.web.bind.annotation.*;
 @Tag(name = "Categories", description = "Asset classification management")
 public class AssetCategoryController {
 
-	private final AssetCategoryService categoryService;
-	private final AssetCategoryValidationService validationService;
-	private final AssetCategoryMapper mapper;
+	private final AssetCategoryFacade categoryFacade;
 
 	@GetMapping
 	public ResponseEntity<List<AssetCategoryDTO>> getAllCategories(
@@ -35,17 +32,12 @@ public class AssetCategoryController {
 			"AssetCategoryController#getAllCategories - Request to list categories for userId={}",
 			userId
 		);
-		List<AssetCategoryDTO> categories = categoryService
-			.findAll(userId)
-			.stream()
-			.map(mapper::toDto)
-			.toList();
-		return ResponseEntity.ok(categories);
+		return ResponseEntity.ok(categoryFacade.getAllCategories(userId));
 	}
 
 	@PostMapping
 	public ResponseEntity<AssetCategoryDTO> createCategory(
-		@RequestBody AssetCategoryDTO categoryDto,
+		@RequestBody CreateAssetCategoryDTO dto,
 		@AuthenticationPrincipal UserPrincipal principal
 	) {
 		UUID userId = principal.user().getId();
@@ -53,20 +45,18 @@ public class AssetCategoryController {
 			"AssetCategoryController#createCategory - Request to create category for userId={}",
 			userId
 		);
-		validationService.validate(categoryDto);
-		AssetCategory category = mapper.toEntity(categoryDto, userId);
-		AssetCategory savedCategory = categoryService.save(category);
+		AssetCategoryDTO result = categoryFacade.createCategory(dto, userId);
 		log.info(
 			"AssetCategoryController#createCategory - Category created: categoryId={}",
-			savedCategory.getId()
+			result.getId()
 		);
-		return ResponseEntity.ok(mapper.toDto(savedCategory));
+		return ResponseEntity.ok(result);
 	}
 
 	@PutMapping("/{id}")
 	public ResponseEntity<AssetCategoryDTO> updateCategory(
 		@PathVariable UUID id,
-		@RequestBody AssetCategoryDTO categoryDto,
+		@RequestBody UpdateAssetCategoryDTO dto,
 		@AuthenticationPrincipal UserPrincipal principal
 	) {
 		UUID userId = principal.user().getId();
@@ -75,14 +65,12 @@ public class AssetCategoryController {
 			id,
 			userId
 		);
-		validationService.validate(categoryDto);
-		AssetCategory categoryDetails = mapper.toEntity(categoryDto, userId);
-		AssetCategory updatedCategory = categoryService.update(id, categoryDetails, userId);
+		AssetCategoryDTO result = categoryFacade.updateCategory(id, dto, userId);
 		log.info(
 			"AssetCategoryController#updateCategory - Category updated successfully: categoryId={}",
 			id
 		);
-		return ResponseEntity.ok(mapper.toDto(updatedCategory));
+		return ResponseEntity.ok(result);
 	}
 
 	@DeleteMapping("/{id}")
@@ -96,7 +84,7 @@ public class AssetCategoryController {
 			id,
 			userId
 		);
-		categoryService.delete(id, userId);
+		categoryFacade.deleteCategory(id, userId);
 		log.info(
 			"AssetCategoryController#deleteCategory - Category deleted successfully: categoryId={}",
 			id

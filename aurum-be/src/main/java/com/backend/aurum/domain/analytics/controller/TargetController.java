@@ -1,14 +1,11 @@
 package com.backend.aurum.domain.analytics.controller;
 
+import com.backend.aurum.domain.analytics.dto.CreateTargetDTO;
 import com.backend.aurum.domain.analytics.dto.TargetDTO;
-import com.backend.aurum.domain.analytics.mapper.TargetMapper;
-import com.backend.aurum.domain.analytics.model.Target;
-import com.backend.aurum.domain.analytics.service.AnalyticsService;
-import com.backend.aurum.domain.analytics.service.TargetService;
-import com.backend.aurum.domain.analytics.validation.TargetValidationService;
+import com.backend.aurum.domain.analytics.dto.UpdateTargetDTO;
+import com.backend.aurum.domain.analytics.facade.TargetFacade;
 import com.backend.aurum.domain.user.model.UserPrincipal;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -24,10 +21,7 @@ import org.springframework.web.bind.annotation.*;
 @Tag(name = "Targets", description = "Financial goals tracking")
 public class TargetController {
 
-	private final TargetService targetService;
-	private final AnalyticsService analyticsService;
-	private final TargetValidationService validationService;
-	private final TargetMapper mapper;
+	private final TargetFacade targetFacade;
 
 	@GetMapping
 	public ResponseEntity<List<TargetDTO>> getAllTargets(
@@ -35,37 +29,28 @@ public class TargetController {
 	) {
 		UUID userId = principal.user().getId();
 		log.debug("TargetController#getAllTargets - Request to list targets for userId={}", userId);
-		BigDecimal netWorth = analyticsService.getSummary(userId).getTotalNetWorth();
-		List<TargetDTO> targets = targetService
-			.findAll(userId, netWorth)
-			.stream()
-			.map(t -> mapper.toDto(t, netWorth))
-			.toList();
-		return ResponseEntity.ok(targets);
+		return ResponseEntity.ok(targetFacade.getAllTargets(userId));
 	}
 
 	@PostMapping
 	public ResponseEntity<TargetDTO> createTarget(
-		@RequestBody TargetDTO targetDto,
+		@RequestBody CreateTargetDTO dto,
 		@AuthenticationPrincipal UserPrincipal principal
 	) {
 		UUID userId = principal.user().getId();
 		log.info("TargetController#createTarget - Request to create target for userId={}", userId);
-		validationService.validate(targetDto);
-		Target target = mapper.toEntity(targetDto, userId);
-		BigDecimal netWorth = analyticsService.getNetWorth(userId);
-		Target savedTarget = targetService.save(target, netWorth);
+		TargetDTO result = targetFacade.createTarget(dto, userId);
 		log.info(
 			"TargetController#createTarget - Target created successfully: targetId={}",
-			savedTarget.getId()
+			result.getId()
 		);
-		return ResponseEntity.ok(mapper.toDto(savedTarget, netWorth));
+		return ResponseEntity.ok(result);
 	}
 
 	@PutMapping("/{id}")
 	public ResponseEntity<TargetDTO> updateTarget(
 		@PathVariable UUID id,
-		@RequestBody TargetDTO targetDto,
+		@RequestBody UpdateTargetDTO dto,
 		@AuthenticationPrincipal UserPrincipal principal
 	) {
 		UUID userId = principal.user().getId();
@@ -74,18 +59,15 @@ public class TargetController {
 			id,
 			userId
 		);
-		validationService.validate(targetDto);
-		Target targetDetails = mapper.toEntity(targetDto, userId);
-		BigDecimal netWorth = analyticsService.getNetWorth(userId);
-		Target updatedTarget = targetService.update(id, targetDetails, netWorth);
+		TargetDTO result = targetFacade.updateTarget(id, dto, userId);
 		log.info("TargetController#updateTarget - Target updated successfully: targetId={}", id);
-		return ResponseEntity.ok(mapper.toDto(updatedTarget, netWorth));
+		return ResponseEntity.ok(result);
 	}
 
 	@DeleteMapping("/{id}")
 	public ResponseEntity<Void> deleteTarget(@PathVariable UUID id) {
 		log.info("TargetController#deleteTarget - Request to delete targetId={}", id);
-		targetService.delete(id);
+		targetFacade.deleteTarget(id);
 		log.info("TargetController#deleteTarget - Target deleted successfully: targetId={}", id);
 		return ResponseEntity.noContent().build();
 	}
