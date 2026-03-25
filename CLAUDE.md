@@ -47,12 +47,38 @@ Available at `http://localhost:8080/swagger-ui.html` when backend is running.
 ## Architecture
 
 ### Backend Domain Structure
-Each domain under `src/main/java/com/backend/aurum/domain/` follows: `controller/` → `service/` → `repository/` → `model/` pattern.
+Each domain under `src/main/java/com/backend/aurum/domain/` follows:
+
+```
+controller/ → facade/ → service/ → repository/ → model/
+```
 
 - **asset/** — Core domain: assets, snapshots, categories, liability types
 - **analytics/** — KPI calculation and financial target management
 - **user/** — User profiles with currency/locale preferences
 - **auth/** — Auth0 management API integration
+
+#### Facade Layer
+Each domain has a `facade/` package containing `*Facade` classes that are the **single entry point** for all business operations. Both HTTP controllers and `AurumMcpTools` must go through the facade — never call a domain service directly from a controller or MCP tool.
+
+Each Facade owns: validation (via `*ValidationService`) → DTO-to-entity mapping (via `*Mapper`) → domain service call → entity-to-DTO mapping.
+
+```
+AssetController  ──┐
+                   ├──▶  AssetFacade  ──▶  AssetService
+AurumMcpTools  ────┘
+```
+
+Facades per domain:
+- `asset/facade/` — `AssetFacade`, `SnapshotFacade`, `AssetCategoryFacade`
+- `analytics/facade/` — `TargetFacade`, `AnalyticsFacade`
+
+#### DTO conventions
+- **Response DTO** (e.g. `AssetDTO`, `TargetDTO`) — returned by all endpoints and facade methods
+- **Create DTO** (e.g. `CreateAssetDTO`) — used as request body for `POST` endpoints and MCP create tools
+- **Update DTO** (e.g. `UpdateAssetDTO`) — used as request body for `PUT` endpoints and MCP update tools; always includes the entity `id`
+
+Controllers accept Create/Update DTOs for write operations; the combined response DTO is never used as a write request body.
 
 Infrastructure:
 - `infrastructure/security/` — JWT/OAuth2 resource server config (stateless, Auth0)
@@ -125,17 +151,21 @@ Assets have `LiabilityType` (MANUAL/AUTOMATIC) and `PaymentFrequency` (WEEKLY/MO
   - **Modules** (`FormsModule`, `ReactiveFormsModule`, `TableModule`, etc.) → `MockModule(Foo)`
   - **Pipes** → `MockPipe(Foo)`
   - Because mocked sub-components carry no real DI tree, transitive service dependencies are never needed in `providers`
-  - **Exception — aliased signal inputs**: if a third-party directive uses `input(null, { alias: 'foo' })` (e.g. `Highlight` from `ngx-highlightjs`), `MockDirective` cannot replicate the alias and Angular will throw `NG0303`. In this case, declare a minimal inline stub in the spec file and use it instead:
+  - **Exception — aliased signal inputs**: if a third-party directive uses `input(null, { alias: 'foo' })` (e.g. `Highlight` from `ngx-highlightjs`), `MockDirective` cannot replicate the alias and Angular will throw `NG0303`. In this case, declare a minimal inline stub that matches the directive's **exact** selector and declares `@Input()` for every binding used in the template:
     ```typescript
     @Directive({ selector: '[highlight]', standalone: true })
-    class HighlightStub { @Input() highlight!: string | null; }
+    class HighlightStub {
+      @Input() highlight!: string | null;
+      @Input() language!: string;
+    }
     ```
 - **GIVEN naming** — mock object instances: `mock<Name>` (e.g. `mockAsset`); stub return values: `stubbed<Name>` (e.g. `stubbedAssets`)
 - **THEN naming** — resolved/actual values: `expected<Name>` (e.g. `const expectedAssets = await result`)
 - **HTTP success AND error** — for every HTTP-backed method write both a success case and an error case; in success tests assert the result: `expect(expectedResult).toEqual(stubbedResult)`
 - **HTTP calls** — use `lastValueFrom()` with `async/await` and `HttpTestingController`; always call `httpController.verify()` in `afterEach`; match requests by URL suffix (`req.url.endsWith(...)`) or `req.urlWithParams` for query params
 - **No `vi.mock`** — the Angular unit-test runner does not support `vi.mock` for relative imports; use TestBed providers for all mocking
-- **Form controls** — access form control values via `form.controls.<name>.value`, not `form.get("")?.value`
+- **Form controls** — access form controls via dot notation: `form.controls.name`, `form.controls.email`, etc. — never use bracket notation `form.controls["name"]`; also never use `form.get("")?.value`
+- **`fixture.detectChanges()` over `TestBed.tick()`** — always use `fixture.detectChanges()` to flush effects and trigger change detection; never use `TestBed.tick()`; never combine the two in the same test
 - **Max 1 nesting level** — at most one level of nested `describe` inside the outer `describe` of the class; do not add a second layer of `describe` blocks
 - **BDD structure** — use `describe` blocks for grouping and `it` descriptions that read as sentences from the subject's perspective
 

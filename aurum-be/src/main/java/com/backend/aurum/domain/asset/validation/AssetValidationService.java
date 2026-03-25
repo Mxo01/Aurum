@@ -1,13 +1,14 @@
 package com.backend.aurum.domain.asset.validation;
 
-import com.backend.aurum.domain.asset.dto.AssetDTO;
+import com.backend.aurum.domain.asset.dto.CreateAssetDTO;
+import com.backend.aurum.domain.asset.dto.UpdateAssetDTO;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 @Service
 public class AssetValidationService {
 
-	public void validate(AssetDTO dto) {
+	public void validate(CreateAssetDTO dto) {
 		if (dto == null) {
 			throw new IllegalArgumentException("Asset data cannot be null");
 		}
@@ -19,7 +20,7 @@ public class AssetValidationService {
 		}
 	}
 
-	public void validateForUpdate(AssetDTO dto) {
+	public void validate(UpdateAssetDTO dto) {
 		if (dto == null) {
 			throw new IllegalArgumentException("Asset data cannot be null");
 		}

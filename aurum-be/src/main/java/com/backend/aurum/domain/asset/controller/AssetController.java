@@ -2,18 +2,13 @@ package com.backend.aurum.domain.asset.controller;
 
 import com.backend.aurum.domain.asset.dto.AssetDTO;
 import com.backend.aurum.domain.asset.dto.AssetStatusDTO;
-import com.backend.aurum.domain.asset.mapper.AssetMapper;
-import com.backend.aurum.domain.asset.model.Asset;
-import com.backend.aurum.domain.asset.model.Snapshot;
-import com.backend.aurum.domain.asset.repository.SnapshotRepository;
-import com.backend.aurum.domain.asset.service.AssetService;
-import com.backend.aurum.domain.asset.validation.AssetValidationService;
+import com.backend.aurum.domain.asset.dto.CreateAssetDTO;
+import com.backend.aurum.domain.asset.dto.UpdateAssetDTO;
+import com.backend.aurum.domain.asset.facade.AssetFacade;
 import com.backend.aurum.domain.user.model.UserPrincipal;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -27,10 +22,7 @@ import org.springframework.web.bind.annotation.*;
 @Tag(name = "Assets", description = "Management of user assets")
 public class AssetController {
 
-	private final AssetService assetService;
-	private final AssetValidationService validationService;
-	private final AssetMapper mapper;
-	private final SnapshotRepository snapshotRepository;
+	private final AssetFacade assetFacade;
 
 	@GetMapping
 	public ResponseEntity<List<AssetDTO>> getAllAssets(
@@ -38,22 +30,7 @@ public class AssetController {
 	) {
 		UUID userId = principal.user().getId();
 		log.debug("AssetController#getAllAssets - Request to list all assets for userId={}", userId);
-		List<Asset> assets = assetService.findAll(userId);
-
-		// Single bulk query — load all snapshots ordered DESC, group, keep latest 2 per asset
-		Map<UUID, List<Snapshot>> latestTwoByAsset = snapshotRepository
-			.findByAssetUserIdOrderByReferenceDateDesc(userId)
-			.stream()
-			.collect(Collectors.groupingBy(s -> s.getAsset().getId()))
-			.entrySet()
-			.stream()
-			.collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().stream().limit(2).toList()));
-
-		List<AssetDTO> dtos = assets
-			.stream()
-			.map(a -> mapper.toDtoLight(a, latestTwoByAsset))
-			.toList();
-		return ResponseEntity.ok(dtos);
+		return ResponseEntity.ok(assetFacade.getAllAssets(userId));
 	}
 
 	@GetMapping("/{id}")
@@ -66,35 +43,28 @@ public class AssetController {
 			id,
 			principal.user().getId()
 		);
-		Asset asset = assetService.findById(id, principal.user().getId());
-		return ResponseEntity.ok(mapper.toDto(asset));
+		return ResponseEntity.ok(assetFacade.getAsset(id, principal.user().getId()));
 	}
 
 	@PostMapping
 	public ResponseEntity<AssetDTO> createAsset(
-		@RequestBody AssetDTO assetDto,
+		@RequestBody CreateAssetDTO dto,
 		@AuthenticationPrincipal UserPrincipal principal
 	) {
 		UUID userId = principal.user().getId();
 		log.info("AssetController#createAsset - Request to create asset for userId={}", userId);
-		validationService.validate(assetDto);
-		Asset asset = mapper.toEntity(assetDto, userId);
-		Asset savedAsset = assetService.save(
-			asset,
-			assetDto.getInitialValue(),
-			assetDto.getReferenceDate()
-		);
+		AssetDTO result = assetFacade.createAsset(dto, userId);
 		log.info(
 			"AssetController#createAsset - Asset created successfully: assetId={}",
-			savedAsset.getId()
+			result.getId()
 		);
-		return ResponseEntity.ok(mapper.toDto(savedAsset));
+		return ResponseEntity.ok(result);
 	}
 
 	@PutMapping("/{id}")
 	public ResponseEntity<AssetDTO> updateAsset(
 		@PathVariable UUID id,
-		@RequestBody AssetDTO assetDto,
+		@RequestBody UpdateAssetDTO dto,
 		@AuthenticationPrincipal UserPrincipal principal
 	) {
 		UUID userId = principal.user().getId();
@@ -103,12 +73,9 @@ public class AssetController {
 			id,
 			userId
 		);
-		validationService.validateForUpdate(assetDto);
-		Asset assetDetails = mapper.toEntity(assetDto, userId);
-		Asset updatedAsset = assetService.update(id, assetDetails, userId);
+		AssetDTO result = assetFacade.updateAssetLight(id, dto, userId);
 		log.info("AssetController#updateAsset - Asset updated successfully: assetId={}", id);
-		List<Snapshot> latestTwo = snapshotRepository.findTop2ByAssetIdOrderByReferenceDateDesc(id);
-		return ResponseEntity.ok(mapper.toDtoLight(updatedAsset, latestTwo));
+		return ResponseEntity.ok(result);
 	}
 
 	@PatchMapping("/{id}/status")
@@ -124,21 +91,12 @@ public class AssetController {
 			userId,
 			statusDto.getIsActive()
 		);
-		if (statusDto.getIsActive() == null) {
-			throw new IllegalArgumentException("isActive is required");
-		}
-		Asset updatedAsset = assetService.patchStatus(
-			id,
-			statusDto.getIsActive(),
-			statusDto.getChangedAt(),
-			userId
-		);
+		AssetDTO result = assetFacade.patchAssetStatus(id, statusDto, userId);
 		log.info(
 			"AssetController#patchAssetStatus - Asset status patched successfully: assetId={}",
 			id
 		);
-		List<Snapshot> latestTwo = snapshotRepository.findTop2ByAssetIdOrderByReferenceDateDesc(id);
-		return ResponseEntity.ok(mapper.toDtoLight(updatedAsset, latestTwo));
+		return ResponseEntity.ok(result);
 	}
 
 	@DeleteMapping("/{id}")
@@ -151,7 +109,7 @@ public class AssetController {
 			id,
 			principal.user().getId()
 		);
-		assetService.delete(id, principal.user().getId());
+		assetFacade.deleteAsset(id, principal.user().getId());
 		log.info("AssetController#deleteAsset - Asset deleted successfully: assetId={}", id);
 		return ResponseEntity.noContent().build();
 	}

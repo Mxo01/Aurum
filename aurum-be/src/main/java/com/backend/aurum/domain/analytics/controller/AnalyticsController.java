@@ -2,7 +2,7 @@ package com.backend.aurum.domain.analytics.controller;
 
 import com.backend.aurum.domain.analytics.dto.AnalyticsSummaryDTO;
 import com.backend.aurum.domain.analytics.dto.ChartDataDTO;
-import com.backend.aurum.domain.analytics.service.AnalyticsService;
+import com.backend.aurum.domain.analytics.facade.AnalyticsFacade;
 import com.backend.aurum.domain.user.model.UserPrincipal;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.math.BigDecimal;
@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.*;
 @Tag(name = "Analytics", description = "Performance metrics, allocation and projections")
 public class AnalyticsController {
 
-	private final AnalyticsService analyticsService;
+	private final AnalyticsFacade analyticsFacade;
 
 	@GetMapping("/summary")
 	public ResponseEntity<AnalyticsSummaryDTO> getSummary(
@@ -32,7 +32,7 @@ public class AnalyticsController {
 			"AnalyticsController#getSummary - Request for analytics summary for userId={}",
 			userId
 		);
-		return ResponseEntity.ok(analyticsService.getSummary(userId));
+		return ResponseEntity.ok(analyticsFacade.getSummary(userId));
 	}
 
 	@GetMapping("/chart")
@@ -48,12 +48,10 @@ public class AnalyticsController {
 			year,
 			allHistory
 		);
-		ChartDataDTO chartData;
-		if (year != null) {
-			chartData = analyticsService.getChartDataForYear(userId, year);
-		} else {
-			chartData = analyticsService.getChartData(userId, allHistory);
-		}
+		ChartDataDTO chartData =
+			year != null
+				? analyticsFacade.getChartDataForYear(userId, year)
+				: analyticsFacade.getChartData(userId, allHistory);
 		return ResponseEntity.ok(chartData);
 	}
 
@@ -70,6 +68,6 @@ public class AnalyticsController {
 			years,
 			assetsOnly
 		);
-		return ResponseEntity.ok(analyticsService.getProjections(userId, years, assetsOnly));
+		return ResponseEntity.ok(analyticsFacade.getProjections(userId, years, assetsOnly));
 	}
 }
