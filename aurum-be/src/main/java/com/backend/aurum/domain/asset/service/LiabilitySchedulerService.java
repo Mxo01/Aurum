@@ -78,16 +78,17 @@ public class LiabilitySchedulerService {
 		}
 
 		BigDecimal currentValue = latestSnapshot.getAmountOriginalCurrency();
+
+		// Skip assets that are already fully paid off
+		if (currentValue.compareTo(BigDecimal.ZERO) <= 0) {
+			return;
+		}
+
 		BigDecimal newValue = currentValue.subtract(asset.getPaymentAmount());
 
 		// Do not go below zero
 		if (newValue.compareTo(BigDecimal.ZERO) < 0) {
 			newValue = BigDecimal.ZERO;
-		}
-
-		// Only create a snapshot if current value is still positive
-		if (currentValue.compareTo(BigDecimal.ZERO) <= 0) {
-			return;
 		}
 
 		Snapshot newSnapshot = new Snapshot();

@@ -254,13 +254,21 @@ public class AnalyticsService {
 			? calculateGrossAssetsAt(assets, snapshotsByAsset, LocalDate.now().minusYears(1))
 			: calculateNetWorthAt(assets, snapshotsByAsset, LocalDate.now().minusYears(1));
 
-		BigDecimal growth = current.subtract(oneYearAgo);
-		if (growth.compareTo(BigDecimal.ZERO) < 0) growth = BigDecimal.ZERO;
-
 		Map<Integer, BigDecimal> projections = new LinkedHashMap<>();
-		projections.put(1, current.add(growth));
-		projections.put(5, current.add(growth.multiply(BigDecimal.valueOf(5))));
-		projections.put(10, current.add(growth.multiply(BigDecimal.valueOf(10))));
+		if (current.compareTo(BigDecimal.ZERO) > 0 && oneYearAgo.compareTo(BigDecimal.ZERO) > 0) {
+			BigDecimal growthRate = current
+				.divide(oneYearAgo, 10, RoundingMode.HALF_UP)
+				.subtract(BigDecimal.ONE);
+			if (growthRate.compareTo(BigDecimal.ZERO) < 0) growthRate = BigDecimal.ZERO;
+			BigDecimal multiplier = BigDecimal.ONE.add(growthRate);
+			projections.put(1, current.multiply(multiplier).setScale(2, RoundingMode.HALF_UP));
+			projections.put(5, current.multiply(multiplier.pow(5)).setScale(2, RoundingMode.HALF_UP));
+			projections.put(10, current.multiply(multiplier.pow(10)).setScale(2, RoundingMode.HALF_UP));
+		} else {
+			projections.put(1, current.setScale(2, RoundingMode.HALF_UP));
+			projections.put(5, current.setScale(2, RoundingMode.HALF_UP));
+			projections.put(10, current.setScale(2, RoundingMode.HALF_UP));
+		}
 
 		return projections;
 	}
@@ -431,11 +439,13 @@ public class AnalyticsService {
 				.max(Comparator.comparing(Snapshot::getReferenceDate));
 
 			if (snapshotEnd.isPresent() && snapshotStart.isPresent()) {
-				BigDecimal endAmount = snapshotEnd.get().getAmountOriginalCurrency();
+				BigDecimal startAmount = snapshotStart.get().getAmountOriginalCurrency();
 				BigDecimal endRate = snapshotEnd.get().getExchangeRateToBase();
 				BigDecimal startRate = snapshotStart.get().getExchangeRateToBase();
 
-				impact = impact.add(endAmount.multiply(endRate).subtract(endAmount.multiply(startRate)));
+				impact = impact.add(
+					startAmount.multiply(endRate).subtract(startAmount.multiply(startRate))
+				);
 			}
 		}
 		return impact;
