@@ -274,6 +274,90 @@ describe("MyComponent", () => {
 });
 ```
 
+## Backend Testing
+
+### Setup
+- Test runner: **JUnit 5** via `spring-boot-starter-test` — run with `./mvnw test` (or `./mvnw test -Dtest="!AurumApplicationTests"` to skip the integration context test that requires a live DB)
+- Mocking: **Mockito** (included via `spring-boot-starter-test`) — `@ExtendWith(MockitoExtension.class)`, `@Mock`, `@InjectMocks`
+- Random test data: **Instancio** (`instancio-junit`) — `Instancio.create(MyClass.class)` for fully-populated random instances
+- Mock maker: `src/test/resources/mockito-extensions/org.mockito.plugins.MockMaker` is set to `mock-maker-subclass` (required for Java 25 compatibility with Spring Data repository interfaces)
+
+### Rules
+
+- **No comments** except `// GIVEN`, `// WHEN`, `// THEN` block separators
+- **No `any`** — never use `any` for casting or accessing private members; never use `any()` as a Mockito matcher when a specific value or `eq()` can be used instead
+- **No `verify()` unless void** — for non-void methods, assert the returned value; only use `verify()` for void method calls
+- **No private method testing** — test behavior through the public API only
+- **Test subject naming** — the class under test must always be assigned to a variable named `testSubject`
+- **Mock everything** — all dependencies must be mocked; never rely on real implementations
+- **Test behavior, not values** — use mock objects for test data; assert that the correct mock result flows through, not hardcoded field values
+- **BDD structure** — `// GIVEN`, `// WHEN`, `// THEN` comments to separate test body sections; use descriptive `@Test` method names that read as sentences
+
+### Annotations
+```java
+@ExtendWith(MockitoExtension.class)
+class AssetServiceTest {
+
+    @Mock
+    private AssetRepository assetRepository;
+
+    @InjectMocks
+    private AssetService testSubject;
+}
+```
+
+### GIVEN naming
+- Mock object instances: `mock<Name>` (e.g. `mockAsset`)
+- Stub return values: `stubbed<Name>` (e.g. `stubbedAssets`)
+
+### THEN naming
+- Resolved/actual values: `expected<Name>` (e.g. `Asset expectedAsset = result`)
+
+### Example — Service
+```java
+@ExtendWith(MockitoExtension.class)
+class AssetServiceTest {
+
+    @Mock
+    private AssetRepository assetRepository;
+
+    @InjectMocks
+    private AssetService testSubject;
+
+    @Test
+    void findById_returnsAsset_whenAuthorized() {
+        // GIVEN
+        UUID mockUserId = UUID.randomUUID();
+        Asset mockAsset = Instancio.of(Asset.class)
+            .set(Select.field(Asset::getUser), buildMockUser(mockUserId))
+            .create();
+        when(assetRepository.findById(mockAsset.getId())).thenReturn(Optional.of(mockAsset));
+
+        // WHEN
+        Asset expectedAsset = testSubject.findById(mockAsset.getId(), mockUserId);
+
+        // THEN
+        assertThat(expectedAsset).isEqualTo(mockAsset);
+    }
+
+    @Test
+    void delete_delegatesToRepository() {
+        // GIVEN
+        UUID mockUserId = UUID.randomUUID();
+        Asset mockAsset = Instancio.of(Asset.class)
+            .set(Select.field(Asset::getUser), buildMockUser(mockUserId))
+            .create();
+        when(assetRepository.findById(mockAsset.getId())).thenReturn(Optional.of(mockAsset));
+
+        // WHEN
+        testSubject.delete(mockAsset.getId(), mockUserId);
+
+        // THEN
+        verify(assetRepository).delete(mockAsset);
+    }
+}
+```
+
 ## Branching Rules
 
 **Never commit directly to `main`.** When starting any edit and the current branch is `main`, always create a new branch first:
