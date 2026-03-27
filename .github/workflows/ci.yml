@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  test-backend:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java 25
+        uses: actions/setup-java@v4
+        with:
+          java-version: "25"
+          distribution: "temurin"
+          cache: maven
+
+      - name: Run backend tests
+        working-directory: aurum-be
+        run: ./mvnw test -Dtest="!AurumApplicationTests" --no-transfer-progress
+
+  test-frontend:
+    name: Frontend Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: aurum-fe/package-lock.json
+
+      - name: Install dependencies
+        working-directory: aurum-fe
+        run: npm ci
+
+      - name: Run frontend tests
+        working-directory: aurum-fe
+        run: npm test -- --watch=false

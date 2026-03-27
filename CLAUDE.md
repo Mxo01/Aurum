@@ -358,6 +358,14 @@ class AssetServiceTest {
 }
 ```
 
+## Testing Requirements
+
+**Always add tests for new code.** Every new feature, service method, component, or bug fix must be accompanied by tests:
+- Backend: JUnit 5 unit tests following the rules in the [Backend Testing](#backend-testing) section
+- Frontend: Vitest unit tests following the rules in the [Frontend Testing](#frontend-testing) section
+
+PRs without tests for new code will not be merged.
+
 ## Branching Rules
 
 **Never commit directly to `main`.** When starting any edit and the current branch is `main`, always create a new branch first:
