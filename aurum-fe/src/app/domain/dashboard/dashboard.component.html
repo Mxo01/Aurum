@@ -1,78 +1,112 @@
-<section class="flex flex-col gap-4">
-	<div class="grid grid-cols-12 gap-4">
-		<div class="col-span-12 sm:col-span-6 xl:col-span-3">
-			<app-kpi-card
-				label="Projected Net Worth"
-				[value]="
-					(projectedNetWorth() | currency: userCurrency() : 'symbol' : '1.2-2' : userLocale()) || 0
-				"
-				[variation]="projectedGrowthVariation()"
-				subtext="Based on 1 year growth rate"
-			/>
+@if (isLoading()) {
+	<section class="flex flex-col gap-4">
+		<div class="grid grid-cols-12 gap-4">
+			@for (i of [1, 2, 3, 4]; track i) {
+				<div class="col-span-12 sm:col-span-6 xl:col-span-3">
+					<p-skeleton
+						height="6rem"
+						class="rounded-xl"
+					/>
+				</div>
+			}
 		</div>
-		<div class="col-span-12 sm:col-span-6 xl:col-span-3">
-			<app-kpi-card
-				label="Asset Growth"
-				[value]="
-					(assetGrowth1Y() | currency: userCurrency() : 'symbol' : '1.2-2' : userLocale()) || 0
-				"
-				[variation]="assetGrowth1YVariation()"
-				subtext="Gross asset change vs. 1 year ago"
-			/>
+		<p-skeleton
+			height="20rem"
+			class="rounded-xl"
+		/>
+		<div class="grid grid-cols-12 gap-4">
+			<div class="col-span-12 lg:col-span-3">
+				<p-skeleton
+					height="12rem"
+					class="rounded-xl"
+				/>
+			</div>
+			<div class="col-span-12 lg:col-span-9">
+				<p-skeleton
+					height="12rem"
+					class="rounded-xl"
+				/>
+			</div>
 		</div>
-		<div class="col-span-12 sm:col-span-6 xl:col-span-3">
-			<app-kpi-card
-				label="Total Liabilities"
-				[value]="
-					(totalLiabilities() | currency: userCurrency() : 'symbol' : '1.2-2' : userLocale()) || 0
-				"
-				[invertVariation]="true"
-				[sparklineData]="liabilitiesSparkline()"
-				[subtext]="'Debt ratio: ' + (debtToAssetRatio() | number: '1.1-1') + '%'"
-			/>
+	</section>
+} @else {
+	<section class="flex flex-col gap-4">
+		<div class="grid grid-cols-12 gap-4">
+			<div class="col-span-12 sm:col-span-6 xl:col-span-3">
+				<app-kpi-card
+					label="Projected Net Worth"
+					[value]="
+						(projectedNetWorth() | currency: userCurrency() : 'symbol' : '1.2-2' : userLocale()) ||
+						0
+					"
+					[variation]="projectedGrowthVariation()"
+					subtext="Based on 1 year growth rate"
+				/>
+			</div>
+			<div class="col-span-12 sm:col-span-6 xl:col-span-3">
+				<app-kpi-card
+					label="Asset Growth"
+					[value]="
+						(assetGrowth1Y() | currency: userCurrency() : 'symbol' : '1.2-2' : userLocale()) || 0
+					"
+					[variation]="assetGrowth1YVariation()"
+					subtext="Gross asset change vs. 1 year ago"
+				/>
+			</div>
+			<div class="col-span-12 sm:col-span-6 xl:col-span-3">
+				<app-kpi-card
+					label="Total Liabilities"
+					[value]="
+						(totalLiabilities() | currency: userCurrency() : 'symbol' : '1.2-2' : userLocale()) || 0
+					"
+					[invertVariation]="true"
+					[sparklineData]="liabilitiesSparkline()"
+					[subtext]="'Debt ratio: ' + (debtToAssetRatio() | number: '1.1-1') + '%'"
+				/>
+			</div>
+			<div class="col-span-12 sm:col-span-6 xl:col-span-3">
+				<app-kpi-card
+					label="Currency Exposure"
+					[value]="
+						(currencyImpact() | currency: userCurrency() : 'symbol' : '1.2-2' : userLocale()) || 0
+					"
+					[variation]="currencyImpact()"
+					subtext="FX impact (1M)"
+				/>
+			</div>
 		</div>
-		<div class="col-span-12 sm:col-span-6 xl:col-span-3">
-			<app-kpi-card
-				label="Currency Exposure"
-				[value]="
-					(currencyImpact() | currency: userCurrency() : 'symbol' : '1.2-2' : userLocale()) || 0
-				"
-				[variation]="currencyImpact()"
-				subtext="FX impact (1M)"
-			/>
-		</div>
-	</div>
 
-	<div class="grid grid-cols-12 gap-4 h-125 sm:h-none!">
-		<div class="col-span-12">
-			<app-networth-chart
-				[data]="chartData()"
-				[summary]="summary()"
-				[minYear]="summary()?.oldestSnapshotYear ?? null"
-				[currency]="userCurrency()"
-				[locale]="userLocale()"
-				(yearChanged)="onYearChanged($event)"
-			/>
-		</div>
-	</div>
-
-	<div class="grid grid-cols-12 gap-4">
-		<div class="col-span-12 lg:col-span-3">
-			<app-target-widget
-				[targets]="targets()"
-				[currency]="userCurrency()"
-				[locale]="userLocale()"
-			/>
+		<div class="grid grid-cols-12 gap-4 h-125 sm:h-none!">
+			<div class="col-span-12">
+				<app-networth-chart
+					[data]="chartData()"
+					[summary]="summary()"
+					[minYear]="summary()?.oldestSnapshotYear ?? null"
+					[currency]="userCurrency()"
+					[locale]="userLocale()"
+					(yearChanged)="onYearChanged($event)"
+				/>
+			</div>
 		</div>
 
-		<div class="col-span-12 lg:col-span-9">
-			<app-top-assets
-				[summary]="summary()"
-				[assets]="topAssets()"
-				[locale]="userLocale()"
-				[currency]="userCurrency()"
-				(viewMore)="navigateToAssets()"
-			/>
+		<div class="grid grid-cols-12 gap-4">
+			<div class="col-span-12 lg:col-span-3">
+				<app-target-widget
+					[targets]="targets()"
+					[currency]="userCurrency()"
+					[locale]="userLocale()"
+				/>
+			</div>
+
+			<div class="col-span-12 lg:col-span-9">
+				<app-top-assets
+					[summary]="summary()"
+					[assets]="topAssets()"
+					[locale]="userLocale()"
+					[currency]="userCurrency()"
+					(viewMore)="navigateToAssets()"
+				/>
+			</div>
 		</div>
-	</div>
-</section>
+	</section>
+}

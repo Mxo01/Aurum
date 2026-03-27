@@ -1,6 +1,7 @@
 package com.backend.aurum.infrastructure.exchange;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -29,16 +30,15 @@ class ExchangeRateServiceTest {
 	}
 
 	@Test
-	void getRate_returnsFallback_whenApiFails() {
+	void getRate_throwsRuntimeException_whenApiFails() {
 		// GIVEN
 		String mockFrom = "XYZ";
 		String mockTo = "ABC";
 		LocalDate mockDate = LocalDate.of(1900, 1, 1);
 
-		// WHEN — API will fail for unknown/historical date, expecting fallback to 1:1
-		BigDecimal expectedRate = testSubject.getRate(mockFrom, mockTo, mockDate);
-
-		// THEN
-		assertThat(expectedRate).isEqualByComparingTo(BigDecimal.ONE);
+		// WHEN / THEN
+		assertThatThrownBy(() -> testSubject.getRate(mockFrom, mockTo, mockDate)).isInstanceOf(
+			RuntimeException.class
+		);
 	}
 }

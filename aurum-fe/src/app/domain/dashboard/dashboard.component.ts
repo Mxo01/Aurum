@@ -7,13 +7,14 @@ import {
 	signal
 } from "@angular/core";
 import { CommonModule, CurrencyPipe } from "@angular/common";
+import { Skeleton } from "primeng/skeleton";
 import { DashboardService } from "./dashboard.service";
 import { AnalyticsSummary, ChartData, Projections } from "./model/dashboard.model";
 import { NetworthChartComponent } from "./components/networth-chart/networth-chart.component";
 import { TopAssetsWidgetComponent } from "./components/top-assets/top-assets-widget.component";
 import { TargetWidgetComponent } from "./components/target-widget/target-widget.component";
 import { KpiCardComponent } from "./components/kpi-card/kpi-card.component";
-import { catchError, forkJoin, of } from "rxjs";
+import { catchError, finalize, forkJoin, of } from "rxjs";
 import { Router } from "@angular/router";
 import { Asset } from "../asset/model/asset.model";
 import { Currency } from "../profile/model/currency.model";
@@ -32,7 +33,8 @@ import { ThemeService } from "../../shared/services/theme/theme.service";
 		TopAssetsWidgetComponent,
 		TargetWidgetComponent,
 		KpiCardComponent,
-		CurrencyPipe
+		CurrencyPipe,
+		Skeleton
 	],
 	templateUrl: "./dashboard.component.html",
 	changeDetection: ChangeDetectionStrategy.OnPush
@@ -44,6 +46,7 @@ export class DashboardComponent implements OnInit {
 	private readonly router = inject(Router);
 	private readonly themeService = inject(ThemeService);
 
+	readonly isLoading = signal(false);
 	readonly userCurrency = signal<Currency>(Currency.EUR);
 	readonly userLocale = signal<Locale>(Locale.EN_US);
 	readonly summary = signal<AnalyticsSummary | null>(null);
@@ -83,26 +86,29 @@ export class DashboardComponent implements OnInit {
 	}
 
 	loadData() {
+		this.isLoading.set(true);
 		forkJoin({
 			profile: this.profileService.getProfile().pipe(catchError(() => of(null))),
 			summary: this.dashboardService.getSummary().pipe(catchError(() => of(null))),
 			chart: this.dashboardService.getChartData().pipe(catchError(() => of(null))),
 			targets: this.targetService.getTargets().pipe(catchError(() => of([]))),
 			projections: this.dashboardService.getProjections().pipe(catchError(() => of(null)))
-		}).subscribe({
-			next: data => {
-				if (data.profile) {
-					this.userCurrency.set(data.profile.currency);
-					this.userLocale.set(data.profile.locale);
-					this.themeService.applyLocale(data.profile.locale);
+		})
+			.pipe(finalize(() => this.isLoading.set(false)))
+			.subscribe({
+				next: data => {
+					if (data.profile) {
+						this.userCurrency.set(data.profile.currency);
+						this.userLocale.set(data.profile.locale);
+						this.themeService.applyLocale(data.profile.locale);
+					}
+					this.summary.set(data.summary);
+					this.chartData.set(data.chart);
+					this.targets.set(data.targets);
+					this.topAssets.set(data.summary?.topAssets || []);
+					this.projections.set(data.projections);
 				}
-				this.summary.set(data.summary);
-				this.chartData.set(data.chart);
-				this.targets.set(data.targets);
-				this.topAssets.set(data.summary?.topAssets || []);
-				this.projections.set(data.projections);
-			}
-		});
+			});
 	}
 
 	navigateToAssets() {

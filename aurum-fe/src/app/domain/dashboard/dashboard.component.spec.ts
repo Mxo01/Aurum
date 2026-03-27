@@ -18,6 +18,7 @@ import { AnalyticsSummary, ChartData, Projections } from "./model/dashboard.mode
 import { Currency } from "../profile/model/currency.model";
 import { Locale } from "../profile/model/locale.model";
 import { UserProfile } from "../profile/model/user-profile.model";
+import { Skeleton } from "primeng/skeleton";
 
 const buildMockSummary = (): AnalyticsSummary => ({
 	totalNetWorth: faker.number.float({ min: 10000, max: 500000 }),
@@ -61,6 +62,8 @@ describe("DashboardComponent", () => {
 	let fixture: ComponentFixture<DashboardComponent>;
 	let testSubject: DashboardComponent;
 	let mockDashboardService: DashboardService;
+	let mockTargetService: TargetService;
+	let mockProfileService: ProfileService;
 	let mockRouter: Router;
 
 	beforeEach(() => {
@@ -68,6 +71,7 @@ describe("DashboardComponent", () => {
 			imports: [
 				DashboardComponent,
 				MockModule(CommonModule),
+				MockComponent(Skeleton),
 				MockComponent(NetworthChartComponent),
 				MockComponent(TopAssetsWidgetComponent),
 				MockComponent(TargetWidgetComponent),
@@ -92,6 +96,8 @@ describe("DashboardComponent", () => {
 		fixture = TestBed.createComponent(DashboardComponent);
 		testSubject = fixture.componentInstance;
 		mockDashboardService = TestBed.inject(DashboardService);
+		mockTargetService = TestBed.inject(TargetService);
+		mockProfileService = TestBed.inject(ProfileService);
 		mockRouter = TestBed.inject(Router);
 		fixture.detectChanges();
 	});
@@ -120,10 +126,10 @@ describe("DashboardComponent", () => {
 			vi.spyOn(mockDashboardService, "getProjections").mockReturnValue(
 				throwError(() => new Error("fail"))
 			);
-			vi.spyOn(TestBed.inject(TargetService), "getTargets").mockReturnValue(
+			vi.spyOn(mockTargetService, "getTargets").mockReturnValue(
 				throwError(() => new Error("fail"))
 			);
-			vi.spyOn(TestBed.inject(ProfileService), "getProfile").mockReturnValue(
+			vi.spyOn(mockProfileService, "getProfile").mockReturnValue(
 				throwError(() => new Error("fail"))
 			);
 

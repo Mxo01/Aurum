@@ -101,7 +101,9 @@ public class TargetService {
 				? netWorth
 				: (target.getCurrentAmount() != null ? target.getCurrentAmount() : BigDecimal.ZERO);
 
-		if (target.getTargetAmount().compareTo(BigDecimal.ZERO) > 0) {
+		if (
+			target.getTargetAmount() != null && target.getTargetAmount().compareTo(BigDecimal.ZERO) > 0
+		) {
 			BigDecimal percentage = currentAmount
 				.multiply(new BigDecimal("100"))
 				.divide(target.getTargetAmount(), 2, RoundingMode.HALF_UP);

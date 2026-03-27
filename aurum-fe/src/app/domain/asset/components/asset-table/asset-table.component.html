@@ -60,6 +60,7 @@
 						class="whitespace-nowrap"
 						[value]="asset.name"
 						[icon]="asset.isFavorite ? 'pi pi-bookmark-fill' : ''"
+						[rounded]="true"
 					/>
 				</div>
 			</td>
@@ -105,6 +106,7 @@
 					[value]="asset.isActive ? 'Active' : 'Archived'"
 					[severity]="asset.isActive ? 'success' : 'danger'"
 					[icon]="asset.isActive ? 'pi pi-check-circle' : 'pi pi-inbox'"
+					[rounded]="true"
 				/>
 			</td>
 		</tr>
@@ -123,6 +125,7 @@
 			<td class="text-right font-mono">
 				<p-tag
 					class="whitespace-nowrap"
+					[rounded]="true"
 					[value]="
 						(categoryTotals()[asset.categoryName]
 							| currency: currency() : 'symbol' : '1.2-2' : locale()) || 'N/A'

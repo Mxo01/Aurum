@@ -177,6 +177,23 @@ describe("AssetService", () => {
 			// THEN
 			await expect(result).rejects.toThrow();
 		});
+
+		it("should throw when POST succeeds but subsequent GET fails", async () => {
+			// GIVEN
+			const mockNewAsset = buildMockAsset({ id: undefined });
+
+			// WHEN
+			const result = lastValueFrom(testSubject.saveAsset(mockNewAsset));
+			httpController
+				.expectOne(req => req.method === "POST" && req.url.endsWith("/assets"))
+				.flush(buildMockAsset());
+			httpController
+				.expectOne(req => req.method === "GET" && req.url.endsWith("/assets"))
+				.flush(null, { status: 500, statusText: "Server Error" });
+
+			// THEN
+			await expect(result).rejects.toThrow();
+		});
 	});
 
 	describe("saveCategory", () => {

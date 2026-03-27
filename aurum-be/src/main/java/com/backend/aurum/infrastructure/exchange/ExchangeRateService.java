@@ -29,28 +29,34 @@ public class ExchangeRateService {
 				.retrieve()
 				.body(new ParameterizedTypeReference<>() {});
 			if (response == null) {
-				log.warn(
-					"ExchangeRateService#getRate - Empty response from API for {}/{} on {}, falling back to 1:1",
-					from,
-					to,
-					date
+				throw new RuntimeException(
+					"Empty response from exchange rate API for " + from + "/" + to + " on " + date
 				);
-				return BigDecimal.ONE;
 			}
 			@SuppressWarnings("unchecked")
 			Map<String, Number> rates = (Map<String, Number>) response.get("rates");
+			if (rates == null || rates.get(to) == null) {
+				throw new RuntimeException(
+					"Exchange rate not available for " + from + "/" + to + " on " + date
+				);
+			}
 			BigDecimal rate = BigDecimal.valueOf(rates.get(to).doubleValue());
 			log.debug("ExchangeRateService#getRate - Rate obtained: 1 {} = {} {}", from, rate, to);
 			return rate;
+		} catch (RuntimeException e) {
+			throw e;
 		} catch (Exception e) {
-			log.warn(
-				"ExchangeRateService#getRate - Failed to fetch exchange rate for {}/{} on {}, falling back to 1:1. Error: {}",
-				from,
-				to,
-				date,
-				e.getMessage()
+			throw new RuntimeException(
+				"Failed to fetch exchange rate for " +
+					from +
+					"/" +
+					to +
+					" on " +
+					date +
+					": " +
+					e.getMessage(),
+				e
 			);
-			return BigDecimal.ONE;
 		}
 	}
 }

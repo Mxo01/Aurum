@@ -27,6 +27,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Base64;
+import java.util.Iterator;
 import java.util.Objects;
 import java.util.UUID;
 import javax.imageio.IIOImage;
@@ -181,12 +182,52 @@ public class UserService {
 		log.info("UserService#deletePicture - Profile picture removed for userId={}", userId);
 	}
 
+	private static final byte[] MAGIC_JPEG = { (byte) 0xFF, (byte) 0xD8, (byte) 0xFF };
+	private static final byte[] MAGIC_PNG = { (byte) 0x89, 0x50, 0x4E, 0x47 };
+	private static final byte[] MAGIC_GIF = { 0x47, 0x49, 0x46, 0x38 };
+	private static final byte[] MAGIC_BMP = { 0x42, 0x4D };
+	private static final byte[] MAGIC_WEBP_RIFF = { 0x52, 0x49, 0x46, 0x46 };
+	private static final byte[] MAGIC_WEBP_TYPE = { 0x57, 0x45, 0x42, 0x50 };
+
+	private boolean isValidImageBytes(byte[] bytes) {
+		if (bytes.length < 12) return false;
+		if (startsWith(bytes, MAGIC_JPEG)) return true;
+		if (startsWith(bytes, MAGIC_PNG)) return true;
+		if (startsWith(bytes, MAGIC_GIF)) return true;
+		if (startsWith(bytes, MAGIC_BMP)) return true;
+		if (startsWith(bytes, MAGIC_WEBP_RIFF) && matchesAt(bytes, 8, MAGIC_WEBP_TYPE)) return true;
+		return false;
+	}
+
+	private boolean startsWith(byte[] data, byte[] prefix) {
+		if (data.length < prefix.length) return false;
+		for (int i = 0; i < prefix.length; i++) {
+			if (data[i] != prefix[i]) return false;
+		}
+		return true;
+	}
+
+	private boolean matchesAt(byte[] data, int offset, byte[] pattern) {
+		if (data.length < offset + pattern.length) return false;
+		for (int i = 0; i < pattern.length; i++) {
+			if (data[offset + i] != pattern[i]) return false;
+		}
+		return true;
+	}
+
 	private String processImage(MultipartFile file) throws IOException {
 		log.debug(
 			"UserService#processImage - Reading image bytes, originalName={}",
 			file.getOriginalFilename()
 		);
 		byte[] bytes = file.getBytes();
+
+		if (!isValidImageBytes(bytes)) {
+			log.warn("UserService#processImage - Rejected file with invalid magic bytes");
+			throw new IllegalArgumentException(
+				"Unsupported file type: only JPEG, PNG, GIF, BMP, and WebP are allowed"
+			);
+		}
 
 		// Read EXIF orientation before decoding the image
 		int orientation = 1;
@@ -235,7 +276,11 @@ public class UserService {
 
 		// Encode as JPEG at 85% quality
 		ByteArrayOutputStream baos = new ByteArrayOutputStream();
-		ImageWriter writer = ImageIO.getImageWritersByFormatName("jpeg").next();
+		Iterator<ImageWriter> imageWriters = ImageIO.getImageWritersByFormatName("jpeg");
+		if (!imageWriters.hasNext()) {
+			throw new RuntimeException("No JPEG image writer available in this JVM");
+		}
+		ImageWriter writer = imageWriters.next();
 		ImageWriteParam param = writer.getDefaultWriteParam();
 		param.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
 		param.setCompressionQuality(0.85f);
