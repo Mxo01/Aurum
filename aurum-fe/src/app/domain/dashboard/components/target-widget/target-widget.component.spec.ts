@@ -1,7 +1,8 @@
 import { ComponentFixture, TestBed } from "@angular/core/testing";
 import { signal } from "@angular/core";
 import { MockComponent, MockModule, MockPipe, MockProvider } from "ng-mocks";
-import { CommonModule, CurrencyPipe, DecimalPipe } from "@angular/common";
+import { CommonModule, DecimalPipe } from "@angular/common";
+import { PrivacyCurrencyPipe } from "../../../../shared/pipes/privacy-currency.pipe";
 import { KnobModule } from "primeng/knob";
 import { ButtonModule } from "primeng/button";
 import { FormsModule } from "@angular/forms";
@@ -40,7 +41,7 @@ describe("TargetWidgetComponent", () => {
 				MockModule(KnobModule),
 				MockModule(ButtonModule),
 				MockModule(FormsModule),
-				MockPipe(CurrencyPipe),
+				MockPipe(PrivacyCurrencyPipe),
 				MockPipe(DecimalPipe),
 				MockComponent(Card),
 				MockComponent(TargetFormComponent),

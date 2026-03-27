@@ -28,8 +28,13 @@ type ExternalFn = (params: {
 	};
 }) => void;
 
-const getExternalFn = (currencySymbol: string, isDarkMode: boolean, locale: string): ExternalFn => {
-	const options = getNetworthChartOptions(currencySymbol, isDarkMode, locale);
+const getExternalFn = (
+	currencySymbol: string,
+	isDarkMode: boolean,
+	locale: string,
+	isPrivacyMode = false
+): ExternalFn => {
+	const options = getNetworthChartOptions(currencySymbol, isDarkMode, locale, isPrivacyMode);
 	return (options?.plugins as unknown as { tooltip: { external: ExternalFn } }).tooltip.external;
 };
 
@@ -305,6 +310,62 @@ describe("getNetworthChartOptions", () => {
 				}
 			})
 		).not.toThrow();
+	});
+
+	it("should show privacy placeholder in body rows when privacy mode is on", () => {
+		// GIVEN
+		const external = getExternalFn("€", false, "en-US", true);
+		const mockCanvas = buildMockCanvas();
+
+		// WHEN
+		external({
+			chart: { id: 9009, canvas: mockCanvas },
+			tooltip: {
+				opacity: 1,
+				title: ["Jan"],
+				dataPoints: [
+					{
+						dataIndex: 0,
+						dataset: { label: "Total Assets", data: [1000], borderColor: "#fff" },
+						parsed: { y: 1000 }
+					}
+				],
+				caretX: 0,
+				caretY: 0
+			}
+		});
+
+		// THEN
+		const el = document.getElementById("chartjs-tooltip-9009");
+		expect(el?.innerHTML).toContain("••••••");
+	});
+
+	it("should show privacy placeholder in variation row when privacy mode is on", () => {
+		// GIVEN
+		const external = getExternalFn("$", false, "en-US", true);
+		const mockCanvas = buildMockCanvas();
+
+		// WHEN
+		external({
+			chart: { id: 9010, canvas: mockCanvas },
+			tooltip: {
+				opacity: 1,
+				title: ["Feb"],
+				dataPoints: [
+					{
+						dataIndex: 1,
+						dataset: { label: "Total Assets", data: [1000, 1200], borderColor: "#fff" },
+						parsed: { y: 1200 }
+					}
+				],
+				caretX: 0,
+				caretY: 0
+			}
+		});
+
+		// THEN
+		const el = document.getElementById("chartjs-tooltip-9010");
+		expect(el?.innerHTML).toContain("••••••");
 	});
 
 	it("should use fallback dot color from muted style when borderColor is absent", () => {

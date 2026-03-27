@@ -5,7 +5,8 @@ import { TableModule } from "primeng/table";
 import { Button } from "primeng/button";
 import { InputNumber } from "primeng/inputnumber";
 import { DatePicker } from "primeng/datepicker";
-import { DatePipe, CurrencyPipe } from "@angular/common";
+import { DatePipe } from "@angular/common";
+import { PrivacyCurrencyPipe } from "../../../../shared/pipes/privacy-currency.pipe";
 import { SelectButton } from "primeng/selectbutton";
 import { ViewMode } from "./model/asset-history.model";
 import { SelectItem } from "primeng/api";
@@ -33,7 +34,7 @@ import { Message } from "primeng/message";
 		InputNumber,
 		DatePicker,
 		DatePipe,
-		CurrencyPipe,
+		PrivacyCurrencyPipe,
 		FormsModule,
 		Message,
 		SelectButton,

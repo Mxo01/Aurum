@@ -1,7 +1,8 @@
 import { ComponentFixture, TestBed } from "@angular/core/testing";
 import { faker } from "@faker-js/faker";
 import { MockComponent, MockModule, MockPipe } from "ng-mocks";
-import { CurrencyPipe, DecimalPipe } from "@angular/common";
+import { DecimalPipe } from "@angular/common";
+import { PrivacyCurrencyPipe } from "../../../../shared/pipes/privacy-currency.pipe";
 import { TableModule } from "primeng/table";
 import { Tag } from "primeng/tag";
 import { Badge } from "primeng/badge";
@@ -38,7 +39,7 @@ describe("AssetTableComponent", () => {
 				MockComponent(Tag),
 				MockComponent(Badge),
 				MockComponent(Button),
-				MockPipe(CurrencyPipe),
+				MockPipe(PrivacyCurrencyPipe),
 				MockPipe(DecimalPipe),
 				MockComponent(Menu)
 			]

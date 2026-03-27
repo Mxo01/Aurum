@@ -55,7 +55,8 @@ export function mapDataIntoNetworthChartData(data: ChartData | null): {
 export function getNetworthChartOptions(
 	currencySymbol: string,
 	isDarkMode: boolean,
-	locale: string
+	locale: string,
+	isPrivacyMode: boolean = false
 ): ChartConfiguration["options"] {
 	const textColor = isDarkMode ? "#ffffff" : "#000000";
 	const t = getChartTooltipStyle(isDarkMode);
@@ -94,13 +95,16 @@ export function getNetworthChartOptions(
 							const percent = (diff / Math.abs(prevVal)) * 100;
 							const sign = diff >= 0 ? "+" : "";
 							const color = diff >= 0 ? "#22c55e" : "#ef4444";
-							const formattedDiff = Math.abs(diff).toLocaleString(locale, {
-								minimumFractionDigits: 2
-							});
+							const formattedDiff = isPrivacyMode
+								? "••••••"
+								: Math.abs(diff).toLocaleString(locale, { minimumFractionDigits: 2 });
 							const formattedPercent = (
 								isNaN(percent) || !isFinite(percent) ? 0 : Math.abs(percent)
 							).toFixed(2);
-							variationHtml = `<div style="margin-top:8px;padding-top:8px;border-top:1px solid ${t.border};font-size:12px;font-family:${t.font};color:${t.body};">Variation:&nbsp;<strong style="color:${color};font-family:${t.monoFont};">${sign}${currencySymbol}${(diff >= 0 ? "" : "-") + formattedDiff}&nbsp;(${sign}${formattedPercent}%)</strong></div>`;
+							const variationValue = isPrivacyMode
+								? "••••••"
+								: `${sign}${currencySymbol}${(diff >= 0 ? "" : "-") + formattedDiff}&nbsp;(${sign}${formattedPercent}%)`;
+							variationHtml = `<div style="margin-top:8px;padding-top:8px;border-top:1px solid ${t.border};font-size:12px;font-family:${t.font};color:${t.body};">Variation:&nbsp;<strong style="color:${color};font-family:${t.monoFont};">${variationValue}</strong></div>`;
 						}
 					}
 
@@ -109,7 +113,9 @@ export function getNetworthChartOptions(
 						.map(point => {
 							const isTotal = point.dataset.label === "Total Assets";
 							const y = (point.parsed as { y: number }).y;
-							const formattedVal = `${currencySymbol}${y.toLocaleString(locale, { minimumFractionDigits: 2 })}`;
+							const formattedVal = isPrivacyMode
+								? "••••••"
+								: `${currencySymbol}${y.toLocaleString(locale, { minimumFractionDigits: 2 })}`;
 							const dotColor = (point.dataset as { borderColor?: string }).borderColor ?? t.muted;
 							const dot = isTotal
 								? `<span style="display:inline-block;width:8px;height:2px;border-radius:1px;background:${t.muted};margin-right:6px;flex-shrink:0;"></span>`

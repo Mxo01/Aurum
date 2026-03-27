@@ -6,7 +6,8 @@ import {
 	OnInit,
 	signal
 } from "@angular/core";
-import { CommonModule, CurrencyPipe } from "@angular/common";
+import { CommonModule } from "@angular/common";
+import { PrivacyCurrencyPipe } from "../../shared/pipes/privacy-currency.pipe";
 import { Skeleton } from "primeng/skeleton";
 import { DashboardService } from "./dashboard.service";
 import { AnalyticsSummary, ChartData, Projections } from "./model/dashboard.model";
@@ -33,7 +34,7 @@ import { ThemeService } from "../../shared/services/theme/theme.service";
 		TopAssetsWidgetComponent,
 		TargetWidgetComponent,
 		KpiCardComponent,
-		CurrencyPipe,
+		PrivacyCurrencyPipe,
 		Skeleton
 	],
 	templateUrl: "./dashboard.component.html",

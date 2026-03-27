@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, input, model, output } from "@angular/core";
-import { CommonModule, CurrencyPipe, DecimalPipe } from "@angular/common";
+import { CommonModule, DecimalPipe } from "@angular/common";
+import { PrivacyCurrencyPipe } from "../../../../shared/pipes/privacy-currency.pipe";
 import { TableModule } from "primeng/table";
 import { Tag } from "primeng/tag";
 import { Button } from "primeng/button";
@@ -13,7 +14,16 @@ import { ProgressBar } from "primeng/progressbar";
 	selector: "app-target-list",
 	standalone: true,
 	templateUrl: "./target-list.component.html",
-	imports: [CommonModule, TableModule, Tag, Button, Dialog, ProgressBar, CurrencyPipe, DecimalPipe],
+	imports: [
+		CommonModule,
+		TableModule,
+		Tag,
+		Button,
+		Dialog,
+		ProgressBar,
+		PrivacyCurrencyPipe,
+		DecimalPipe
+	],
 	changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class TargetListComponent {

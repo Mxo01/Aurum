@@ -39,38 +39,32 @@
 			</ng-template>
 
 			<ng-template #end>
-				<p-button
+				<p-split-button
 					severity="secondary"
 					[text]="true"
 					size="small"
-					routerLink="/profile"
+					(onClick)="onProfileClick()"
+					[model]="profileMenuItems()"
 				>
-					<div class="flex flex-col items-end max-sm:hidden">
-						<span class="text-primary text-sm font-bold">{{ user()?.name }}</span>
-						<span class="text-xs">{{ user()?.email }}</span>
-					</div>
-					@if (avatarUrl()) {
-						<p-avatar
-							[image]="avatarUrl()"
-							shape="circle"
-						/>
-					} @else {
-						<p-avatar
-							icon="pi pi-user"
-							class="bg-surface-200! dark:bg-surface-700!"
-							shape="circle"
-						/>
-					}
-				</p-button>
-
-				<p-button
-					severity="danger"
-					icon="pi pi-sign-out"
-					[rounded]="true"
-					[text]="true"
-					size="small"
-					(onClick)="logout()"
-				/>
+					<ng-template #content>
+						<div class="flex flex-col items-end max-sm:hidden">
+							<span class="text-primary text-sm font-bold">{{ user()?.name }}</span>
+							<span class="text-xs">{{ user()?.email }}</span>
+						</div>
+						@if (avatarUrl()) {
+							<p-avatar
+								[image]="avatarUrl()"
+								shape="circle"
+							/>
+						} @else {
+							<p-avatar
+								icon="pi pi-user"
+								class="bg-surface-200! dark:bg-surface-700!"
+								shape="circle"
+							/>
+						}
+					</ng-template>
+				</p-split-button>
 			</ng-template>
 		</p-toolbar>
 	</div>

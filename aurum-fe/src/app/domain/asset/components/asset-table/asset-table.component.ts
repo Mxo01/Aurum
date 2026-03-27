@@ -3,7 +3,8 @@ import { TableModule } from "primeng/table";
 import { Tag } from "primeng/tag";
 import { Badge } from "primeng/badge";
 import { Button } from "primeng/button";
-import { CurrencyPipe, DecimalPipe } from "@angular/common";
+import { DecimalPipe } from "@angular/common";
+import { PrivacyCurrencyPipe } from "../../../../shared/pipes/privacy-currency.pipe";
 import { MenuItem, MenuItemCommandEvent } from "primeng/api";
 import { Menu } from "primeng/menu";
 import { Currency } from "../../../profile/model/currency.model";
@@ -15,7 +16,7 @@ import { mapAssetsToAssetsWithBalance } from "./asset-table.utils";
 	selector: "app-asset-table",
 	standalone: true,
 	templateUrl: "./asset-table.component.html",
-	imports: [TableModule, Tag, Badge, Button, CurrencyPipe, DecimalPipe, Menu]
+	imports: [TableModule, Tag, Badge, Button, PrivacyCurrencyPipe, DecimalPipe, Menu]
 })
 export class AssetTableComponent {
 	assets = input.required<Asset[]>();

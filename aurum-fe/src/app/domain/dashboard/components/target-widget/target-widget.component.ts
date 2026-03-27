@@ -7,7 +7,8 @@ import {
 	model,
 	signal
 } from "@angular/core";
-import { CommonModule, CurrencyPipe, DecimalPipe } from "@angular/common";
+import { CommonModule, DecimalPipe } from "@angular/common";
+import { PrivacyCurrencyPipe } from "../../../../shared/pipes/privacy-currency.pipe";
 import { KnobModule } from "primeng/knob";
 import { ButtonModule } from "primeng/button";
 import { FormsModule } from "@angular/forms";
@@ -31,7 +32,7 @@ import { ThemeService } from "../../../../shared/services/theme/theme.service";
 		KnobModule,
 		ButtonModule,
 		FormsModule,
-		CurrencyPipe,
+		PrivacyCurrencyPipe,
 		DecimalPipe,
 		Card,
 		TargetFormComponent,
