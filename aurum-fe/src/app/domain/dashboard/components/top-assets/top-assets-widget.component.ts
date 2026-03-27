@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, input, output } from "@an
 import { Locale } from "../../../profile/model/locale.model";
 import { Currency } from "../../../profile/model/currency.model";
 import { CommonModule, DecimalPipe } from "@angular/common";
+import { PrivacyCurrencyPipe } from "../../../../shared/pipes/privacy-currency.pipe";
 import { TableModule } from "primeng/table";
 import { ButtonModule } from "primeng/button";
 import { Asset, AssetType } from "../../../asset/model/asset.model";
@@ -20,6 +21,7 @@ import { Divider } from "primeng/divider";
 		ButtonModule,
 		Card,
 		DecimalPipe,
+		PrivacyCurrencyPipe,
 		AssetAllocationChartComponent,
 		Divider
 	],

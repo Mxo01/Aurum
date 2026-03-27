@@ -21,6 +21,8 @@ import { getNetworthChartOptions, mapDataIntoNetworthChartData } from "./networt
 import { getCurrencySymbol } from "../../../profile/profile.utils";
 import { Button } from "primeng/button";
 import { ThemeService } from "../../../../shared/services/theme/theme.service";
+import { PrivacyService } from "../../../../shared/services/privacy/privacy.service";
+import { PrivacyCurrencyPipe } from "../../../../shared/pipes/privacy-currency.pipe";
 
 @Component({
 	selector: "app-networth-chart",
@@ -33,13 +35,15 @@ import { ThemeService } from "../../../../shared/services/theme/theme.service";
 		FormsModule,
 		Card,
 		DecimalPipe,
-		Button
+		Button,
+		PrivacyCurrencyPipe
 	],
 	templateUrl: "./networth-chart.component.html",
 	changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class NetworthChartComponent {
 	private readonly themeService = inject(ThemeService);
+	private readonly privacyService = inject(PrivacyService);
 
 	data = input<ChartData | null>(null);
 	summary = input<AnalyticsSummary | null>(null);
@@ -73,7 +77,8 @@ export class NetworthChartComponent {
 		getNetworthChartOptions(
 			getCurrencySymbol(this.currency()),
 			this.themeService.isDarkMode(),
-			this.locale()
+			this.locale(),
+			this.privacyService.isPrivacyMode()
 		)
 	);
 

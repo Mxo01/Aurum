@@ -76,7 +76,8 @@
 			<td class="text-right font-mono">
 				<span class="font-bold">
 					{{
-						asset.currentValue | currency: asset.originalCurrency : "symbol" : "1.2-2" : locale()
+						asset.currentValue
+							| privacyCurrency: asset.originalCurrency : "symbol" : "1.2-2" : locale()
 					}}
 				</span>
 			</td>
@@ -128,7 +129,7 @@
 					[rounded]="true"
 					[value]="
 						(categoryTotals()[asset.categoryName]
-							| currency: currency() : 'symbol' : '1.2-2' : locale()) || 'N/A'
+							| privacyCurrency: currency() : 'symbol' : '1.2-2' : locale()) || 'N/A'
 					"
 				/>
 			</td>

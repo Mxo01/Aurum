@@ -31,10 +31,10 @@
 			<tr>
 				<td class="font-medium">{{ target.name }}</td>
 				<td class="text-right font-mono">
-					{{ target.targetAmount | currency: currency() : "symbol" : "1.2-2" : locale() }}
+					{{ target.targetAmount | privacyCurrency: currency() : "symbol" : "1.2-2" : locale() }}
 				</td>
 				<td class="text-right font-mono">
-					{{ target.currentAmount | currency: currency() : "symbol" : "1.2-2" : locale() }}
+					{{ target.currentAmount | privacyCurrency: currency() : "symbol" : "1.2-2" : locale() }}
 				</td>
 				<td class="text-center">
 					<div class="relative">

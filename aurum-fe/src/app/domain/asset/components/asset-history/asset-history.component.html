@@ -76,13 +76,21 @@
 						<td class="text-right font-mono">
 							{{
 								snapshot.amountOriginalCurrency
-									| currency: selectedAsset()?.originalCurrency : "symbol" : "1.2-2" : locale()
+									| privacyCurrency
+										: selectedAsset()?.originalCurrency
+										: "symbol"
+										: "1.2-2"
+										: locale()
 							}}
 						</td>
 						<td class="text-right font-mono font-bold">
 							{{
 								snapshot.amountBaseCurrency
-									| currency: selectedAsset()?.originalCurrency : "symbol" : "1.2-2" : locale()
+									| privacyCurrency
+										: selectedAsset()?.originalCurrency
+										: "symbol"
+										: "1.2-2"
+										: locale()
 							}}
 						</td>
 					</tr>

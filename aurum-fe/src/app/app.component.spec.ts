@@ -5,20 +5,22 @@ import { faker } from "@faker-js/faker";
 import { BehaviorSubject, of } from "rxjs";
 import { AuthService } from "@auth0/auth0-angular";
 import { DOCUMENT } from "@angular/common";
-import { App } from "./app.component";
-import { ThemeService } from "./shared/services/theme/theme.service";
-import { ProfileService } from "./domain/profile/profile.service";
-import { UserProfile } from "./domain/profile/model/user-profile.model";
-import { Currency } from "./domain/profile/model/currency.model";
-import { Locale } from "./domain/profile/model/locale.model";
-import { darkModeSelector } from "./app.utils";
-import { RouterLink, RouterLinkActive, RouterOutlet } from "@angular/router";
-import { Button, ButtonDirective } from "primeng/button";
+import { Router, RouterLink, RouterLinkActive, RouterOutlet } from "@angular/router";
+import { ButtonDirective } from "primeng/button";
+import { SplitButton } from "primeng/splitbutton";
 import { Avatar } from "primeng/avatar";
 import { Toolbar } from "primeng/toolbar";
 import { ConfirmDialog } from "primeng/confirmdialog";
 import { Toast } from "primeng/toast";
+import { App } from "./app.component";
+import { ThemeService } from "./shared/services/theme/theme.service";
+import { PrivacyService } from "./shared/services/privacy/privacy.service";
+import { ProfileService } from "./domain/profile/profile.service";
 import { GdprConsentComponent } from "./domain/legal/gdpr-consent/gdpr-consent.component";
+import { UserProfile } from "./domain/profile/model/user-profile.model";
+import { Currency } from "./domain/profile/model/currency.model";
+import { Locale } from "./domain/profile/model/locale.model";
+import { darkModeSelector } from "./app.utils";
 
 const buildMockProfile = (overrides: Partial<UserProfile> = {}): UserProfile => ({
 	id: faker.string.uuid(),
@@ -34,43 +36,59 @@ describe("App", () => {
 
 	let mockAuthService: AuthService;
 	let mockProfileService: ProfileService;
+	let mockPrivacyService: PrivacyService;
+	let mockThemeService: ThemeService;
+	let mockRouter: Router;
 
 	let doc: Document;
 	let mockProfile: WritableSignal<UserProfile | undefined>;
 	let mockIsDarkMode: WritableSignal<boolean>;
+	let mockIsPrivacyMode: WritableSignal<boolean>;
 	let userSubject: BehaviorSubject<{ picture?: string } | null>;
 
 	beforeEach(() => {
 		mockProfile = signal<UserProfile | undefined>(undefined);
 		mockIsDarkMode = signal<boolean>(false);
+		mockIsPrivacyMode = signal<boolean>(false);
 		userSubject = new BehaviorSubject<{ picture?: string } | null>(null);
 
 		TestBed.configureTestingModule({
 			imports: [
 				App,
 				MockDirective(RouterOutlet),
-				MockComponent(Button),
 				MockDirective(ButtonDirective),
 				MockComponent(Avatar),
 				MockComponent(Toolbar),
 				MockDirective(RouterLink),
 				MockDirective(RouterLinkActive),
+				MockComponent(SplitButton),
 				MockComponent(ConfirmDialog),
 				MockComponent(Toast),
 				MockComponent(GdprConsentComponent)
 			],
 			providers: [
 				MockProvider(AuthService, { user$: userSubject.asObservable(), logout: vi.fn() }),
-				MockProvider(ThemeService, { isDarkMode: mockIsDarkMode }),
+				MockProvider(ThemeService, {
+					isDarkMode: mockIsDarkMode,
+					toggleTheme: vi.fn()
+				}),
+				MockProvider(PrivacyService, {
+					isPrivacyMode: mockIsPrivacyMode,
+					togglePrivacy: vi.fn()
+				}),
 				MockProvider(ProfileService, {
 					profile: mockProfile,
 					getProfile: vi.fn().mockReturnValue(of(buildMockProfile()))
-				})
+				}),
+				MockProvider(Router, { navigate: vi.fn().mockResolvedValue(true) })
 			]
 		});
 
 		mockProfileService = TestBed.inject(ProfileService);
 		mockAuthService = TestBed.inject(AuthService);
+		mockPrivacyService = TestBed.inject(PrivacyService);
+		mockThemeService = TestBed.inject(ThemeService);
+		mockRouter = TestBed.inject(Router);
 		doc = TestBed.inject(DOCUMENT);
 
 		fixture = TestBed.createComponent(App);
@@ -140,6 +158,102 @@ describe("App", () => {
 
 			// THEN
 			expect(testSubject.avatarUrl()).toBe(stubbedPictureUrl);
+		});
+	});
+
+	describe("isPrivacyMode", () => {
+		it("should reflect the privacy service signal when false", () => {
+			// GIVEN
+			mockIsPrivacyMode.set(false);
+
+			// WHEN
+			fixture.detectChanges();
+
+			// THEN
+			expect(testSubject.isPrivacyMode()).toBe(false);
+		});
+
+		it("should reflect the privacy service signal when true", () => {
+			// GIVEN
+			mockIsPrivacyMode.set(true);
+
+			// WHEN
+			fixture.detectChanges();
+
+			// THEN
+			expect(testSubject.isPrivacyMode()).toBe(true);
+		});
+	});
+
+	describe("profileMenuItems", () => {
+		it("should contain four items including a separator", () => {
+			// WHEN
+			fixture.detectChanges();
+
+			// THEN
+			expect(testSubject.profileMenuItems()).toHaveLength(4);
+		});
+
+		it("should toggle privacy when the first item command is invoked", () => {
+			// GIVEN
+			const togglePrivacy = vi.spyOn(mockPrivacyService, "togglePrivacy");
+			fixture.detectChanges();
+
+			// WHEN
+			testSubject.profileMenuItems()[0].command!({} as never);
+
+			// THEN
+			expect(togglePrivacy).toHaveBeenCalledOnce();
+		});
+
+		it("should toggle theme when the second item command is invoked", () => {
+			// GIVEN
+			const toggleTheme = vi.spyOn(mockThemeService, "toggleTheme");
+			fixture.detectChanges();
+
+			// WHEN
+			testSubject.profileMenuItems()[1].command!({} as never);
+
+			// THEN
+			expect(toggleTheme).toHaveBeenCalledOnce();
+		});
+
+		it("should call logout when the fourth item command is invoked", () => {
+			// GIVEN
+			const logout = vi.spyOn(mockAuthService, "logout");
+			fixture.detectChanges();
+
+			// WHEN
+			testSubject.profileMenuItems()[3].command!({} as never);
+
+			// THEN
+			expect(logout).toHaveBeenCalled();
+		});
+	});
+
+	describe("togglePrivacy", () => {
+		it("should delegate to privacyService.togglePrivacy", () => {
+			// GIVEN
+			const togglePrivacy = vi.spyOn(mockPrivacyService, "togglePrivacy");
+
+			// WHEN
+			testSubject.togglePrivacy();
+
+			// THEN
+			expect(togglePrivacy).toHaveBeenCalledOnce();
+		});
+	});
+
+	describe("onProfileClick", () => {
+		it("should navigate to /profile", () => {
+			// GIVEN
+			const navigate = vi.spyOn(mockRouter, "navigate").mockResolvedValue(true);
+
+			// WHEN
+			testSubject.onProfileClick();
+
+			// THEN
+			expect(navigate).toHaveBeenCalledWith(["/profile"]);
 		});
 	});
 

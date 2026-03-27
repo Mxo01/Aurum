@@ -1,7 +1,8 @@
 import { ComponentFixture, TestBed } from "@angular/core/testing";
 import { signal } from "@angular/core";
 import { MockComponent, MockModule, MockPipe, MockProvider } from "ng-mocks";
-import { CommonModule, CurrencyPipe } from "@angular/common";
+import { CommonModule } from "@angular/common";
+import { PrivacyCurrencyPipe } from "../../shared/pipes/privacy-currency.pipe";
 import { faker } from "@faker-js/faker";
 import { of, throwError } from "rxjs";
 import { Router } from "@angular/router";
@@ -76,7 +77,7 @@ describe("DashboardComponent", () => {
 				MockComponent(TopAssetsWidgetComponent),
 				MockComponent(TargetWidgetComponent),
 				MockComponent(KpiCardComponent),
-				MockPipe(CurrencyPipe)
+				MockPipe(PrivacyCurrencyPipe)
 			],
 			providers: [
 				MockProvider(ProfileService, {

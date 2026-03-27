@@ -1,7 +1,8 @@
 import { ComponentFixture, TestBed } from "@angular/core/testing";
 import { signal } from "@angular/core";
 import { MockComponent, MockModule, MockPipe, MockProvider } from "ng-mocks";
-import { DatePipe, CurrencyPipe } from "@angular/common";
+import { DatePipe } from "@angular/common";
+import { PrivacyCurrencyPipe } from "../../../../shared/pipes/privacy-currency.pipe";
 import { FormsModule } from "@angular/forms";
 import { Dialog } from "primeng/dialog";
 import { TableModule } from "primeng/table";
@@ -57,7 +58,7 @@ describe("AssetHistoryComponent", () => {
 				MockComponent(InputNumber),
 				MockComponent(DatePicker),
 				MockPipe(DatePipe),
-				MockPipe(CurrencyPipe),
+				MockPipe(PrivacyCurrencyPipe),
 				MockComponent(Message),
 				MockComponent(SelectButton),
 				MockComponent(UIChart)

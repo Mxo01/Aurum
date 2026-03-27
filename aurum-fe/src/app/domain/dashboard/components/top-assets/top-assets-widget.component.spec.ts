@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from "@angular/core/testing";
 import { faker } from "@faker-js/faker";
 import { MockComponent, MockModule, MockPipe } from "ng-mocks";
 import { CommonModule, DecimalPipe } from "@angular/common";
+import { PrivacyCurrencyPipe } from "../../../../shared/pipes/privacy-currency.pipe";
 import { TableModule } from "primeng/table";
 import { ButtonModule } from "primeng/button";
 import { Card } from "primeng/card";
@@ -39,6 +40,7 @@ describe("TopAssetsWidgetComponent", () => {
 				MockModule(ButtonModule),
 				MockComponent(Card),
 				MockPipe(DecimalPipe),
+				MockPipe(PrivacyCurrencyPipe),
 				MockComponent(AssetAllocationChartComponent),
 				MockComponent(Divider)
 			]

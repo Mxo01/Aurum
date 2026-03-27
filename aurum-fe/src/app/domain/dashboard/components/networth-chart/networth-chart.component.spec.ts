@@ -2,6 +2,8 @@ import { ComponentFixture, TestBed } from "@angular/core/testing";
 import { signal } from "@angular/core";
 import { MockComponent, MockModule, MockPipe, MockProvider } from "ng-mocks";
 import { CommonModule, DecimalPipe } from "@angular/common";
+import { PrivacyService } from "../../../../shared/services/privacy/privacy.service";
+import { PrivacyCurrencyPipe } from "../../../../shared/pipes/privacy-currency.pipe";
 import { ChartModule } from "primeng/chart";
 import { SelectButtonModule } from "primeng/selectbutton";
 import { DatePicker } from "primeng/datepicker";
@@ -36,9 +38,13 @@ describe("NetworthChartComponent", () => {
 				MockModule(FormsModule),
 				MockComponent(Card),
 				MockPipe(DecimalPipe),
+				MockPipe(PrivacyCurrencyPipe),
 				MockComponent(Button)
 			],
-			providers: [MockProvider(ThemeService, { isDarkMode: signal(false) })]
+			providers: [
+				MockProvider(ThemeService, { isDarkMode: signal(false) }),
+				MockProvider(PrivacyService, { isPrivacyMode: signal(false) })
+			]
 		});
 		fixture = TestBed.createComponent(NetworthChartComponent);
 		testSubject = fixture.componentInstance;
