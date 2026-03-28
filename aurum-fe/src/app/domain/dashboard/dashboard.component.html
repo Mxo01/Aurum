@@ -31,7 +31,7 @@
 	</section>
 } @else {
 	<section class="flex flex-col gap-4">
-		<div class="grid grid-cols-12 gap-4">
+		<div class="grid grid-cols-12 gap-4 order-2 sm:order-1">
 			<div class="col-span-12 sm:col-span-6 xl:col-span-3">
 				<app-kpi-card
 					label="Projected Net Worth"
@@ -79,7 +79,7 @@
 			</div>
 		</div>
 
-		<div class="grid grid-cols-12 gap-4 h-125 sm:h-none!">
+		<div class="grid grid-cols-12 gap-4 min-h-125 sm:min-h-0 order-1 sm:order-2">
 			<div class="col-span-12">
 				<app-networth-chart
 					[data]="chartData()"
@@ -92,7 +92,7 @@
 			</div>
 		</div>
 
-		<div class="grid grid-cols-12 gap-4">
+		<div class="grid grid-cols-12 gap-4 order-3">
 			<div class="col-span-12 lg:col-span-3">
 				<app-target-widget
 					[targets]="targets()"

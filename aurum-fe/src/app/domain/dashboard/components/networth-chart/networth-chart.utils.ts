@@ -12,12 +12,12 @@ import { ChartConfiguration, ChartDataset } from "chart.js";
 
 export function mapDataIntoNetworthChartData(data: ChartData | null): {
 	labels: string[];
-	datasets: ChartDataset[];
+	datasets: (ChartDataset<"bar"> | ChartDataset<"line">)[];
 } {
 	const labels = data?.labels ?? [];
 	const colors = chartColors;
 
-	const datasets: ChartDataset[] = [
+	const datasets: (ChartDataset<"bar"> | ChartDataset<"line">)[] = [
 		{
 			type: "bar",
 			label: "Total Assets",

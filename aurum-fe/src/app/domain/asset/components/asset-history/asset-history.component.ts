@@ -84,7 +84,7 @@ export class AssetHistoryComponent {
 
 	readonly snapshotsForSelectedAsset = computed(() =>
 		this.snapshots().toSorted(
-			(a, b) => new Date(a.referenceDate).getTime() - new Date(b.referenceDate).getTime()
+			(a, b) => new Date(b.referenceDate).getTime() - new Date(a.referenceDate).getTime()
 		)
 	);
 
