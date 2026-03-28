@@ -10,7 +10,6 @@ import {
 import { McpSetupComponent } from "./mcp/mcp-setup.component";
 import { toSignal } from "@angular/core/rxjs-interop";
 import { AuthService } from "@auth0/auth0-angular";
-import { Card } from "primeng/card";
 import { InputText } from "primeng/inputtext";
 import { Button } from "primeng/button";
 import { SelectButton } from "primeng/selectbutton";
@@ -42,7 +41,6 @@ import { currencyOptions, localeOptions } from "./profile.utils";
 		Button,
 		IconField,
 		InputIcon,
-		Card,
 		FormsModule,
 		InputText,
 		SelectButton,

@@ -10,19 +10,27 @@ import {
 import { ChartData } from "../../model/dashboard.model";
 import { ChartConfiguration, ChartDataset } from "chart.js";
 
-export function mapDataIntoNetworthChartData(data: ChartData | null): {
+export function mapDataIntoNetworthChartData(
+	data: ChartData | null,
+	isDarkMode: boolean
+): {
 	labels: string[];
 	datasets: (ChartDataset<"bar"> | ChartDataset<"line">)[];
 } {
 	const labels = data?.labels ?? [];
 	const colors = chartColors;
 
+	const barGradient = isDarkMode
+		? createBarGradient("rgba(255,255,255,0.50)", "rgba(255,255,255,0.02)")
+		: createBarGradient("rgba(0,0,0,0.30)", "rgba(0,0,0,0.02)");
+
 	const datasets: (ChartDataset<"bar"> | ChartDataset<"line">)[] = [
 		{
 			type: "bar",
 			label: "Total Assets",
 			data: data?.totalAssetsOnly ?? [],
-			backgroundColor: createBarGradient("rgba(255,255,255)", "rgba(0,0,0,0.1)"),
+			backgroundColor: barGradient,
+			borderWidth: 0,
 			borderRadius: 16,
 			maxBarThickness: 64,
 			borderSkipped: false,
@@ -58,7 +66,7 @@ export function getNetworthChartOptions(
 	locale: string,
 	isPrivacyMode: boolean = false
 ): ChartConfiguration["options"] {
-	const textColor = isDarkMode ? "#ffffff" : "#000000";
+	const textColor = isDarkMode ? "rgba(255,255,255,0.4)" : "rgba(0,0,0,0.35)";
 	const t = getChartTooltipStyle(isDarkMode);
 
 	return {
@@ -139,7 +147,10 @@ export function getNetworthChartOptions(
 			x: {
 				grid: { display: false },
 				border: { display: false },
-				ticks: { color: textColor }
+				ticks: {
+					color: textColor,
+					font: { size: 11 }
+				}
 			},
 			y: {
 				display: false,

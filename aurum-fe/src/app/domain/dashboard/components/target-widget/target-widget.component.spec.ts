@@ -6,7 +6,6 @@ import { PrivacyCurrencyPipe } from "../../../../shared/pipes/privacy-currency.p
 import { KnobModule } from "primeng/knob";
 import { ButtonModule } from "primeng/button";
 import { FormsModule } from "@angular/forms";
-import { Card } from "primeng/card";
 import { Menu } from "primeng/menu";
 import { faker } from "@faker-js/faker";
 import { of } from "rxjs";
@@ -43,7 +42,6 @@ describe("TargetWidgetComponent", () => {
 				MockModule(FormsModule),
 				MockPipe(PrivacyCurrencyPipe),
 				MockPipe(DecimalPipe),
-				MockComponent(Card),
 				MockComponent(TargetFormComponent),
 				MockComponent(TargetListComponent),
 				MockComponent(Menu)

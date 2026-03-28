@@ -72,9 +72,9 @@ export class AssetTableComponent {
 			},
 			{
 				label: "Delete Forever",
-				labelClass: "text-red-500",
+				labelClass: "text-red-400",
 				icon: "pi pi-trash",
-				iconClass: "text-red-500!",
+				iconClass: "text-red-400!",
 				command: event => this.deleteAsset.emit({ event, asset })
 			}
 		]);

@@ -8,6 +8,11 @@ interface RouteInfo {
 
 export const routes: Routes = [
 	{
+		path: "",
+		pathMatch: "full",
+		loadComponent: () => import("./domain/landing/landing.component").then(m => m.LandingComponent)
+	},
+	{
 		path: "dashboard",
 		data: {
 			label: "Dashboard",
@@ -61,11 +66,6 @@ export const routes: Routes = [
 			import("./domain/legal/privacy-policy/privacy-policy.component").then(
 				m => m.PrivacyPolicyComponent
 			)
-	},
-	{
-		path: "",
-		redirectTo: "dashboard",
-		pathMatch: "full"
 	},
 	{
 		path: "**",

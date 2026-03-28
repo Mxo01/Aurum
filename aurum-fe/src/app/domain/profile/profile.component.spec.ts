@@ -6,7 +6,6 @@ import { RouterLink, provideRouter } from "@angular/router";
 import { Button } from "primeng/button";
 import { IconField } from "primeng/iconfield";
 import { InputIcon } from "primeng/inputicon";
-import { Card } from "primeng/card";
 import { InputText } from "primeng/inputtext";
 import { SelectButton } from "primeng/selectbutton";
 import { Select, SelectChangeEvent } from "primeng/select";
@@ -49,7 +48,6 @@ describe("ProfileComponent", () => {
 				MockComponent(Button),
 				MockComponent(IconField),
 				MockComponent(InputIcon),
-				MockComponent(Card),
 				MockModule(FormsModule),
 				MockDirective(InputText),
 				MockComponent(SelectButton),

@@ -41,7 +41,7 @@ const getExternalFn = (
 describe("mapDataIntoNetworthChartData", () => {
 	it("should return empty labels and a single bar dataset when data is null", () => {
 		// GIVEN / WHEN
-		const result = mapDataIntoNetworthChartData(null);
+		const result = mapDataIntoNetworthChartData(null, false);
 
 		// THEN
 		expect(result.labels).toHaveLength(0);
@@ -54,7 +54,7 @@ describe("mapDataIntoNetworthChartData", () => {
 		const data = buildMockChartData({ labels: ["Jan", "Feb", "Mar"] });
 
 		// WHEN
-		const result = mapDataIntoNetworthChartData(data);
+		const result = mapDataIntoNetworthChartData(data, false);
 
 		// THEN
 		expect(result.labels).toEqual(["Jan", "Feb", "Mar"]);
@@ -66,7 +66,7 @@ describe("mapDataIntoNetworthChartData", () => {
 		const data = buildMockChartData({ totalAssetsOnly: totals });
 
 		// WHEN
-		const result = mapDataIntoNetworthChartData(data);
+		const result = mapDataIntoNetworthChartData(data, false);
 		const barDataset = result.datasets.find(d => d.type === "bar");
 
 		// THEN
@@ -83,7 +83,7 @@ describe("mapDataIntoNetworthChartData", () => {
 		});
 
 		// WHEN
-		const result = mapDataIntoNetworthChartData(data);
+		const result = mapDataIntoNetworthChartData(data, false);
 		const lineDatasets = result.datasets.filter(d => d.type === "line");
 
 		// THEN
@@ -95,7 +95,7 @@ describe("mapDataIntoNetworthChartData", () => {
 		const data = buildMockChartData({ favoriteAssetsValues: {} });
 
 		// WHEN
-		const result = mapDataIntoNetworthChartData(data);
+		const result = mapDataIntoNetworthChartData(data, false);
 
 		// THEN
 		expect(result.datasets).toHaveLength(1);
@@ -118,7 +118,7 @@ describe("getNetworthChartOptions", () => {
 		const scales = result?.scales as { x: { ticks: { color: string } } };
 
 		// THEN
-		expect(scales.x.ticks.color).toBe("#ffffff");
+		expect(scales.x.ticks.color).toBe("rgba(255,255,255,0.4)");
 	});
 
 	it("should set black tick color in light mode", () => {
@@ -127,7 +127,7 @@ describe("getNetworthChartOptions", () => {
 		const scales = result?.scales as { x: { ticks: { color: string } } };
 
 		// THEN
-		expect(scales.x.ticks.color).toBe("#000000");
+		expect(scales.x.ticks.color).toBe("rgba(0,0,0,0.35)");
 	});
 
 	it("should disable the legend", () => {

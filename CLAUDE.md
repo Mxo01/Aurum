@@ -123,6 +123,7 @@ Assets have `LiabilityType` (MANUAL/AUTOMATIC) and `PaymentFrequency` (WEEKLY/MO
 - Frontend uses **standalone Angular components** (no NgModules)
 - Frontend UI is **PrimeNG 21** + **Tailwind CSS 4** — **always prefer PrimeNG components over custom HTML/CSS implementations**; only build custom components when PrimeNG has no equivalent
 - Currency amounts use `BigDecimal` on the backend; format with user's locale/currency on the frontend
+- Never add `: void` as an explicit return type on functions or methods — omit it entirely
 - Git pre-commit hook runs ESLint + Prettier via lint-staged (husky) for the frontend, and `spotless:apply` for any staged Java files in the backend
 - Backend Java formatting uses **Prettier + prettier-plugin-java** (same tool as frontend), reading `prettier.config.cjs` at the repo root — run `npx prettier --write 'aurum-be/src/**/*.java'` manually or let the pre-commit hook handle it
 

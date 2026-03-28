@@ -5,7 +5,6 @@ import { CommonModule, DecimalPipe } from "@angular/common";
 import { PrivacyCurrencyPipe } from "../../../../shared/pipes/privacy-currency.pipe";
 import { TableModule } from "primeng/table";
 import { ButtonModule } from "primeng/button";
-import { Card } from "primeng/card";
 import { Divider } from "primeng/divider";
 import { TopAssetsWidgetComponent } from "./top-assets-widget.component";
 import { AssetAllocationChartComponent } from "../asset-allocation-chart/asset-allocation-chart.component";
@@ -38,7 +37,6 @@ describe("TopAssetsWidgetComponent", () => {
 				MockModule(CommonModule),
 				MockModule(TableModule),
 				MockModule(ButtonModule),
-				MockComponent(Card),
 				MockPipe(DecimalPipe),
 				MockPipe(PrivacyCurrencyPipe),
 				MockComponent(AssetAllocationChartComponent),

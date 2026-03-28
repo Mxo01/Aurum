@@ -80,6 +80,7 @@ export class App implements OnInit {
 			command: () => this.logout()
 		}
 	]);
+	readonly isAuthenticated = toSignal(this.authService.isAuthenticated$);
 	readonly avatarUrl = computed(() => {
 		const customPic = this.profileService.profile()?.picture;
 		if (customPic) return `data:image/jpeg;base64,${customPic}`;

@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /dashboard
+Disallow: /assets
+Disallow: /profile
+
+Sitemap: https://aurum-networth.com/sitemap.xml

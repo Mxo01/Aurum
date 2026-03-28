@@ -84,7 +84,7 @@
 			<td class="text-right font-mono">
 				@if (asset.trend !== null) {
 					<span
-						class="whitespace-nowrap"
+						class="whitespace-nowrap text-sm font-medium font-mono"
 						[class]="
 							(asset.type === AssetType.ASSET ? asset.trend >= 0 : asset.trend < 0)
 								? 'text-green-500'
@@ -93,7 +93,7 @@
 					>
 						<i
 							[class]="asset.trend >= 0 ? 'pi pi-arrow-up' : 'pi pi-arrow-down'"
-							class="text-sm"
+							class="text-xs!"
 						></i>
 						{{ asset.trendPercentage | number: "1.2-2" : locale() }}%
 					</span>

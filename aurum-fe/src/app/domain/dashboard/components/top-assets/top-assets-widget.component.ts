@@ -6,7 +6,6 @@ import { PrivacyCurrencyPipe } from "../../../../shared/pipes/privacy-currency.p
 import { TableModule } from "primeng/table";
 import { ButtonModule } from "primeng/button";
 import { Asset, AssetType } from "../../../asset/model/asset.model";
-import { Card } from "primeng/card";
 import { mapAssetsToAssetsWithBalance } from "../../../asset/components/asset-table/asset-table.utils";
 import { AssetAllocationChartComponent } from "../asset-allocation-chart/asset-allocation-chart.component";
 import { AnalyticsSummary } from "../../model/dashboard.model";
@@ -19,7 +18,6 @@ import { Divider } from "primeng/divider";
 		CommonModule,
 		TableModule,
 		ButtonModule,
-		Card,
 		DecimalPipe,
 		PrivacyCurrencyPipe,
 		AssetAllocationChartComponent,

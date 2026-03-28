@@ -6,9 +6,9 @@ import { BehaviorSubject, of } from "rxjs";
 import { AuthService } from "@auth0/auth0-angular";
 import { DOCUMENT } from "@angular/common";
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from "@angular/router";
-import { ButtonDirective } from "primeng/button";
-import { SplitButton } from "primeng/splitbutton";
+import { ButtonDirective, Button } from "primeng/button";
 import { Avatar } from "primeng/avatar";
+import { Menu } from "primeng/menu";
 import { Toolbar } from "primeng/toolbar";
 import { ConfirmDialog } from "primeng/confirmdialog";
 import { Toast } from "primeng/toast";
@@ -61,13 +61,18 @@ describe("App", () => {
 				MockComponent(Toolbar),
 				MockDirective(RouterLink),
 				MockDirective(RouterLinkActive),
-				MockComponent(SplitButton),
+				MockComponent(Menu),
+				MockComponent(Button),
 				MockComponent(ConfirmDialog),
 				MockComponent(Toast),
 				MockComponent(GdprConsentComponent)
 			],
 			providers: [
-				MockProvider(AuthService, { user$: userSubject.asObservable(), logout: vi.fn() }),
+				MockProvider(AuthService, {
+					user$: userSubject.asObservable(),
+					isAuthenticated$: of(false),
+					logout: vi.fn()
+				}),
 				MockProvider(ThemeService, {
 					isDarkMode: mockIsDarkMode,
 					toggleTheme: vi.fn()
@@ -186,45 +191,57 @@ describe("App", () => {
 	});
 
 	describe("profileMenuItems", () => {
-		it("should contain four items including a separator", () => {
+		it("should contain five items including a separator", () => {
 			// WHEN
 			fixture.detectChanges();
 
 			// THEN
-			expect(testSubject.profileMenuItems()).toHaveLength(4);
+			expect(testSubject.profileMenuItems()).toHaveLength(5);
 		});
 
-		it("should toggle privacy when the first item command is invoked", () => {
+		it("should navigate to profile when the first item command is invoked", () => {
 			// GIVEN
-			const togglePrivacy = vi.spyOn(mockPrivacyService, "togglePrivacy");
+			const navigate = vi.spyOn(mockRouter, "navigate").mockResolvedValue(true);
 			fixture.detectChanges();
 
 			// WHEN
 			testSubject.profileMenuItems()[0].command!({} as never);
 
 			// THEN
-			expect(togglePrivacy).toHaveBeenCalledOnce();
+			expect(navigate).toHaveBeenCalledWith(["/profile"]);
 		});
 
-		it("should toggle theme when the second item command is invoked", () => {
+		it("should toggle privacy when the second item command is invoked", () => {
 			// GIVEN
-			const toggleTheme = vi.spyOn(mockThemeService, "toggleTheme");
+			const togglePrivacy = vi.spyOn(mockPrivacyService, "togglePrivacy");
 			fixture.detectChanges();
 
 			// WHEN
 			testSubject.profileMenuItems()[1].command!({} as never);
 
 			// THEN
+			expect(togglePrivacy).toHaveBeenCalledOnce();
+		});
+
+		it("should toggle theme when the third item command is invoked", () => {
+			// GIVEN
+			const toggleTheme = vi.spyOn(mockThemeService, "toggleTheme");
+			fixture.detectChanges();
+
+			// WHEN
+			testSubject.profileMenuItems()[2].command!({} as never);
+
+			// THEN
 			expect(toggleTheme).toHaveBeenCalledOnce();
 		});
 
-		it("should call logout when the fourth item command is invoked", () => {
+		it("should call logout when the fifth item command is invoked", () => {
 			// GIVEN
 			const logout = vi.spyOn(mockAuthService, "logout");
 			fixture.detectChanges();
 
 			// WHEN
-			testSubject.profileMenuItems()[3].command!({} as never);
+			testSubject.profileMenuItems()[4].command!({} as never);
 
 			// THEN
 			expect(logout).toHaveBeenCalled();

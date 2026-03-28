@@ -1,15 +1,20 @@
-<p-card class="rounded-xl h-full flex flex-col p-2">
-	<div class="flex flex-wrap justify-between items-center gap-3 mb-4">
-		<span class="text-xl font-bold flex items-center gap-3 whitespace-nowrap">
-			<i class="pi pi-wallet text-xl! font-bold"></i>
+<div
+	class="p-5 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-sm h-full flex flex-col gap-5"
+>
+	<div class="flex flex-wrap justify-between items-center gap-3">
+		<span
+			class="text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400 flex items-center gap-2 whitespace-nowrap"
+		>
+			<i class="pi pi-wallet"></i>
 			Top Assets
 		</span>
 		<p-button
 			label="View more"
 			size="small"
 			severity="secondary"
+			[text]="true"
 			iconPos="right"
-			icon="pi pi-external-link"
+			icon="pi pi-arrow-right"
 			class="whitespace-nowrap"
 			(onClick)="viewMore.emit()"
 		/>
@@ -21,25 +26,21 @@
 			[rows]="5"
 		>
 			<ng-template #header>
-				<tr>
-					<th>Name</th>
-					<th>Current Value</th>
-					<th>Variation (1M)</th>
+				<tr class="bg-transparent!">
+					<th class="bg-transparent!">Name</th>
+					<th class="bg-transparent!">Current Value</th>
+					<th class="bg-transparent!">Variation (1M)</th>
 				</tr>
 			</ng-template>
 			<ng-template
 				#body
 				let-asset
 			>
-				<tr>
+				<tr class="bg-transparent!">
 					<td>
-						<div class="flex flex-column">
-							<span class="font-medium flex items-center gap-3">
-								{{ asset.name }}
-							</span>
-						</div>
+						<span class="font-medium">{{ asset.name }}</span>
 					</td>
-					<td class="font-mono">
+					<td class="font-mono font-bold tabular-nums">
 						{{
 							asset.currentValueBase | privacyCurrency: currency() : "symbol" : "1.2-2" : locale()
 						}}
@@ -47,7 +48,7 @@
 					<td>
 						@if (asset.trend !== null) {
 							<span
-								class="whitespace-nowrap"
+								class="whitespace-nowrap text-sm font-medium font-mono"
 								[class]="
 									(asset.type === AssetType.ASSET ? asset.trend >= 0 : asset.trend < 0)
 										? 'text-green-500'
@@ -56,12 +57,12 @@
 							>
 								<i
 									[class]="asset.trend >= 0 ? 'pi pi-arrow-up' : 'pi pi-arrow-down'"
-									class="text-sm"
+									class="text-xs!"
 								></i>
 								{{ asset.trendPercentage | number: "1.2-2" : locale() }}%
 							</span>
 						} @else {
-							<span class="text-stone-400 italic text-xs">No data</span>
+							<span class="text-zinc-400 dark:text-zinc-500 italic text-xs">No data</span>
 						}
 					</td>
 				</tr>
@@ -72,9 +73,9 @@
 						colspan="5"
 						class="text-center py-12!"
 					>
-						<div class="flex flex-col items-center gap-4 text-stone-400">
+						<div class="flex flex-col items-center gap-3 text-zinc-400 dark:text-zinc-500">
 							<i class="pi pi-inbox text-4xl!"></i>
-							<p>No assets found.</p>
+							<span class="text-sm">No assets found.</span>
 						</div>
 					</td>
 				</tr>
@@ -85,4 +86,4 @@
 
 		<app-asset-allocation-chart [summary]="summary()" />
 	</div>
-</p-card>
+</div>

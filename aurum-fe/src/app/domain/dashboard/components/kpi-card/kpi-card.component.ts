@@ -1,13 +1,12 @@
 import { ChangeDetectionStrategy, Component, computed, input } from "@angular/core";
 import { CommonModule } from "@angular/common";
-import { Card } from "primeng/card";
 import { ChartModule } from "primeng/chart";
 import { createGradientFill } from "../../../../shared/utils";
 
 @Component({
 	selector: "app-kpi-card",
 	standalone: true,
-	imports: [CommonModule, Card, ChartModule],
+	imports: [CommonModule, ChartModule],
 	templateUrl: "./kpi-card.component.html",
 	changeDetection: ChangeDetectionStrategy.OnPush
 })

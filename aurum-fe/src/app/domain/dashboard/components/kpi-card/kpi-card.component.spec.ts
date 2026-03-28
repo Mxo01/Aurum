@@ -1,8 +1,7 @@
 import { ComponentFixture, TestBed } from "@angular/core/testing";
 import { faker } from "@faker-js/faker";
-import { MockComponent, MockModule } from "ng-mocks";
+import { MockModule } from "ng-mocks";
 import { CommonModule } from "@angular/common";
-import { Card } from "primeng/card";
 import { ChartModule } from "primeng/chart";
 import { KpiCardComponent } from "./kpi-card.component";
 
@@ -12,12 +11,7 @@ describe("KpiCardComponent", () => {
 
 	beforeEach(() => {
 		TestBed.configureTestingModule({
-			imports: [
-				KpiCardComponent,
-				MockModule(CommonModule),
-				MockComponent(Card),
-				MockModule(ChartModule)
-			]
+			imports: [KpiCardComponent, MockModule(CommonModule), MockModule(ChartModule)]
 		});
 		fixture = TestBed.createComponent(KpiCardComponent);
 		testSubject = fixture.componentInstance;

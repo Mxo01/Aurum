@@ -8,7 +8,6 @@ import { ChartModule } from "primeng/chart";
 import { SelectButtonModule } from "primeng/selectbutton";
 import { DatePicker } from "primeng/datepicker";
 import { FormsModule } from "@angular/forms";
-import { Card } from "primeng/card";
 import { Button } from "primeng/button";
 import { NetworthChartComponent } from "./networth-chart.component";
 import { ThemeService } from "../../../../shared/services/theme/theme.service";
@@ -36,7 +35,6 @@ describe("NetworthChartComponent", () => {
 				MockModule(SelectButtonModule),
 				MockComponent(DatePicker),
 				MockModule(FormsModule),
-				MockComponent(Card),
 				MockPipe(DecimalPipe),
 				MockPipe(PrivacyCurrencyPipe),
 				MockComponent(Button)
