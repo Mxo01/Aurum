@@ -1,4 +1,3 @@
-import { SplitButton } from "primeng/splitbutton";
 import {
 	ChangeDetectionStrategy,
 	Component,
@@ -8,7 +7,7 @@ import {
 	OnInit
 } from "@angular/core";
 import { RouterOutlet, RouterLinkActive, RouterLink, Router } from "@angular/router";
-import { ButtonDirective } from "primeng/button";
+import { ButtonDirective, Button } from "primeng/button";
 import { Avatar } from "primeng/avatar";
 import { AuthService } from "@auth0/auth0-angular";
 import { toSignal } from "@angular/core/rxjs-interop";
@@ -22,6 +21,7 @@ import { paths } from "./app.routes";
 import { ProfileService } from "./domain/profile/profile.service";
 import { GdprConsentComponent } from "./domain/legal/gdpr-consent/gdpr-consent.component";
 import { MenuItem } from "primeng/api";
+import { Menu } from "primeng/menu";
 
 @Component({
 	selector: "app-root",
@@ -35,8 +35,9 @@ import { MenuItem } from "primeng/api";
 		RouterLinkActive,
 		ConfirmDialog,
 		Toast,
-		SplitButton,
-		GdprConsentComponent
+		GdprConsentComponent,
+		Menu,
+		Button
 	],
 	templateUrl: "app.component.html",
 	changeDetection: ChangeDetectionStrategy.OnPush
@@ -53,9 +54,13 @@ export class App implements OnInit {
 	readonly paths = Object.entries(paths).filter(
 		([path]) => path !== "/profile" && path !== "/assets/categories" && path !== "/privacy"
 	);
-
 	readonly isPrivacyMode = computed(() => this.privacyService.isPrivacyMode());
 	readonly profileMenuItems = computed<MenuItem[]>(() => [
+		{
+			label: "Profile",
+			icon: "pi pi-user",
+			command: () => this.onProfileClick()
+		},
 		{
 			label: "Toggle Privacy Mode",
 			icon: this.isPrivacyMode() ? "pi pi-eye-slash" : "pi pi-eye",

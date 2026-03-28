@@ -39,32 +39,31 @@
 			</ng-template>
 
 			<ng-template #end>
-				<p-split-button
+				<p-button
 					severity="secondary"
 					[text]="true"
 					size="small"
-					(onClick)="onProfileClick()"
-					[model]="profileMenuItems()"
+					(onClick)="profileMenu.toggle($event)"
 				>
-					<ng-template #content>
-						<div class="flex flex-col items-end max-sm:hidden">
-							<span class="text-primary text-sm font-bold">{{ user()?.name }}</span>
-							<span class="text-xs">{{ user()?.email }}</span>
-						</div>
-						@if (avatarUrl()) {
-							<p-avatar
-								[image]="avatarUrl()"
-								shape="circle"
-							/>
-						} @else {
-							<p-avatar
-								icon="pi pi-user"
-								class="bg-surface-200! dark:bg-surface-700!"
-								shape="circle"
-							/>
-						}
-					</ng-template>
-				</p-split-button>
+					<div class="flex flex-col items-end max-sm:hidden">
+						<span class="text-primary text-sm font-bold">{{ user()?.name }}</span>
+						<span class="text-xs">{{ user()?.email }}</span>
+					</div>
+					@if (avatarUrl()) {
+						<p-avatar
+							[image]="avatarUrl()"
+							shape="circle"
+						/>
+					} @else {
+						<p-avatar
+							icon="pi pi-user"
+							class="bg-surface-200! dark:bg-surface-700!"
+							shape="circle"
+						/>
+					}
+					<i class="pi pi-chevron-up sm:hidden! ml-2"></i>
+					<i class="pi pi-chevron-down max-sm:hidden! ml-2"></i>
+				</p-button>
 			</ng-template>
 		</p-toolbar>
 	</div>
@@ -76,3 +75,11 @@
 		<router-outlet />
 	</section>
 </main>
+
+<p-menu
+	class="fixed!"
+	#profileMenu
+	[popup]="true"
+	[model]="profileMenuItems()"
+	[appendTo]="navbar"
+/>
