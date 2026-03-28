@@ -118,7 +118,7 @@ describe("getNetworthChartOptions", () => {
 		const scales = result?.scales as { x: { ticks: { color: string } } };
 
 		// THEN
-		expect(scales.x.ticks.color).toBe("#ffffff");
+		expect(scales.x.ticks.color).toBe("rgba(255,255,255,0.4)");
 	});
 
 	it("should set black tick color in light mode", () => {
@@ -127,7 +127,7 @@ describe("getNetworthChartOptions", () => {
 		const scales = result?.scales as { x: { ticks: { color: string } } };
 
 		// THEN
-		expect(scales.x.ticks.color).toBe("#000000");
+		expect(scales.x.ticks.color).toBe("rgba(0,0,0,0.35)");
 	});
 
 	it("should disable the legend", () => {

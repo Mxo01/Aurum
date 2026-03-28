@@ -13,7 +13,6 @@ import { KnobModule } from "primeng/knob";
 import { ButtonModule } from "primeng/button";
 import { FormsModule } from "@angular/forms";
 import { Target } from "../../../target/model/target.model";
-import { Card } from "primeng/card";
 import { TargetFormComponent } from "../../../target/components/target-form/target-form.component";
 import { TargetListComponent } from "../../../target/components/target-list/target-list.component";
 import { TargetService } from "../../../target/target.service";
@@ -34,7 +33,6 @@ import { ThemeService } from "../../../../shared/services/theme/theme.service";
 		FormsModule,
 		PrivacyCurrencyPipe,
 		DecimalPipe,
-		Card,
 		TargetFormComponent,
 		TargetListComponent,
 		Menu
