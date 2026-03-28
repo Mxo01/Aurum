@@ -5,15 +5,16 @@ import {
 	signal,
 	computed,
 	inject,
-	output
+	output,
+	viewChild,
+	DOCUMENT
 } from "@angular/core";
 import { CommonModule, DecimalPipe } from "@angular/common";
-import { ChartModule } from "primeng/chart";
+import { ChartModule, UIChart } from "primeng/chart";
 import { SelectButtonModule } from "primeng/selectbutton";
 import { DatePicker } from "primeng/datepicker";
 import { FormsModule } from "@angular/forms";
 import { AnalyticsSummary, ChartData, Variation } from "../../model/dashboard.model";
-import { Card } from "primeng/card";
 import { Currency } from "../../../profile/model/currency.model";
 import { Locale } from "../../../profile/model/locale.model";
 import { SelectItem } from "primeng/api";
@@ -33,7 +34,6 @@ import { PrivacyCurrencyPipe } from "../../../../shared/pipes/privacy-currency.p
 		SelectButtonModule,
 		DatePicker,
 		FormsModule,
-		Card,
 		DecimalPipe,
 		Button,
 		PrivacyCurrencyPipe
@@ -44,6 +44,9 @@ import { PrivacyCurrencyPipe } from "../../../../shared/pipes/privacy-currency.p
 export class NetworthChartComponent {
 	private readonly themeService = inject(ThemeService);
 	private readonly privacyService = inject(PrivacyService);
+	private readonly document = inject(DOCUMENT);
+
+	private chartRef? = viewChild(UIChart);
 
 	data = input<ChartData | null>(null);
 	summary = input<AnalyticsSummary | null>(null);
@@ -72,7 +75,9 @@ export class NetworthChartComponent {
 		{ label: "1Y", value: "oneYear" }
 	]);
 	readonly selectedPeriod = signal<keyof Variation>("oneMonth");
-	readonly chartData = computed(() => mapDataIntoNetworthChartData(this.data()));
+	readonly chartData = computed(() =>
+		mapDataIntoNetworthChartData(this.data(), this.themeService.isDarkMode())
+	);
 	readonly chartOptions = computed(() =>
 		getNetworthChartOptions(
 			getCurrencySymbol(this.currency()),

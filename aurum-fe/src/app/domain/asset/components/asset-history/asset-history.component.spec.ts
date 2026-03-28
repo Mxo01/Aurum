@@ -20,6 +20,7 @@ import { ThemeService } from "../../../../shared/services/theme/theme.service";
 import { Asset, AssetType, LiabilityType } from "../../model/asset.model";
 import { Snapshot } from "../../../snapshot/model/snapshot.model";
 import { Currency } from "../../../profile/model/currency.model";
+import { ViewMode } from "./model/asset-history.model";
 
 const buildMockAsset = (overrides: Partial<Asset> = {}): Asset => ({
 	id: faker.string.uuid(),
@@ -140,6 +141,7 @@ describe("AssetHistoryComponent", () => {
 			// GIVEN
 			const mockAsset = buildMockAsset();
 			fixture.componentRef.setInput("selectedAsset", mockAsset);
+			testSubject.newSnapshotValue.set(500);
 			fixture.detectChanges();
 
 			// WHEN
@@ -149,6 +151,18 @@ describe("AssetHistoryComponent", () => {
 			// THEN
 			expect(testSubject.selectedAsset()).toBeNull();
 			expect(testSubject.newSnapshotValue()).toBeNull();
+			expect(testSubject.viewMode()).toBe(ViewMode.Table);
+		});
+
+		it("should reset viewMode to Table when closed while in Chart view", () => {
+			// GIVEN
+			testSubject.viewMode.set(ViewMode.Chart);
+
+			// WHEN
+			testSubject.onHideDrawer();
+
+			// THEN
+			expect(testSubject.viewMode()).toBe(ViewMode.Table);
 		});
 	});
 
@@ -268,13 +282,13 @@ describe("AssetHistoryComponent", () => {
 	});
 
 	describe("snapshotsForSelectedAsset", () => {
-		it("should return snapshots sorted by referenceDate ascending", () => {
+		it("should return snapshots sorted by referenceDate descending (newest first)", () => {
 			// GIVEN
 			const mockAsset = buildMockAsset();
 			const stubbedOlder = buildMockSnapshot(mockAsset.id, { referenceDate: "2023-01-01" });
 			const stubbedNewer = buildMockSnapshot(mockAsset.id, { referenceDate: "2024-06-15" });
 			vi.spyOn(mockSnapshotService, "getSnapshotsByAssetId").mockReturnValue(
-				of([stubbedNewer, stubbedOlder])
+				of([stubbedOlder, stubbedNewer])
 			);
 			fixture.componentRef.setInput("selectedAsset", mockAsset);
 
@@ -282,8 +296,8 @@ describe("AssetHistoryComponent", () => {
 			fixture.detectChanges();
 
 			// THEN
-			expect(testSubject.snapshotsForSelectedAsset()[0].referenceDate).toBe("2023-01-01");
-			expect(testSubject.snapshotsForSelectedAsset()[1].referenceDate).toBe("2024-06-15");
+			expect(testSubject.snapshotsForSelectedAsset()[0].referenceDate).toBe("2024-06-15");
+			expect(testSubject.snapshotsForSelectedAsset()[1].referenceDate).toBe("2023-01-01");
 		});
 	});
 });

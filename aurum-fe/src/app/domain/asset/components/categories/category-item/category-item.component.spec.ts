@@ -2,7 +2,6 @@ import { ComponentFixture, TestBed } from "@angular/core/testing";
 import { faker } from "@faker-js/faker";
 import { MockComponent } from "ng-mocks";
 import { Button } from "primeng/button";
-import { Avatar } from "primeng/avatar";
 import { CategoryItemComponent } from "./category-item.component";
 import { AssetCategory, AssetType } from "../../../model/asset.model";
 
@@ -21,7 +20,7 @@ describe("CategoryItemComponent", () => {
 
 	beforeEach(() => {
 		TestBed.configureTestingModule({
-			imports: [CategoryItemComponent, MockComponent(Button), MockComponent(Avatar)]
+			imports: [CategoryItemComponent, MockComponent(Button)]
 		});
 		fixture = TestBed.createComponent(CategoryItemComponent);
 		testSubject = fixture.componentInstance;

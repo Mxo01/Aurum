@@ -1,14 +1,16 @@
-<div class="flex flex-col gap-3">
-	<span class="text-xl font-bold flex items-center gap-3 whitespace-nowrap mb-4">
-		<i class="pi pi-chart-pie text-xl! font-bold"></i>
+<div class="flex flex-col gap-4">
+	<span
+		class="text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400 flex items-center gap-2 whitespace-nowrap"
+	>
+		<i class="pi pi-chart-pie"></i>
 		Asset Allocation
 	</span>
 	@if (meterItems().length) {
 		<p-metergroup [value]="meterItems()" />
 	} @else {
-		<div class="flex flex-col items-center gap-4 text-stone-400">
+		<div class="flex flex-col items-center gap-3 text-zinc-400 dark:text-zinc-500">
 			<i class="pi pi-chart-pie text-4xl!"></i>
-			Not enough data.
+			<span class="text-sm">Not enough data.</span>
 		</div>
 	}
 </div>

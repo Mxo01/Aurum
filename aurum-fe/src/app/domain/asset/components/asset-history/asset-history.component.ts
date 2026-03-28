@@ -108,6 +108,7 @@ export class AssetHistoryComponent {
 		this.newSnapshotValue.set(null);
 		this.newSnapshotDate.set(new Date());
 		this.selectedAsset.set(null);
+		this.viewMode.set(ViewMode.Table);
 	}
 
 	addSnapshotFromHistory() {

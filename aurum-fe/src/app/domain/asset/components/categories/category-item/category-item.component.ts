@@ -1,11 +1,10 @@
 import { ChangeDetectionStrategy, Component, computed, input, output } from "@angular/core";
 import { AssetCategory, AssetType } from "../../../model/asset.model";
 import { Button } from "primeng/button";
-import { Avatar } from "primeng/avatar";
 
 @Component({
 	selector: "app-category-item",
-	imports: [Button, Avatar],
+	imports: [Button],
 	templateUrl: "./category-item.component.html",
 	changeDetection: ChangeDetectionStrategy.OnPush
 })
