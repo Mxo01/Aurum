@@ -81,7 +81,7 @@ describe("AssetHistoryComponent", () => {
 		fixture.detectChanges();
 	});
 
-	describe("effect — snapshot loading", () => {
+	describe("snapshot loading", () => {
 		it("should load snapshots when a selected asset is provided", () => {
 			// GIVEN
 			const mockAsset = buildMockAsset();

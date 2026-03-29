@@ -21,6 +21,7 @@ import com.backend.aurum.domain.asset.facade.AssetCategoryFacade;
 import com.backend.aurum.domain.asset.facade.AssetFacade;
 import com.backend.aurum.domain.asset.facade.SnapshotFacade;
 import com.backend.aurum.domain.user.model.User;
+import com.backend.aurum.domain.user.model.UserPrincipal;
 import java.util.List;
 import java.util.UUID;
 import org.instancio.Instancio;
@@ -62,8 +63,9 @@ class AurumMcpToolsTest {
 	void setUpSecurityContext() {
 		mockUserId = UUID.randomUUID();
 		User mockUser = Instancio.of(User.class).set(Select.field(User::getId), mockUserId).create();
+		UserPrincipal mockPrincipal = new UserPrincipal(mockUser, null);
 		UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
-			mockUser,
+			mockPrincipal,
 			null,
 			List.of()
 		);

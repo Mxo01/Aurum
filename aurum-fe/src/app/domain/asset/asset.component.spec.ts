@@ -75,7 +75,7 @@ describe("AssetComponent", () => {
 					deleteAssetPermanently: vi.fn().mockReturnValue(of([]))
 				}),
 				MockProvider(ConfirmationService),
-				MockProvider(NavigationService, { previousRoute: "/assets" }),
+				MockProvider(NavigationService, { previousRoute: signal("/assets") }),
 				MockProvider(ProfileService, {
 					getProfile: vi.fn().mockReturnValue(of(buildMockProfile()))
 				}),

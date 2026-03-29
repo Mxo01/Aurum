@@ -7,6 +7,7 @@ import static org.mockito.Mockito.when;
 
 import com.backend.aurum.domain.mcp.service.ApiKeyService;
 import com.backend.aurum.domain.user.model.User;
+import com.backend.aurum.domain.user.model.UserPrincipal;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.http.HttpServletResponse;
 import java.util.Optional;
@@ -119,9 +120,10 @@ class ApiKeyAuthFilterTest {
 
 		// THEN
 		assertThat(SecurityContextHolder.getContext().getAuthentication()).isNotNull();
-		assertThat(SecurityContextHolder.getContext().getAuthentication().getPrincipal()).isEqualTo(
-			mockUser
-		);
+		UserPrincipal expectedPrincipal = (UserPrincipal) SecurityContextHolder.getContext()
+			.getAuthentication()
+			.getPrincipal();
+		assertThat(expectedPrincipal.user()).isEqualTo(mockUser);
 		verify(mockChain).doFilter(
 			org.mockito.ArgumentMatchers.notNull(),
 			org.mockito.ArgumentMatchers.notNull()
@@ -160,9 +162,10 @@ class ApiKeyAuthFilterTest {
 
 		// THEN
 		assertThat(SecurityContextHolder.getContext().getAuthentication()).isNotNull();
-		assertThat(SecurityContextHolder.getContext().getAuthentication().getPrincipal()).isEqualTo(
-			mockUser
-		);
+		UserPrincipal expectedPrincipal = (UserPrincipal) SecurityContextHolder.getContext()
+			.getAuthentication()
+			.getPrincipal();
+		assertThat(expectedPrincipal.user()).isEqualTo(mockUser);
 		verify(mockChain).doFilter(mockRequest, mockResponse);
 		SecurityContextHolder.clearContext();
 	}

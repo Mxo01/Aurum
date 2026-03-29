@@ -2,6 +2,7 @@ import {
 	ChangeDetectionStrategy,
 	Component,
 	computed,
+	DestroyRef,
 	inject,
 	OnInit,
 	signal
@@ -12,6 +13,7 @@ import { DatePipe } from "@angular/common";
 import { Button } from "primeng/button";
 import { Dialog } from "primeng/dialog";
 import { Tooltip } from "primeng/tooltip";
+import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
 import { finalize, switchMap } from "rxjs";
 import { Message } from "primeng/message";
 import { Highlight } from "ngx-highlightjs";
@@ -29,6 +31,7 @@ import { FormsModule } from "@angular/forms";
 export class McpSetupComponent implements OnInit {
 	private readonly mcpService = inject(McpService);
 	private readonly messageService = inject(MessageService);
+	private readonly destroyRef = inject(DestroyRef);
 
 	readonly sseUrl = this.mcpService.mcpSseUrl;
 	readonly isMcpDesktop = signal(true);
@@ -50,10 +53,13 @@ export class McpSetupComponent implements OnInit {
 	});
 
 	ngOnInit() {
-		this.mcpService.getKeyMeta().subscribe({
-			next: meta => this.keyMeta.set(meta),
-			error: () => this.keyMeta.set(null)
-		});
+		this.mcpService
+			.getKeyMeta()
+			.pipe(takeUntilDestroyed(this.destroyRef))
+			.subscribe({
+				next: meta => this.keyMeta.set(meta),
+				error: () => this.keyMeta.set(null)
+			});
 	}
 
 	generateKey() {

@@ -6,6 +6,16 @@ export function isTruthy<T>(value: T): value is Truthy<T> {
 	return value !== false && value !== "" && value !== null && value !== undefined;
 }
 
+export function formatDateToISO(date: Date): string {
+	return (
+		date.getFullYear() +
+		"-" +
+		String(date.getMonth() + 1).padStart(2, "0") +
+		"-" +
+		String(date.getDate()).padStart(2, "0")
+	);
+}
+
 // ─── Chart utils ─────────────────────────────────────────────────────────────
 
 /**

@@ -2,6 +2,7 @@ import {
 	ChangeDetectionStrategy,
 	Component,
 	computed,
+	DestroyRef,
 	inject,
 	OnInit,
 	signal
@@ -15,6 +16,7 @@ import { NetworthChartComponent } from "./components/networth-chart/networth-cha
 import { TopAssetsWidgetComponent } from "./components/top-assets/top-assets-widget.component";
 import { TargetWidgetComponent } from "./components/target-widget/target-widget.component";
 import { KpiCardComponent } from "./components/kpi-card/kpi-card.component";
+import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
 import { catchError, finalize, forkJoin, of } from "rxjs";
 import { Router } from "@angular/router";
 import { Asset } from "../asset/model/asset.model";
@@ -46,6 +48,7 @@ export class DashboardComponent implements OnInit {
 	private readonly targetService = inject(TargetService);
 	private readonly router = inject(Router);
 	private readonly themeService = inject(ThemeService);
+	private readonly destroyRef = inject(DestroyRef);
 
 	readonly isLoading = signal(false);
 	readonly userCurrency = signal<Currency>(Currency.EUR);
@@ -95,7 +98,10 @@ export class DashboardComponent implements OnInit {
 			targets: this.targetService.getTargets().pipe(catchError(() => of([]))),
 			projections: this.dashboardService.getProjections().pipe(catchError(() => of(null)))
 		})
-			.pipe(finalize(() => this.isLoading.set(false)))
+			.pipe(
+				takeUntilDestroyed(this.destroyRef),
+				finalize(() => this.isLoading.set(false))
+			)
 			.subscribe({
 				next: data => {
 					if (data.profile) {
@@ -122,7 +128,10 @@ export class DashboardComponent implements OnInit {
 		} else {
 			this.dashboardService
 				.getChartDataForYear(year)
-				.pipe(catchError(() => of(null)))
+				.pipe(
+					catchError(() => of(null)),
+					takeUntilDestroyed(this.destroyRef)
+				)
 				.subscribe(chartData => {
 					this.chartData.set(chartData);
 				});

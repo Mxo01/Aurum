@@ -15,6 +15,7 @@ import { provideHttpClient, withInterceptors } from "@angular/common/http";
 import { provideAuth0, authHttpInterceptorFn } from "@auth0/auth0-angular";
 
 import { routes } from "./app.routes";
+import { errorInterceptor } from "./shared/interceptors/error.interceptor";
 import { provideHighlightOptions } from "ngx-highlightjs";
 import { providePrimeNG } from "primeng/config";
 import { primengPreset, auth0Config, darkModeSelector } from "./app.utils";
@@ -30,7 +31,7 @@ export const appConfig: ApplicationConfig = {
 		}),
 		provideZonelessChangeDetection(),
 		provideRouter(routes),
-		provideHttpClient(withInterceptors([authHttpInterceptorFn])),
+		provideHttpClient(withInterceptors([authHttpInterceptorFn, errorInterceptor])),
 		provideAuth0(auth0Config),
 		provideHighlightOptions({
 			fullLibraryLoader: () => import("highlight.js")

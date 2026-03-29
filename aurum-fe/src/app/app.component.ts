@@ -2,6 +2,7 @@ import {
 	ChangeDetectionStrategy,
 	Component,
 	computed,
+	DestroyRef,
 	DOCUMENT,
 	inject,
 	OnInit
@@ -10,7 +11,7 @@ import { RouterOutlet, RouterLinkActive, RouterLink, Router } from "@angular/rou
 import { ButtonDirective, Button } from "primeng/button";
 import { Avatar } from "primeng/avatar";
 import { AuthService } from "@auth0/auth0-angular";
-import { toSignal } from "@angular/core/rxjs-interop";
+import { takeUntilDestroyed, toSignal } from "@angular/core/rxjs-interop";
 import { Toolbar } from "primeng/toolbar";
 import { darkModeSelector } from "./app.utils";
 import { ThemeService } from "./shared/services/theme/theme.service";
@@ -49,6 +50,7 @@ export class App implements OnInit {
 	private readonly privacyService = inject(PrivacyService);
 	private readonly document = inject(DOCUMENT);
 	private readonly router = inject(Router);
+	private readonly destroyRef = inject(DestroyRef);
 
 	readonly user = toSignal(this.authService.user$);
 	readonly paths = Object.entries(paths).filter(
@@ -91,7 +93,7 @@ export class App implements OnInit {
 		if (this.themeService.isDarkMode())
 			this.document.documentElement.classList.add(darkModeSelector);
 
-		this.profileService.getProfile().subscribe();
+		this.profileService.getProfile().pipe(takeUntilDestroyed(this.destroyRef)).subscribe();
 	}
 
 	togglePrivacy() {

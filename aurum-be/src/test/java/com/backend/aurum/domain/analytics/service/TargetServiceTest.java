@@ -8,6 +8,7 @@ import static org.mockito.Mockito.when;
 import com.backend.aurum.domain.analytics.model.Target;
 import com.backend.aurum.domain.analytics.model.TargetType;
 import com.backend.aurum.domain.analytics.repository.TargetRepository;
+import com.backend.aurum.domain.user.model.User;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
@@ -159,14 +160,38 @@ class TargetServiceTest {
 	}
 
 	@Test
-	void delete_delegatesToRepository() {
+	void delete_delegatesToRepository_whenUserOwnsTarget() {
 		// GIVEN
-		UUID mockId = UUID.randomUUID();
+		UUID mockUserId = UUID.randomUUID();
+		User mockUser = Instancio.of(User.class).set(Select.field(User::getId), mockUserId).create();
+		Target mockTarget = Instancio.of(Target.class)
+			.set(Select.field(Target::getUser), mockUser)
+			.create();
+		when(targetRepository.findById(mockTarget.getId())).thenReturn(Optional.of(mockTarget));
 
 		// WHEN
-		testSubject.delete(mockId);
+		testSubject.delete(mockTarget.getId(), mockUserId);
 
 		// THEN
-		verify(targetRepository).deleteById(mockId);
+		verify(targetRepository).delete(mockTarget);
+	}
+
+	@Test
+	void delete_throwsException_whenUserDoesNotOwnTarget() {
+		// GIVEN
+		UUID mockUserId = UUID.randomUUID();
+		UUID mockOtherUserId = UUID.randomUUID();
+		User mockUser = Instancio.of(User.class)
+			.set(Select.field(User::getId), mockOtherUserId)
+			.create();
+		Target mockTarget = Instancio.of(Target.class)
+			.set(Select.field(Target::getUser), mockUser)
+			.create();
+		when(targetRepository.findById(mockTarget.getId())).thenReturn(Optional.of(mockTarget));
+
+		// WHEN / THEN
+		assertThatThrownBy(() -> testSubject.delete(mockTarget.getId(), mockUserId)).isInstanceOf(
+			IllegalArgumentException.class
+		);
 	}
 }

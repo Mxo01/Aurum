@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from "@angular/core/testing";
+import { signal } from "@angular/core";
 import { MockComponent, MockDirective, MockProvider } from "ng-mocks";
 import { provideRouter, RouterLink } from "@angular/router";
 import { faker } from "@faker-js/faker";
@@ -42,7 +43,7 @@ describe("CategoriesComponent", () => {
 					saveCategory: vi.fn().mockReturnValue(of({ categories: [], assets: [] })),
 					deleteCategory: vi.fn().mockReturnValue(of({ categories: [], assets: [] }))
 				}),
-				MockProvider(NavigationService, { previousRoute: "/assets" }),
+				MockProvider(NavigationService, { previousRoute: signal("/assets") }),
 				MockProvider(ConfirmationService),
 				provideRouter([])
 			]

@@ -1,8 +1,17 @@
-import { ChangeDetectionStrategy, Component, inject, signal, OnInit } from "@angular/core";
+import {
+	ChangeDetectionStrategy,
+	Component,
+	DestroyRef,
+	inject,
+	signal,
+	OnInit,
+	computed
+} from "@angular/core";
 import { Button } from "primeng/button";
 import { TableModule } from "primeng/table";
 import { AssetService } from "./asset.service";
 import { Asset, AssetCategory } from "./model/asset.model";
+import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
 import { finalize, tap } from "rxjs";
 import { ReactiveFormsModule, FormsModule } from "@angular/forms";
 import { ConfirmationService, MenuItemCommandEvent } from "primeng/api";
@@ -18,6 +27,7 @@ import { AssetHistoryComponent } from "./components/asset-history/asset-history.
 import { AssetTableComponent } from "./components/asset-table/asset-table.component";
 import { Dialog } from "primeng/dialog";
 import { DatePicker } from "primeng/datepicker";
+import { formatDateToISO } from "../../shared/utils";
 
 @Component({
 	selector: "app-asset",
@@ -43,9 +53,10 @@ export class AssetComponent implements OnInit {
 	private readonly navigationService = inject(NavigationService);
 	private readonly profileService = inject(ProfileService);
 	private readonly themeService = inject(ThemeService);
+	private readonly destroyRef = inject(DestroyRef);
 
 	readonly paths = paths;
-	readonly previousRoute = this.navigationService.previousRoute;
+	readonly previousRoute = computed(() => this.navigationService.previousRoute());
 	readonly assets = signal<Asset[]>([]);
 	readonly userCurrency = signal<Currency>(Currency.EUR);
 	readonly userLocale = signal<Locale>(Locale.EN_US);
@@ -62,17 +73,23 @@ export class AssetComponent implements OnInit {
 	statusChangeDate: Date = new Date();
 
 	ngOnInit() {
-		this.profileService.getProfile().subscribe({
-			next: profile => {
-				this.userCurrency.set(profile.currency);
-				this.userLocale.set(profile.locale);
-				this.themeService.applyLocale(profile.locale);
-			}
-		});
+		this.profileService
+			.getProfile()
+			.pipe(takeUntilDestroyed(this.destroyRef))
+			.subscribe({
+				next: profile => {
+					this.userCurrency.set(profile.currency);
+					this.userLocale.set(profile.locale);
+					this.themeService.applyLocale(profile.locale);
+				}
+			});
 
-		this.assetService.getAssetCategories().subscribe({
-			next: categories => this.categoriesOptions.set(categories)
-		});
+		this.assetService
+			.getAssetCategories()
+			.pipe(takeUntilDestroyed(this.destroyRef))
+			.subscribe({
+				next: categories => this.categoriesOptions.set(categories)
+			});
 
 		this.refreshAssets();
 	}
@@ -85,6 +102,7 @@ export class AssetComponent implements OnInit {
 		this.areAssetsLoading.set(true);
 
 		return this.assetService.getAssets().pipe(
+			takeUntilDestroyed(this.destroyRef),
 			finalize(() => this.areAssetsLoading.set(false)),
 			tap({
 				next: assets => {
@@ -126,13 +144,7 @@ export class AssetComponent implements OnInit {
 		if (!pending) return;
 
 		const { asset, newStatus } = pending;
-		const d = this.statusChangeDate;
-		const changedAt =
-			d.getFullYear() +
-			"-" +
-			String(d.getMonth() + 1).padStart(2, "0") +
-			"-" +
-			String(d.getDate()).padStart(2, "0");
+		const changedAt = formatDateToISO(this.statusChangeDate);
 
 		this.isStatusDialogVisible.set(false);
 		this.pendingStatusToggle.set(null);

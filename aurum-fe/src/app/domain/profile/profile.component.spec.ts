@@ -70,7 +70,7 @@ describe("ProfileComponent", () => {
 				}),
 				MockProvider(AuthService, { user$: of(null), logout: vi.fn() }),
 				MockProvider(ThemeService, { isDarkMode: signal(false), toggleTheme: vi.fn() }),
-				MockProvider(NavigationService, { previousRoute: "/assets" }),
+				MockProvider(NavigationService, { previousRoute: signal("/assets") }),
 				MockProvider(ConfirmationService),
 				MockProvider(McpService, {
 					getKeyMeta: vi.fn().mockReturnValue(of(null)),
