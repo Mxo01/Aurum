@@ -1,4 +1,11 @@
-import { ChangeDetectionStrategy, Component, inject, signal, OnInit } from "@angular/core";
+import {
+	ChangeDetectionStrategy,
+	Component,
+	inject,
+	signal,
+	OnInit,
+	computed
+} from "@angular/core";
 import { Button } from "primeng/button";
 import { TableModule } from "primeng/table";
 import { AssetService } from "./asset.service";
@@ -46,7 +53,7 @@ export class AssetComponent implements OnInit {
 	private readonly themeService = inject(ThemeService);
 
 	readonly paths = paths;
-	readonly previousRoute = this.navigationService.previousRoute;
+	readonly previousRoute = computed(() => this.navigationService.previousRoute());
 	readonly assets = signal<Asset[]>([]);
 	readonly userCurrency = signal<Currency>(Currency.EUR);
 	readonly userLocale = signal<Locale>(Locale.EN_US);

@@ -60,7 +60,7 @@ export class ProfileComponent implements OnInit {
 	private readonly navigationService = inject(NavigationService);
 
 	readonly paths = paths;
-	readonly previousRoute = this.navigationService.previousRoute;
+	readonly previousRoute = computed(() => this.navigationService.previousRoute());
 	readonly themeOptions = signal([
 		{
 			label: "Dark",

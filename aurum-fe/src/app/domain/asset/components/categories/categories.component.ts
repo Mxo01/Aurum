@@ -30,7 +30,7 @@ export class CategoriesComponent implements OnInit {
 	private readonly navigationService = inject(NavigationService);
 
 	readonly paths = paths;
-	readonly previousRoute = this.navigationService.previousRoute;
+	readonly previousRoute = computed(() => this.navigationService.previousRoute());
 	readonly categories = signal<AssetCategory[]>([]);
 	readonly defaultCategories = computed(() => this.categories().filter(c => c.isDefault));
 	readonly customCategories = computed(() => this.categories().filter(c => !c.isDefault));
