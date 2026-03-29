@@ -75,6 +75,16 @@ export class DashboardComponent implements OnInit {
 		return pct !== undefined ? +pct.toFixed(2) : undefined;
 	});
 	readonly debtToAssetRatio = computed<number>(() => this.summary()?.debtToAssetRatio ?? 0);
+	readonly avgMonthlyAbsolute = computed<number | undefined>(() => {
+		const abs = this.summary()?.assetVariations.oneYear.absolute;
+		if (abs === undefined) return undefined;
+		return +(abs / 12).toFixed(2);
+	});
+	readonly avgMonthlyPercent = computed<number | undefined>(() => {
+		const pct = this.summary()?.assetVariations.oneYear.percentage;
+		if (pct === undefined) return undefined;
+		return +((Math.pow(1 + pct / 100, 1 / 12) - 1) * 100).toFixed(2);
+	});
 	readonly liabilitiesSparkline = computed<number[]>(() => {
 		const chart = this.chartData();
 		if (!chart?.totalAssetsOnly || !chart?.totalNetWorth) return [];

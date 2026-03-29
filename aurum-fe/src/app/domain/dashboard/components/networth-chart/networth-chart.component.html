@@ -1,59 +1,80 @@
 <div
 	class="p-5 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-sm h-full flex flex-col"
 >
-	<div class="flex flex-col md:flex-row justify-between items-start gap-3 mb-5">
+	<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
+		<!-- Left: main stat block -->
 		<div class="flex flex-col gap-1.5">
 			<span
-				class="text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400 flex items-center gap-2"
+				class="text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400 flex items-center gap-1.5"
 			>
 				<i class="pi pi-money-bill"></i>
 				Total Assets
 			</span>
+
 			<div class="flex items-center flex-wrap gap-3">
-				<span class="text-3xl font-bold font-mono tracking-tight">
+				<span class="text-4xl font-bold font-mono tracking-tight leading-none">
 					{{ totalAmount() | privacyCurrency: currency() : "symbol" : "1.2-2" : locale() }}
 				</span>
 
 				@if (
 					hasEnoughDataToDisplayChart() && variation()?.percentage && !isSpecificYearSelected()
 				) {
-					<div
-						class="flex items-center gap-2 px-2.5 py-1 rounded-full text-sm font-medium"
+					<button
+						class="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-sm font-semibold transition-all cursor-pointer select-none"
 						[class]="
 							variation()!.percentage > 0
-								? 'text-green-500 bg-green-600/10'
-								: 'text-red-500 bg-red-600/10'
+								? 'text-green-500 bg-green-600/10 hover:bg-green-600/20'
+								: 'text-red-500 bg-red-600/10 hover:bg-red-600/20'
 						"
+						(click)="percentageView.set(!percentageView())"
 					>
+						<i
+							[class]="variation()!.percentage > 0 ? 'pi pi-arrow-up' : 'pi pi-arrow-down'"
+							class="text-xs!"
+						></i>
 						@if (percentageView()) {
-							<i
-								[class]="variation()!.percentage > 0 ? 'pi pi-arrow-up' : 'pi pi-arrow-down'"
-								class="text-xs!"
-							></i>
 							{{ variation()!.percentage | number: "1.2-2" : locale() }}%
 						} @else {
-							<i
-								[class]="variation()!.percentage > 0 ? 'pi pi-arrow-up' : 'pi pi-arrow-down'"
-								class="text-xs!"
-							></i>
 							{{
 								variation()!.absolute | privacyCurrency: currency() : "symbol" : "1.2-2" : locale()
 							}}
 						}
+					</button>
+				}
 
-						<p-button
-							size="small"
-							[rounded]="true"
-							[severity]="variation()!.percentage > 0 ? 'success' : 'danger'"
-							[icon]="percentageView() ? 'pi pi-percentage text-xs!' : 'pi pi-money-bill text-xs!'"
-							styleClass="p-1"
-							(onClick)="percentageView.set(!percentageView())"
-						/>
+				@if (avgMonthlyAbsolute() !== undefined && !isSpecificYearSelected()) {
+					<div class="hidden sm:block w-px h-8 bg-zinc-200 dark:bg-zinc-700 self-center"></div>
+					<div class="flex flex-col gap-0.5">
+						<span
+							class="text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400"
+						>
+							avg / month
+						</span>
+						<div class="flex items-center gap-2">
+							<span
+								[class]="isAvgMonthlyPositive() ? 'text-green-500' : 'text-red-500'"
+								class="text-xl font-bold font-mono tracking-tight"
+							>
+								{{
+									avgMonthlyAbsolute() | privacyCurrency: currency() : "symbol" : "1.2-2" : locale()
+								}}
+							</span>
+							@if (avgMonthlyPercent() !== undefined) {
+								<span
+									[class]="isAvgMonthlyPositive() ? 'text-green-500/70' : 'text-red-500/70'"
+									class="text-sm font-semibold tabular-nums"
+								>
+									{{ avgMonthlyPercent()! > 0 ? "+" : ""
+									}}{{ avgMonthlyPercent() | number: "1.2-2" : locale() }}%
+								</span>
+							}
+						</div>
 					</div>
 				}
 			</div>
 		</div>
 
+		<!-- Right: controls -->
 		<div class="flex flex-wrap items-center gap-2">
 			@if (hasEnoughDataToDisplayChart()) {
 				<div class="flex items-center gap-1">

@@ -53,17 +53,21 @@
 						(onClick)="profileMenu.toggle($event)"
 					>
 						<div class="flex flex-col items-end max-sm:hidden">
-							<span class="text-primary text-sm font-bold">{{ user()?.name }}</span>
-							<span class="text-xs">{{ user()?.email }}</span>
+							<span class="text-primary text-sm font-bold">
+								{{ isPrivacyMode() ? "••••••••" : user()?.name }}
+							</span>
+							<span class="text-xs">
+								{{ isPrivacyMode() ? "••••••••••••••••••••••••" : user()?.email }}
+							</span>
 						</div>
-						@if (avatarUrl()) {
+						@if (avatarUrl() && !isPrivacyMode()) {
 							<p-avatar
 								[image]="avatarUrl()"
 								shape="circle"
 							/>
 						} @else {
 							<p-avatar
-								icon="pi pi-user"
+								[icon]="isPrivacyMode() ? 'pi pi-eye-slash' : 'pi pi-user'"
 								class="bg-surface-200! dark:bg-surface-700!"
 								shape="circle"
 							/>

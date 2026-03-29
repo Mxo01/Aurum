@@ -53,6 +53,8 @@ export class NetworthChartComponent {
 	minYear = input<number | null>(null);
 	currency = input.required<Currency>();
 	locale = input<string>(Locale.EN_US);
+	avgMonthlyAbsolute = input<number>();
+	avgMonthlyPercent = input<number>();
 
 	yearChanged = output<number | null>();
 
@@ -75,6 +77,7 @@ export class NetworthChartComponent {
 		{ label: "1Y", value: "oneYear" }
 	]);
 	readonly selectedPeriod = signal<keyof Variation>("oneMonth");
+	readonly isAvgMonthlyPositive = computed(() => (this.avgMonthlyPercent() ?? 0) >= 0);
 	readonly chartData = computed(() =>
 		mapDataIntoNetworthChartData(this.data(), this.themeService.isDarkMode())
 	);
