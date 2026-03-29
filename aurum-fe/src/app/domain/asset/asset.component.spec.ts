@@ -22,6 +22,7 @@ import { Asset, AssetType } from "./model/asset.model";
 import { Currency } from "../profile/model/currency.model";
 import { Locale } from "../profile/model/locale.model";
 import { UserProfile } from "../profile/model/user-profile.model";
+import { SnapshotService } from "../snapshot/snapshot.service";
 
 const buildMockAsset = (overrides: Partial<Asset> = {}): Asset => ({
 	id: faker.string.uuid(),
@@ -49,6 +50,7 @@ describe("AssetComponent", () => {
 	let fixture: ComponentFixture<AssetComponent>;
 	let testSubject: AssetComponent;
 	let mockAssetService: AssetService;
+	let mockSnapshotService: SnapshotService;
 	let mockConfirmationService: ConfirmationService;
 
 	beforeEach(() => {
@@ -79,11 +81,13 @@ describe("AssetComponent", () => {
 				MockProvider(ProfileService, {
 					getProfile: vi.fn().mockReturnValue(of(buildMockProfile()))
 				}),
-				MockProvider(ThemeService, { isDarkMode: signal(false), applyLocale: vi.fn() })
+				MockProvider(ThemeService, { isDarkMode: signal(false), applyLocale: vi.fn() }),
+				MockProvider(SnapshotService, { saveSnapshot: vi.fn().mockReturnValue(of([])) })
 			]
 		});
 
 		mockAssetService = TestBed.inject(AssetService);
+		mockSnapshotService = TestBed.inject(SnapshotService);
 		mockConfirmationService = TestBed.inject(ConfirmationService);
 
 		fixture = TestBed.createComponent(AssetComponent);
@@ -291,6 +295,25 @@ describe("AssetComponent", () => {
 			expect(saveAsset).toHaveBeenCalledWith(mockAsset);
 			expect(testSubject.assets()).toHaveLength(stubbedAssets.length);
 			expect(testSubject.isSaveLoading()).toBe(false);
+		});
+	});
+
+	describe("handleCurrentValueSaved", () => {
+		it("should call saveSnapshot with the asset id, new value and today's date, then refresh assets", () => {
+			// GIVEN
+			const stubbedAssets = [buildMockAsset()];
+			const saveSnapshot = vi.spyOn(mockSnapshotService, "saveSnapshot").mockReturnValue(of([]));
+			vi.spyOn(mockAssetService, "getAssets").mockReturnValue(of(stubbedAssets));
+
+			// WHEN
+			testSubject.currentValueUpdate({ assetId: "asset-1", value: 5000 });
+			fixture.detectChanges();
+
+			// THEN
+			expect(saveSnapshot).toHaveBeenCalledWith(
+				expect.objectContaining({ assetId: "asset-1", amountOriginalCurrency: 5000 })
+			);
+			expect(testSubject.assets()).toHaveLength(stubbedAssets.length);
 		});
 	});
 });
