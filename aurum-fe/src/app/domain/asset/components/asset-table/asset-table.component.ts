@@ -1,9 +1,22 @@
-import { Component, computed, input, output, signal } from "@angular/core";
+import {
+	Component,
+	computed,
+	DestroyRef,
+	inject,
+	input,
+	output,
+	signal,
+	OnInit
+} from "@angular/core";
+import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
+import { FormsModule } from "@angular/forms";
 import { TableModule } from "primeng/table";
 import { Tag } from "primeng/tag";
 import { Badge } from "primeng/badge";
 import { Button } from "primeng/button";
+import { InputNumber } from "primeng/inputnumber";
 import { DecimalPipe } from "@angular/common";
+import { debounceTime, distinctUntilChanged, Subject } from "rxjs";
 import { PrivacyCurrencyPipe } from "../../../../shared/pipes/privacy-currency.pipe";
 import { MenuItem, MenuItemCommandEvent } from "primeng/api";
 import { Menu } from "primeng/menu";
@@ -11,14 +24,28 @@ import { Currency } from "../../../profile/model/currency.model";
 import { Locale } from "../../../profile/model/locale.model";
 import { Asset, AssetType } from "../../model/asset.model";
 import { mapAssetsToAssetsWithBalance } from "./asset-table.utils";
+import { Tooltip } from "primeng/tooltip";
 
 @Component({
 	selector: "app-asset-table",
 	standalone: true,
 	templateUrl: "./asset-table.component.html",
-	imports: [TableModule, Tag, Badge, Button, PrivacyCurrencyPipe, DecimalPipe, Menu]
+	imports: [
+		TableModule,
+		Tag,
+		Badge,
+		Button,
+		PrivacyCurrencyPipe,
+		DecimalPipe,
+		Menu,
+		InputNumber,
+		FormsModule,
+		Tooltip
+	]
 })
-export class AssetTableComponent {
+export class AssetTableComponent implements OnInit {
+	private readonly destroyRef = inject(DestroyRef);
+
 	assets = input.required<Asset[]>();
 	isLoading = input.required<boolean>();
 	currency = input<Currency>(Currency.EUR);
@@ -28,12 +55,13 @@ export class AssetTableComponent {
 	editAsset = output<Asset>();
 	toggleAssetStatus = output<Asset>();
 	deleteAsset = output<{ event: MenuItemCommandEvent; asset: Asset }>();
+	currentValueUpdate = output<{ assetId: string; value: number }>();
 
 	readonly Currency = Currency;
 	readonly AssetType = AssetType;
 
 	readonly rowMenuItems = signal<MenuItem[]>([]);
-	expandedRowGroups: string[] = [];
+	readonly editingValues = signal<Partial<Record<string, number>>>({});
 	readonly assetsWithBalance = computed(() => mapAssetsToAssetsWithBalance(this.assets()));
 	readonly categoryCounts = computed(() => {
 		const counts: Record<string, number> = {};
@@ -52,6 +80,24 @@ export class AssetTableComponent {
 
 		return totals;
 	});
+
+	private readonly currentValueTrigger$ = new Subject<{ assetId: string; value: number }>();
+
+	ngOnInit() {
+		this.currentValueTrigger$
+			.pipe(
+				debounceTime(500),
+				distinctUntilChanged((a, b) => a.assetId === b.assetId && a.value === b.value),
+				takeUntilDestroyed(this.destroyRef)
+			)
+			.subscribe({ next: change => this.currentValueUpdate.emit(change) });
+	}
+
+	onCurrentValueChange(assetId: string, value: number | null) {
+		if (value === null) return;
+		this.editingValues.update(values => ({ ...values, [assetId]: value }));
+		this.currentValueTrigger$.next({ assetId, value });
+	}
 
 	showMenu(event: MouseEvent, menu: Menu, asset: Asset) {
 		this.rowMenuItems.set([

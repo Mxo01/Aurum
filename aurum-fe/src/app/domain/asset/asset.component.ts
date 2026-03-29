@@ -12,7 +12,7 @@ import { TableModule } from "primeng/table";
 import { AssetService } from "./asset.service";
 import { Asset, AssetCategory } from "./model/asset.model";
 import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
-import { finalize, tap } from "rxjs";
+import { finalize, switchMap, tap } from "rxjs";
 import { ReactiveFormsModule, FormsModule } from "@angular/forms";
 import { ConfirmationService, MenuItemCommandEvent } from "primeng/api";
 import { NavigationService } from "../../shared/services/navigation/navigation.service";
@@ -28,6 +28,7 @@ import { AssetTableComponent } from "./components/asset-table/asset-table.compon
 import { Dialog } from "primeng/dialog";
 import { DatePicker } from "primeng/datepicker";
 import { formatDateToISO } from "../../shared/utils";
+import { SnapshotService } from "../snapshot/snapshot.service";
 
 @Component({
 	selector: "app-asset",
@@ -49,6 +50,7 @@ import { formatDateToISO } from "../../shared/utils";
 })
 export class AssetComponent implements OnInit {
 	private readonly assetService = inject(AssetService);
+	private readonly snapshotService = inject(SnapshotService);
 	private readonly confirmationService = inject(ConfirmationService);
 	private readonly navigationService = inject(NavigationService);
 	private readonly profileService = inject(ProfileService);
@@ -199,5 +201,16 @@ export class AssetComponent implements OnInit {
 			.subscribe({
 				next: assets => this.assets.set(assets)
 			});
+	}
+
+	currentValueUpdate({ assetId, value }: { assetId: string; value: number }) {
+		this.snapshotService
+			.saveSnapshot({
+				assetId,
+				amountOriginalCurrency: value,
+				referenceDate: formatDateToISO(new Date())
+			})
+			.pipe(switchMap(() => this.getAssets()))
+			.subscribe({ next: assets => this.assets.set(assets) });
 	}
 }
