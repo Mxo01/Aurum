@@ -8,7 +8,7 @@ import { Select } from "primeng/select";
 import { Dialog } from "primeng/dialog";
 import { ToggleButton } from "primeng/togglebutton";
 import { CategoryFormComponent } from "./category-form.component";
-import { AssetCategory, AssetType } from "../../model/asset.model";
+import { AssetCategory, AssetType } from "../../asset/model/asset.model";
 
 const buildMockCategory = (overrides: Partial<AssetCategory> = {}): AssetCategory => ({
 	id: faker.string.uuid(),

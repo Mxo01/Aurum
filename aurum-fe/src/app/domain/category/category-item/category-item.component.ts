@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, input, output } from "@angular/core";
-import { AssetCategory, AssetType } from "../../../model/asset.model";
 import { Button } from "primeng/button";
+import { AssetCategory, AssetType } from "../../asset/model/asset.model";
 
 @Component({
 	selector: "app-category-item",

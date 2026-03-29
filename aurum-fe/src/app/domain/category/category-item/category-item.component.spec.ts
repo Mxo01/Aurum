@@ -3,7 +3,7 @@ import { faker } from "@faker-js/faker";
 import { MockComponent } from "ng-mocks";
 import { Button } from "primeng/button";
 import { CategoryItemComponent } from "./category-item.component";
-import { AssetCategory, AssetType } from "../../../model/asset.model";
+import { AssetCategory, AssetType } from "../../asset/model/asset.model";
 
 const buildMockCategory = (overrides: Partial<AssetCategory> = {}): AssetCategory => ({
 	id: faker.string.uuid(),

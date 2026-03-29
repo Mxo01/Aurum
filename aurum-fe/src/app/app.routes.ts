@@ -50,9 +50,7 @@ export const routes: Routes = [
 					icon: "pi pi-tags"
 				},
 				loadComponent: () =>
-					import("./domain/asset/components/categories/categories.component").then(
-						m => m.CategoriesComponent
-					)
+					import("./domain/category/category.component").then(m => m.CategoryComponent)
 			}
 		]
 	},
