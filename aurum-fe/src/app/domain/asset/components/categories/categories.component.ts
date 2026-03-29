@@ -2,6 +2,7 @@ import {
 	ChangeDetectionStrategy,
 	Component,
 	computed,
+	DestroyRef,
 	inject,
 	OnInit,
 	signal
@@ -9,6 +10,7 @@ import {
 import { Button } from "primeng/button";
 import { RouterLink } from "@angular/router";
 import { ConfirmationService } from "primeng/api";
+import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
 import { finalize } from "rxjs";
 import { AssetService } from "../../asset.service";
 import { AssetCategory } from "../../model/asset.model";
@@ -28,6 +30,7 @@ export class CategoriesComponent implements OnInit {
 	private readonly assetService = inject(AssetService);
 	private readonly confirmationService = inject(ConfirmationService);
 	private readonly navigationService = inject(NavigationService);
+	private readonly destroyRef = inject(DestroyRef);
 
 	readonly paths = paths;
 	readonly previousRoute = computed(() => this.navigationService.previousRoute());
@@ -40,9 +43,12 @@ export class CategoriesComponent implements OnInit {
 	readonly isDeleteLoading = signal(false);
 
 	ngOnInit() {
-		this.assetService.getAssetCategories().subscribe({
-			next: categories => this.categories.set(categories)
-		});
+		this.assetService
+			.getAssetCategories()
+			.pipe(takeUntilDestroyed(this.destroyRef))
+			.subscribe({
+				next: categories => this.categories.set(categories)
+			});
 	}
 
 	openAdd() {

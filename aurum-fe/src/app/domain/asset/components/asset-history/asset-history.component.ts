@@ -1,5 +1,5 @@
 import { FormsModule } from "@angular/forms";
-import { Component, computed, effect, inject, input, model, output, signal } from "@angular/core";
+import { Component, computed, inject, input, model, output, signal } from "@angular/core";
 import { Dialog } from "primeng/dialog";
 import { TableModule } from "primeng/table";
 import { Button } from "primeng/button";
@@ -11,6 +11,8 @@ import { SelectButton } from "primeng/selectbutton";
 import { ViewMode } from "./model/asset-history.model";
 import { SelectItem } from "primeng/api";
 import { UIChart } from "primeng/chart";
+import { takeUntilDestroyed, toObservable } from "@angular/core/rxjs-interop";
+import { of, switchMap } from "rxjs";
 import { formatDateToISO, isTruthy } from "../../../../shared/utils";
 import { Currency } from "../../../profile/model/currency.model";
 import { Locale } from "../../../profile/model/locale.model";
@@ -65,16 +67,14 @@ export class AssetHistoryComponent {
 	private readonly snapshots = signal<Snapshot[]>([]);
 
 	constructor() {
-		effect(() => {
-			const asset = this.selectedAsset();
-			if (asset?.id) {
-				this.snapshotService.getSnapshotsByAssetId(asset.id).subscribe({
-					next: snapshots => this.snapshots.set(snapshots)
-				});
-			} else {
-				this.snapshots.set([]);
-			}
-		});
+		toObservable(this.selectedAsset)
+			.pipe(
+				switchMap(asset =>
+					asset?.id ? this.snapshotService.getSnapshotsByAssetId(asset.id) : of([])
+				),
+				takeUntilDestroyed()
+			)
+			.subscribe({ next: snapshots => this.snapshots.set(snapshots) });
 	}
 
 	readonly isAutomaticLiability = computed(() => {

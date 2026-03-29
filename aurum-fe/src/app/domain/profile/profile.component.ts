@@ -3,12 +3,13 @@ import {
 	ChangeDetectionStrategy,
 	Component,
 	computed,
+	DestroyRef,
 	inject,
 	signal,
 	OnInit
 } from "@angular/core";
 import { McpSetupComponent } from "./mcp/mcp-setup.component";
-import { toSignal } from "@angular/core/rxjs-interop";
+import { takeUntilDestroyed, toSignal } from "@angular/core/rxjs-interop";
 import { AuthService } from "@auth0/auth0-angular";
 import { InputText } from "primeng/inputtext";
 import { Button } from "primeng/button";
@@ -58,6 +59,7 @@ export class ProfileComponent implements OnInit {
 	private readonly profileService = inject(ProfileService);
 	private readonly confirmationService = inject(ConfirmationService);
 	private readonly navigationService = inject(NavigationService);
+	private readonly destroyRef = inject(DestroyRef);
 
 	readonly paths = paths;
 	readonly previousRoute = computed(() => this.navigationService.previousRoute());
@@ -95,11 +97,12 @@ export class ProfileComponent implements OnInit {
 	private readonly nameTrigger$ = new Subject<string>();
 
 	ngOnInit() {
-		this.profileService.getProfile().subscribe();
+		this.profileService.getProfile().pipe(takeUntilDestroyed(this.destroyRef)).subscribe();
 
 		this.nameTrigger$
-			.pipe(debounceTime(500), distinctUntilChanged())
 			.pipe(
+				debounceTime(500),
+				distinctUntilChanged(),
 				switchMap(name => {
 					this.isUpdatingName.set(true);
 
@@ -107,7 +110,8 @@ export class ProfileComponent implements OnInit {
 						finalize(() => this.isUpdatingName.set(false)),
 						catchError(() => EMPTY)
 					);
-				})
+				}),
+				takeUntilDestroyed(this.destroyRef)
 			)
 			.subscribe();
 	}

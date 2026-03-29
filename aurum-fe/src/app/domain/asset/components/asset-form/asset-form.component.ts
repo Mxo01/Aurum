@@ -3,13 +3,14 @@ import { ToggleButton } from "primeng/togglebutton";
 import {
 	ChangeDetectionStrategy,
 	Component,
+	DestroyRef,
 	effect,
+	inject,
 	input,
 	model,
 	OnInit,
 	output,
-	signal,
-	OnDestroy
+	signal
 } from "@angular/core";
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from "@angular/forms";
 import { InputText } from "primeng/inputtext";
@@ -22,9 +23,9 @@ import {
 	liabilityTypeOptions,
 	paymentFrequencyOptions
 } from "./asset-form.utils";
+import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
 import { Button } from "primeng/button";
 import { Drawer } from "primeng/drawer";
-import { Subscription } from "rxjs";
 import { formatDateToISO } from "../../../../shared/utils";
 import { Currency } from "../../../profile/model/currency.model";
 import { Locale } from "../../../profile/model/locale.model";
@@ -53,7 +54,7 @@ import {
 	],
 	changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class AssetFormComponent implements OnInit, OnDestroy {
+export class AssetFormComponent implements OnInit {
 	isVisible = model.required<boolean>();
 	selectedAsset = model<Asset | null>(null);
 
@@ -81,8 +82,7 @@ export class AssetFormComponent implements OnInit, OnDestroy {
 	readonly AssetType = AssetType;
 	readonly LiabilityType = LiabilityType;
 
-	private categoryCtrlSub?: Subscription;
-	private liabilityTypeCtrlSub?: Subscription;
+	private readonly destroyRef = inject(DestroyRef);
 
 	constructor() {
 		effect(() => {
@@ -124,21 +124,21 @@ export class AssetFormComponent implements OnInit, OnDestroy {
 	}
 
 	ngOnInit() {
-		this.categoryCtrlSub = this.assetForm.controls.category.valueChanges.subscribe({
-			next: category => {
-				if (category) this.assetForm.controls.type.setValue(category.type);
-			}
-		});
-		this.liabilityTypeCtrlSub = this.assetForm.controls.liabilityType.valueChanges.subscribe({
-			next: liabilityType => {
-				this.updateLiabilityValidators(liabilityType);
-			}
-		});
-	}
+		this.assetForm.controls.category.valueChanges
+			.pipe(takeUntilDestroyed(this.destroyRef))
+			.subscribe({
+				next: category => {
+					if (category) this.assetForm.controls.type.setValue(category.type);
+				}
+			});
 
-	ngOnDestroy() {
-		this.categoryCtrlSub?.unsubscribe();
-		this.liabilityTypeCtrlSub?.unsubscribe();
+		this.assetForm.controls.liabilityType.valueChanges
+			.pipe(takeUntilDestroyed(this.destroyRef))
+			.subscribe({
+				next: liabilityType => {
+					this.updateLiabilityValidators(liabilityType);
+				}
+			});
 	}
 
 	private updateLiabilityValidators(liabilityType: LiabilityType | null) {

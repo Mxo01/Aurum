@@ -127,6 +127,16 @@ Assets have `LiabilityType` (MANUAL/AUTOMATIC) and `PaymentFrequency` (WEEKLY/MO
 - Git pre-commit hook runs ESLint + Prettier via lint-staged (husky) for the frontend, and `spotless:apply` for any staged Java files in the backend
 - Backend Java formatting uses **Prettier + prettier-plugin-java** (same tool as frontend), reading `prettier.config.cjs` at the repo root — run `npx prettier --write 'aurum-be/src/**/*.java'` manually or let the pre-commit hook handle it
 
+### Observable unsubscription rule
+
+Always unsubscribe from observables in components unless you have explicitly accounted for the request outliving the component. The rule splits by HTTP intent:
+
+- **GET / read operations** — always add `takeUntilDestroyed(this.destroyRef)` (inject `DestroyRef`). If the subscription is started in the constructor context (field initializer or constructor body), `takeUntilDestroyed()` with no argument is also fine. For signal-based reactive chains inside a `constructor()`, prefer `toObservable()` + `switchMap()` + `takeUntilDestroyed()` — this also cancels stale in-flight requests when the source signal changes.
+- **Mutations (POST / PUT / PATCH / DELETE)** — it is acceptable to omit `takeUntilDestroyed` because the server-side effect should complete even if the user navigates away. However, if the response handler mutates component state (signals, etc.), make sure it does not assume the component is still alive — or add `takeUntilDestroyed` anyway.
+- **Long-lived streams** (router events, singleton services, etc.) — subscriptions in root-level singleton services are intentionally permanent; no unsubscription needed.
+
+Never use `ngOnDestroy` + manual `Subscription` variables — use `takeUntilDestroyed` instead.
+
 ## Frontend Testing
 
 ### Setup
