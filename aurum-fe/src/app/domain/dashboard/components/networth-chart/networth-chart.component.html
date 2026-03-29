@@ -51,6 +51,36 @@
 						/>
 					</div>
 				}
+
+				@if (avgMonthlyAbsolute() !== undefined && !isSpecificYearSelected()) {
+					<div class="hidden sm:block w-px h-8 bg-zinc-200 dark:bg-zinc-700 self-center"></div>
+					<div class="flex flex-col gap-0.5">
+						<span
+							class="text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400"
+						>
+							avg / month
+						</span>
+						<div class="flex items-center gap-2">
+							<span
+								[class]="isAvgMonthlyPositive() ? 'text-green-500' : 'text-red-500'"
+								class="text-xl font-bold font-mono tracking-tight"
+							>
+								{{
+									avgMonthlyAbsolute() | privacyCurrency: currency() : "symbol" : "1.2-2" : locale()
+								}}
+							</span>
+							@if (avgMonthlyPercent() !== undefined) {
+								<span
+									[class]="isAvgMonthlyPositive() ? 'text-green-500/70' : 'text-red-500/70'"
+									class="text-sm font-semibold tabular-nums"
+								>
+									{{ avgMonthlyPercent()! > 0 ? "+" : ""
+									}}{{ avgMonthlyPercent() | number: "1.2-2" : locale() }}%
+								</span>
+							}
+						</div>
+					</div>
+				}
 			</div>
 		</div>
 

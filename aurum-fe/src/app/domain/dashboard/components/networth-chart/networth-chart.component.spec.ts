@@ -161,6 +161,34 @@ describe("NetworthChartComponent", () => {
 		});
 	});
 
+	describe("isAvgMonthlyPositive", () => {
+		it("should be true when avgMonthlyPercent is positive", () => {
+			// GIVEN
+			fixture.componentRef.setInput("avgMonthlyPercent", 1.5);
+			fixture.detectChanges();
+
+			// THEN
+			expect(testSubject.isAvgMonthlyPositive()).toBe(true);
+		});
+
+		it("should be false when avgMonthlyPercent is negative", () => {
+			// GIVEN
+			fixture.componentRef.setInput("avgMonthlyPercent", -2);
+			fixture.detectChanges();
+
+			// THEN
+			expect(testSubject.isAvgMonthlyPositive()).toBe(false);
+		});
+
+		it("should be true when avgMonthlyPercent is undefined", () => {
+			// GIVEN
+			fixture.detectChanges();
+
+			// THEN
+			expect(testSubject.isAvgMonthlyPositive()).toBe(true);
+		});
+	});
+
 	describe("onDateChange", () => {
 		it("should emit the year from the selected date", () => {
 			// GIVEN

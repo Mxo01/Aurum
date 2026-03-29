@@ -87,6 +87,8 @@
 					[minYear]="summary()?.oldestSnapshotYear ?? null"
 					[currency]="userCurrency()"
 					[locale]="userLocale()"
+					[avgMonthlyAbsolute]="avgMonthlyAbsolute()"
+					[avgMonthlyPercent]="avgMonthlyPercent()"
 					(yearChanged)="onYearChanged($event)"
 				/>
 			</div>

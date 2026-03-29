@@ -254,6 +254,62 @@ describe("DashboardComponent", () => {
 		});
 	});
 
+	describe("avgMonthlyAbsolute", () => {
+		it("should return the 1-year absolute divided by 12", () => {
+			// GIVEN
+			const mockSummary = buildMockSummary();
+			mockSummary.assetVariations.oneYear.absolute = 1200;
+
+			// WHEN
+			testSubject.summary.set(mockSummary);
+
+			// THEN
+			expect(testSubject.avgMonthlyAbsolute()).toBe(100);
+		});
+
+		it("should return undefined when summary is null", () => {
+			// WHEN
+			testSubject.summary.set(null);
+
+			// THEN
+			expect(testSubject.avgMonthlyAbsolute()).toBeUndefined();
+		});
+	});
+
+	describe("avgMonthlyPercent", () => {
+		it("should return the compound monthly rate derived from the 1-year percentage", () => {
+			// GIVEN
+			const mockSummary = buildMockSummary();
+			mockSummary.assetVariations.oneYear.percentage = 0;
+
+			// WHEN
+			testSubject.summary.set(mockSummary);
+
+			// THEN
+			expect(testSubject.avgMonthlyPercent()).toBe(0);
+		});
+
+		it("should return undefined when summary is null", () => {
+			// WHEN
+			testSubject.summary.set(null);
+
+			// THEN
+			expect(testSubject.avgMonthlyPercent()).toBeUndefined();
+		});
+
+		it("should return a positive value when 1-year percentage is positive", () => {
+			// GIVEN
+			const mockSummary = buildMockSummary();
+			mockSummary.assetVariations.oneYear.percentage = 12;
+
+			// WHEN
+			testSubject.summary.set(mockSummary);
+
+			// THEN
+			expect(testSubject.avgMonthlyPercent()).toBeGreaterThan(0);
+		});
+	});
+
 	describe("assetGrowth1YVariation", () => {
 		it("should return the 1-year percentage growth fixed to 2 decimals", () => {
 			// GIVEN
