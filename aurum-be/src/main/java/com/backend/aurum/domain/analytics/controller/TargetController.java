@@ -65,9 +65,17 @@ public class TargetController {
 	}
 
 	@DeleteMapping("/{id}")
-	public ResponseEntity<Void> deleteTarget(@PathVariable UUID id) {
-		log.info("TargetController#deleteTarget - Request to delete targetId={}", id);
-		targetFacade.deleteTarget(id);
+	public ResponseEntity<Void> deleteTarget(
+		@PathVariable UUID id,
+		@AuthenticationPrincipal UserPrincipal principal
+	) {
+		UUID userId = principal.user().getId();
+		log.info(
+			"TargetController#deleteTarget - Request to delete targetId={} for userId={}",
+			id,
+			userId
+		);
+		targetFacade.deleteTarget(id, userId);
 		log.info("TargetController#deleteTarget - Target deleted successfully: targetId={}", id);
 		return ResponseEntity.noContent().build();
 	}

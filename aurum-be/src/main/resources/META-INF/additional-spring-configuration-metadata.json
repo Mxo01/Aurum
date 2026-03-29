@@ -1,19 +1,22 @@
-{
-	"properties": [
-		{
-			"name": "auth0.management.domain",
-			"type": "java.lang.String",
-			"description": "A description for 'auth0.management.domain'"
-		},
-		{
-			"name": "auth0.management.clientId",
-			"type": "java.lang.String",
-			"description": "A description for 'auth0.management.clientId'"
-		},
-		{
-			"name": "auth0.management.clientSecret",
-			"type": "java.lang.String",
-			"description": "A description for 'auth0.management.clientSecret'"
-		}
-	]
-}
+{"properties": [
+  {
+    "name": "auth0.management.domain",
+    "type": "java.lang.String",
+    "description": "A description for 'auth0.management.domain'"
+  },
+  {
+    "name": "auth0.management.clientId",
+    "type": "java.lang.String",
+    "description": "A description for 'auth0.management.clientId'"
+  },
+  {
+    "name": "auth0.management.clientSecret",
+    "type": "java.lang.String",
+    "description": "A description for 'auth0.management.clientSecret'"
+  },
+  {
+    "name": "cors.allowed-origins",
+    "type": "java.lang.String",
+    "description": "A description for 'cors.allowed-origins'"
+  }
+]}

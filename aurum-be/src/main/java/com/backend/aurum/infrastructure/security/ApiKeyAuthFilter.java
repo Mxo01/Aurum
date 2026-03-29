@@ -2,6 +2,7 @@ package com.backend.aurum.infrastructure.security;
 
 import com.backend.aurum.domain.mcp.service.ApiKeyService;
 import com.backend.aurum.domain.user.model.User;
+import com.backend.aurum.domain.user.model.UserPrincipal;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.ServletOutputStream;
@@ -143,8 +144,9 @@ public class ApiKeyAuthFilter extends OncePerRequestFilter {
 	}
 
 	private void setAuthentication(User user) {
+		UserPrincipal principal = new UserPrincipal(user, null);
 		UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
-			user,
+			principal,
 			null,
 			List.of()
 		);

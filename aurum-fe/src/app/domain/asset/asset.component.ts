@@ -18,6 +18,7 @@ import { AssetHistoryComponent } from "./components/asset-history/asset-history.
 import { AssetTableComponent } from "./components/asset-table/asset-table.component";
 import { Dialog } from "primeng/dialog";
 import { DatePicker } from "primeng/datepicker";
+import { formatDateToISO } from "../../shared/utils";
 
 @Component({
 	selector: "app-asset",
@@ -126,13 +127,7 @@ export class AssetComponent implements OnInit {
 		if (!pending) return;
 
 		const { asset, newStatus } = pending;
-		const d = this.statusChangeDate;
-		const changedAt =
-			d.getFullYear() +
-			"-" +
-			String(d.getMonth() + 1).padStart(2, "0") +
-			"-" +
-			String(d.getDate()).padStart(2, "0");
+		const changedAt = formatDateToISO(this.statusChangeDate);
 
 		this.isStatusDialogVisible.set(false);
 		this.pendingStatusToggle.set(null);

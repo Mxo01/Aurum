@@ -74,7 +74,7 @@ public class TargetFacade {
 			.toList();
 	}
 
-	public void deleteTarget(UUID id) {
-		targetService.delete(id);
+	public void deleteTarget(UUID id, UUID userId) {
+		targetService.delete(id, userId);
 	}
 }

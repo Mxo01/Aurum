@@ -52,11 +52,11 @@ export const primengPreset = definePreset(Aura, {
 });
 
 export const auth0Config: AuthConfig = {
-	domain: "aurum-api.eu.auth0.com",
-	clientId: "ZHikUaUM2UOqcOHtTzdPephPVMWifRPj",
+	domain: environment.auth0Domain,
+	clientId: environment.auth0ClientId,
 	authorizationParams: {
 		redirect_uri: window.location.origin,
-		audience: "https://api.aurum.com"
+		audience: environment.auth0Audience
 	},
 	httpInterceptor: {
 		allowedList: [
@@ -64,7 +64,7 @@ export const auth0Config: AuthConfig = {
 				uri: `${environment.apiUrl}/*`,
 				tokenOptions: {
 					authorizationParams: {
-						audience: "https://api.aurum.com"
+						audience: environment.auth0Audience
 					}
 				}
 			}

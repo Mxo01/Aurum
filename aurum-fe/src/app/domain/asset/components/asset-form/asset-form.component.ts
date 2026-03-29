@@ -25,6 +25,7 @@ import {
 import { Button } from "primeng/button";
 import { Drawer } from "primeng/drawer";
 import { Subscription } from "rxjs";
+import { formatDateToISO } from "../../../../shared/utils";
 import { Currency } from "../../../profile/model/currency.model";
 import { Locale } from "../../../profile/model/locale.model";
 import {
@@ -188,14 +189,7 @@ export class AssetFormComponent implements OnInit, OnDestroy {
 			isActive: this.selectedAsset()?.isActive ?? true,
 			isFavorite: !!form.isFavorite,
 			initialValue: isNewAsset ? form.initialValue : null,
-			referenceDate:
-				isNewAsset && form.referenceDate
-					? form.referenceDate.getFullYear() +
-						"-" +
-						String(form.referenceDate.getMonth() + 1).padStart(2, "0") +
-						"-" +
-						String(form.referenceDate.getDate()).padStart(2, "0")
-					: null,
+			referenceDate: isNewAsset && form.referenceDate ? formatDateToISO(form.referenceDate) : null,
 			liabilityType: form.type === AssetType.LIABILITY ? (form.liabilityType ?? null) : null,
 			paymentFrequency:
 				form.type === AssetType.LIABILITY && form.liabilityType === LiabilityType.AUTOMATIC

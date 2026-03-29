@@ -89,12 +89,13 @@ class TargetFacadeTest {
 	void deleteTarget_delegatesToService() {
 		// GIVEN
 		UUID mockId = UUID.randomUUID();
+		UUID mockUserId = UUID.randomUUID();
 
 		// WHEN
-		testSubject.deleteTarget(mockId);
+		testSubject.deleteTarget(mockId, mockUserId);
 
 		// THEN
-		verify(targetService).delete(mockId);
+		verify(targetService).delete(mockId, mockUserId);
 	}
 
 	@Test

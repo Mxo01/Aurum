@@ -85,9 +85,18 @@ public class TargetService {
 	}
 
 	@Transactional
-	public void delete(UUID id) {
-		log.debug("TargetService#delete - Deleting targetId={}", id);
-		targetRepository.deleteById(Objects.requireNonNull(id));
+	public void delete(UUID id, UUID userId) {
+		log.debug("TargetService#delete - Deleting targetId={} for userId={}", id, userId);
+		Target target = targetRepository
+			.findById(Objects.requireNonNull(id))
+			.orElseThrow(() -> {
+				log.warn("TargetService#delete - Target not found: targetId={}", id);
+				return new RuntimeException("Target not found");
+			});
+		if (!target.getUser().getId().equals(Objects.requireNonNull(userId))) {
+			throw new IllegalArgumentException("Target does not belong to the requesting user");
+		}
+		targetRepository.delete(target);
 		log.info("TargetService#delete - Target deleted: targetId={}", id);
 	}
 

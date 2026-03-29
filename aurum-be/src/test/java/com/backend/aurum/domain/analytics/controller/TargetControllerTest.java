@@ -96,13 +96,15 @@ class TargetControllerTest {
 	@Test
 	void deleteTarget_returnsNoContent() {
 		// GIVEN
+		UUID mockUserId = UUID.randomUUID();
 		UUID mockId = UUID.randomUUID();
+		UserPrincipal mockPrincipal = buildPrincipal(mockUserId);
 
 		// WHEN
-		ResponseEntity<Void> expectedResponse = testSubject.deleteTarget(mockId);
+		ResponseEntity<Void> expectedResponse = testSubject.deleteTarget(mockId, mockPrincipal);
 
 		// THEN
 		assertThat(expectedResponse.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
-		verify(targetFacade).deleteTarget(mockId);
+		verify(targetFacade).deleteTarget(mockId, mockUserId);
 	}
 }

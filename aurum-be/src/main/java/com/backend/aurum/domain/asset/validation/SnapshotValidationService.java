@@ -40,7 +40,9 @@ public class SnapshotValidationService {
 			.findById(Objects.requireNonNull(dto.getAssetId()))
 			.orElseThrow(() -> new IllegalArgumentException("Asset not found"));
 
-		if (userId != null && !asset.getUser().getId().equals(userId)) {
+		if (
+			!asset.getUser().getId().equals(Objects.requireNonNull(userId, "userId must not be null"))
+		) {
 			throw new IllegalArgumentException("Asset does not belong to the requesting user");
 		}
 	}
@@ -69,7 +71,9 @@ public class SnapshotValidationService {
 			.findById(Objects.requireNonNull(dto.getAssetId()))
 			.orElseThrow(() -> new IllegalArgumentException("Asset not found"));
 
-		if (userId != null && !asset.getUser().getId().equals(userId)) {
+		if (
+			!asset.getUser().getId().equals(Objects.requireNonNull(userId, "userId must not be null"))
+		) {
 			throw new IllegalArgumentException("Asset does not belong to the requesting user");
 		}
 	}

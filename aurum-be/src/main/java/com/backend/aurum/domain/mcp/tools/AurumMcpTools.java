@@ -18,6 +18,7 @@ import com.backend.aurum.domain.asset.facade.AssetCategoryFacade;
 import com.backend.aurum.domain.asset.facade.AssetFacade;
 import com.backend.aurum.domain.asset.facade.SnapshotFacade;
 import com.backend.aurum.domain.user.model.User;
+import com.backend.aurum.domain.user.model.UserPrincipal;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.ai.tool.annotation.Tool;
@@ -205,6 +206,7 @@ public class AurumMcpTools {
 
 	private User currentUser() {
 		Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-		return (User) auth.getPrincipal();
+		UserPrincipal principal = (UserPrincipal) auth.getPrincipal();
+		return principal.user();
 	}
 }

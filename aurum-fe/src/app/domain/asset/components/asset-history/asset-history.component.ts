@@ -11,7 +11,7 @@ import { SelectButton } from "primeng/selectbutton";
 import { ViewMode } from "./model/asset-history.model";
 import { SelectItem } from "primeng/api";
 import { UIChart } from "primeng/chart";
-import { isTruthy } from "../../../../shared/utils";
+import { formatDateToISO, isTruthy } from "../../../../shared/utils";
 import { Currency } from "../../../profile/model/currency.model";
 import { Locale } from "../../../profile/model/locale.model";
 import { getCurrencySymbol } from "../../../profile/profile.utils";
@@ -118,12 +118,7 @@ export class AssetHistoryComponent {
 
 		if (!assetId || amount === null || !date) return;
 
-		const formattedDate =
-			date.getFullYear() +
-			"-" +
-			String(date.getMonth() + 1).padStart(2, "0") +
-			"-" +
-			String(date.getDate()).padStart(2, "0");
+		const formattedDate = formatDateToISO(date);
 
 		const snapshot: Snapshot = {
 			assetId,
