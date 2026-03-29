@@ -12,21 +12,21 @@ import { RouterLink } from "@angular/router";
 import { ConfirmationService } from "primeng/api";
 import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
 import { finalize } from "rxjs";
-import { AssetService } from "../../asset.service";
-import { AssetCategory } from "../../model/asset.model";
-import { CategoryFormComponent } from "../category-form/category-form.component";
-import { NavigationService } from "../../../../shared/services/navigation/navigation.service";
-import { paths } from "../../../../app.routes";
+import { CategoryFormComponent } from "./category-form/category-form.component";
 import { CategoryItemComponent } from "./category-item/category-item.component";
+import { paths } from "../../app.routes";
+import { NavigationService } from "../../shared/services/navigation/navigation.service";
+import { AssetService } from "../asset/asset.service";
+import { AssetCategory } from "../asset/model/asset.model";
 
 @Component({
-	selector: "app-categories",
+	selector: "app-category",
 	standalone: true,
-	templateUrl: "./categories.component.html",
+	templateUrl: "./category.component.html",
 	imports: [Button, RouterLink, CategoryFormComponent, CategoryItemComponent],
 	changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class CategoriesComponent implements OnInit {
+export class CategoryComponent implements OnInit {
 	private readonly assetService = inject(AssetService);
 	private readonly confirmationService = inject(ConfirmationService);
 	private readonly navigationService = inject(NavigationService);

@@ -56,12 +56,10 @@
 			</td>
 			<td>
 				<div class="flex items-center gap-2">
-					<p-tag
-						class="whitespace-nowrap"
-						[value]="asset.name"
-						[icon]="asset.isFavorite ? 'pi pi-bookmark-fill' : ''"
-						[rounded]="true"
-					/>
+					@if (asset.isFavorite) {
+						<i class="pi pi-bookmark-fill"></i>
+					}
+					<span class="font-medium uppercase tracking-wider">{{ asset.name }}</span>
 				</div>
 			</td>
 			<td>
@@ -119,11 +117,11 @@
 		<tr class="font-semibold">
 			<td
 				colspan="3"
-				class="text-right text-stone-400 text-sm italic"
+				class="font-medium uppercase tracking-wider text-stone-400 text-sm"
 			>
 				Total
 			</td>
-			<td class="text-right font-mono">
+			<td class="font-mono">
 				<p-tag
 					class="whitespace-nowrap"
 					[rounded]="true"

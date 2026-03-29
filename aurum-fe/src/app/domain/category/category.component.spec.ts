@@ -6,12 +6,12 @@ import { faker } from "@faker-js/faker";
 import { of } from "rxjs";
 import { Button } from "primeng/button";
 import { ConfirmationService } from "primeng/api";
-import { CategoriesComponent } from "./categories.component";
-import { CategoryFormComponent } from "../category-form/category-form.component";
+import { CategoryComponent } from "./category.component";
 import { CategoryItemComponent } from "./category-item/category-item.component";
-import { AssetService } from "../../asset.service";
-import { NavigationService } from "../../../../shared/services/navigation/navigation.service";
-import { AssetCategory, AssetType } from "../../model/asset.model";
+import { NavigationService } from "../../shared/services/navigation/navigation.service";
+import { AssetService } from "../asset/asset.service";
+import { AssetCategory, AssetType } from "../asset/model/asset.model";
+import { CategoryFormComponent } from "./category-form/category-form.component";
 
 const buildMockCategory = (overrides: Partial<AssetCategory> = {}): AssetCategory => ({
 	id: faker.string.uuid(),
@@ -22,16 +22,16 @@ const buildMockCategory = (overrides: Partial<AssetCategory> = {}): AssetCategor
 	...overrides
 });
 
-describe("CategoriesComponent", () => {
-	let fixture: ComponentFixture<CategoriesComponent>;
-	let testSubject: CategoriesComponent;
+describe("CategoryComponent", () => {
+	let fixture: ComponentFixture<CategoryComponent>;
+	let testSubject: CategoryComponent;
 	let mockAssetService: AssetService;
 	let mockConfirmationService: ConfirmationService;
 
 	beforeEach(() => {
 		TestBed.configureTestingModule({
 			imports: [
-				CategoriesComponent,
+				CategoryComponent,
 				MockComponent(Button),
 				MockDirective(RouterLink),
 				MockComponent(CategoryFormComponent),
@@ -48,7 +48,7 @@ describe("CategoriesComponent", () => {
 				provideRouter([])
 			]
 		});
-		fixture = TestBed.createComponent(CategoriesComponent);
+		fixture = TestBed.createComponent(CategoryComponent);
 		testSubject = fixture.componentInstance;
 		mockAssetService = TestBed.inject(AssetService);
 		mockConfirmationService = TestBed.inject(ConfirmationService);

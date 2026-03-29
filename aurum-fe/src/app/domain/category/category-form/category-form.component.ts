@@ -19,9 +19,9 @@ import { InputText } from "primeng/inputtext";
 import { Select } from "primeng/select";
 import { Dialog } from "primeng/dialog";
 import { ToggleButton } from "primeng/togglebutton";
-import { AssetCategory, AssetType } from "../../model/asset.model";
-import { typeOptions } from "../asset-form/asset-form.utils";
 import { categoryIcons } from "./category-form.utils";
+import { typeOptions } from "../../asset/components/asset-form/asset-form.utils";
+import { AssetCategory, AssetType } from "../../asset/model/asset.model";
 @Component({
 	selector: "app-category-form",
 	standalone: true,

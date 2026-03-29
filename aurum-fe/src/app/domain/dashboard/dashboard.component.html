@@ -1,5 +1,5 @@
 @if (isLoading()) {
-	<section class="flex flex-col gap-4 max-w-screen-2xl mx-auto">
+	<section class="flex flex-col gap-4 max-w-screen-3xl mx-auto">
 		<div class="grid grid-cols-12 gap-4">
 			@for (i of [1, 2, 3, 4]; track i) {
 				<div class="col-span-12 sm:col-span-6 xl:col-span-3">
@@ -30,7 +30,7 @@
 		</div>
 	</section>
 } @else {
-	<section class="flex flex-col gap-4 max-w-screen-2xl mx-auto">
+	<section class="flex flex-col gap-4 max-w-screen-3xl mx-auto">
 		<div class="grid grid-cols-12 gap-4 order-2 sm:order-1">
 			<div class="col-span-12 sm:col-span-6 xl:col-span-3">
 				<app-kpi-card
