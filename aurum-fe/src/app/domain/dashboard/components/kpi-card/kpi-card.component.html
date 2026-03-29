@@ -16,9 +16,13 @@
 			</div>
 		} @else if (variation()) {
 			<span
-				[class]="isPositive() ? 'text-green-500' : 'text-red-500'"
-				class="text-sm font-semibold tabular-nums"
+				[class]="isPositive() ? 'text-green-500 bg-green-600/10' : 'text-red-500 bg-red-600/10'"
+				class="flex items-center gap-1 px-2.5 py-1 rounded-full text-sm font-semibold tabular-nums"
 			>
+				<i
+					[class]="isPositive() ? 'pi pi-arrow-up' : 'pi pi-arrow-down'"
+					class="text-xs!"
+				></i>
 				{{ variation()! > 0 ? "+" : "" }}{{ variation() }}%
 			</span>
 		}
