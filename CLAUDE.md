@@ -137,6 +137,25 @@ Always unsubscribe from observables in components unless you have explicitly acc
 
 Never use `ngOnDestroy` + manual `Subscription` variables — use `takeUntilDestroyed` instead.
 
+### RxJS subscribe/tap syntax
+
+Always use the object-notation overload for `.subscribe()` and `.tap()` — never pass positional callback arguments:
+
+```typescript
+// correct
+observable$.pipe(
+  tap({ next: val => doSomething(val) })
+).subscribe({
+  next: val => handle(val),
+  error: err => handleError(err)
+});
+
+// wrong
+observable$.pipe(tap(val => doSomething(val))).subscribe(val => handle(val), err => handleError(err));
+```
+
+Only include the `next`, `error`, or `complete` keys that are actually needed — omit the others.
+
 ## Frontend Testing
 
 ### Setup
@@ -379,8 +398,12 @@ PRs without tests for new code will not be merged.
 
 ## Branching Rules
 
-**Never commit directly to `main`.** When starting any edit and the current branch is `main`, always create a new branch first:
+**Never commit directly to `main`.** When starting any edit, check the current branch:
 
+- If on `main` → create a new branch before making any changes.
+- If already on a feature/fix branch (branched off `main`) → continue on that branch; do **not** create another branch even if the task or context changes.
+
+Branch naming:
 - Feature or enhancement → `feat/<short-name>`
 - Bug fix → `fix/<short-name>`
 

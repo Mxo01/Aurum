@@ -21,7 +21,7 @@ describe("LandingComponent", () => {
 		TestBed.configureTestingModule({
 			imports: [LandingComponent, MockDirective(RouterLink), MockComponent(Button)],
 			providers: [
-				MockProvider(AuthService, { isAuthenticated$: of(false) }),
+				MockProvider(AuthService, { isLoading$: of(false), isAuthenticated$: of(false) }),
 				MockProvider(Router, { navigate: vi.fn() }),
 				MockProvider(Title, { setTitle: vi.fn() }),
 				MockProvider(Meta, { updateTag: vi.fn() }),
@@ -67,6 +67,7 @@ describe("LandingComponent", () => {
 
 		it("should navigate to dashboard when user is already authenticated", () => {
 			// GIVEN
+			vi.spyOn(mockAuthService, "isLoading$", "get").mockReturnValue(of(false));
 			vi.spyOn(mockAuthService, "isAuthenticated$", "get").mockReturnValue(of(true));
 
 			// WHEN
@@ -78,7 +79,20 @@ describe("LandingComponent", () => {
 
 		it("should not navigate when user is not authenticated", () => {
 			// GIVEN
+			vi.spyOn(mockAuthService, "isLoading$", "get").mockReturnValue(of(false));
 			vi.spyOn(mockAuthService, "isAuthenticated$", "get").mockReturnValue(of(false));
+
+			// WHEN
+			fixture.detectChanges();
+
+			// THEN
+			expect(mockRouter.navigate).not.toHaveBeenCalled();
+		});
+
+		it("should not navigate while auth is still loading", () => {
+			// GIVEN
+			vi.spyOn(mockAuthService, "isLoading$", "get").mockReturnValue(of(true));
+			vi.spyOn(mockAuthService, "isAuthenticated$", "get").mockReturnValue(of(true));
 
 			// WHEN
 			fixture.detectChanges();
