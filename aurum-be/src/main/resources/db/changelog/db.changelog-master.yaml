@@ -47,3 +47,6 @@ databaseChangeLog:
   - include:
       file: db/changelog/changes/2026-03-29-add-financial-constraints.sql
       relativeToChangelogFile: false
+  - include:
+      file: db/changelog/changes/2026-03-30-add-cash-flows.sql
+      relativeToChangelogFile: false

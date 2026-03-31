@@ -1,0 +1,221 @@
+<p-table
+	[value]="rows()"
+	[loading]="isLoading()"
+	[stripedRows]="true"
+	class="rounded-xl border border-surface-200 dark:border-surface-700 overflow-hidden text-sm"
+>
+	<ng-template #header>
+		<tr>
+			<th
+				style="width: 8%"
+				class="text-xs! uppercase tracking-wider whitespace-nowrap"
+			>
+				Month
+			</th>
+			<th
+				style="width: 18%"
+				class="text-xs! uppercase tracking-wider whitespace-nowrap"
+			>
+				<div class="flex items-center gap-2">
+					<span>Earned</span>
+					<i
+						class="pi pi-question-circle text-zinc-400 dark:text-zinc-500"
+						[pTooltip]="tooltip"
+						tooltipStyleClass="max-w-xs!"
+					></i>
+				</div>
+			</th>
+			<th
+				style="width: 18%"
+				class="text-xs! uppercase tracking-wider whitespace-nowrap"
+			>
+				<div class="flex items-center gap-2">
+					<span>Spent</span>
+					<i
+						class="pi pi-question-circle text-zinc-400 dark:text-zinc-500"
+						[pTooltip]="tooltip"
+						tooltipStyleClass="max-w-xs!"
+					></i>
+				</div>
+			</th>
+			<th
+				style="width: 16%"
+				class="text-xs! uppercase tracking-wider whitespace-nowrap"
+			>
+				Balance
+			</th>
+			<th
+				style="width: 14%"
+				class="text-xs! uppercase tracking-wider whitespace-nowrap"
+			>
+				vs Prev Mo
+			</th>
+			@if (hasPrevYearData()) {
+				<th
+					style="width: 13%"
+					class="text-xs! uppercase tracking-wider whitespace-nowrap"
+				>
+					{{ year() - 1 }} Earned
+				</th>
+				<th
+					style="width: 13%"
+					class="text-xs! uppercase tracking-wider whitespace-nowrap"
+				>
+					{{ year() - 1 }} Spent
+				</th>
+			}
+		</tr>
+	</ng-template>
+
+	<ng-template
+		#body
+		let-row
+	>
+		<tr>
+			<td>
+				<span
+					class="font-mono font-semibold text-zinc-500 dark:text-zinc-400 text-xs uppercase tracking-widest"
+				>
+					{{ row.monthLabel }}
+				</span>
+			</td>
+
+			<td
+				class="font-mono"
+				[pEditableColumn]="getEditingValue(row.month, 'earned', row.earned)"
+				pEditableColumnField="earned"
+			>
+				<p-cellEditor>
+					<ng-template #input>
+						<p-inputNumber
+							appNoArrowSpin
+							[ngModel]="getEditingValue(row.month, 'earned', row.earned)"
+							(ngModelChange)="onValueChange(row.month, 'earned', $event)"
+							(onBlur)="onCellEditBlur(row.month, 'earned')"
+							[min]="0"
+							[minFractionDigits]="2"
+							[maxFractionDigits]="2"
+							[showButtons]="false"
+							[fluid]="true"
+						/>
+					</ng-template>
+					<ng-template #output>
+						<span class="font-semibold">
+							{{
+								getEditingValue(row.month, "earned", row.earned)
+									| privacyCurrency: currency() : "symbol" : "1.2-2" : locale()
+							}}
+						</span>
+					</ng-template>
+				</p-cellEditor>
+			</td>
+
+			<td
+				class="font-mono"
+				[pEditableColumn]="getEditingValue(row.month, 'spent', row.spent)"
+				pEditableColumnField="spent"
+			>
+				<p-cellEditor>
+					<ng-template #input>
+						<p-inputNumber
+							appNoArrowSpin
+							[ngModel]="getEditingValue(row.month, 'spent', row.spent)"
+							(ngModelChange)="onValueChange(row.month, 'spent', $event)"
+							(onBlur)="onCellEditBlur(row.month, 'spent')"
+							[min]="0"
+							[minFractionDigits]="2"
+							[maxFractionDigits]="2"
+							[showButtons]="false"
+							[fluid]="true"
+						/>
+					</ng-template>
+					<ng-template #output>
+						<span class="font-semibold">
+							{{
+								getEditingValue(row.month, "spent", row.spent)
+									| privacyCurrency: currency() : "symbol" : "1.2-2" : locale()
+							}}
+						</span>
+					</ng-template>
+				</p-cellEditor>
+			</td>
+
+			<td class="font-mono">
+				<span
+					class="font-semibold"
+					[class]="row.balance >= 0 ? 'text-green-500' : 'text-red-400'"
+				>
+					{{ row.balance >= 0 ? "+" : ""
+					}}{{ row.balance | privacyCurrency: currency() : "symbol" : "1.2-2" : locale() }}
+				</span>
+			</td>
+
+			<td class="font-mono">
+				@if (row.deltaPercent !== null) {
+					<span
+						class="font-mono flex flex-nowrap items-center gap-2"
+						[class]="row.deltaPercent >= 0 ? 'text-green-500' : 'text-red-400'"
+					>
+						<i
+							[class]="
+								row.deltaPercent >= 0 ? 'pi pi-arrow-up text-[9px]' : 'pi pi-arrow-down text-[9px]'
+							"
+						></i>
+						{{ row.deltaPercent | number: "1.1-1" : locale() }}%
+					</span>
+				} @else {
+					<span class="text-zinc-400 dark:text-zinc-500 italic">—</span>
+				}
+			</td>
+
+			@if (hasPrevYearData()) {
+				<td class="font-mono text-zinc-400 dark:text-zinc-500">
+					@if (row.prevYearEarned !== null) {
+						{{ row.prevYearEarned | privacyCurrency: currency() : "symbol" : "1.0-0" : locale() }}
+					} @else {
+						<span class="italic">—</span>
+					}
+				</td>
+				<td class="font-mono text-zinc-400 dark:text-zinc-500">
+					@if (row.prevYearSpent !== null) {
+						{{ row.prevYearSpent | privacyCurrency: currency() : "symbol" : "1.0-0" : locale() }}
+					} @else {
+						<span class="italic">—</span>
+					}
+				</td>
+			}
+		</tr>
+	</ng-template>
+
+	<ng-template #footer>
+		<tr class="font-semibold border-t-2 border-surface-200 dark:border-surface-700">
+			<td class="text-xs uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Total</td>
+			<td class="font-mono font-bold">
+				{{ totalEarned() | privacyCurrency: currency() : "symbol" : "1.2-2" : locale() }}
+			</td>
+			<td class="font-mono font-bold">
+				{{ totalSpent() | privacyCurrency: currency() : "symbol" : "1.2-2" : locale() }}
+			</td>
+			<td
+				class="font-mono font-bold"
+				[class]="totalBalance() >= 0 ? 'text-green-500!' : 'text-red-400!'"
+			>
+				{{ totalBalance() >= 0 ? "+" : ""
+				}}{{ totalBalance() | privacyCurrency: currency() : "symbol" : "1.2-2" : locale() }}
+			</td>
+			<td></td>
+			@if (hasPrevYearData()) {
+				<td class="font-mono text-zinc-400 dark:text-zinc-500">
+					{{ prevYearTotalEarned() | privacyCurrency: currency() : "symbol" : "1.0-0" : locale() }}
+				</td>
+				<td class="font-mono text-zinc-400 dark:text-zinc-500">
+					{{ prevYearTotalSpent() | privacyCurrency: currency() : "symbol" : "1.0-0" : locale() }}
+				</td>
+			}
+		</tr>
+	</ng-template>
+</p-table>
+
+<ng-template #tooltip>
+	<app-editable-cell-tooltip />
+</ng-template>

@@ -101,7 +101,7 @@ export class ProfileComponent implements OnInit {
 
 		this.nameTrigger$
 			.pipe(
-				debounceTime(500),
+				debounceTime(1000),
 				distinctUntilChanged(),
 				switchMap(name => {
 					this.isUpdatingName.set(true);

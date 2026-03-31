@@ -27,9 +27,9 @@
 		>
 			<ng-template #header>
 				<tr class="bg-transparent!">
-					<th class="bg-transparent!">Name</th>
-					<th class="bg-transparent!">Current Value</th>
-					<th class="bg-transparent!">Variation (1M)</th>
+					<th class="bg-transparent! tracking-wider text-sm uppercase">Name</th>
+					<th class="bg-transparent! tracking-wider text-sm uppercase">Current Value</th>
+					<th class="bg-transparent! tracking-wider text-sm uppercase">Variation (1M)</th>
 				</tr>
 			</ng-template>
 			<ng-template
@@ -38,7 +38,7 @@
 			>
 				<tr class="bg-transparent!">
 					<td>
-						<span class="font-medium uppercase tracking-wider">{{ asset.name }}</span>
+						<span class="uppercase tracking-wider">{{ asset.name }}</span>
 					</td>
 					<td class="font-mono font-bold tabular-nums">
 						{{
@@ -68,7 +68,7 @@
 				</tr>
 			</ng-template>
 			<ng-template #emptymessage>
-				<tr>
+				<tr class="bg-transparent!">
 					<td
 						colspan="5"
 						class="text-center py-12!"

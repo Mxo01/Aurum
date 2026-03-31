@@ -198,20 +198,22 @@ public class AnalyticsService {
 			favoriteAssetsTypes.put(asset.getName(), isLiability ? "LIABILITY" : "ASSET");
 		}
 
-		LocalDate current = start;
-		while (!current.isAfter(end)) {
-			final LocalDate datePoint = current;
+		LocalDate current = start.withDayOfMonth(1);
+		LocalDate endFirstOfMonth = end.withDayOfMonth(1);
+		while (!current.isAfter(endFirstOfMonth)) {
+			LocalDate monthLastDay = current.withDayOfMonth(current.lengthOfMonth());
+			final LocalDate datePoint = monthLastDay.isAfter(end) ? end : monthLastDay;
 			List<Asset> activeAtDate = allAssets
 				.stream()
 				.filter(a -> wasActiveAt(a, statusLogsByAsset, datePoint))
 				.toList();
 
 			labels.add(formatDateLabel(current));
-			totalSeries.add(calculateNetWorthAt(activeAtDate, snapshotsByAsset, current));
-			assetsOnlySeries.add(calculateGrossAssetsAt(activeAtDate, snapshotsByAsset, current));
+			totalSeries.add(calculateNetWorthAt(activeAtDate, snapshotsByAsset, datePoint));
+			assetsOnlySeries.add(calculateGrossAssetsAt(activeAtDate, snapshotsByAsset, datePoint));
 			for (Asset asset : favoriteAssets) {
 				List<Snapshot> snapshots = snapshotsByAsset.getOrDefault(asset.getId(), List.of());
-				BigDecimal value = calculateAssetValueAt(snapshots, current);
+				BigDecimal value = calculateAssetValueAt(snapshots, datePoint);
 				boolean isLiability =
 					asset.getCategory() != null && asset.getCategory().getType() == AssetType.LIABILITY;
 				if (isLiability) {
@@ -488,13 +490,18 @@ public class AnalyticsService {
 
 	/**
 	 * Returns true if the asset was active on the given date, based on the status log.
-	 * If no log entry exists before the date, we default to active (pre-log assets).
+	 * For today or later: the isActive flag is authoritative (matches the summary card).
+	 * For historical dates: use the latest log entry ≤ date, or assume active if no log exists
+	 * so that pre-log history is preserved.
 	 */
 	private boolean wasActiveAt(
 		Asset asset,
 		Map<UUID, List<AssetStatusLog>> statusLogsByAsset,
 		LocalDate date
 	) {
+		if (!date.isBefore(LocalDate.now())) {
+			return Boolean.TRUE.equals(asset.getIsActive());
+		}
 		List<AssetStatusLog> logs = statusLogsByAsset.getOrDefault(asset.getId(), List.of());
 		return logs
 			.stream()

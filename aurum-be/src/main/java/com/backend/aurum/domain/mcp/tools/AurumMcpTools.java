@@ -17,6 +17,10 @@ import com.backend.aurum.domain.asset.dto.UpdateAssetDTO;
 import com.backend.aurum.domain.asset.facade.AssetCategoryFacade;
 import com.backend.aurum.domain.asset.facade.AssetFacade;
 import com.backend.aurum.domain.asset.facade.SnapshotFacade;
+import com.backend.aurum.domain.cashflow.dto.CashFlowEntryDTO;
+import com.backend.aurum.domain.cashflow.dto.CashFlowYearDTO;
+import com.backend.aurum.domain.cashflow.dto.UpdateCashFlowEntryDTO;
+import com.backend.aurum.domain.cashflow.facade.CashFlowFacade;
 import com.backend.aurum.domain.user.model.User;
 import com.backend.aurum.domain.user.model.UserPrincipal;
 import java.util.List;
@@ -36,6 +40,7 @@ public class AurumMcpTools {
 	private final TargetFacade targetFacade;
 	private final AnalyticsFacade analyticsFacade;
 	private final AssetCategoryFacade categoryFacade;
+	private final CashFlowFacade cashFlowFacade;
 
 	@Tool(description = "Get all assets for the current user")
 	public List<AssetDTO> getAssets() {
@@ -201,6 +206,48 @@ public class AurumMcpTools {
 		return categories
 			.stream()
 			.map(dto -> categoryFacade.updateCategory(dto.getId(), dto, currentUser().getId()))
+			.toList();
+	}
+
+	@Tool(
+		description = "Get monthly cash flow data (earned and spent) for a specific year, including previous year comparison and available years"
+	)
+	public CashFlowYearDTO getCashFlowYear(
+		@ToolParam(description = "The year to retrieve cash flow data for (e.g. 2025)") Integer year
+	) {
+		return cashFlowFacade.getYear(currentUser().getId(), year);
+	}
+
+	@Tool(
+		description = "Update the earned and/or spent amount for a specific month in a given year. Creates the entry if it does not exist yet."
+	)
+	public CashFlowEntryDTO updateCashFlowEntry(
+		@ToolParam(description = "The year of the entry (e.g. 2025)") Integer year,
+		@ToolParam(description = "The month of the entry (1 = January, 12 = December)") Integer month,
+		@ToolParam(
+			description = "The DTO containing the earned and/or spent amounts to set"
+		) UpdateCashFlowEntryDTO dto
+	) {
+		return cashFlowFacade.updateEntry(currentUser().getId(), year, month, dto);
+	}
+
+	@Tool(
+		description = "Update multiple monthly cash flow entries at once. Use this when importing or updating data in bulk (e.g. from a spreadsheet) to avoid making many separate updateCashFlowEntry calls."
+	)
+	public List<CashFlowEntryDTO> bulkUpdateCashFlowEntries(
+		@ToolParam(description = "Year all entries belong to (e.g. 2025)") Integer year,
+		@ToolParam(
+			description = "List of monthly entries to update; each item must have a month (1–12), earned, and spent"
+		) List<CashFlowEntryDTO> entries
+	) {
+		return entries
+			.stream()
+			.map(entry -> {
+				UpdateCashFlowEntryDTO dto = new UpdateCashFlowEntryDTO();
+				dto.setEarned(entry.getEarned());
+				dto.setSpent(entry.getSpent());
+				return cashFlowFacade.updateEntry(currentUser().getId(), year, entry.getMonth(), dto);
+			})
 			.toList();
 	}
 

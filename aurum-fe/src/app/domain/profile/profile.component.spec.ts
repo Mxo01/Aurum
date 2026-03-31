@@ -227,7 +227,7 @@ describe("ProfileComponent", () => {
 
 			// WHEN
 			testSubject.updateName(stubbedName);
-			vi.advanceTimersByTime(500);
+			vi.advanceTimersByTime(1000);
 
 			// THEN
 			expect(updateName).toHaveBeenCalledWith(stubbedName);
@@ -245,7 +245,7 @@ describe("ProfileComponent", () => {
 			// WHEN / THEN — no error thrown
 			expect(() => {
 				testSubject.updateName(faker.person.firstName());
-				vi.advanceTimersByTime(500);
+				vi.advanceTimersByTime(1000);
 			}).not.toThrow();
 
 			vi.useRealTimers();

@@ -1,0 +1,122 @@
+<div
+	class="h-full p-5 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-sm flex flex-col justify-between gap-3"
+>
+	@if (title()) {
+		<span class="flex items-center gap-3 font-bold uppercase tracking-wider">
+			<div
+				class="w-9 h-9 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center shrink-0"
+			>
+				<i
+					class="text-zinc-700 dark:text-zinc-300"
+					[class]="icon()"
+				></i>
+			</div>
+			<span>
+				{{ title() }}
+				@if (yearHint()) {
+					<span class="text-gray-500 ms-1 text-xs">(vs {{ yearHint() }})</span>
+				}
+			</span>
+		</span>
+	}
+
+	<div>
+		<div
+			class="flex"
+			[class]="rightLabel() ? 'divide-x divide-zinc-200/80 dark:divide-zinc-800' : ''"
+		>
+			<!-- Left metric -->
+			<div
+				class="flex flex-col gap-1"
+				[class]="rightLabel() ? 'flex-1 pr-5' : 'flex-1'"
+			>
+				<span
+					class="text-[11px] font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-500"
+				>
+					{{ leftLabel() }}
+				</span>
+				@if (isLoading()) {
+					<p-skeleton height="1.75rem" />
+					@if (hasSubSkeleton()) {
+						<p-skeleton
+							height="0.875rem"
+							width="60%"
+						/>
+					}
+				} @else {
+					<span
+						class="text-2xl font-bold font-mono tracking-tight"
+						[class]="leftValueClass()"
+					>
+						{{ leftValue() }}
+					</span>
+					@if (leftDelta() !== null) {
+						<span
+							class="flex items-center gap-1 text-xs font-medium"
+							[class]="leftIsPositive() ? 'text-green-500' : 'text-red-400'"
+						>
+							<i
+								class="text-xs!"
+								[class]="leftIsPositive() ? 'pi pi-arrow-up' : 'pi pi-arrow-down'"
+							></i>
+							{{ formatDelta(leftDelta()) }}
+						</span>
+					}
+				}
+			</div>
+
+			<!-- Right metric (optional) -->
+			@if (rightLabel()) {
+				<div class="flex-1 pl-5 flex flex-col gap-1">
+					<span
+						class="text-[11px] font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-500"
+					>
+						{{ rightLabel() }}
+					</span>
+					@if (isLoading()) {
+						<p-skeleton height="1.75rem" />
+						@if (hasSubSkeleton()) {
+							<p-skeleton
+								height="0.875rem"
+								width="60%"
+							/>
+						}
+					} @else {
+						<span
+							class="text-2xl font-bold font-mono tracking-tight"
+							[class]="rightValueClass()"
+						>
+							{{ rightValue() }}
+						</span>
+						@if (rightDelta() !== null) {
+							<span
+								class="flex items-center gap-1 text-xs font-medium"
+								[class]="rightIsPositive() ? 'text-green-500' : 'text-red-400'"
+							>
+								<i
+									class="text-xs!"
+									[class]="rightIsPositive() ? 'pi pi-arrow-up' : 'pi pi-arrow-down'"
+								></i>
+								{{ formatDelta(rightDelta()) }}
+							</span>
+						}
+					}
+				</div>
+			}
+		</div>
+
+		@if (!isLoading() && progressValue() !== null) {
+			<p-progress-bar
+				[value]="progressValue()"
+				[showValue]="false"
+				class="h-2! mt-4"
+			/>
+		}
+
+		@if (!isLoading() && footerText()) {
+			<span class="text-sm py-0 text-zinc-400 dark:text-zinc-500">
+				{{ footerText() }}
+			</span>
+		}
+	</div>
+</div>

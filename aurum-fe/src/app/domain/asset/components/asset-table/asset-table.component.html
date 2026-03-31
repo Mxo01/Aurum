@@ -9,10 +9,26 @@
 >
 	<ng-template #header>
 		<tr>
-			<th style="width: 8%">Actions</th>
-			<th style="width: 22%">Name</th>
-			<th style="width: 15%">Type</th>
-			<th style="width: 25%">
+			<th
+				class="tracking-wider text-sm uppercase"
+				style="width: 8%"
+			></th>
+			<th
+				class="tracking-wider text-sm uppercase"
+				style="width: 22%"
+			>
+				Name
+			</th>
+			<th
+				class="tracking-wider text-sm uppercase"
+				style="width: 15%"
+			>
+				Type
+			</th>
+			<th
+				class="tracking-wider text-sm uppercase"
+				style="width: 25%"
+			>
 				<div class="flex items-center gap-3">
 					<span class="whitespace-nowrap">Current Value</span>
 					<i
@@ -22,8 +38,18 @@
 					></i>
 				</div>
 			</th>
-			<th style="width: 17%">Trend</th>
-			<th style="width: 13%">Status</th>
+			<th
+				class="tracking-wider text-sm uppercase"
+				style="width: 17%"
+			>
+				Trend
+			</th>
+			<th
+				class="tracking-wider text-sm uppercase"
+				style="width: 13%"
+			>
+				Status
+			</th>
 		</tr>
 	</ng-template>
 	<ng-template
@@ -68,7 +94,7 @@
 					@if (asset.isFavorite) {
 						<i class="pi pi-bookmark-fill"></i>
 					}
-					<span class="font-medium uppercase tracking-wider">{{ asset.name }}</span>
+					<span class="uppercase tracking-wider">{{ asset.name }}</span>
 				</div>
 			</td>
 			<td>
@@ -88,11 +114,14 @@
 				<p-cellEditor>
 					<ng-template #input>
 						<p-inputNumber
+							appNoArrowSpin
 							[ngModel]="editingValues()[asset.id] ?? asset.currentValue"
 							(ngModelChange)="onCurrentValueChange(asset.id, $event)"
+							(onBlur)="onCellEditBlur(asset.id)"
 							[min]="0"
 							[minFractionDigits]="2"
 							[maxFractionDigits]="2"
+							[showButtons]="false"
 							[fluid]="true"
 						/>
 					</ng-template>
@@ -183,27 +212,5 @@
 />
 
 <ng-template #tooltip>
-	<div class="flex flex-col gap-5">
-		<span class="flex flex-col">
-			<span class="font-semibold">Quick Value Edit</span>
-			<span class="text-xs text-gray-300">
-				Click any cell in this column to edit the value inline
-			</span>
-		</span>
-
-		<ul class="flex flex-col gap-2 text-xs">
-			<li class="flex items-center gap-2">
-				<i class="pi pi-save"></i>
-				<span>Stops typing → saved automatically</span>
-			</li>
-			<li class="flex items-center gap-2">
-				<i class="pi pi-calendar"></i>
-				<span>Creates a new record for this month, or overwrites it if one already exists</span>
-			</li>
-			<li class="flex items-center gap-2">
-				<i class="pi pi-history"></i>
-				<span>Use History for past edits and cleanup</span>
-			</li>
-		</ul>
-	</div>
+	<app-editable-cell-tooltip />
 </ng-template>

@@ -55,6 +55,16 @@ export const routes: Routes = [
 		]
 	},
 	{
+		path: "cashflow",
+		data: {
+			label: "Cash Flow",
+			icon: "pi pi-money-bill"
+		},
+		canActivate: [authGuardFn],
+		loadComponent: () =>
+			import("./domain/cashflow/cashflow.component").then(m => m.CashFlowComponent)
+	},
+	{
 		path: "privacy",
 		data: {
 			label: "Privacy Policy",

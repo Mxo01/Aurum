@@ -60,10 +60,10 @@ describe("mapDataIntoNetworthChartData", () => {
 		expect(result.labels).toEqual(["Jan", "Feb", "Mar"]);
 	});
 
-	it("should create the bar dataset with totalAssetsOnly data", () => {
+	it("should create the bar dataset with totalNetWorth data", () => {
 		// GIVEN
 		const totals = [1000, 2000, 3000];
-		const data = buildMockChartData({ totalAssetsOnly: totals });
+		const data = buildMockChartData({ totalNetWorth: totals });
 
 		// WHEN
 		const result = mapDataIntoNetworthChartData(data, false);
@@ -170,7 +170,7 @@ describe("getNetworthChartOptions", () => {
 					dataPoints: [
 						{
 							dataIndex: 0,
-							dataset: { label: "Total Assets", data: [1000], borderColor: "#fff" },
+							dataset: { label: "Net Worth", data: [1000], borderColor: "#fff" },
 							parsed: { y: 1000 }
 						}
 					],
@@ -195,7 +195,7 @@ describe("getNetworthChartOptions", () => {
 				dataPoints: [
 					{
 						dataIndex: 1,
-						dataset: { label: "Total Assets", data: [1000, 1200], borderColor: "#fff" },
+						dataset: { label: "Net Worth", data: [1000, 1200], borderColor: "#fff" },
 						parsed: { y: 1200 }
 					}
 				],
@@ -223,7 +223,7 @@ describe("getNetworthChartOptions", () => {
 				dataPoints: [
 					{
 						dataIndex: 1,
-						dataset: { label: "Total Assets", data: [1200, 1000], borderColor: "#fff" },
+						dataset: { label: "Net Worth", data: [1200, 1000], borderColor: "#fff" },
 						parsed: { y: 1000 }
 					}
 				],
@@ -251,7 +251,7 @@ describe("getNetworthChartOptions", () => {
 					dataPoints: [
 						{
 							dataIndex: 1,
-							dataset: { label: "Total Assets", data: [0, 1000] },
+							dataset: { label: "Net Worth", data: [0, 1000] },
 							parsed: { y: 1000 }
 						}
 					],
@@ -301,7 +301,7 @@ describe("getNetworthChartOptions", () => {
 					dataPoints: [
 						{
 							dataIndex: 1,
-							dataset: { label: "Total Assets", data: [NaN, 1000] },
+							dataset: { label: "Net Worth", data: [NaN, 1000] },
 							parsed: { y: 1000 }
 						}
 					],
@@ -326,7 +326,7 @@ describe("getNetworthChartOptions", () => {
 				dataPoints: [
 					{
 						dataIndex: 0,
-						dataset: { label: "Total Assets", data: [1000], borderColor: "#fff" },
+						dataset: { label: "Net Worth", data: [1000], borderColor: "#fff" },
 						parsed: { y: 1000 }
 					}
 				],
@@ -354,7 +354,7 @@ describe("getNetworthChartOptions", () => {
 				dataPoints: [
 					{
 						dataIndex: 1,
-						dataset: { label: "Total Assets", data: [1000, 1200], borderColor: "#fff" },
+						dataset: { label: "Net Worth", data: [1000, 1200], borderColor: "#fff" },
 						parsed: { y: 1200 }
 					}
 				],
@@ -382,7 +382,7 @@ describe("getNetworthChartOptions", () => {
 					dataPoints: [
 						{
 							dataIndex: 0,
-							dataset: { label: "Total Assets", data: [500] },
+							dataset: { label: "Net Worth", data: [500] },
 							parsed: { y: 500 }
 						}
 					],
