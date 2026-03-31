@@ -390,11 +390,19 @@ class AssetServiceTest {
 
 ## Testing Requirements
 
-**Always add tests for new code.** Every new feature, service method, component, or bug fix must be accompanied by tests:
+**Always add tests for new code — this is implied by every code generation request.** Whenever you create or modify a feature, service, component, or fix a bug, you must also write the corresponding tests in the same response, without being asked. Every new feature, service method, component, or bug fix must be accompanied by tests:
 - Backend: JUnit 5 unit tests following the rules in the [Backend Testing](#backend-testing) section
 - Frontend: Vitest unit tests following the rules in the [Frontend Testing](#frontend-testing) section
 
 PRs without tests for new code will not be merged.
+
+## SEO Maintenance
+
+Whenever Angular routes are added, removed, or renamed, you must update both:
+- `aurum-fe/public/robots.txt` — adjust `Disallow`/`Allow` entries if the new route should be crawled or blocked
+- `aurum-fe/public/sitemap.xml` — add, remove, or update the corresponding `<url>` entry (including `<loc>`, `<changefreq>`, and `<priority>`)
+
+This applies to any route change, including lazy-loaded routes defined in `app.routes.ts` or any child route file.
 
 ## Branching Rules
 
