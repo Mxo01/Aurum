@@ -29,14 +29,14 @@ describe("CashflowKpiCardComponent", () => {
 			expect(testSubject.leftIsPositive()).toBe(true);
 		});
 
-		it("should return true when leftDelta is zero and not inverted", () => {
+		it("should return false when leftDelta is zero and not inverted", () => {
 			// GIVEN
 			fixture.componentRef.setInput("leftDelta", 0);
 			fixture.componentRef.setInput("leftDeltaInverted", false);
 			fixture.detectChanges();
 
 			// THEN
-			expect(testSubject.leftIsPositive()).toBe(true);
+			expect(testSubject.leftIsPositive()).toBe(false);
 		});
 
 		it("should return false when leftDelta is negative and not inverted", () => {
@@ -69,13 +69,13 @@ describe("CashflowKpiCardComponent", () => {
 			expect(testSubject.leftIsPositive()).toBe(false);
 		});
 
-		it("should default to true when leftDelta is null", () => {
+		it("should return false when leftDelta is null", () => {
 			// GIVEN
 			fixture.componentRef.setInput("leftDelta", null);
 			fixture.detectChanges();
 
 			// THEN
-			expect(testSubject.leftIsPositive()).toBe(true);
+			expect(testSubject.leftIsPositive()).toBe(false);
 		});
 	});
 
@@ -120,13 +120,13 @@ describe("CashflowKpiCardComponent", () => {
 			expect(testSubject.rightIsPositive()).toBe(false);
 		});
 
-		it("should default to true when rightDelta is null", () => {
+		it("should return false when rightDelta is null", () => {
 			// GIVEN
 			fixture.componentRef.setInput("rightDelta", null);
 			fixture.detectChanges();
 
 			// THEN
-			expect(testSubject.rightIsPositive()).toBe(true);
+			expect(testSubject.rightIsPositive()).toBe(false);
 		});
 	});
 

@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from "@angular/core/testing";
 import { faker } from "@faker-js/faker";
-import { MockComponent, MockModule, MockPipe } from "ng-mocks";
+import { MockComponent, MockDirective, MockModule, MockPipe } from "ng-mocks";
 import { DecimalPipe } from "@angular/common";
 import { FormsModule } from "@angular/forms";
 import { PrivacyCurrencyPipe } from "../../../../shared/pipes/privacy-currency.pipe";
@@ -13,6 +13,7 @@ import { Menu } from "primeng/menu";
 import { AssetTableComponent } from "./asset-table.component";
 import { Asset, AssetType } from "../../model/asset.model";
 import { Currency } from "../../../profile/model/currency.model";
+import { NoArrowSpinDirective } from "../../../../shared/directives/no-arrow-spin.directive";
 
 const buildMockAsset = (overrides: Partial<Asset> = {}): Asset => ({
 	id: faker.string.uuid(),
@@ -43,6 +44,7 @@ describe("AssetTableComponent", () => {
 				MockComponent(Badge),
 				MockComponent(Button),
 				MockComponent(InputNumber),
+				MockDirective(NoArrowSpinDirective),
 				MockPipe(PrivacyCurrencyPipe),
 				MockPipe(DecimalPipe),
 				MockComponent(Menu)
@@ -209,8 +211,6 @@ describe("AssetTableComponent", () => {
 		});
 
 		it("should not update editingValues or emit when value is null", () => {
-			vi.useFakeTimers();
-
 			// GIVEN
 			const mockAsset = buildMockAsset({ id: "asset-1" });
 			fixture.componentRef.setInput("assets", [mockAsset]);
@@ -220,18 +220,14 @@ describe("AssetTableComponent", () => {
 
 			// WHEN
 			testSubject.onCurrentValueChange("asset-1", null);
-			vi.advanceTimersByTime(500);
+			testSubject.onCellEditBlur("asset-1");
 
 			// THEN
 			expect(testSubject.editingValues()["asset-1"]).toBeUndefined();
 			expect(emitted).toHaveLength(0);
-
-			vi.useRealTimers();
 		});
 
-		it("should emit currentValueSaved after the debounce period", async () => {
-			vi.useFakeTimers();
-
+		it("should emit currentValueUpdate on blur after value change", () => {
 			// GIVEN
 			const mockAsset = buildMockAsset({ id: "asset-1" });
 			fixture.componentRef.setInput("assets", [mockAsset]);
@@ -241,24 +237,14 @@ describe("AssetTableComponent", () => {
 
 			// WHEN
 			testSubject.onCurrentValueChange("asset-1", 2000);
-			vi.advanceTimersByTime(499);
-
-			// THEN
-			expect(emitted).toHaveLength(0);
-
-			// WHEN
-			vi.advanceTimersByTime(1);
+			testSubject.onCellEditBlur("asset-1");
 
 			// THEN
 			expect(emitted).toHaveLength(1);
 			expect(emitted[0]).toEqual({ assetId: "asset-1", value: 2000 });
-
-			vi.useRealTimers();
 		});
 
-		it("should not emit currentValueSaved for duplicate consecutive values", async () => {
-			vi.useFakeTimers();
-
+		it("should not emit currentValueUpdate for duplicate consecutive values", () => {
 			// GIVEN
 			const mockAsset = buildMockAsset({ id: "asset-1" });
 			fixture.componentRef.setInput("assets", [mockAsset]);
@@ -268,14 +254,12 @@ describe("AssetTableComponent", () => {
 
 			// WHEN
 			testSubject.onCurrentValueChange("asset-1", 2000);
-			vi.advanceTimersByTime(500);
+			testSubject.onCellEditBlur("asset-1");
 			testSubject.onCurrentValueChange("asset-1", 2000);
-			vi.advanceTimersByTime(500);
+			testSubject.onCellEditBlur("asset-1");
 
 			// THEN
 			expect(emitted).toHaveLength(1);
-
-			vi.useRealTimers();
 		});
 	});
 });

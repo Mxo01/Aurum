@@ -114,11 +114,14 @@
 				<p-cellEditor>
 					<ng-template #input>
 						<p-inputNumber
+							appNoArrowSpin
 							[ngModel]="editingValues()[asset.id] ?? asset.currentValue"
 							(ngModelChange)="onCurrentValueChange(asset.id, $event)"
+							(onBlur)="onCellEditBlur(asset.id)"
 							[min]="0"
 							[minFractionDigits]="2"
 							[maxFractionDigits]="2"
+							[showButtons]="false"
 							[fluid]="true"
 						/>
 					</ng-template>

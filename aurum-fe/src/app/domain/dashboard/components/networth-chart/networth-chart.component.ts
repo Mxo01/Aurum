@@ -66,7 +66,7 @@ export class NetworthChartComponent {
 	});
 	readonly maxDate = signal<Date>(new Date());
 	readonly isSpecificYearSelected = computed(() => this.selectedDate() !== null);
-	readonly totalAmount = computed(() => this.summary()?.totalGrossAssets ?? 0);
+	readonly totalAmount = computed(() => this.summary()?.totalNetWorth ?? 0);
 	readonly variation = computed(() => this.summary()?.assetVariations?.[this.selectedPeriod()]);
 	readonly hasEnoughDataToDisplayChart = computed(() =>
 		this.data()?.totalAssetsOnly?.some(value => value !== 0)

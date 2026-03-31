@@ -58,6 +58,8 @@ export const auth0Config: AuthConfig = {
 		redirect_uri: window.location.origin,
 		audience: environment.auth0Audience
 	},
+	useRefreshTokens: true,
+	cacheLocation: "localstorage",
 	httpInterceptor: {
 		allowedList: [
 			{

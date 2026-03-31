@@ -88,11 +88,14 @@
 				<p-cellEditor>
 					<ng-template #input>
 						<p-inputNumber
+							appNoArrowSpin
 							[ngModel]="getEditingValue(row.month, 'earned', row.earned)"
 							(ngModelChange)="onValueChange(row.month, 'earned', $event)"
+							(onBlur)="onCellEditBlur(row.month, 'earned')"
 							[min]="0"
 							[minFractionDigits]="2"
 							[maxFractionDigits]="2"
+							[showButtons]="false"
 							[fluid]="true"
 						/>
 					</ng-template>
@@ -115,11 +118,14 @@
 				<p-cellEditor>
 					<ng-template #input>
 						<p-inputNumber
+							appNoArrowSpin
 							[ngModel]="getEditingValue(row.month, 'spent', row.spent)"
 							(ngModelChange)="onValueChange(row.month, 'spent', $event)"
+							(onBlur)="onCellEditBlur(row.month, 'spent')"
 							[min]="0"
 							[minFractionDigits]="2"
 							[maxFractionDigits]="2"
+							[showButtons]="false"
 							[fluid]="true"
 						/>
 					</ng-template>

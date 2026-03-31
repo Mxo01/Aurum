@@ -16,7 +16,7 @@ import { Badge } from "primeng/badge";
 import { Button } from "primeng/button";
 import { InputNumber } from "primeng/inputnumber";
 import { DecimalPipe } from "@angular/common";
-import { debounceTime, distinctUntilChanged, Subject } from "rxjs";
+import { distinctUntilChanged, Subject } from "rxjs";
 import { PrivacyCurrencyPipe } from "../../../../shared/pipes/privacy-currency.pipe";
 import { MenuItem, MenuItemCommandEvent } from "primeng/api";
 import { Menu } from "primeng/menu";
@@ -26,6 +26,7 @@ import { Asset, AssetType } from "../../model/asset.model";
 import { mapAssetsToAssetsWithBalance } from "./asset-table.utils";
 import { Tooltip } from "primeng/tooltip";
 import { EditableCellTooltipComponent } from "../../../../shared/components/editable-cell-tooltip/editable-cell-tooltip.component";
+import { NoArrowSpinDirective } from "../../../../shared/directives/no-arrow-spin.directive";
 
 @Component({
 	selector: "app-asset-table",
@@ -42,7 +43,8 @@ import { EditableCellTooltipComponent } from "../../../../shared/components/edit
 		InputNumber,
 		FormsModule,
 		Tooltip,
-		EditableCellTooltipComponent
+		EditableCellTooltipComponent,
+		NoArrowSpinDirective
 	]
 })
 export class AssetTableComponent implements OnInit {
@@ -88,7 +90,6 @@ export class AssetTableComponent implements OnInit {
 	ngOnInit() {
 		this.currentValueTrigger$
 			.pipe(
-				debounceTime(500),
 				distinctUntilChanged((a, b) => a.assetId === b.assetId && a.value === b.value),
 				takeUntilDestroyed(this.destroyRef)
 			)
@@ -98,6 +99,11 @@ export class AssetTableComponent implements OnInit {
 	onCurrentValueChange(assetId: string, value: number | null) {
 		if (value === null) return;
 		this.editingValues.update(values => ({ ...values, [assetId]: value }));
+	}
+
+	onCellEditBlur(assetId: string) {
+		const value = this.editingValues()[assetId];
+		if (value === null || value === undefined) return;
 		this.currentValueTrigger$.next({ assetId, value });
 	}
 

@@ -11,7 +11,7 @@ import {
 } from "@angular/core";
 import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
 import { FormsModule } from "@angular/forms";
-import { debounceTime, distinctUntilChanged, Subject } from "rxjs";
+import { distinctUntilChanged, Subject } from "rxjs";
 import { TableModule } from "primeng/table";
 import { InputNumber } from "primeng/inputnumber";
 import { Tooltip } from "primeng/tooltip";
@@ -22,6 +22,7 @@ import { CashFlowService } from "../../cashflow.service";
 import { PrivacyCurrencyPipe } from "../../../../shared/pipes/privacy-currency.pipe";
 import { DecimalPipe } from "@angular/common";
 import { EditableCellTooltipComponent } from "../../../../shared/components/editable-cell-tooltip/editable-cell-tooltip.component";
+import { NoArrowSpinDirective } from "../../../../shared/directives/no-arrow-spin.directive";
 
 @Component({
 	selector: "app-cashflow-table",
@@ -33,7 +34,8 @@ import { EditableCellTooltipComponent } from "../../../../shared/components/edit
 		Tooltip,
 		PrivacyCurrencyPipe,
 		DecimalPipe,
-		EditableCellTooltipComponent
+		EditableCellTooltipComponent,
+		NoArrowSpinDirective
 	],
 	templateUrl: "./cashflow-table.component.html",
 	changeDetection: ChangeDetectionStrategy.OnPush
@@ -74,7 +76,6 @@ export class CashflowTableComponent implements OnInit {
 	ngOnInit() {
 		this.updateTrigger$
 			.pipe(
-				debounceTime(600),
 				distinctUntilChanged(
 					(a, b) => a.month === b.month && a.field === b.field && a.value === b.value
 				),
@@ -87,6 +88,11 @@ export class CashflowTableComponent implements OnInit {
 		if (value === null) return;
 		const key = `${month}`;
 		this.editingValues.update(v => ({ ...v, [key]: { ...v[key], [field]: value } }));
+	}
+
+	onCellEditBlur(month: number, field: "earned" | "spent") {
+		const value = this.editingValues()[`${month}`]?.[field];
+		if (value === null || value === undefined) return;
 		this.updateTrigger$.next({ month, field, value });
 	}
 

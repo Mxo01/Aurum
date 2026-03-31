@@ -10,6 +10,7 @@ import com.backend.aurum.domain.analytics.dto.ChartDataDTO;
 import com.backend.aurum.domain.asset.mapper.AssetMapper;
 import com.backend.aurum.domain.asset.model.Asset;
 import com.backend.aurum.domain.asset.model.AssetCategory;
+import com.backend.aurum.domain.asset.model.AssetStatusLog;
 import com.backend.aurum.domain.asset.model.AssetType;
 import com.backend.aurum.domain.asset.model.Snapshot;
 import com.backend.aurum.domain.asset.repository.AssetRepository;
@@ -70,6 +71,15 @@ class AnalyticsServiceTest {
 		snapshot.setExchangeRateToBase(BigDecimal.ONE);
 		snapshot.setReferenceDate(date);
 		return snapshot;
+	}
+
+	private AssetStatusLog buildStatusLog(Asset asset, boolean isActive, LocalDate changedAt) {
+		AssetStatusLog log = new AssetStatusLog();
+		log.setId(UUID.randomUUID());
+		log.setAsset(asset);
+		log.setIsActive(isActive);
+		log.setChangedAt(changedAt);
+		return log;
 	}
 
 	@Test
@@ -274,6 +284,92 @@ class AnalyticsServiceTest {
 
 		// THEN
 		assertThat(expectedChart.getLabels()).hasSize(12);
+	}
+
+	@Test
+	void getChartData_excludesArchivedAssetWithNoStatusLog_fromCurrentMonthBar() {
+		// GIVEN
+		UUID mockUserId = UUID.randomUUID();
+		AssetCategory mockCategory = buildCategory(AssetType.ASSET);
+		Asset mockArchivedAsset = buildAsset(mockCategory);
+		mockArchivedAsset.setIsActive(false);
+		Snapshot mockSnapshot = buildSnapshot(
+			mockArchivedAsset,
+			new BigDecimal("1000"),
+			LocalDate.now().minusDays(1)
+		);
+		when(assetRepository.findByUserIdOrderByCreatedAtDesc(mockUserId)).thenReturn(
+			List.of(mockArchivedAsset)
+		);
+		when(snapshotRepository.findByAssetUserId(mockUserId)).thenReturn(List.of(mockSnapshot));
+		when(statusLogRepository.findByAssetIdIn(List.of(mockArchivedAsset.getId()))).thenReturn(
+			List.of()
+		);
+
+		// WHEN
+		ChartDataDTO expectedChart = testSubject.getChartData(mockUserId, false);
+
+		// THEN — current month bar (last entry) must be zero since the asset is archived
+		List<BigDecimal> assetsOnly = expectedChart.getTotalAssetsOnly();
+		assertThat(assetsOnly.get(assetsOnly.size() - 1)).isEqualByComparingTo(BigDecimal.ZERO);
+	}
+
+	@Test
+	void getChartData_includesArchivedAssetWithNoStatusLog_inHistoricalBars() {
+		// GIVEN
+		UUID mockUserId = UUID.randomUUID();
+		AssetCategory mockCategory = buildCategory(AssetType.ASSET);
+		Asset mockArchivedAsset = buildAsset(mockCategory);
+		mockArchivedAsset.setIsActive(false);
+		// snapshot from 6 months ago — falls in a historical bar
+		Snapshot mockOldSnapshot = buildSnapshot(
+			mockArchivedAsset,
+			new BigDecimal("1000"),
+			LocalDate.now().minusMonths(6)
+		);
+		when(assetRepository.findByUserIdOrderByCreatedAtDesc(mockUserId)).thenReturn(
+			List.of(mockArchivedAsset)
+		);
+		when(snapshotRepository.findByAssetUserId(mockUserId)).thenReturn(List.of(mockOldSnapshot));
+		when(statusLogRepository.findByAssetIdIn(List.of(mockArchivedAsset.getId()))).thenReturn(
+			List.of()
+		);
+
+		// WHEN
+		ChartDataDTO expectedChart = testSubject.getChartData(mockUserId, false);
+
+		// THEN — the bar 7 from the end covers ~6 months ago and must include the archived asset
+		List<BigDecimal> assetsOnly = expectedChart.getTotalAssetsOnly();
+		assertThat(assetsOnly.get(assetsOnly.size() - 7)).isGreaterThan(BigDecimal.ZERO);
+	}
+
+	@Test
+	void getChartData_includesActiveAsset_inCurrentMonthBar_evenWhenStatusLogSaysInactive() {
+		// GIVEN — asset is currently active (isActive=true) but has a stale log saying inactive
+		UUID mockUserId = UUID.randomUUID();
+		AssetCategory mockCategory = buildCategory(AssetType.ASSET);
+		Asset mockAsset = buildAsset(mockCategory);
+		mockAsset.setIsActive(true);
+		Snapshot mockSnapshot = buildSnapshot(
+			mockAsset,
+			new BigDecimal("1000"),
+			LocalDate.now().minusDays(1)
+		);
+		AssetStatusLog staleLog = buildStatusLog(mockAsset, false, LocalDate.now().minusDays(30));
+		when(assetRepository.findByUserIdOrderByCreatedAtDesc(mockUserId)).thenReturn(
+			List.of(mockAsset)
+		);
+		when(snapshotRepository.findByAssetUserId(mockUserId)).thenReturn(List.of(mockSnapshot));
+		when(statusLogRepository.findByAssetIdIn(List.of(mockAsset.getId()))).thenReturn(
+			List.of(staleLog)
+		);
+
+		// WHEN
+		ChartDataDTO expectedChart = testSubject.getChartData(mockUserId, false);
+
+		// THEN — current month bar must include the active asset despite the stale log
+		List<BigDecimal> assetsOnly = expectedChart.getTotalAssetsOnly();
+		assertThat(assetsOnly.get(assetsOnly.size() - 1)).isGreaterThan(BigDecimal.ZERO);
 	}
 
 	@Test

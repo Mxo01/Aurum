@@ -27,8 +27,8 @@ export function mapDataIntoNetworthChartData(
 	const datasets: (ChartDataset<"bar"> | ChartDataset<"line">)[] = [
 		{
 			type: "bar",
-			label: "Total Assets",
-			data: data?.totalAssetsOnly ?? [],
+			label: "Net Worth",
+			data: data?.totalNetWorth ?? [],
 			backgroundColor: barGradient,
 			borderWidth: 0,
 			borderRadius: 16,
@@ -93,7 +93,7 @@ export function getNetworthChartOptions(
 					const title = tooltip.title?.[0] ?? "";
 
 					// Variation row
-					const totalPoint = dataPoints.find(p => p.dataset.label === "Total Assets");
+					const totalPoint = dataPoints.find(p => p.dataset.label === "Net Worth");
 					let variationHtml = "";
 					if (index > 0 && totalPoint) {
 						const currentVal = (totalPoint.parsed as { y: number }).y;
@@ -119,7 +119,7 @@ export function getNetworthChartOptions(
 					// Body rows
 					const rowsHtml = dataPoints
 						.map(point => {
-							const isTotal = point.dataset.label === "Total Assets";
+							const isTotal = point.dataset.label === "Net Worth";
 							const y = (point.parsed as { y: number }).y;
 							const formattedVal = isPrivacyMode
 								? "••••••"

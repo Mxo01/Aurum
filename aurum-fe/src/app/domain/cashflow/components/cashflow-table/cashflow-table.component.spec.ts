@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from "@angular/core/testing";
 import { MockComponent, MockDirective, MockModule, MockPipe, MockProvider } from "ng-mocks";
+import { NoArrowSpinDirective } from "../../../../shared/directives/no-arrow-spin.directive";
 import { FormsModule } from "@angular/forms";
 import { TableModule } from "primeng/table";
 import { InputNumber } from "primeng/inputnumber";
@@ -50,6 +51,7 @@ describe("CashflowTableComponent", () => {
 				MockModule(TableModule),
 				MockComponent(InputNumber),
 				MockDirective(Tooltip),
+				MockDirective(NoArrowSpinDirective),
 				MockPipe(PrivacyCurrencyPipe),
 				MockPipe(DecimalPipe),
 				MockComponent(EditableCellTooltipComponent)
@@ -147,9 +149,8 @@ describe("CashflowTableComponent", () => {
 	});
 
 	describe("entryUpdated output", () => {
-		it("should emit the updated entry returned by the service after debounce", async () => {
+		it("should emit the updated entry returned by the service on cell blur", () => {
 			// GIVEN
-			vi.useFakeTimers();
 			const stubbedEntry = buildMockEntry(1, 1500, 500);
 			vi.spyOn(mockCashFlowService, "updateEntry").mockReturnValue(of(stubbedEntry));
 			fixture.componentRef.setInput("rows", [buildMockRow(1)]);
@@ -160,11 +161,22 @@ describe("CashflowTableComponent", () => {
 
 			// WHEN
 			testSubject.onValueChange(1, "earned", 1500);
-			await vi.advanceTimersByTimeAsync(700);
+			testSubject.onCellEditBlur(1, "earned");
 
 			// THEN
 			expect(emittedValues[0]).toEqual(stubbedEntry);
-			vi.useRealTimers();
+		});
+
+		it("should not emit when onCellEditBlur is called with no pending editing value", () => {
+			// GIVEN
+			const emittedValues: CashFlowEntry[] = [];
+			testSubject.entryUpdated.subscribe(e => emittedValues.push(e));
+
+			// WHEN
+			testSubject.onCellEditBlur(1, "earned");
+
+			// THEN
+			expect(emittedValues).toHaveLength(0);
 		});
 	});
 });

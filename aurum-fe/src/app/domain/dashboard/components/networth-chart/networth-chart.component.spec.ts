@@ -91,9 +91,9 @@ describe("NetworthChartComponent", () => {
 	});
 
 	describe("totalAmount", () => {
-		it("should return the totalGrossAssets from summary", () => {
+		it("should return the totalNetWorth from summary", () => {
 			// GIVEN
-			fixture.componentRef.setInput("summary", { totalGrossAssets: 50000 });
+			fixture.componentRef.setInput("summary", { totalNetWorth: 50000 });
 			fixture.detectChanges();
 
 			// THEN
