@@ -1,0 +1,133 @@
+<div class="flex flex-col gap-4 max-w-screen-3xl mx-auto">
+	<!-- Year nav -->
+	<div class="flex flex-wrap items-center justify-between gap-3">
+		<p-button
+			[label]="'Back to ' + paths[previousRoute()].label"
+			[routerLink]="previousRoute()"
+			icon="pi pi-arrow-left"
+			[text]="true"
+			severity="secondary"
+			size="small"
+		/>
+
+		<div>
+			<p-button
+				icon="pi pi-chevron-left"
+				[text]="true"
+				severity="secondary"
+				size="small"
+				(onClick)="prevYear()"
+				[disabled]="isLoading()"
+			/>
+			<span class="text-xl font-bold font-mono w-16 text-center select-none">
+				{{ currentYear() }}
+			</span>
+			<p-button
+				icon="pi pi-chevron-right"
+				[text]="true"
+				severity="secondary"
+				size="small"
+				(onClick)="nextYear()"
+				[disabled]="isLoading() || isCurrentYearMax()"
+			/>
+		</div>
+	</div>
+
+	<!-- KPI cards -->
+	<div class="grid grid-cols-2 lg:grid-cols-6 gap-4">
+		<!-- Total Cashflow: Earned + Spent with YoY delta -->
+		<app-cashflow-kpi-card
+			class="col-span-2"
+			title="Total Cashflow"
+			icon="pi pi-arrow-right-arrow-left"
+			[yearHint]="currentYear() - 1"
+			[isLoading]="isLoading()"
+			[hasSubSkeleton]="true"
+			leftLabel="Earned"
+			[leftValue]="
+				(totalEarned() | privacyCurrency: currency() : 'symbol' : '1.0-0' : locale()) ?? ''
+			"
+			[leftDelta]="yoyEarnedPercent()"
+			rightLabel="Spent"
+			[rightValue]="
+				(totalSpent() | privacyCurrency: currency() : 'symbol' : '1.0-0' : locale()) ?? ''
+			"
+			[rightDelta]="yoySpentPercent()"
+			[rightDeltaInverted]="true"
+		/>
+
+		<!-- Monthly Avg: Earned + Spent -->
+		<app-cashflow-kpi-card
+			class="col-span-2"
+			title="Monthly Avg"
+			icon="pi pi-wave-pulse"
+			[isLoading]="isLoading()"
+			leftLabel="Earned"
+			[leftValue]="
+				(avgEarned() | privacyCurrency: currency() : 'symbol' : '1.0-0' : locale()) ?? ''
+			"
+			rightLabel="Spent"
+			[rightValue]="
+				(avgSpent() | privacyCurrency: currency() : 'symbol' : '1.0-0' : locale()) ?? ''
+			"
+			[footerText]="activeMonths() + ' months with recorded data'"
+		/>
+
+		<!-- Balance & Savings Rate -->
+		<app-cashflow-kpi-card
+			class="col-span-2"
+			title="Balance & Rate"
+			icon="pi pi-shield"
+			[isLoading]="isLoading()"
+			leftLabel="Net Balance"
+			[leftValue]="
+				(totalBalance() >= 0 ? '+' : '') +
+				((totalBalance() | privacyCurrency: currency() : 'symbol' : '1.0-0' : locale()) ?? '')
+			"
+			[leftValueClass]="totalBalanceClass()"
+			rightLabel="Savings Rate"
+			[rightValue]="savingsRateDisplay()"
+			[rightValueClass]="totalBalanceClass()"
+			[progressValue]="savingsRatePercent()"
+		/>
+	</div>
+
+	<!-- Chart -->
+	<app-cashflow-chart
+		[isLoading]="isLoading()"
+		[entries]="yearData()?.entries ?? []"
+		[currency]="currency()"
+		[locale]="locale()"
+		[isDarkMode]="isDarkMode()"
+		[isPrivacyMode]="isPrivacyMode()"
+	/>
+
+	<!-- Table -->
+	<app-cashflow-table
+		[rows]="rows()"
+		[isLoading]="isLoading()"
+		[hasPrevYearData]="hasPrevYearData()"
+		[year]="currentYear()"
+		[currency]="currency()"
+		[locale]="locale()"
+		[totalEarned]="totalEarned()"
+		[totalSpent]="totalSpent()"
+		[totalBalance]="totalBalance()"
+		[prevYearTotalEarned]="prevYearTotalEarned()"
+		[prevYearTotalSpent]="prevYearTotalSpent()"
+		(entryUpdated)="onEntryUpdated($event)"
+	/>
+
+	@if (!hasPrevYearData() && !isLoading()) {
+		<p-message
+			icon="pi pi-info-circle"
+			severity="secondary"
+		>
+			<span class="text-sm">
+				No data found for
+				<strong>{{ currentYear() - 1 }}</strong>
+				— previous year comparison will appear once you add data for that year.
+			</span>
+		</p-message>
+	}
+</div>

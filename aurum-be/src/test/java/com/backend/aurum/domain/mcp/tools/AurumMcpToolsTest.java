@@ -20,8 +20,13 @@ import com.backend.aurum.domain.asset.dto.UpdateAssetDTO;
 import com.backend.aurum.domain.asset.facade.AssetCategoryFacade;
 import com.backend.aurum.domain.asset.facade.AssetFacade;
 import com.backend.aurum.domain.asset.facade.SnapshotFacade;
+import com.backend.aurum.domain.cashflow.dto.CashFlowEntryDTO;
+import com.backend.aurum.domain.cashflow.dto.CashFlowYearDTO;
+import com.backend.aurum.domain.cashflow.dto.UpdateCashFlowEntryDTO;
+import com.backend.aurum.domain.cashflow.facade.CashFlowFacade;
 import com.backend.aurum.domain.user.model.User;
 import com.backend.aurum.domain.user.model.UserPrincipal;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 import org.instancio.Instancio;
@@ -53,6 +58,9 @@ class AurumMcpToolsTest {
 
 	@Mock
 	private AssetCategoryFacade categoryFacade;
+
+	@Mock
+	private CashFlowFacade cashFlowFacade;
 
 	@InjectMocks
 	private AurumMcpTools testSubject;
@@ -258,5 +266,80 @@ class AurumMcpToolsTest {
 
 		// THEN
 		assertThat(expectedDtos).isEqualTo(stubbedDtos);
+	}
+
+	@Test
+	void getCashFlowYear_delegatesToFacadeWithCurrentUser() {
+		// GIVEN
+		Integer mockYear = 2025;
+		CashFlowYearDTO stubbedDto = Instancio.create(CashFlowYearDTO.class);
+		when(cashFlowFacade.getYear(mockUserId, mockYear)).thenReturn(stubbedDto);
+
+		// WHEN
+		CashFlowYearDTO expectedDto = testSubject.getCashFlowYear(mockYear);
+
+		// THEN
+		assertThat(expectedDto).isEqualTo(stubbedDto);
+	}
+
+	@Test
+	void updateCashFlowEntry_delegatesToFacadeWithCurrentUser() {
+		// GIVEN
+		Integer mockYear = 2025;
+		Integer mockMonth = 6;
+		UpdateCashFlowEntryDTO mockDto = Instancio.create(UpdateCashFlowEntryDTO.class);
+		CashFlowEntryDTO stubbedDto = Instancio.create(CashFlowEntryDTO.class);
+		when(cashFlowFacade.updateEntry(mockUserId, mockYear, mockMonth, mockDto)).thenReturn(
+			stubbedDto
+		);
+
+		// WHEN
+		CashFlowEntryDTO expectedDto = testSubject.updateCashFlowEntry(mockYear, mockMonth, mockDto);
+
+		// THEN
+		assertThat(expectedDto).isEqualTo(stubbedDto);
+	}
+
+	@Test
+	void bulkUpdateCashFlowEntries_processesAllEntriesWithCurrentUser() {
+		// GIVEN
+		Integer mockYear = 2025;
+		CashFlowEntryDTO mockEntry1 = Instancio.of(CashFlowEntryDTO.class)
+			.set(Select.field(CashFlowEntryDTO::getMonth), 1)
+			.set(Select.field(CashFlowEntryDTO::getEarned), new BigDecimal("1000.00"))
+			.set(Select.field(CashFlowEntryDTO::getSpent), new BigDecimal("400.00"))
+			.create();
+		CashFlowEntryDTO mockEntry2 = Instancio.of(CashFlowEntryDTO.class)
+			.set(Select.field(CashFlowEntryDTO::getMonth), 2)
+			.set(Select.field(CashFlowEntryDTO::getEarned), new BigDecimal("1200.00"))
+			.set(Select.field(CashFlowEntryDTO::getSpent), new BigDecimal("500.00"))
+			.create();
+		CashFlowEntryDTO stubbedResult1 = Instancio.create(CashFlowEntryDTO.class);
+		CashFlowEntryDTO stubbedResult2 = Instancio.create(CashFlowEntryDTO.class);
+		when(
+			cashFlowFacade.updateEntry(
+				org.mockito.ArgumentMatchers.eq(mockUserId),
+				org.mockito.ArgumentMatchers.eq(mockYear),
+				org.mockito.ArgumentMatchers.eq(1),
+				org.mockito.ArgumentMatchers.notNull()
+			)
+		).thenReturn(stubbedResult1);
+		when(
+			cashFlowFacade.updateEntry(
+				org.mockito.ArgumentMatchers.eq(mockUserId),
+				org.mockito.ArgumentMatchers.eq(mockYear),
+				org.mockito.ArgumentMatchers.eq(2),
+				org.mockito.ArgumentMatchers.notNull()
+			)
+		).thenReturn(stubbedResult2);
+
+		// WHEN
+		List<CashFlowEntryDTO> expectedDtos = testSubject.bulkUpdateCashFlowEntries(
+			mockYear,
+			List.of(mockEntry1, mockEntry2)
+		);
+
+		// THEN
+		assertThat(expectedDtos).containsExactly(stubbedResult1, stubbedResult2);
 	}
 }

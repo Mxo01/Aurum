@@ -25,6 +25,7 @@ import { Locale } from "../../../profile/model/locale.model";
 import { Asset, AssetType } from "../../model/asset.model";
 import { mapAssetsToAssetsWithBalance } from "./asset-table.utils";
 import { Tooltip } from "primeng/tooltip";
+import { EditableCellTooltipComponent } from "../../../../shared/components/editable-cell-tooltip/editable-cell-tooltip.component";
 
 @Component({
 	selector: "app-asset-table",
@@ -40,7 +41,8 @@ import { Tooltip } from "primeng/tooltip";
 		Menu,
 		InputNumber,
 		FormsModule,
-		Tooltip
+		Tooltip,
+		EditableCellTooltipComponent
 	]
 })
 export class AssetTableComponent implements OnInit {
