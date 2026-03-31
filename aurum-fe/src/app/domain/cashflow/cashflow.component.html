@@ -70,7 +70,7 @@
 			[rightValue]="
 				(avgSpent() | privacyCurrency: currency() : 'symbol' : '1.0-0' : locale()) ?? ''
 			"
-			[footerText]="activeMonths() + ' months with recorded data'"
+			[footerText]="activeMonths() ? activeMonths() + ' months with recorded data' : ''"
 		/>
 
 		<!-- Balance & Savings Rate -->
@@ -81,7 +81,7 @@
 			[isLoading]="isLoading()"
 			leftLabel="Net Balance"
 			[leftValue]="
-				(totalBalance() >= 0 ? '+' : '') +
+				(totalBalance() > 0 ? '+' : '') +
 				((totalBalance() | privacyCurrency: currency() : 'symbol' : '1.0-0' : locale()) ?? '')
 			"
 			[leftValueClass]="totalBalanceClass()"

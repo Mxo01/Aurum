@@ -24,7 +24,12 @@
 	</div>
 	@if (isLoading()) {
 		<p-skeleton height="220px" />
-	} @else if (chartData()) {
+	} @else if (isChartEmpty()) {
+		<div class="flex flex-col items-center gap-4 text-zinc-400 dark:text-zinc-500 py-11">
+			<i class="pi pi-chart-bar text-4xl!"></i>
+			<p>No cash flow data yet. Click any cell to start tracking.</p>
+		</div>
+	} @else {
 		<p-chart
 			type="bar"
 			[data]="chartData()"

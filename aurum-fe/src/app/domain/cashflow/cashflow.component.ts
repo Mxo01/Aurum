@@ -136,9 +136,10 @@ export class CashFlowComponent implements OnInit {
 		if (delta === null || !prev) return null;
 		return (delta / Math.abs(prev)) * 100;
 	});
-	readonly totalBalanceClass = computed(() =>
-		this.totalBalance() >= 0 ? "text-green-500" : "text-red-400"
-	);
+	readonly totalBalanceClass = computed(() => {
+		const balance = this.totalBalance();
+		return balance > 0 ? "text-green-500" : balance < 0 ? "text-red-400" : "";
+	});
 	readonly activeMonths = computed(
 		() => this.rows().filter(r => r.earned > 0 || r.spent > 0).length
 	);

@@ -208,20 +208,6 @@
 			}
 		</tr>
 	</ng-template>
-
-	<ng-template #emptymessage>
-		<tr>
-			<td
-				[colSpan]="hasPrevYearData() ? 7 : 5"
-				class="text-center py-12!"
-			>
-				<div class="flex flex-col items-center gap-4 text-zinc-400 dark:text-zinc-500">
-					<i class="pi pi-chart-bar text-4xl!"></i>
-					<p>No cash flow data yet. Click any cell to start tracking.</p>
-				</div>
-			</td>
-		</tr>
-	</ng-template>
 </p-table>
 
 <ng-template #tooltip>

@@ -29,11 +29,11 @@ export class CashflowKpiCardComponent {
 	progressValue = input<number | null>(null);
 
 	readonly leftIsPositive = computed(() =>
-		this.leftDeltaInverted() ? (this.leftDelta() ?? 0) < 0 : (this.leftDelta() ?? 0) >= 0
+		this.leftDeltaInverted() ? (this.leftDelta() ?? 0) < 0 : (this.leftDelta() ?? 0) > 0
 	);
 
 	readonly rightIsPositive = computed(() =>
-		this.rightDeltaInverted() ? (this.rightDelta() ?? 0) < 0 : (this.rightDelta() ?? 0) >= 0
+		this.rightDeltaInverted() ? (this.rightDelta() ?? 0) < 0 : (this.rightDelta() ?? 0) > 0
 	);
 
 	formatDelta(value: number | null): string {

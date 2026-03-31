@@ -31,7 +31,12 @@ export class CashflowChartComponent {
 		if (!e.length) return null;
 		return mapCashFlowToChartData(e);
 	});
-
+	readonly isChartEmpty = computed(() => {
+		const data = this.chartData();
+		const earnedEmpty = data?.datasets[0].data.every(v => !v);
+		const spentEmpty = data?.datasets[1].data.every(v => !v);
+		return earnedEmpty && spentEmpty;
+	});
 	readonly chartOptions = computed(() =>
 		getCashFlowChartOptions(
 			getCurrencySymbol(this.currency()),
@@ -41,7 +46,6 @@ export class CashflowChartComponent {
 			this.entries()
 		)
 	);
-
 	readonly chartPlugins = computed(() => [
 		buildBarLabelsPlugin(
 			getCurrencySymbol(this.currency()),

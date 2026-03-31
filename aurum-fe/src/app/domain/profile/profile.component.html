@@ -9,19 +9,19 @@
 	/>
 
 	<!-- Personal Details -->
-	<div
-		class="p-6 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-sm flex flex-col gap-5"
-	>
-		<div class="flex items-center gap-3">
-			<div
-				class="w-9 h-9 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center shrink-0"
-			>
-				<i class="pi pi-user text-zinc-700 dark:text-zinc-300"></i>
+	@if (!hasGoogleProfile()) {
+		<div
+			class="p-6 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-sm flex flex-col gap-5"
+		>
+			<div class="flex items-center gap-3">
+				<div
+					class="w-9 h-9 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center shrink-0"
+				>
+					<i class="pi pi-user text-zinc-700 dark:text-zinc-300"></i>
+				</div>
+				<span class="font-semibold">Personal Details</span>
 			</div>
-			<span class="font-semibold">Personal Details</span>
-		</div>
 
-		@if (!hasGoogleProfile()) {
 			<div class="flex flex-col gap-3">
 				<span class="text-sm text-zinc-500 dark:text-zinc-400">Profile Picture</span>
 				<div class="flex items-center gap-4">
@@ -73,31 +73,31 @@
 			</div>
 
 			<p-divider />
-		}
 
-		<div class="flex flex-col gap-2">
-			<label
-				for="username"
-				class="text-sm text-zinc-500 dark:text-zinc-400"
-			>
-				Name
-			</label>
-			<p-iconfield>
-				<input
-					pInputText
-					id="username"
-					autocomplete="off"
-					[fluid]="true"
-					[ngModel]="user()?.name"
-					(ngModelChange)="updateName($event)"
-					size="small"
-				/>
-				@if (isUpdatingName()) {
-					<p-inputicon class="pi pi-spinner pi-spin" />
-				}
-			</p-iconfield>
+			<div class="flex flex-col gap-2">
+				<label
+					for="username"
+					class="text-sm text-zinc-500 dark:text-zinc-400"
+				>
+					Name
+				</label>
+				<p-iconfield>
+					<input
+						pInputText
+						id="username"
+						autocomplete="off"
+						[fluid]="true"
+						[ngModel]="user()?.name"
+						(ngModelChange)="updateName($event)"
+						size="small"
+					/>
+					@if (isUpdatingName()) {
+						<p-inputicon class="pi pi-spinner pi-spin" />
+					}
+				</p-iconfield>
+			</div>
 		</div>
-	</div>
+	}
 
 	<!-- Preferences -->
 	<div
