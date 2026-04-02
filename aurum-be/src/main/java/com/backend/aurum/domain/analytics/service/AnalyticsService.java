@@ -483,7 +483,10 @@ public class AnalyticsService {
 	 * Returns true if the asset was active on the given date, based on the status log.
 	 * For today or later: the isActive flag is authoritative (matches the summary card).
 	 * For historical dates: use the latest log entry ≤ date, or assume active if no log exists
-	 * so that pre-log history is preserved.
+	 * so that pre-log history is preserved (supports backdated initial snapshots).
+	 * Exception: a currently-inactive asset created after the target date could not have been
+	 * active at that date and is excluded, preventing archived assets with backdated snapshots
+	 * from inflating historical bars.
 	 */
 	private boolean wasActiveAt(
 		Asset asset,
@@ -492,6 +495,13 @@ public class AnalyticsService {
 	) {
 		if (!date.isBefore(LocalDate.now())) {
 			return Boolean.TRUE.equals(asset.getIsActive());
+		}
+		if (
+			!Boolean.TRUE.equals(asset.getIsActive()) &&
+			asset.getCreatedAt() != null &&
+			asset.getCreatedAt().toLocalDate().isAfter(date)
+		) {
+			return false;
 		}
 		List<AssetStatusLog> logs = statusLogsByAsset.getOrDefault(asset.getId(), List.of());
 		return logs
