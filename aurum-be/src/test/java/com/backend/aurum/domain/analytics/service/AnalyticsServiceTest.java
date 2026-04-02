@@ -19,6 +19,7 @@ import com.backend.aurum.domain.asset.repository.AssetStatusLogRepository;
 import com.backend.aurum.domain.asset.repository.SnapshotRepository;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -381,6 +382,67 @@ class AnalyticsServiceTest {
 		// THEN — current month bar must include the active asset despite the stale log
 		List<BigDecimal> assetsOnly = expectedChart.getTotalAssetsOnly();
 		assertThat(assetsOnly.get(assetsOnly.size() - 1)).isGreaterThan(BigDecimal.ZERO);
+	}
+
+	@Test
+	void getChartData_excludesInactiveAssetCreatedToday_fromHistoricalBars() {
+		// GIVEN — inactive asset created today with a backdated snapshot (archived immediately)
+		UUID mockUserId = UUID.randomUUID();
+		AssetCategory mockCategory = buildCategory(AssetType.ASSET);
+		Asset mockAsset = buildAsset(mockCategory);
+		mockAsset.setIsActive(false);
+		mockAsset.setCreatedAt(LocalDateTime.now());
+		Snapshot mockBackdatedSnapshot = buildSnapshot(
+			mockAsset,
+			new BigDecimal("450"),
+			LocalDate.now().minusMonths(6)
+		);
+		when(assetRepository.findByUserIdOrderByCreatedAtDesc(mockUserId)).thenReturn(
+			List.of(mockAsset)
+		);
+		when(snapshotRepository.findByAssetUserId(mockUserId)).thenReturn(
+			List.of(mockBackdatedSnapshot)
+		);
+		when(statusLogRepository.findByAssetIdIn(List.of(mockAsset.getId()))).thenReturn(List.of());
+
+		// WHEN
+		ChartDataDTO expectedChart = testSubject.getChartData(mockUserId, false);
+
+		// THEN — all bars must be zero: inactive + created today means it shouldn't appear anywhere
+		List<BigDecimal> assetsOnly = expectedChart.getTotalAssetsOnly();
+		assetsOnly.forEach(v -> assertThat(v).isEqualByComparingTo(BigDecimal.ZERO));
+	}
+
+	@Test
+	void getChartData_includesActiveAssetCreatedToday_inHistoricalBarsViaMBackdatedSnapshot() {
+		// GIVEN — active asset created today with a backdated snapshot (legitimate historical import)
+		UUID mockUserId = UUID.randomUUID();
+		AssetCategory mockCategory = buildCategory(AssetType.ASSET);
+		Asset mockAsset = buildAsset(mockCategory);
+		mockAsset.setIsActive(true);
+		mockAsset.setCreatedAt(LocalDateTime.now());
+		Snapshot mockBackdatedSnapshot = buildSnapshot(
+			mockAsset,
+			new BigDecimal("450"),
+			LocalDate.now().minusMonths(6)
+		);
+		AssetStatusLog creationLog = buildStatusLog(mockAsset, true, LocalDate.now());
+		when(assetRepository.findByUserIdOrderByCreatedAtDesc(mockUserId)).thenReturn(
+			List.of(mockAsset)
+		);
+		when(snapshotRepository.findByAssetUserId(mockUserId)).thenReturn(
+			List.of(mockBackdatedSnapshot)
+		);
+		when(statusLogRepository.findByAssetIdIn(List.of(mockAsset.getId()))).thenReturn(
+			List.of(creationLog)
+		);
+
+		// WHEN
+		ChartDataDTO expectedChart = testSubject.getChartData(mockUserId, false);
+
+		// THEN — the bar ~6 months back must include the backdated snapshot value
+		List<BigDecimal> assetsOnly = expectedChart.getTotalAssetsOnly();
+		assertThat(assetsOnly.get(assetsOnly.size() - 7)).isGreaterThan(BigDecimal.ZERO);
 	}
 
 	@Test
