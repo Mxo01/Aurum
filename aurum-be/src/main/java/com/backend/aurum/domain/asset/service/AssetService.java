@@ -80,6 +80,12 @@ public class AssetService {
 			savedAsset.getName()
 		);
 
+		AssetStatusLog statusLog = new AssetStatusLog();
+		statusLog.setAsset(savedAsset);
+		statusLog.setChangedAt(LocalDate.now());
+		statusLog.setIsActive(true);
+		statusLogRepository.save(statusLog);
+
 		if (initialValue != null && referenceDate != null) {
 			log.debug(
 				"AssetService#save - Creating initial snapshot for assetId={}, amount={}, date={}",
