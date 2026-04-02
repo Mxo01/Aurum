@@ -59,6 +59,7 @@ export const auth0Config: AuthConfig = {
 		audience: environment.auth0Audience
 	},
 	useRefreshTokens: true,
+	useRefreshTokensFallback: true,
 	cacheLocation: "localstorage",
 	httpInterceptor: {
 		allowedList: [

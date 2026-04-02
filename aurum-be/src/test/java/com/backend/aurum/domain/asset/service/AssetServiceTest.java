@@ -119,6 +119,20 @@ class AssetServiceTest {
 	}
 
 	@Test
+	void save_createsInitialStatusLog() {
+		// GIVEN
+		Asset mockAsset = Instancio.create(Asset.class);
+		Asset stubbedSaved = Instancio.create(Asset.class);
+		when(assetRepository.save(mockAsset)).thenReturn(stubbedSaved);
+
+		// WHEN
+		testSubject.save(mockAsset, null, null);
+
+		// THEN
+		verify(statusLogRepository).save(org.mockito.ArgumentMatchers.notNull());
+	}
+
+	@Test
 	void save_createsInitialSnapshot_whenInitialValueAndDateProvided() {
 		// GIVEN
 		Asset mockAsset = Instancio.of(Asset.class)
