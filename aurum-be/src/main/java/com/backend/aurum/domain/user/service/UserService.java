@@ -6,6 +6,7 @@ import com.backend.aurum.domain.analytics.repository.TargetRepository;
 import com.backend.aurum.domain.asset.repository.AssetCategoryRepository;
 import com.backend.aurum.domain.asset.repository.AssetRepository;
 import com.backend.aurum.domain.auth.service.Auth0ManagementService;
+import com.backend.aurum.domain.cashflow.repository.CashFlowRepository;
 import com.backend.aurum.domain.user.dto.UpdateCurrencyDTO;
 import com.backend.aurum.domain.user.dto.UpdateLocaleDTO;
 import com.backend.aurum.domain.user.dto.UpdateNameDTO;
@@ -15,6 +16,7 @@ import com.backend.aurum.domain.user.enums.Locale;
 import com.backend.aurum.domain.user.model.User;
 import com.backend.aurum.domain.user.model.UserPrincipal;
 import com.backend.aurum.domain.user.repository.UserRepository;
+import com.backend.aurum.infrastructure.exception.NotFoundException;
 import com.drew.imaging.ImageMetadataReader;
 import com.drew.imaging.ImageProcessingException;
 import com.drew.metadata.Metadata;
@@ -37,6 +39,7 @@ import javax.imageio.ImageWriter;
 import javax.imageio.stream.ImageOutputStream;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -51,6 +54,7 @@ public class UserService {
 	private final AssetRepository assetRepository;
 	private final AssetCategoryRepository categoryRepository;
 	private final TargetRepository targetRepository;
+	private final CashFlowRepository cashFlowRepository;
 
 	public User findOrCreate(String jwtId) {
 		log.debug("UserService#findOrCreate - Looking up user by jwtId={}", jwtId);
@@ -69,7 +73,7 @@ public class UserService {
 					User created = userRepository.saveAndFlush(newUser);
 					log.info("UserService#findOrCreate - New user created: userId={}", created.getId());
 					return created;
-				} catch (Exception e) {
+				} catch (DataIntegrityViolationException e) {
 					log.warn(
 						"UserService#findOrCreate - Concurrent insert detected for jwtId={}, retrying lookup",
 						jwtId
@@ -84,7 +88,9 @@ public class UserService {
 	@Transactional
 	public User getUserById(UUID userId) {
 		log.debug("UserService#getUserById - Fetching user: userId={}", userId);
-		return userRepository.findById(Objects.requireNonNull(userId)).orElseThrow();
+		return userRepository
+			.findById(Objects.requireNonNull(userId))
+			.orElseThrow(() -> new NotFoundException("User not found"));
 	}
 
 	@Transactional
@@ -127,7 +133,9 @@ public class UserService {
 			userId,
 			dto.currency()
 		);
-		User user = userRepository.findById(Objects.requireNonNull(userId)).orElseThrow();
+		User user = userRepository
+			.findById(Objects.requireNonNull(userId))
+			.orElseThrow(() -> new NotFoundException("User not found"));
 		user.setCurrency(dto.currency());
 		userRepository.save(user);
 		log.info(
@@ -144,7 +152,9 @@ public class UserService {
 			userId,
 			dto.locale()
 		);
-		User user = userRepository.findById(Objects.requireNonNull(userId)).orElseThrow();
+		User user = userRepository
+			.findById(Objects.requireNonNull(userId))
+			.orElseThrow(() -> new NotFoundException("User not found"));
 		user.setLocale(dto.locale());
 		userRepository.save(user);
 		log.info(
@@ -163,7 +173,9 @@ public class UserService {
 		);
 		try {
 			String encoded = processImage(file);
-			User user = userRepository.findById(Objects.requireNonNull(userId)).orElseThrow();
+			User user = userRepository
+				.findById(Objects.requireNonNull(userId))
+				.orElseThrow(() -> new NotFoundException("User not found"));
 			user.setPicture(encoded);
 			userRepository.save(user);
 			log.info("UserService#updatePicture - Profile picture updated for userId={}", userId);
@@ -176,7 +188,9 @@ public class UserService {
 	@Transactional
 	public void deletePicture(UUID userId) {
 		log.debug("UserService#deletePicture - Removing profile picture for userId={}", userId);
-		User user = userRepository.findById(Objects.requireNonNull(userId)).orElseThrow();
+		User user = userRepository
+			.findById(Objects.requireNonNull(userId))
+			.orElseThrow(() -> new NotFoundException("User not found"));
 		user.setPicture(null);
 		userRepository.save(user);
 		log.info("UserService#deletePicture - Profile picture removed for userId={}", userId);
@@ -348,7 +362,9 @@ public class UserService {
 	@Transactional(readOnly = true)
 	public UserExportDTO exportUserData(UUID userId, String email) {
 		log.info("UserService#exportUserData - Exporting data for userId={}", userId);
-		User user = userRepository.findById(Objects.requireNonNull(userId)).orElseThrow();
+		User user = userRepository
+			.findById(Objects.requireNonNull(userId))
+			.orElseThrow(() -> new NotFoundException("User not found"));
 
 		var profile = new UserExportDTO.ProfileExport(
 			user.getId(),
@@ -411,7 +427,21 @@ public class UserService {
 			)
 			.toList();
 
-		return new UserExportDTO(profile, categories, assets, targets);
+		var cashFlows = cashFlowRepository
+			.findByUserIdOrderByYearDescMonthAsc(userId)
+			.stream()
+			.map(cf ->
+				new UserExportDTO.CashFlowExport(
+					cf.getId(),
+					cf.getYear(),
+					cf.getMonth(),
+					cf.getEarned(),
+					cf.getSpent()
+				)
+			)
+			.toList();
+
+		return new UserExportDTO(profile, categories, assets, targets, cashFlows);
 	}
 
 	public boolean isGoogleUser(UserPrincipal principal) {

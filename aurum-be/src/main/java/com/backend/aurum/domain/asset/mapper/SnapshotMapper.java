@@ -5,6 +5,8 @@ import com.backend.aurum.domain.asset.dto.SnapshotDTO;
 import com.backend.aurum.domain.asset.model.Asset;
 import com.backend.aurum.domain.asset.model.Snapshot;
 import com.backend.aurum.domain.asset.repository.AssetRepository;
+import com.backend.aurum.infrastructure.exception.AccessDeniedException;
+import com.backend.aurum.infrastructure.exception.NotFoundException;
 import java.math.BigDecimal;
 import java.util.Objects;
 import java.util.UUID;
@@ -29,10 +31,10 @@ public class SnapshotMapper {
 		if (dto.getAssetId() != null) {
 			Asset asset = assetRepository
 				.findById(Objects.requireNonNull(dto.getAssetId()))
-				.orElseThrow(() -> new RuntimeException("Asset not found"));
+				.orElseThrow(() -> new NotFoundException("Asset not found"));
 
 			if (userId != null && !asset.getUser().getId().equals(userId)) {
-				throw new RuntimeException("Asset does not belong to the user");
+				throw new AccessDeniedException("Asset does not belong to the user");
 			}
 			snapshot.setAsset(asset);
 		}
@@ -52,10 +54,10 @@ public class SnapshotMapper {
 		if (dto.getAssetId() != null) {
 			Asset asset = assetRepository
 				.findById(Objects.requireNonNull(dto.getAssetId()))
-				.orElseThrow(() -> new RuntimeException("Asset not found"));
+				.orElseThrow(() -> new NotFoundException("Asset not found"));
 
 			if (userId != null && !asset.getUser().getId().equals(userId)) {
-				throw new RuntimeException("Asset does not belong to the user");
+				throw new AccessDeniedException("Asset does not belong to the user");
 			}
 			snapshot.setAsset(asset);
 		}

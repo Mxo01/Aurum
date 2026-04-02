@@ -10,6 +10,8 @@ import com.backend.aurum.domain.asset.model.Asset;
 import com.backend.aurum.domain.asset.model.Snapshot;
 import com.backend.aurum.domain.asset.repository.AssetRepository;
 import com.backend.aurum.domain.user.model.User;
+import com.backend.aurum.infrastructure.exception.AccessDeniedException;
+import com.backend.aurum.infrastructure.exception.NotFoundException;
 import java.math.BigDecimal;
 import java.util.Optional;
 import java.util.UUID;
@@ -85,7 +87,7 @@ class SnapshotMapperTest {
 	}
 
 	@Test
-	void toEntity_createDto_throwsRuntimeException_whenAssetNotFound() {
+	void toEntity_createDto_throwsNotFoundException_whenAssetNotFound() {
 		// GIVEN
 		UUID mockUserId = UUID.randomUUID();
 		CreateSnapshotDTO mockDto = Instancio.create(CreateSnapshotDTO.class);
@@ -93,12 +95,12 @@ class SnapshotMapperTest {
 
 		// WHEN / THEN
 		assertThatThrownBy(() -> testSubject.toEntity(mockDto, mockUserId)).isInstanceOf(
-			RuntimeException.class
+			NotFoundException.class
 		);
 	}
 
 	@Test
-	void toEntity_createDto_throwsRuntimeException_whenAssetBelongsToDifferentUser() {
+	void toEntity_createDto_throwsAccessDeniedException_whenAssetBelongsToDifferentUser() {
 		// GIVEN
 		UUID mockUserId = UUID.randomUUID();
 		UUID otherUserId = UUID.randomUUID();
@@ -115,7 +117,7 @@ class SnapshotMapperTest {
 
 		// WHEN / THEN
 		assertThatThrownBy(() -> testSubject.toEntity(mockDto, mockUserId)).isInstanceOf(
-			RuntimeException.class
+			AccessDeniedException.class
 		);
 	}
 

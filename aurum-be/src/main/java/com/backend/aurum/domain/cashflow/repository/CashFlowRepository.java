@@ -11,6 +11,8 @@ import org.springframework.data.repository.query.Param;
 public interface CashFlowRepository extends JpaRepository<CashFlow, UUID> {
 	List<CashFlow> findByUserIdAndYearOrderByMonthAsc(UUID userId, Integer year);
 
+	List<CashFlow> findByUserIdOrderByYearDescMonthAsc(UUID userId);
+
 	Optional<CashFlow> findByUserIdAndYearAndMonth(UUID userId, Integer year, Integer month);
 
 	@Query(

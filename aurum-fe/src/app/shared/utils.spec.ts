@@ -1,6 +1,7 @@
 import {
 	createBarGradient,
 	createGradientFill,
+	escapeHtml,
 	getChartTooltipStyle,
 	getOrCreateTooltipEl,
 	isTruthy,
@@ -18,6 +19,65 @@ describe("isTruthy", () => {
 	it.each([true, "hello", 42, {}])("should return true for %s", value => {
 		// GIVEN / WHEN / THEN
 		expect(isTruthy(value)).toBe(true);
+	});
+});
+
+describe("escapeHtml", () => {
+	it("should escape HTML special characters", () => {
+		// GIVEN
+		const malicious = '<img src=x onerror=alert("XSS")>';
+
+		// WHEN
+		const result = escapeHtml(malicious);
+
+		// THEN
+		expect(result).toBe("&lt;img src=x onerror=alert(&quot;XSS&quot;)&gt;");
+		expect(result).not.toContain("<");
+		expect(result).not.toContain(">");
+	});
+
+	it("should escape ampersands and quotes", () => {
+		// GIVEN / WHEN
+		const result = escapeHtml('Tom & Jerry\'s "show"');
+
+		// THEN
+		expect(result).toBe("Tom &amp; Jerry&#39;s &quot;show&quot;");
+	});
+
+	it("should return the same string when no special characters", () => {
+		// GIVEN / WHEN
+		const result = escapeHtml("Hello World 123");
+
+		// THEN
+		expect(result).toBe("Hello World 123");
+	});
+});
+
+describe("tooltipRow", () => {
+	it("should escape the label to prevent XSS", () => {
+		// GIVEN
+		const style = getChartTooltipStyle(false);
+
+		// WHEN
+		const html = tooltipRow(style, "<span></span>", '<script>alert("xss")</script>', "$10,000");
+
+		// THEN
+		expect(html).not.toContain("<script>");
+		expect(html).toContain("&lt;script&gt;");
+	});
+});
+
+describe("tooltipContainer", () => {
+	it("should escape the title to prevent XSS", () => {
+		// GIVEN
+		const style = getChartTooltipStyle(false);
+
+		// WHEN
+		const html = tooltipContainer(style, "<img src=x onerror=alert(1)>", "<div>body</div>");
+
+		// THEN
+		expect(html).not.toContain("<img src=x");
+		expect(html).toContain("&lt;img");
 	});
 });
 

@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
@@ -14,6 +15,7 @@ public class ExchangeRateService {
 
 	private final RestClient restClient = RestClient.create("https://api.frankfurter.app");
 
+	@Cacheable(value = "exchangeRates", key = "#from + '-' + #to + '-' + #date")
 	public BigDecimal getRate(String from, String to, LocalDate date) {
 		if (from.equals(to)) return BigDecimal.ONE;
 		log.debug(
@@ -41,6 +43,11 @@ public class ExchangeRateService {
 				);
 			}
 			BigDecimal rate = BigDecimal.valueOf(rates.get(to).doubleValue());
+			if (rate.compareTo(BigDecimal.ZERO) <= 0) {
+				throw new RuntimeException(
+					"Invalid exchange rate (<=0) for " + from + "/" + to + " on " + date + ": " + rate
+				);
+			}
 			log.debug("ExchangeRateService#getRate - Rate obtained: 1 {} = {} {}", from, rate, to);
 			return rate;
 		} catch (RuntimeException e) {

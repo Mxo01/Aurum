@@ -39,7 +39,11 @@ public class AnalyticsService {
 		LocalDate now = LocalDate.now();
 
 		List<Asset> assets = assetRepository.findByUserIdAndIsActiveTrueOrderByCreatedAtDesc(userId);
-		Map<UUID, List<Snapshot>> snapshotsByAsset = loadSnapshotsByAsset(userId);
+
+		// Only load snapshots from the oldest needed date (1 year back) instead of all history.
+		// Add a 1-month buffer so carry-forward logic works for the earliest variation date.
+		LocalDate earliestNeeded = now.minusYears(1).minusMonths(2);
+		Map<UUID, List<Snapshot>> snapshotsByAsset = loadSnapshotsByAsset(userId, earliestNeeded);
 
 		// Anchor variations at the latest snapshot date so that months without data
 		// don't collapse the delta to zero via carry-forward.
@@ -53,42 +57,28 @@ public class AnalyticsService {
 			.max(LocalDate::compareTo)
 			.orElse(now);
 
-		BigDecimal currentNetWorth = calculateNetWorthAt(assets, snapshotsByAsset, now);
-		BigDecimal oneMonthAgoNetWorth = calculateNetWorthAt(
+		// Compute net worth and gross assets at all 4 dates in a single pass
+		// instead of calling calculateNetWorthAt/calculateGrossAssetsAt 8 times.
+		LocalDate oneMonthAgoDate = latestDataDate.minusMonths(1);
+		LocalDate sixMonthsAgoDate = latestDataDate.minusMonths(6);
+		LocalDate oneYearAgoDate = latestDataDate.minusYears(1);
+		List<LocalDate> dates = List.of(now, oneMonthAgoDate, sixMonthsAgoDate, oneYearAgoDate);
+
+		Map<LocalDate, BigDecimal> netWorthByDate = calculateNetWorthAtDates(
 			assets,
 			snapshotsByAsset,
-			latestDataDate.minusMonths(1)
+			dates
 		);
-		BigDecimal sixMonthsAgoNetWorth = calculateNetWorthAt(
+		Map<LocalDate, BigDecimal> grossAssetsByDate = calculateGrossAssetsAtDates(
 			assets,
 			snapshotsByAsset,
-			latestDataDate.minusMonths(6)
-		);
-		BigDecimal oneYearAgoNetWorth = calculateNetWorthAt(
-			assets,
-			snapshotsByAsset,
-			latestDataDate.minusYears(1)
+			dates
 		);
 
-		BigDecimal totalLiabilities = calculateTotalLiabilities(assets, snapshotsByAsset);
-		BigDecimal totalGrossAssets = calculateTotalGrossAssets(assets, snapshotsByAsset);
-
-		BigDecimal currentGrossAssets = calculateGrossAssetsAt(assets, snapshotsByAsset, now);
-		BigDecimal oneMonthAgoGrossAssets = calculateGrossAssetsAt(
-			assets,
-			snapshotsByAsset,
-			latestDataDate.minusMonths(1)
-		);
-		BigDecimal sixMonthsAgoGrossAssets = calculateGrossAssetsAt(
-			assets,
-			snapshotsByAsset,
-			latestDataDate.minusMonths(6)
-		);
-		BigDecimal oneYearAgoGrossAssets = calculateGrossAssetsAt(
-			assets,
-			snapshotsByAsset,
-			latestDataDate.minusYears(1)
-		);
+		BigDecimal currentNetWorth = netWorthByDate.get(now);
+		BigDecimal currentGrossAssets = grossAssetsByDate.get(now);
+		BigDecimal totalLiabilities = currentGrossAssets.subtract(currentNetWorth);
+		BigDecimal totalGrossAssets = currentGrossAssets;
 
 		log.debug(
 			"AnalyticsService#getSummary - Summary computed for userId={}: netWorth={}, grossAssets={}, liabilities={}",
@@ -110,16 +100,16 @@ public class AnalyticsService {
 			.totalGrossAssets(currentGrossAssets)
 			.variations(
 				VariationDTO.builder()
-					.oneMonth(calculateDelta(currentNetWorth, oneMonthAgoNetWorth))
-					.sixMonths(calculateDelta(currentNetWorth, sixMonthsAgoNetWorth))
-					.oneYear(calculateDelta(currentNetWorth, oneYearAgoNetWorth))
+					.oneMonth(calculateDelta(currentNetWorth, netWorthByDate.get(oneMonthAgoDate)))
+					.sixMonths(calculateDelta(currentNetWorth, netWorthByDate.get(sixMonthsAgoDate)))
+					.oneYear(calculateDelta(currentNetWorth, netWorthByDate.get(oneYearAgoDate)))
 					.build()
 			)
 			.assetVariations(
 				VariationDTO.builder()
-					.oneMonth(calculateDelta(currentGrossAssets, oneMonthAgoGrossAssets))
-					.sixMonths(calculateDelta(currentGrossAssets, sixMonthsAgoGrossAssets))
-					.oneYear(calculateDelta(currentGrossAssets, oneYearAgoGrossAssets))
+					.oneMonth(calculateDelta(currentGrossAssets, grossAssetsByDate.get(oneMonthAgoDate)))
+					.sixMonths(calculateDelta(currentGrossAssets, grossAssetsByDate.get(sixMonthsAgoDate)))
+					.oneYear(calculateDelta(currentGrossAssets, grossAssetsByDate.get(oneYearAgoDate)))
 					.build()
 			)
 			.assetAllocation(calculateAssetAllocation(assets, snapshotsByAsset))
@@ -284,6 +274,37 @@ public class AnalyticsService {
 			.collect(Collectors.groupingBy(s -> s.getAsset().getId()));
 	}
 
+	private Map<UUID, List<Snapshot>> loadSnapshotsByAsset(UUID userId, LocalDate since) {
+		return snapshotRepository
+			.findByAssetUserIdAndReferenceDateGreaterThanEqual(userId, since)
+			.stream()
+			.collect(Collectors.groupingBy(s -> s.getAsset().getId()));
+	}
+
+	private Map<LocalDate, BigDecimal> calculateNetWorthAtDates(
+		List<Asset> assets,
+		Map<UUID, List<Snapshot>> snapshotsByAsset,
+		List<LocalDate> dates
+	) {
+		Map<LocalDate, BigDecimal> result = new HashMap<>();
+		for (LocalDate date : dates) {
+			result.put(date, calculateNetWorthAt(assets, snapshotsByAsset, date));
+		}
+		return result;
+	}
+
+	private Map<LocalDate, BigDecimal> calculateGrossAssetsAtDates(
+		List<Asset> assets,
+		Map<UUID, List<Snapshot>> snapshotsByAsset,
+		List<LocalDate> dates
+	) {
+		Map<LocalDate, BigDecimal> result = new HashMap<>();
+		for (LocalDate date : dates) {
+			result.put(date, calculateGrossAssetsAt(assets, snapshotsByAsset, date));
+		}
+		return result;
+	}
+
 	private BigDecimal calculateNetWorthAt(
 		List<Asset> assets,
 		Map<UUID, List<Snapshot>> snapshotsByAsset,
@@ -335,36 +356,6 @@ public class AnalyticsService {
 			.max(Comparator.comparing(Snapshot::getReferenceDate))
 			.map(Snapshot::getAmountInBaseCurrency)
 			.orElse(BigDecimal.ZERO);
-	}
-
-	private BigDecimal calculateTotalLiabilities(
-		List<Asset> assets,
-		Map<UUID, List<Snapshot>> snapshotsByAsset
-	) {
-		BigDecimal total = BigDecimal.ZERO;
-		for (Asset asset : assets) {
-			if (
-				asset.getCategory() == null || asset.getCategory().getType() != AssetType.LIABILITY
-			) continue;
-			total = total.add(
-				getLatestSnapshotValue(snapshotsByAsset.getOrDefault(asset.getId(), List.of()))
-			);
-		}
-		return total;
-	}
-
-	private BigDecimal calculateTotalGrossAssets(
-		List<Asset> assets,
-		Map<UUID, List<Snapshot>> snapshotsByAsset
-	) {
-		BigDecimal total = BigDecimal.ZERO;
-		for (Asset asset : assets) {
-			if (asset.getCategory() == null || asset.getCategory().getType() != AssetType.ASSET) continue;
-			total = total.add(
-				getLatestSnapshotValue(snapshotsByAsset.getOrDefault(asset.getId(), List.of()))
-			);
-		}
-		return total;
 	}
 
 	private BigDecimal calculateDebtToAssetRatio(BigDecimal liabilities, BigDecimal grossAssets) {

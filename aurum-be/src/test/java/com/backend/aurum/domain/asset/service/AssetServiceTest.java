@@ -11,6 +11,8 @@ import com.backend.aurum.domain.asset.repository.AssetRepository;
 import com.backend.aurum.domain.asset.repository.AssetStatusLogRepository;
 import com.backend.aurum.domain.asset.repository.SnapshotRepository;
 import com.backend.aurum.domain.user.model.User;
+import com.backend.aurum.infrastructure.exception.AccessDeniedException;
+import com.backend.aurum.infrastructure.exception.NotFoundException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
@@ -79,12 +81,12 @@ class AssetServiceTest {
 
 		// WHEN / THEN
 		assertThatThrownBy(() -> testSubject.findById(mockAssetId, mockUserId)).isInstanceOf(
-			RuntimeException.class
+			NotFoundException.class
 		);
 	}
 
 	@Test
-	void findById_throwsRuntimeException_whenAssetBelongsToDifferentUser() {
+	void findById_throwsAccessDeniedException_whenAssetBelongsToDifferentUser() {
 		// GIVEN
 		UUID mockUserId = UUID.randomUUID();
 		UUID otherUserId = UUID.randomUUID();
@@ -98,7 +100,7 @@ class AssetServiceTest {
 
 		// WHEN / THEN
 		assertThatThrownBy(() -> testSubject.findById(mockAsset.getId(), mockUserId)).isInstanceOf(
-			RuntimeException.class
+			AccessDeniedException.class
 		);
 	}
 

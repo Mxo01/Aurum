@@ -4,6 +4,8 @@ import com.backend.aurum.domain.asset.model.Asset;
 import com.backend.aurum.domain.asset.model.Snapshot;
 import com.backend.aurum.domain.asset.repository.AssetRepository;
 import com.backend.aurum.domain.asset.repository.SnapshotRepository;
+import com.backend.aurum.infrastructure.exception.AccessDeniedException;
+import com.backend.aurum.infrastructure.exception.NotFoundException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
@@ -46,7 +48,7 @@ public class SnapshotService {
 			.findById(Objects.requireNonNull(assetId))
 			.orElseThrow(() -> {
 				log.warn("SnapshotService#findByAssetId - Asset not found: assetId={}", assetId);
-				return new RuntimeException("Asset not found");
+				return new NotFoundException("Asset not found");
 			});
 		if (!asset.getUser().getId().equals(userId)) {
 			log.warn(
@@ -54,7 +56,7 @@ public class SnapshotService {
 				assetId,
 				userId
 			);
-			throw new RuntimeException("Access denied: Asset does not belong to user");
+			throw new AccessDeniedException("Access denied: Asset does not belong to user");
 		}
 		List<Snapshot> snapshots = snapshotRepository.findByAssetId(assetId);
 		log.debug(
@@ -72,7 +74,7 @@ public class SnapshotService {
 			.findById(Objects.requireNonNull(id))
 			.orElseThrow(() -> {
 				log.warn("SnapshotService#findById - Snapshot not found: snapshotId={}", id);
-				return new RuntimeException("Snapshot not found");
+				return new NotFoundException("Snapshot not found");
 			});
 
 		if (!snapshot.getAsset().getUser().getId().equals(userId)) {
@@ -81,7 +83,7 @@ public class SnapshotService {
 				id,
 				userId
 			);
-			throw new RuntimeException("Access denied: Snapshot does not belong to user");
+			throw new AccessDeniedException("Access denied: Snapshot does not belong to user");
 		}
 		return snapshot;
 	}
@@ -186,7 +188,7 @@ public class SnapshotService {
 					s.getId(),
 					assetId
 				);
-				throw new RuntimeException(
+				throw new AccessDeniedException(
 					"Snapshot " + s.getId() + " does not belong to asset " + assetId
 				);
 			}
@@ -197,7 +199,7 @@ public class SnapshotService {
 					s.getId(),
 					userId
 				);
-				throw new RuntimeException(
+				throw new AccessDeniedException(
 					"Access denied: Snapshot " + s.getId() + " does not belong to user"
 				);
 			}

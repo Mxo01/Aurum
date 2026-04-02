@@ -466,3 +466,36 @@ AUTH0_CLIENT_ID=
 AUTH0_AUDIENCE=
 API_BASE_URL=
 ```
+
+## Audit
+
+When asked to perform an audit (`esegui un audit`), always perform a **comprehensive codebase audit** covering all of the following areas. If anything else comes to mind during the audit, include it — the software must be solid and optimized.
+
+### Audit Checklist
+
+1. **Potential bugs** — null handling, edge cases, race conditions, incorrect business logic
+2. **UI responsiveness** — fixed widths, missing responsive breakpoints, overflow issues, mobile-unfriendly layouts
+3. **UX problems** — missing loading states, empty states, error feedback, form validation gaps, navigation issues, accessibility (a11y)
+4. **Security vulnerabilities** — XSS, SQL injection, CSRF, input validation, CORS misconfiguration, secrets exposure, authentication/authorization gaps
+5. **GDPR & privacy** — data export completeness (Art. 20), data retention policies (Art. 5), cookie disclosure, user deletion cascade, PII in logs
+6. **Data leaks** — tokens/secrets in logs or responses, sensitive data in localStorage, unencrypted PII, error messages exposing internals
+7. **Optimization & efficiency** — unnecessary re-renders, missing caching, redundant computations, large bundle imports, lazy loading gaps
+8. **Database indexing** — missing indexes on foreign keys, frequently filtered columns, composite indexes for common query patterns
+9. **Query optimization** — N+1 queries, redundant DB calls, missing `@Transactional(readOnly = true)`, eager vs lazy loading issues, batch operations
+10. **Service/repository interaction** — redundant calls across facade → service → repository layers, missing caching layers, batch operations
+11. **First user access flow** — race conditions on user creation, default values, onboarding data seeding, transaction isolation
+12. **SEO** — robots.txt, sitemap.xml, meta tags, structured data, SSR/pre-rendering for public pages
+13. **Test quality & coverage** — missing test files, missing edge cases, incorrect mocking patterns, adherence to project test conventions
+14. **Memory leaks** — missing `takeUntilDestroyed()` on GET observables, nested subscribes, POST/PUT/DELETE subscriptions that write to component state without error handlers
+
+### Audit Tools
+
+Use **Playwright MCP server** and **frontend-design plugin** to visually verify UI quality, responsiveness, and UX during the audit when applicable.
+
+### Audit Output
+
+Present findings in a prioritized table format (CRITICAL → HIGH → MEDIUM → LOW) with:
+- Issue identifier
+- File path and line number
+- Clear description of the problem
+- Suggested fix

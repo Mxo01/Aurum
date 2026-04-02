@@ -4,6 +4,7 @@ import com.backend.aurum.domain.asset.model.Asset;
 import com.backend.aurum.domain.asset.model.LiabilityType;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -12,8 +13,13 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface AssetRepository extends JpaRepository<Asset, UUID> {
 	List<Asset> findAllByIsActiveTrue();
+
+	@EntityGraph(attributePaths = "category")
 	List<Asset> findByUserIdOrderByCreatedAtDesc(UUID userId);
+
+	@EntityGraph(attributePaths = "category")
 	List<Asset> findByUserIdAndIsActiveTrueOrderByCreatedAtDesc(UUID userId);
+
 	List<Asset> findAllByIsActiveTrueAndLiabilityType(LiabilityType liabilityType);
 
 	@Query(

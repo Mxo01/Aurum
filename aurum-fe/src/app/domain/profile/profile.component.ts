@@ -83,6 +83,8 @@ export class ProfileComponent implements OnInit {
 	readonly isUploadingPicture = signal(false);
 	readonly currencyOptions = signal(currencyOptions);
 	readonly localeOptions = signal(localeOptions);
+	readonly isUpdatingCurrency = signal(false);
+	readonly isUpdatingLocale = signal(false);
 	readonly isDeletingProfile = signal(false);
 	readonly isExportingData = signal(false);
 
@@ -121,11 +123,19 @@ export class ProfileComponent implements OnInit {
 	}
 
 	chooseCurrency(event: SelectChangeEvent) {
-		this.profileService.updateCurrency(event.value).subscribe();
+		this.isUpdatingCurrency.set(true);
+		this.profileService
+			.updateCurrency(event.value)
+			.pipe(finalize(() => this.isUpdatingCurrency.set(false)))
+			.subscribe();
 	}
 
 	chooseLocale(event: SelectChangeEvent) {
-		this.profileService.updateLocale(event.value).subscribe();
+		this.isUpdatingLocale.set(true);
+		this.profileService
+			.updateLocale(event.value)
+			.pipe(finalize(() => this.isUpdatingLocale.set(false)))
+			.subscribe();
 	}
 
 	toggleTheme() {

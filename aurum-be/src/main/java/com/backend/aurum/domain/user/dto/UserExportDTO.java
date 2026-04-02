@@ -10,7 +10,8 @@ public record UserExportDTO(
 	ProfileExport profile,
 	List<CategoryExport> categories,
 	List<AssetExport> assets,
-	List<TargetExport> targets
+	List<TargetExport> targets,
+	List<CashFlowExport> cashFlows
 ) {
 	public record ProfileExport(UUID id, String email, String currency, String locale) {}
 
@@ -45,5 +46,13 @@ public record UserExportDTO(
 		String type,
 		LocalDate deadline,
 		Boolean isCompleted
+	) {}
+
+	public record CashFlowExport(
+		UUID id,
+		Integer year,
+		Integer month,
+		BigDecimal earned,
+		BigDecimal spent
 	) {}
 }
