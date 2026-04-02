@@ -13,6 +13,7 @@ import com.backend.aurum.domain.analytics.repository.TargetRepository;
 import com.backend.aurum.domain.asset.repository.AssetCategoryRepository;
 import com.backend.aurum.domain.asset.repository.AssetRepository;
 import com.backend.aurum.domain.auth.service.Auth0ManagementService;
+import com.backend.aurum.domain.cashflow.repository.CashFlowRepository;
 import com.backend.aurum.domain.user.dto.UpdateCurrencyDTO;
 import com.backend.aurum.domain.user.dto.UpdateLocaleDTO;
 import com.backend.aurum.domain.user.dto.UpdateNameDTO;
@@ -50,6 +51,9 @@ class UserServiceTest {
 
 	@Mock
 	private TargetRepository targetRepository;
+
+	@Mock
+	private CashFlowRepository cashFlowRepository;
 
 	@InjectMocks
 	private UserService testSubject;
@@ -94,7 +98,7 @@ class UserServiceTest {
 			.thenReturn(Optional.empty())
 			.thenReturn(Optional.of(stubbedUser));
 		when(userRepository.saveAndFlush(org.mockito.ArgumentMatchers.notNull())).thenThrow(
-			new RuntimeException("duplicate key")
+			new org.springframework.dao.DataIntegrityViolationException("duplicate key")
 		);
 
 		// WHEN
@@ -220,6 +224,7 @@ class UserServiceTest {
 		when(categoryRepository.findByUserId(mockUserId)).thenReturn(List.of());
 		when(assetRepository.findByUserIdOrderByCreatedAtDesc(mockUserId)).thenReturn(List.of());
 		when(targetRepository.findByUserId(mockUserId)).thenReturn(List.of());
+		when(cashFlowRepository.findByUserIdOrderByYearDescMonthAsc(mockUserId)).thenReturn(List.of());
 
 		// WHEN
 		var expectedExport = testSubject.exportUserData(mockUserId, mockEmail);

@@ -8,7 +8,7 @@ import {
 	signal
 } from "@angular/core";
 import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
-import { finalize, switchMap, tap } from "rxjs";
+import { catchError, EMPTY, finalize, switchMap, tap } from "rxjs";
 import { Button } from "primeng/button";
 import { Message } from "primeng/message";
 import { PrivacyCurrencyPipe } from "../../shared/pipes/privacy-currency.pipe";
@@ -170,6 +170,7 @@ export class CashFlowComponent implements OnInit {
 					}
 				}),
 				switchMap(() => this.loadYear(this.currentYear())),
+				catchError(() => EMPTY),
 				takeUntilDestroyed(this.destroyRef)
 			)
 			.subscribe({ next: data => this.yearData.set(data) });

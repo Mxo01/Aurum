@@ -124,7 +124,8 @@
 				[filter]="true"
 				filterBy="label"
 				size="small"
-				styleClass="w-56"
+				[loading]="isUpdatingCurrency()"
+				panelStyleClass="w-full sm:w-56"
 			/>
 		</div>
 
@@ -140,7 +141,8 @@
 				(onChange)="chooseLocale($event)"
 				[options]="localeOptions()"
 				size="small"
-				styleClass="w-56"
+				[loading]="isUpdatingLocale()"
+				panelStyleClass="w-full sm:w-56"
 			/>
 		</div>
 

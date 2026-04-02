@@ -10,6 +10,8 @@ import com.backend.aurum.domain.asset.repository.AssetCategoryRepository;
 import com.backend.aurum.domain.user.enums.Currency;
 import com.backend.aurum.domain.user.model.User;
 import com.backend.aurum.domain.user.repository.UserRepository;
+import com.backend.aurum.infrastructure.exception.AccessDeniedException;
+import com.backend.aurum.infrastructure.exception.NotFoundException;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -41,19 +43,19 @@ public class AssetMapper {
 		if (userId != null) {
 			User user = userRepository
 				.findById(userId)
-				.orElseThrow(() -> new RuntimeException("User not found"));
+				.orElseThrow(() -> new NotFoundException("User not found"));
 			asset.setUser(user);
 		}
 
 		if (dto.getCategoryId() != null) {
 			AssetCategory category = categoryRepository
 				.findById(Objects.requireNonNull(dto.getCategoryId()))
-				.orElseThrow(() -> new RuntimeException("Category not found"));
+				.orElseThrow(() -> new NotFoundException("Category not found"));
 
 			if (
 				category.getUser() != null && (userId == null || !category.getUser().getId().equals(userId))
 			) {
-				throw new RuntimeException("Category does not belong to the user");
+				throw new AccessDeniedException("Category does not belong to the user");
 			}
 
 			asset.setCategory(category);
@@ -78,19 +80,19 @@ public class AssetMapper {
 		if (userId != null) {
 			User user = userRepository
 				.findById(userId)
-				.orElseThrow(() -> new RuntimeException("User not found"));
+				.orElseThrow(() -> new NotFoundException("User not found"));
 			asset.setUser(user);
 		}
 
 		if (dto.getCategoryId() != null) {
 			AssetCategory category = categoryRepository
 				.findById(Objects.requireNonNull(dto.getCategoryId()))
-				.orElseThrow(() -> new RuntimeException("Category not found"));
+				.orElseThrow(() -> new NotFoundException("Category not found"));
 
 			if (
 				category.getUser() != null && (userId == null || !category.getUser().getId().equals(userId))
 			) {
-				throw new RuntimeException("Category does not belong to the user");
+				throw new AccessDeniedException("Category does not belong to the user");
 			}
 
 			asset.setCategory(category);
@@ -115,19 +117,19 @@ public class AssetMapper {
 		if (userId != null) {
 			User user = userRepository
 				.findById(userId)
-				.orElseThrow(() -> new RuntimeException("User not found"));
+				.orElseThrow(() -> new NotFoundException("User not found"));
 			asset.setUser(user);
 		}
 
 		if (dto.getCategoryId() != null) {
 			AssetCategory category = categoryRepository
 				.findById(Objects.requireNonNull(dto.getCategoryId()))
-				.orElseThrow(() -> new RuntimeException("Category not found"));
+				.orElseThrow(() -> new NotFoundException("Category not found"));
 
 			if (
 				category.getUser() != null && (userId == null || !category.getUser().getId().equals(userId))
 			) {
-				throw new RuntimeException("Category does not belong to the user");
+				throw new AccessDeniedException("Category does not belong to the user");
 			}
 
 			asset.setCategory(category);

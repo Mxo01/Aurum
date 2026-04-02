@@ -1,6 +1,7 @@
 package com.backend.aurum.domain.analytics.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
@@ -208,7 +209,12 @@ class AnalyticsServiceTest {
 		when(assetRepository.findByUserIdAndIsActiveTrueOrderByCreatedAtDesc(mockUserId)).thenReturn(
 			List.of(mockAsset)
 		);
-		when(snapshotRepository.findByAssetUserId(mockUserId)).thenReturn(List.of(mockSnapshot));
+		when(
+			snapshotRepository.findByAssetUserIdAndReferenceDateGreaterThanEqual(
+				eq(mockUserId),
+				any(LocalDate.class)
+			)
+		).thenReturn(List.of(mockSnapshot));
 		when(assetMapper.toDtoLight(eq(mockAsset), anyMap())).thenReturn(
 			new com.backend.aurum.domain.asset.dto.AssetDTO()
 		);
@@ -229,7 +235,12 @@ class AnalyticsServiceTest {
 		when(assetRepository.findByUserIdAndIsActiveTrueOrderByCreatedAtDesc(mockUserId)).thenReturn(
 			List.of()
 		);
-		when(snapshotRepository.findByAssetUserId(mockUserId)).thenReturn(List.of());
+		when(
+			snapshotRepository.findByAssetUserIdAndReferenceDateGreaterThanEqual(
+				eq(mockUserId),
+				any(LocalDate.class)
+			)
+		).thenReturn(List.of());
 
 		// WHEN
 		AnalyticsSummaryDTO expectedSummary = testSubject.getSummary(mockUserId);

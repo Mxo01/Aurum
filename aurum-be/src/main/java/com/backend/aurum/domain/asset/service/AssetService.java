@@ -6,6 +6,8 @@ import com.backend.aurum.domain.asset.model.Snapshot;
 import com.backend.aurum.domain.asset.repository.AssetRepository;
 import com.backend.aurum.domain.asset.repository.AssetStatusLogRepository;
 import com.backend.aurum.domain.asset.repository.SnapshotRepository;
+import com.backend.aurum.infrastructure.exception.AccessDeniedException;
+import com.backend.aurum.infrastructure.exception.NotFoundException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
@@ -52,7 +54,7 @@ public class AssetService {
 			.findById(Objects.requireNonNull(id))
 			.orElseThrow(() -> {
 				log.warn("AssetService#findById - Asset not found: assetId={}", id);
-				return new RuntimeException("Asset not found");
+				return new NotFoundException("Asset not found");
 			});
 
 		if (!asset.getUser().getId().equals(userId)) {
@@ -61,7 +63,7 @@ public class AssetService {
 				id,
 				userId
 			);
-			throw new RuntimeException("Access denied: Asset does not belong to user");
+			throw new AccessDeniedException("Access denied: Asset does not belong to user");
 		}
 
 		log.debug("AssetService#findById - Asset found: assetId={}, name={}", id, asset.getName());

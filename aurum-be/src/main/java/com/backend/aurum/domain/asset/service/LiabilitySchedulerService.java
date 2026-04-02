@@ -5,9 +5,9 @@ import com.backend.aurum.domain.asset.model.LiabilityType;
 import com.backend.aurum.domain.asset.model.PaymentFrequency;
 import com.backend.aurum.domain.asset.model.Snapshot;
 import com.backend.aurum.domain.asset.repository.AssetRepository;
-import com.backend.aurum.domain.asset.repository.SnapshotRepository;
 import com.backend.aurum.infrastructure.exchange.ExchangeRateService;
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.List;
@@ -24,32 +24,47 @@ import org.springframework.transaction.annotation.Transactional;
 public class LiabilitySchedulerService {
 
 	private final AssetRepository assetRepository;
-	private final SnapshotRepository snapshotRepository;
+	private final SnapshotService snapshotService;
 	private final ExchangeRateService exchangeRateService;
+	private final Clock clock;
 
 	/**
-	 * Runs daily at midnight to process automatic liability payments.
+	 * Runs daily at midnight UTC to process automatic liability payments.
 	 */
-	@Scheduled(cron = "0 0 0 * * *")
+	@Scheduled(cron = "0 0 0 * * *", zone = "UTC")
 	@Transactional
 	public void processAutomaticLiabilityPayments() {
 		log.info("Running automatic liability payment processor...");
 		List<Asset> automaticLiabilities =
 			assetRepository.findAllByIsActiveTrueAndLiabilityTypeWithSnapshots(LiabilityType.AUTOMATIC);
 
-		LocalDate today = LocalDate.now();
+		LocalDate today = LocalDate.now(clock);
+
+		int processed = 0;
+		int failed = 0;
 
 		for (Asset asset : automaticLiabilities) {
 			try {
 				processPaymentForAsset(asset, today);
+				processed++;
 			} catch (Exception e) {
+				failed++;
 				log.error(
-					"Failed to process payment for liability asset {}: {}",
+					"Failed to process payment for liability asset {} ({}): {}",
 					asset.getId(),
-					e.getMessage()
+					asset.getName(),
+					e.getMessage(),
+					e
 				);
 			}
 		}
+
+		log.info(
+			"Automatic liability payment processor completed: {} processed, {} failed out of {} total",
+			processed,
+			failed,
+			automaticLiabilities.size()
+		);
 	}
 
 	private void processPaymentForAsset(Asset asset, LocalDate today) {
@@ -91,22 +106,18 @@ public class LiabilitySchedulerService {
 			newValue = BigDecimal.ZERO;
 		}
 
-		Snapshot newSnapshot = new Snapshot();
-		newSnapshot.setAsset(asset);
-		newSnapshot.setAmountOriginalCurrency(newValue);
-		newSnapshot.setReferenceDate(today);
-
-		// Set exchange rate
+		// Resolve exchange rate
+		BigDecimal exchangeRate = BigDecimal.ONE;
 		String assetCurrency = asset.getOriginalCurrency().getValue();
 		String userCurrency = asset.getUser().getCurrency().getValue();
 		if (!assetCurrency.equals(userCurrency)) {
-			BigDecimal rate = exchangeRateService.getRate(assetCurrency, userCurrency, today);
-			newSnapshot.setExchangeRateToBase(rate);
+			exchangeRate = exchangeRateService.getRate(assetCurrency, userCurrency, today);
 		}
 
-		snapshotRepository.save(newSnapshot);
+		// Use saveOrUpdate for idempotency — if a snapshot already exists for this month, update it
+		snapshotService.saveOrUpdate(asset, newValue, today, exchangeRate);
 		log.info(
-			"Created automatic payment snapshot for liability {} (new value: {})",
+			"Processed automatic payment snapshot for liability {} (new value: {})",
 			asset.getId(),
 			newValue
 		);

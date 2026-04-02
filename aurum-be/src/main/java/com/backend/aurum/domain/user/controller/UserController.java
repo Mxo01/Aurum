@@ -56,7 +56,7 @@ public class UserController {
 		userService.deleteUser(userId, jwtId);
 		log.info("UserController#deleteUser - User deleted successfully: userId={}", userId);
 
-		return ResponseEntity.ok().build();
+		return ResponseEntity.noContent().build();
 	}
 
 	@PutMapping

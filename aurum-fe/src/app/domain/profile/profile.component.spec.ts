@@ -157,6 +157,17 @@ describe("ProfileComponent", () => {
 			// THEN
 			expect(updateCurrency).toHaveBeenCalledWith(Currency.USD);
 		});
+
+		it("should reset isUpdatingCurrency after completion", () => {
+			// GIVEN
+			vi.spyOn(mockProfileService, "updateCurrency").mockReturnValue(of(buildMockProfile()));
+
+			// WHEN
+			testSubject.chooseCurrency({ value: Currency.USD } as SelectChangeEvent);
+
+			// THEN
+			expect(testSubject.isUpdatingCurrency()).toBe(false);
+		});
 	});
 
 	describe("toggleTheme", () => {
@@ -213,6 +224,17 @@ describe("ProfileComponent", () => {
 
 			// THEN
 			expect(updateLocale).toHaveBeenCalledWith(Locale.IT);
+		});
+
+		it("should reset isUpdatingLocale after completion", () => {
+			// GIVEN
+			vi.spyOn(mockProfileService, "updateLocale").mockReturnValue(of(buildMockProfile()));
+
+			// WHEN
+			testSubject.chooseLocale({ value: Locale.IT } as SelectChangeEvent);
+
+			// THEN
+			expect(testSubject.isUpdatingLocale()).toBe(false);
 		});
 	});
 

@@ -124,15 +124,24 @@ export function positionTooltipEl(
 	el.style.opacity = "1";
 }
 
+export function escapeHtml(str: string): string {
+	return str
+		.replace(/&/g, "&amp;")
+		.replace(/</g, "&lt;")
+		.replace(/>/g, "&gt;")
+		.replace(/"/g, "&quot;")
+		.replace(/'/g, "&#39;");
+}
+
 export function tooltipRow(
 	t: ChartTooltipStyle,
 	dot: string,
 	label: string,
 	value: string
 ): string {
-	return `<div style="display:flex;align-items:center;margin-bottom:4px;font-size:13px;font-family:${t.font};color:${t.body};">${dot}<span>${label}:&nbsp;<strong style="color:${t.title};font-family:${t.monoFont};">${value}</strong></span></div>`;
+	return `<div style="display:flex;align-items:center;margin-bottom:4px;font-size:13px;font-family:${t.font};color:${t.body};">${dot}<span>${escapeHtml(label)}:&nbsp;<strong style="color:${t.title};font-family:${t.monoFont};">${value}</strong></span></div>`;
 }
 
 export function tooltipContainer(t: ChartTooltipStyle, title: string, body: string): string {
-	return `<div style="background:${t.bg};border:1px solid ${t.border};border-radius:8px;padding:12px 14px;min-width:180px;box-shadow:0 4px 20px rgba(0,0,0,0.3);font-family:${t.font};"><div style="font-weight:700;font-size:13px;font-family:${t.font};color:${t.title};margin-bottom:8px;">${title}</div>${body}</div>`;
+	return `<div style="background:${t.bg};border:1px solid ${t.border};border-radius:8px;padding:12px 14px;min-width:180px;box-shadow:0 4px 20px rgba(0,0,0,0.3);font-family:${t.font};"><div style="font-weight:700;font-size:13px;font-family:${t.font};color:${t.title};margin-bottom:8px;">${escapeHtml(title)}</div>${body}</div>`;
 }

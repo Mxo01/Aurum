@@ -74,6 +74,7 @@ class UserControllerTest {
 			new UserExportDTO.ProfileExport(mockUserId, mockEmail, "EUR", "EN_US"),
 			List.of(),
 			List.of(),
+			List.of(),
 			List.of()
 		);
 		when(mockPrincipal.jwt().getClaimAsString("https://api.aurum-networth.com/email")).thenReturn(
@@ -101,7 +102,7 @@ class UserControllerTest {
 		ResponseEntity<Void> expectedResponse = testSubject.deleteUser(mockPrincipal);
 
 		// THEN
-		assertThat(expectedResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
+		assertThat(expectedResponse.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
 		verify(userService).deleteUser(mockUserId, mockJwtId);
 	}
 

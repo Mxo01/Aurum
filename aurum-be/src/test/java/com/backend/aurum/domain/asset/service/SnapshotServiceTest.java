@@ -10,6 +10,8 @@ import com.backend.aurum.domain.asset.model.Snapshot;
 import com.backend.aurum.domain.asset.repository.AssetRepository;
 import com.backend.aurum.domain.asset.repository.SnapshotRepository;
 import com.backend.aurum.domain.user.model.User;
+import com.backend.aurum.infrastructure.exception.AccessDeniedException;
+import com.backend.aurum.infrastructure.exception.NotFoundException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
@@ -69,7 +71,7 @@ class SnapshotServiceTest {
 	}
 
 	@Test
-	void findByAssetId_throwsRuntimeException_whenAssetNotFound() {
+	void findByAssetId_throwsNotFoundException_whenAssetNotFound() {
 		// GIVEN
 		UUID mockAssetId = UUID.randomUUID();
 		UUID mockUserId = UUID.randomUUID();
@@ -77,12 +79,12 @@ class SnapshotServiceTest {
 
 		// WHEN / THEN
 		assertThatThrownBy(() -> testSubject.findByAssetId(mockAssetId, mockUserId)).isInstanceOf(
-			RuntimeException.class
+			NotFoundException.class
 		);
 	}
 
 	@Test
-	void findByAssetId_throwsRuntimeException_whenAssetBelongsToDifferentUser() {
+	void findByAssetId_throwsAccessDeniedException_whenAssetBelongsToDifferentUser() {
 		// GIVEN
 		UUID mockUserId = UUID.randomUUID();
 		UUID otherUserId = UUID.randomUUID();
@@ -96,7 +98,7 @@ class SnapshotServiceTest {
 
 		// WHEN / THEN
 		assertThatThrownBy(() -> testSubject.findByAssetId(mockAsset.getId(), mockUserId)).isInstanceOf(
-			RuntimeException.class
+			AccessDeniedException.class
 		);
 	}
 
@@ -183,7 +185,7 @@ class SnapshotServiceTest {
 	}
 
 	@Test
-	void deleteBulk_throwsRuntimeException_whenSnapshotBelongsToDifferentAsset() {
+	void deleteBulk_throwsAccessDeniedException_whenSnapshotBelongsToDifferentAsset() {
 		// GIVEN
 		UUID mockUserId = UUID.randomUUID();
 		User mockUser = Instancio.of(User.class).set(Select.field(User::getId), mockUserId).create();
@@ -201,12 +203,12 @@ class SnapshotServiceTest {
 
 		// WHEN / THEN
 		assertThatThrownBy(() -> testSubject.deleteBulk(mockIds, mockAssetId, mockUserId)).isInstanceOf(
-			RuntimeException.class
+			AccessDeniedException.class
 		);
 	}
 
 	@Test
-	void deleteBulk_throwsRuntimeException_whenSnapshotBelongsToDifferentUser() {
+	void deleteBulk_throwsAccessDeniedException_whenSnapshotBelongsToDifferentUser() {
 		// GIVEN
 		UUID mockUserId = UUID.randomUUID();
 		UUID otherUserId = UUID.randomUUID();
@@ -226,7 +228,7 @@ class SnapshotServiceTest {
 
 		// WHEN / THEN
 		assertThatThrownBy(() -> testSubject.deleteBulk(mockIds, mockAssetId, mockUserId)).isInstanceOf(
-			RuntimeException.class
+			AccessDeniedException.class
 		);
 	}
 }

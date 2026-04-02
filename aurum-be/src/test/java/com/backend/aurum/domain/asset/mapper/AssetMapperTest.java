@@ -15,6 +15,8 @@ import com.backend.aurum.domain.asset.repository.AssetCategoryRepository;
 import com.backend.aurum.domain.user.enums.Currency;
 import com.backend.aurum.domain.user.model.User;
 import com.backend.aurum.domain.user.repository.UserRepository;
+import com.backend.aurum.infrastructure.exception.AccessDeniedException;
+import com.backend.aurum.infrastructure.exception.NotFoundException;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
@@ -78,7 +80,7 @@ class AssetMapperTest {
 	}
 
 	@Test
-	void toEntity_createDto_throwsRuntimeException_whenUserNotFound() {
+	void toEntity_createDto_throwsNotFoundException_whenUserNotFound() {
 		// GIVEN
 		UUID mockUserId = UUID.randomUUID();
 		CreateAssetDTO mockDto = Instancio.create(CreateAssetDTO.class);
@@ -86,12 +88,12 @@ class AssetMapperTest {
 
 		// WHEN / THEN
 		assertThatThrownBy(() -> testSubject.toEntity(mockDto, mockUserId)).isInstanceOf(
-			RuntimeException.class
+			NotFoundException.class
 		);
 	}
 
 	@Test
-	void toEntity_createDto_throwsRuntimeException_whenCategoryNotFound() {
+	void toEntity_createDto_throwsNotFoundException_whenCategoryNotFound() {
 		// GIVEN
 		UUID mockUserId = UUID.randomUUID();
 		User mockUser = Instancio.create(User.class);
@@ -101,12 +103,12 @@ class AssetMapperTest {
 
 		// WHEN / THEN
 		assertThatThrownBy(() -> testSubject.toEntity(mockDto, mockUserId)).isInstanceOf(
-			RuntimeException.class
+			NotFoundException.class
 		);
 	}
 
 	@Test
-	void toEntity_createDto_throwsRuntimeException_whenCategoryBelongsToDifferentUser() {
+	void toEntity_createDto_throwsAccessDeniedException_whenCategoryBelongsToDifferentUser() {
 		// GIVEN
 		UUID mockUserId = UUID.randomUUID();
 		UUID otherUserId = UUID.randomUUID();
@@ -125,7 +127,7 @@ class AssetMapperTest {
 
 		// WHEN / THEN
 		assertThatThrownBy(() -> testSubject.toEntity(mockDto, mockUserId)).isInstanceOf(
-			RuntimeException.class
+			AccessDeniedException.class
 		);
 	}
 
