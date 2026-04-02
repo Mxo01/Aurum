@@ -38,7 +38,9 @@ describe("errorInterceptor", () => {
 	describe("on 401", () => {
 		it("should call authService.logout", async () => {
 			// GIVEN / WHEN
-			const result = lastValueFrom(httpClient.get("/test"));
+			const result = lastValueFrom(httpClient.get("/test")).catch(() => {
+				void 0;
+			});
 			httpController.expectOne("/test").flush(null, { status: 401, statusText: "Unauthorized" });
 			await result;
 
@@ -50,7 +52,9 @@ describe("errorInterceptor", () => {
 	describe("on 403", () => {
 		it("should show an access denied error message", async () => {
 			// GIVEN / WHEN
-			const result = lastValueFrom(httpClient.get("/test"));
+			const result = lastValueFrom(httpClient.get("/test")).catch(() => {
+				void 0;
+			});
 			httpController.expectOne("/test").flush(null, { status: 403, statusText: "Forbidden" });
 			await result;
 
@@ -64,7 +68,9 @@ describe("errorInterceptor", () => {
 	describe("on 500+", () => {
 		it("should show a generic server error message", async () => {
 			// GIVEN / WHEN
-			const result = lastValueFrom(httpClient.get("/test"));
+			const result = lastValueFrom(httpClient.get("/test")).catch(() => {
+				void 0;
+			});
 			httpController
 				.expectOne("/test")
 				.flush(null, { status: 500, statusText: "Internal Server Error" });
@@ -91,7 +97,9 @@ describe("errorInterceptor", () => {
 	describe("on 404", () => {
 		it("should not call authService.logout or show a message", async () => {
 			// GIVEN / WHEN
-			const result = lastValueFrom(httpClient.get("/test"));
+			const result = lastValueFrom(httpClient.get("/test")).catch(() => {
+				void 0;
+			});
 			httpController.expectOne("/test").flush(null, { status: 404, statusText: "Not Found" });
 			await result;
 
