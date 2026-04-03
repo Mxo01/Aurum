@@ -1,4 +1,4 @@
-<section class="flex flex-col gap-3 max-w-6xl mx-auto">
+<section class="flex flex-col gap-3 max-w-7xl mx-auto">
 	<div class="flex flex-wrap items-center justify-between gap-3">
 		<p-button
 			[label]="'Back to ' + paths[previousRoute()].label"
@@ -34,7 +34,6 @@
 		[locale]="userLocale()"
 		(viewHistory)="viewHistory($event)"
 		(editAsset)="editAsset($event)"
-		(toggleAssetStatus)="toggleAssetStatus($event)"
 		(deleteAsset)="deleteAsset($event)"
 		(currentValueUpdate)="currentValueUpdate($event)"
 	/>
@@ -54,40 +53,3 @@
 	[locale]="userLocale()"
 	(snapshotsChanged)="refreshAssets()"
 />
-
-<p-dialog
-	[header]="pendingStatusToggle()?.newStatus ? 'Activate Asset' : 'Archive Asset'"
-	[visible]="isStatusDialogVisible()"
-	(visibleChange)="isStatusDialogVisible.set($event)"
-	[modal]="true"
-	[style]="{ width: '24rem' }"
-	(onHide)="cancelStatusToggle()"
->
-	<div class="flex flex-col gap-4">
-		<p class="text-sm text-color-secondary m-0">
-			{{
-				pendingStatusToggle()?.newStatus
-					? "From what date should this asset be activated?"
-					: "From what date should this asset be archived?"
-			}}
-		</p>
-		<p-datepicker
-			[(ngModel)]="statusChangeDate"
-			[showIcon]="true"
-			dateFormat="dd/mm/yy"
-			[showOnFocus]="false"
-			[maxDate]="$any(null)"
-			placeholder="Select date"
-			appendTo="body"
-		/>
-	</div>
-	<ng-template #footer>
-		<p-button
-			[label]="pendingStatusToggle()?.newStatus ? 'Activate' : 'Archive'"
-			[severity]="pendingStatusToggle()?.newStatus ? 'primary' : 'danger'"
-			[icon]="pendingStatusToggle()?.newStatus ? 'pi pi-check-circle' : 'pi pi-inbox'"
-			[loading]="isSaveLoading()"
-			(onClick)="confirmStatusToggle()"
-		/>
-	</ng-template>
-</p-dialog>

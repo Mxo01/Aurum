@@ -57,7 +57,6 @@ export class AssetTableComponent implements OnInit {
 
 	viewHistory = output<Asset>();
 	editAsset = output<Asset>();
-	toggleAssetStatus = output<Asset>();
 	deleteAsset = output<{ event: MenuItemCommandEvent; asset: Asset }>();
 	currentValueUpdate = output<{ assetId: string; value: number }>();
 
@@ -118,11 +117,6 @@ export class AssetTableComponent implements OnInit {
 				label: "View History",
 				icon: "pi pi-history",
 				command: () => this.viewHistory.emit(asset)
-			},
-			{
-				label: asset.isActive ? "Archive" : "Activate",
-				icon: asset.isActive ? "pi pi-inbox" : "pi pi-check-circle",
-				command: () => this.toggleAssetStatus.emit(asset)
 			},
 			{
 				label: "Delete Forever",

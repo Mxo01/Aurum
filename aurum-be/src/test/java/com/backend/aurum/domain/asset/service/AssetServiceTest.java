@@ -8,7 +8,6 @@ import static org.mockito.Mockito.when;
 import com.backend.aurum.domain.asset.model.Asset;
 import com.backend.aurum.domain.asset.model.Snapshot;
 import com.backend.aurum.domain.asset.repository.AssetRepository;
-import com.backend.aurum.domain.asset.repository.AssetStatusLogRepository;
 import com.backend.aurum.domain.asset.repository.SnapshotRepository;
 import com.backend.aurum.domain.user.model.User;
 import com.backend.aurum.infrastructure.exception.AccessDeniedException;
@@ -34,9 +33,6 @@ class AssetServiceTest {
 
 	@Mock
 	private SnapshotRepository snapshotRepository;
-
-	@Mock
-	private AssetStatusLogRepository statusLogRepository;
 
 	@InjectMocks
 	private AssetService testSubject;
@@ -119,20 +115,6 @@ class AssetServiceTest {
 	}
 
 	@Test
-	void save_createsInitialStatusLog() {
-		// GIVEN
-		Asset mockAsset = Instancio.create(Asset.class);
-		Asset stubbedSaved = Instancio.create(Asset.class);
-		when(assetRepository.save(mockAsset)).thenReturn(stubbedSaved);
-
-		// WHEN
-		testSubject.save(mockAsset, null, null);
-
-		// THEN
-		verify(statusLogRepository).save(org.mockito.ArgumentMatchers.notNull());
-	}
-
-	@Test
 	void save_createsInitialSnapshot_whenInitialValueAndDateProvided() {
 		// GIVEN
 		Asset mockAsset = Instancio.of(Asset.class)
@@ -172,74 +154,6 @@ class AssetServiceTest {
 
 		// THEN
 		assertThat(expectedAsset).isEqualTo(stubbedUpdated);
-	}
-
-	@Test
-	void update_savesStatusLog_whenActiveStatusChanges() {
-		// GIVEN
-		UUID mockUserId = UUID.randomUUID();
-		User mockUser = Instancio.of(User.class).set(Select.field(User::getId), mockUserId).create();
-		Asset mockExistingAsset = Instancio.of(Asset.class)
-			.set(Select.field(Asset::getUser), mockUser)
-			.set(Select.field(Asset::getIsActive), true)
-			.create();
-		Asset mockDetails = Instancio.of(Asset.class)
-			.set(Select.field(Asset::getUser), mockUser)
-			.set(Select.field(Asset::getIsActive), false)
-			.create();
-		when(assetRepository.findById(mockExistingAsset.getId())).thenReturn(
-			Optional.of(mockExistingAsset)
-		);
-		when(assetRepository.save(mockExistingAsset)).thenReturn(mockExistingAsset);
-
-		// WHEN
-		testSubject.update(mockExistingAsset.getId(), mockDetails, mockUserId);
-
-		// THEN
-		verify(statusLogRepository).save(org.mockito.ArgumentMatchers.notNull());
-	}
-
-	@Test
-	void patchStatus_returnsUpdatedAsset() {
-		// GIVEN
-		UUID mockUserId = UUID.randomUUID();
-		User mockUser = Instancio.of(User.class).set(Select.field(User::getId), mockUserId).create();
-		Asset mockAsset = Instancio.of(Asset.class)
-			.set(Select.field(Asset::getUser), mockUser)
-			.create();
-		Asset stubbedUpdated = Instancio.create(Asset.class);
-		when(assetRepository.findById(mockAsset.getId())).thenReturn(Optional.of(mockAsset));
-		when(assetRepository.save(mockAsset)).thenReturn(stubbedUpdated);
-
-		// WHEN
-		Asset expectedAsset = testSubject.patchStatus(
-			mockAsset.getId(),
-			false,
-			LocalDate.now(),
-			mockUserId
-		);
-
-		// THEN
-		assertThat(expectedAsset).isEqualTo(stubbedUpdated);
-	}
-
-	@Test
-	void patchStatus_setsFavoriteToFalse_whenDeactivating() {
-		// GIVEN
-		UUID mockUserId = UUID.randomUUID();
-		User mockUser = Instancio.of(User.class).set(Select.field(User::getId), mockUserId).create();
-		Asset mockAsset = Instancio.of(Asset.class)
-			.set(Select.field(Asset::getUser), mockUser)
-			.set(Select.field(Asset::getIsFavorite), true)
-			.create();
-		when(assetRepository.findById(mockAsset.getId())).thenReturn(Optional.of(mockAsset));
-		when(assetRepository.save(mockAsset)).thenReturn(mockAsset);
-
-		// WHEN
-		testSubject.patchStatus(mockAsset.getId(), false, LocalDate.now(), mockUserId);
-
-		// THEN
-		assertThat(mockAsset.getIsFavorite()).isFalse();
 	}
 
 	@Test

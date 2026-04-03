@@ -400,7 +400,6 @@ public class UserService {
 					a.getName(),
 					a.getCategory() != null ? a.getCategory().getName() : null,
 					a.getOriginalCurrency().name(),
-					a.getIsActive(),
 					a.getIsFavorite(),
 					a.getLiabilityType() != null ? a.getLiabilityType().name() : null,
 					a.getPaymentFrequency() != null ? a.getPaymentFrequency().name() : null,

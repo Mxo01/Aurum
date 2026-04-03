@@ -56,3 +56,6 @@ databaseChangeLog:
   - include:
       file: db/changelog/changes/2026-04-02-fix-status-log-seed-dates.sql
       relativeToChangelogFile: false
+  - include:
+      file: db/changelog/changes/2026-04-03-remove-isactive.sql
+      relativeToChangelogFile: false

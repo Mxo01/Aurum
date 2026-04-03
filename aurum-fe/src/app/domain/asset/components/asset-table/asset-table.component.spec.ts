@@ -23,7 +23,6 @@ const buildMockAsset = (overrides: Partial<Asset> = {}): Asset => ({
 	categoryIcon: null,
 	type: AssetType.ASSET,
 	originalCurrency: Currency.EUR,
-	isActive: true,
 	isFavorite: false,
 	latestValue: 1000,
 	latestValueBase: 1000,
@@ -103,36 +102,17 @@ describe("AssetTableComponent", () => {
 	});
 
 	describe("showMenu", () => {
-		it("should set four menu items when called with an active asset", () => {
+		it("should set three menu items when called with an asset", () => {
 			// GIVEN
-			const mockAsset = buildMockAsset({ isActive: true });
+			const mockAsset = buildMockAsset();
 			const mockMenu = { toggle: vi.fn() };
 
 			// WHEN
 			testSubject.showMenu(new MouseEvent("click"), mockMenu as never, mockAsset);
 
 			// THEN
-			expect(testSubject.rowMenuItems()).toHaveLength(4);
+			expect(testSubject.rowMenuItems()).toHaveLength(3);
 			expect(testSubject.rowMenuItems()[0].label).toBe("Edit");
-		});
-
-		it("should label the status item Archive for an active asset and Activate for an inactive one", () => {
-			// GIVEN
-			const mockActiveAsset = buildMockAsset({ isActive: true });
-			const mockInactiveAsset = buildMockAsset({ isActive: false });
-			const mockMenu = { toggle: vi.fn() };
-
-			// WHEN — active
-			testSubject.showMenu(new MouseEvent("click"), mockMenu as never, mockActiveAsset);
-			const expectedActiveLabel = testSubject.rowMenuItems()[2].label;
-
-			// WHEN — inactive
-			testSubject.showMenu(new MouseEvent("click"), mockMenu as never, mockInactiveAsset);
-			const expectedInactiveLabel = testSubject.rowMenuItems()[2].label;
-
-			// THEN
-			expect(expectedActiveLabel).toBe("Archive");
-			expect(expectedInactiveLabel).toBe("Activate");
 		});
 
 		it("should emit editAsset when the Edit command is invoked", () => {
@@ -165,21 +145,6 @@ describe("AssetTableComponent", () => {
 			expect(emitted[0].id).toBe(mockAsset.id);
 		});
 
-		it("should emit toggleAssetStatus when the status command is invoked", () => {
-			// GIVEN
-			const mockAsset = buildMockAsset();
-			const mockMenu = { toggle: vi.fn() };
-			const emitted: Asset[] = [];
-			testSubject.toggleAssetStatus.subscribe(a => emitted.push(a));
-			testSubject.showMenu(new MouseEvent("click"), mockMenu as never, mockAsset);
-
-			// WHEN
-			testSubject.rowMenuItems()[2].command!({} as never);
-
-			// THEN
-			expect(emitted[0].id).toBe(mockAsset.id);
-		});
-
 		it("should emit deleteAsset when the Delete Forever command is invoked", () => {
 			// GIVEN
 			const mockAsset = buildMockAsset();
@@ -189,7 +154,7 @@ describe("AssetTableComponent", () => {
 			testSubject.showMenu(new MouseEvent("click"), mockMenu as never, mockAsset);
 
 			// WHEN
-			testSubject.rowMenuItems()[3].command!({} as never);
+			testSubject.rowMenuItems()[2].command!({} as never);
 
 			// THEN
 			expect(emitted[0].asset.id).toBe(mockAsset.id);

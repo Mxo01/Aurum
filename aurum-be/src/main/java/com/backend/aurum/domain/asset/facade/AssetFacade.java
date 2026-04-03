@@ -1,7 +1,6 @@
 package com.backend.aurum.domain.asset.facade;
 
 import com.backend.aurum.domain.asset.dto.AssetDTO;
-import com.backend.aurum.domain.asset.dto.AssetStatusDTO;
 import com.backend.aurum.domain.asset.dto.CreateAssetDTO;
 import com.backend.aurum.domain.asset.dto.UpdateAssetDTO;
 import com.backend.aurum.domain.asset.mapper.AssetMapper;
@@ -63,20 +62,6 @@ public class AssetFacade {
 		validationService.validate(dto);
 		Asset assetDetails = mapper.toEntity(dto, userId);
 		Asset updated = assetService.update(id, assetDetails, userId);
-		List<Snapshot> latestTwo = snapshotRepository.findTop2ByAssetIdOrderByReferenceDateDesc(id);
-		return mapper.toDtoLight(updated, latestTwo);
-	}
-
-	public AssetDTO patchAssetStatus(UUID id, AssetStatusDTO statusDto, UUID userId) {
-		if (statusDto.getIsActive() == null) {
-			throw new IllegalArgumentException("isActive is required");
-		}
-		Asset updated = assetService.patchStatus(
-			id,
-			statusDto.getIsActive(),
-			statusDto.getChangedAt(),
-			userId
-		);
 		List<Snapshot> latestTwo = snapshotRepository.findTop2ByAssetIdOrderByReferenceDateDesc(id);
 		return mapper.toDtoLight(updated, latestTwo);
 	}

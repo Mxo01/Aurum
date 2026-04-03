@@ -59,9 +59,6 @@ public class Asset {
 	private Currency originalCurrency = Currency.EUR;
 
 	@Column(nullable = false)
-	private Boolean isActive = true;
-
-	@Column(nullable = false)
 	private Boolean isFavorite = false;
 
 	@Enumerated(EnumType.STRING)

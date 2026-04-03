@@ -14,7 +14,6 @@ public class CreateAssetDTO {
 	private String name;
 	private UUID categoryId;
 	private Currency originalCurrency;
-	private Boolean isActive;
 	private Boolean isFavorite;
 	private BigDecimal initialValue;
 	private LocalDate referenceDate;

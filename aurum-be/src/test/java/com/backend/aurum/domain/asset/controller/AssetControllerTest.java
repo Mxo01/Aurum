@@ -6,7 +6,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.backend.aurum.domain.asset.dto.AssetDTO;
-import com.backend.aurum.domain.asset.dto.AssetStatusDTO;
 import com.backend.aurum.domain.asset.dto.CreateAssetDTO;
 import com.backend.aurum.domain.asset.dto.UpdateAssetDTO;
 import com.backend.aurum.domain.asset.facade.AssetFacade;
@@ -106,30 +105,6 @@ class AssetControllerTest {
 		ResponseEntity<AssetDTO> expectedResponse = testSubject.updateAsset(
 			mockAssetId,
 			mockDto,
-			mockPrincipal
-		);
-
-		// THEN
-		assertThat(expectedResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
-		assertThat(expectedResponse.getBody()).isEqualTo(stubbedDto);
-	}
-
-	@Test
-	void patchAssetStatus_returnsOkWithDtoFromFacade() {
-		// GIVEN
-		UUID mockUserId = UUID.randomUUID();
-		UUID mockAssetId = UUID.randomUUID();
-		UserPrincipal mockPrincipal = buildPrincipal(mockUserId);
-		AssetStatusDTO mockStatusDto = Instancio.create(AssetStatusDTO.class);
-		AssetDTO stubbedDto = Instancio.create(AssetDTO.class);
-		when(assetFacade.patchAssetStatus(mockAssetId, mockStatusDto, mockUserId)).thenReturn(
-			stubbedDto
-		);
-
-		// WHEN
-		ResponseEntity<AssetDTO> expectedResponse = testSubject.patchAssetStatus(
-			mockAssetId,
-			mockStatusDto,
 			mockPrincipal
 		);
 

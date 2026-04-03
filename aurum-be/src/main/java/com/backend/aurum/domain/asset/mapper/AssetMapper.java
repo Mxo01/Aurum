@@ -31,7 +31,6 @@ public class AssetMapper {
 		if (dto == null) return null;
 		Asset asset = new Asset();
 		asset.setName(dto.getName());
-		asset.setIsActive(dto.getIsActive() != null ? dto.getIsActive() : true);
 		asset.setIsFavorite(dto.getIsFavorite() != null ? dto.getIsFavorite() : false);
 		asset.setOriginalCurrency(
 			dto.getOriginalCurrency() != null ? dto.getOriginalCurrency() : Currency.EUR
@@ -68,7 +67,6 @@ public class AssetMapper {
 		if (dto == null) return null;
 		Asset asset = new Asset();
 		asset.setName(dto.getName());
-		asset.setIsActive(dto.getIsActive() != null ? dto.getIsActive() : true);
 		asset.setIsFavorite(dto.getIsFavorite() != null ? dto.getIsFavorite() : false);
 		asset.setOriginalCurrency(
 			dto.getOriginalCurrency() != null ? dto.getOriginalCurrency() : Currency.EUR
@@ -105,7 +103,6 @@ public class AssetMapper {
 		if (dto == null) return null;
 		Asset asset = new Asset();
 		asset.setName(dto.getName());
-		asset.setIsActive(dto.getIsActive() != null ? dto.getIsActive() : true);
 		asset.setIsFavorite(dto.getIsFavorite() != null ? dto.getIsFavorite() : false);
 		asset.setOriginalCurrency(
 			dto.getOriginalCurrency() != null ? dto.getOriginalCurrency() : Currency.EUR
@@ -158,7 +155,6 @@ public class AssetMapper {
 		AssetDTO dto = new AssetDTO();
 		dto.setId(entity.getId());
 		dto.setName(entity.getName());
-		dto.setIsActive(entity.getIsActive());
 		dto.setIsFavorite(entity.getIsFavorite());
 		dto.setOriginalCurrency(entity.getOriginalCurrency());
 

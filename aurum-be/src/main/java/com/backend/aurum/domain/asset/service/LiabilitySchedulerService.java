@@ -35,8 +35,9 @@ public class LiabilitySchedulerService {
 	@Transactional
 	public void processAutomaticLiabilityPayments() {
 		log.info("Running automatic liability payment processor...");
-		List<Asset> automaticLiabilities =
-			assetRepository.findAllByIsActiveTrueAndLiabilityTypeWithSnapshots(LiabilityType.AUTOMATIC);
+		List<Asset> automaticLiabilities = assetRepository.findAllByLiabilityTypeWithSnapshots(
+			LiabilityType.AUTOMATIC
+		);
 
 		LocalDate today = LocalDate.now(clock);
 
@@ -123,9 +124,7 @@ public class LiabilitySchedulerService {
 		);
 
 		if (newValue.compareTo(BigDecimal.ZERO) == 0) {
-			asset.setIsActive(false);
-			assetRepository.save(asset);
-			log.info("Archived liability {} as it reached zero value", asset.getId());
+			log.info("Liability {} has reached zero value", asset.getId());
 		}
 	}
 

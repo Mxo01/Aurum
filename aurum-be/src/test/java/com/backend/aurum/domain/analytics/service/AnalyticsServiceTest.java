@@ -11,15 +11,12 @@ import com.backend.aurum.domain.analytics.dto.ChartDataDTO;
 import com.backend.aurum.domain.asset.mapper.AssetMapper;
 import com.backend.aurum.domain.asset.model.Asset;
 import com.backend.aurum.domain.asset.model.AssetCategory;
-import com.backend.aurum.domain.asset.model.AssetStatusLog;
 import com.backend.aurum.domain.asset.model.AssetType;
 import com.backend.aurum.domain.asset.model.Snapshot;
 import com.backend.aurum.domain.asset.repository.AssetRepository;
-import com.backend.aurum.domain.asset.repository.AssetStatusLogRepository;
 import com.backend.aurum.domain.asset.repository.SnapshotRepository;
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -39,9 +36,6 @@ class AnalyticsServiceTest {
 	private AssetRepository assetRepository;
 
 	@Mock
-	private AssetStatusLogRepository statusLogRepository;
-
-	@Mock
 	private AssetMapper assetMapper;
 
 	@InjectMocks
@@ -59,7 +53,6 @@ class AnalyticsServiceTest {
 		Asset asset = new Asset();
 		asset.setId(UUID.randomUUID());
 		asset.setCategory(category);
-		asset.setIsActive(true);
 		asset.setIsFavorite(false);
 		asset.setSnapshots(new ArrayList<>());
 		return asset;
@@ -75,22 +68,11 @@ class AnalyticsServiceTest {
 		return snapshot;
 	}
 
-	private AssetStatusLog buildStatusLog(Asset asset, boolean isActive, LocalDate changedAt) {
-		AssetStatusLog log = new AssetStatusLog();
-		log.setId(UUID.randomUUID());
-		log.setAsset(asset);
-		log.setIsActive(isActive);
-		log.setChangedAt(changedAt);
-		return log;
-	}
-
 	@Test
 	void getNetWorth_returnsZero_whenNoAssets() {
 		// GIVEN
 		UUID mockUserId = UUID.randomUUID();
-		when(assetRepository.findByUserIdAndIsActiveTrueOrderByCreatedAtDesc(mockUserId)).thenReturn(
-			List.of()
-		);
+		when(assetRepository.findByUserIdOrderByCreatedAtDesc(mockUserId)).thenReturn(List.of());
 		when(snapshotRepository.findByAssetUserId(mockUserId)).thenReturn(List.of());
 
 		// WHEN
@@ -111,7 +93,7 @@ class AnalyticsServiceTest {
 			new BigDecimal("1000"),
 			LocalDate.now().minusDays(1)
 		);
-		when(assetRepository.findByUserIdAndIsActiveTrueOrderByCreatedAtDesc(mockUserId)).thenReturn(
+		when(assetRepository.findByUserIdOrderByCreatedAtDesc(mockUserId)).thenReturn(
 			List.of(mockAsset)
 		);
 		when(snapshotRepository.findByAssetUserId(mockUserId)).thenReturn(List.of(mockSnapshot));
@@ -141,7 +123,7 @@ class AnalyticsServiceTest {
 			new BigDecimal("500"),
 			LocalDate.now().minusDays(1)
 		);
-		when(assetRepository.findByUserIdAndIsActiveTrueOrderByCreatedAtDesc(mockUserId)).thenReturn(
+		when(assetRepository.findByUserIdOrderByCreatedAtDesc(mockUserId)).thenReturn(
 			List.of(mockAsset, mockLiability)
 		);
 		when(snapshotRepository.findByAssetUserId(mockUserId)).thenReturn(
@@ -161,7 +143,7 @@ class AnalyticsServiceTest {
 		UUID mockUserId = UUID.randomUUID();
 		AssetCategory mockCategory = buildCategory(AssetType.ASSET);
 		Asset mockAsset = buildAsset(mockCategory);
-		when(assetRepository.findByUserIdAndIsActiveTrueOrderByCreatedAtDesc(mockUserId)).thenReturn(
+		when(assetRepository.findByUserIdOrderByCreatedAtDesc(mockUserId)).thenReturn(
 			List.of(mockAsset)
 		);
 		when(snapshotRepository.findByAssetUserId(mockUserId)).thenReturn(List.of());
@@ -184,7 +166,7 @@ class AnalyticsServiceTest {
 			new BigDecimal("800"),
 			LocalDate.now().minusMonths(3)
 		);
-		when(assetRepository.findByUserIdAndIsActiveTrueOrderByCreatedAtDesc(mockUserId)).thenReturn(
+		when(assetRepository.findByUserIdOrderByCreatedAtDesc(mockUserId)).thenReturn(
 			List.of(mockAsset)
 		);
 		when(snapshotRepository.findByAssetUserId(mockUserId)).thenReturn(List.of(mockOldSnapshot));
@@ -207,7 +189,7 @@ class AnalyticsServiceTest {
 			new BigDecimal("1000"),
 			LocalDate.now().minusDays(5)
 		);
-		when(assetRepository.findByUserIdAndIsActiveTrueOrderByCreatedAtDesc(mockUserId)).thenReturn(
+		when(assetRepository.findByUserIdOrderByCreatedAtDesc(mockUserId)).thenReturn(
 			List.of(mockAsset)
 		);
 		when(
@@ -233,9 +215,7 @@ class AnalyticsServiceTest {
 	void getSummary_returnsZeroNetWorth_whenNoData() {
 		// GIVEN
 		UUID mockUserId = UUID.randomUUID();
-		when(assetRepository.findByUserIdAndIsActiveTrueOrderByCreatedAtDesc(mockUserId)).thenReturn(
-			List.of()
-		);
+		when(assetRepository.findByUserIdOrderByCreatedAtDesc(mockUserId)).thenReturn(List.of());
 		when(
 			snapshotRepository.findByAssetUserIdAndReferenceDateGreaterThanEqual(
 				eq(mockUserId),
@@ -257,7 +237,6 @@ class AnalyticsServiceTest {
 		UUID mockUserId = UUID.randomUUID();
 		when(assetRepository.findByUserIdOrderByCreatedAtDesc(mockUserId)).thenReturn(List.of());
 		when(snapshotRepository.findByAssetUserId(mockUserId)).thenReturn(List.of());
-		when(statusLogRepository.findByAssetIdIn(List.of())).thenReturn(List.of());
 
 		// WHEN
 		ChartDataDTO expectedChart = testSubject.getChartData(mockUserId, false);
@@ -273,7 +252,6 @@ class AnalyticsServiceTest {
 		UUID mockUserId = UUID.randomUUID();
 		when(assetRepository.findByUserIdOrderByCreatedAtDesc(mockUserId)).thenReturn(List.of());
 		when(snapshotRepository.findByAssetUserId(mockUserId)).thenReturn(List.of());
-		when(statusLogRepository.findByAssetIdIn(List.of())).thenReturn(List.of());
 
 		// WHEN
 		ChartDataDTO expectedChart = testSubject.getChartData(mockUserId, true);
@@ -289,7 +267,6 @@ class AnalyticsServiceTest {
 		int mockYear = 2025;
 		when(assetRepository.findByUserIdOrderByCreatedAtDesc(mockUserId)).thenReturn(List.of());
 		when(snapshotRepository.findByAssetUserId(mockUserId)).thenReturn(List.of());
-		when(statusLogRepository.findByAssetIdIn(List.of())).thenReturn(List.of());
 
 		// WHEN
 		ChartDataDTO expectedChart = testSubject.getChartDataForYear(mockUserId, mockYear);
@@ -299,150 +276,47 @@ class AnalyticsServiceTest {
 	}
 
 	@Test
-	void getChartData_excludesArchivedAssetWithNoStatusLog_fromCurrentMonthBar() {
-		// GIVEN
+	void getChartData_includesAssetWithZeroValueSnapshot_inBars() {
+		// GIVEN — asset with zero-value snapshot (simulates "archived" via zero value)
 		UUID mockUserId = UUID.randomUUID();
 		AssetCategory mockCategory = buildCategory(AssetType.ASSET);
-		Asset mockArchivedAsset = buildAsset(mockCategory);
-		mockArchivedAsset.setIsActive(false);
-		Snapshot mockSnapshot = buildSnapshot(
-			mockArchivedAsset,
-			new BigDecimal("1000"),
-			LocalDate.now().minusDays(1)
-		);
+		Asset mockAsset = buildAsset(mockCategory);
+		Snapshot mockSnapshot = buildSnapshot(mockAsset, BigDecimal.ZERO, LocalDate.now().minusDays(1));
 		when(assetRepository.findByUserIdOrderByCreatedAtDesc(mockUserId)).thenReturn(
-			List.of(mockArchivedAsset)
+			List.of(mockAsset)
 		);
 		when(snapshotRepository.findByAssetUserId(mockUserId)).thenReturn(List.of(mockSnapshot));
-		when(statusLogRepository.findByAssetIdIn(List.of(mockArchivedAsset.getId()))).thenReturn(
-			List.of()
-		);
 
 		// WHEN
 		ChartDataDTO expectedChart = testSubject.getChartData(mockUserId, false);
 
-		// THEN — current month bar (last entry) must be zero since the asset is archived
+		// THEN — current month bar is zero because snapshot value is zero
 		List<BigDecimal> assetsOnly = expectedChart.getTotalAssetsOnly();
 		assertThat(assetsOnly.get(assetsOnly.size() - 1)).isEqualByComparingTo(BigDecimal.ZERO);
 	}
 
 	@Test
-	void getChartData_includesArchivedAssetWithNoStatusLog_inHistoricalBars() {
+	void getChartData_includesAssetWithSnapshotValue_inCurrentBar() {
 		// GIVEN
 		UUID mockUserId = UUID.randomUUID();
 		AssetCategory mockCategory = buildCategory(AssetType.ASSET);
-		Asset mockArchivedAsset = buildAsset(mockCategory);
-		mockArchivedAsset.setIsActive(false);
-		// snapshot from 6 months ago — falls in a historical bar
-		Snapshot mockOldSnapshot = buildSnapshot(
-			mockArchivedAsset,
-			new BigDecimal("1000"),
-			LocalDate.now().minusMonths(6)
-		);
-		when(assetRepository.findByUserIdOrderByCreatedAtDesc(mockUserId)).thenReturn(
-			List.of(mockArchivedAsset)
-		);
-		when(snapshotRepository.findByAssetUserId(mockUserId)).thenReturn(List.of(mockOldSnapshot));
-		when(statusLogRepository.findByAssetIdIn(List.of(mockArchivedAsset.getId()))).thenReturn(
-			List.of()
-		);
-
-		// WHEN
-		ChartDataDTO expectedChart = testSubject.getChartData(mockUserId, false);
-
-		// THEN — the bar 7 from the end covers ~6 months ago and must include the archived asset
-		List<BigDecimal> assetsOnly = expectedChart.getTotalAssetsOnly();
-		assertThat(assetsOnly.get(assetsOnly.size() - 7)).isGreaterThan(BigDecimal.ZERO);
-	}
-
-	@Test
-	void getChartData_includesActiveAsset_inCurrentMonthBar_evenWhenStatusLogSaysInactive() {
-		// GIVEN — asset is currently active (isActive=true) but has a stale log saying inactive
-		UUID mockUserId = UUID.randomUUID();
-		AssetCategory mockCategory = buildCategory(AssetType.ASSET);
 		Asset mockAsset = buildAsset(mockCategory);
-		mockAsset.setIsActive(true);
 		Snapshot mockSnapshot = buildSnapshot(
 			mockAsset,
 			new BigDecimal("1000"),
 			LocalDate.now().minusDays(1)
 		);
-		AssetStatusLog staleLog = buildStatusLog(mockAsset, false, LocalDate.now().minusDays(30));
 		when(assetRepository.findByUserIdOrderByCreatedAtDesc(mockUserId)).thenReturn(
 			List.of(mockAsset)
 		);
 		when(snapshotRepository.findByAssetUserId(mockUserId)).thenReturn(List.of(mockSnapshot));
-		when(statusLogRepository.findByAssetIdIn(List.of(mockAsset.getId()))).thenReturn(
-			List.of(staleLog)
-		);
 
 		// WHEN
 		ChartDataDTO expectedChart = testSubject.getChartData(mockUserId, false);
 
-		// THEN — current month bar must include the active asset despite the stale log
+		// THEN
 		List<BigDecimal> assetsOnly = expectedChart.getTotalAssetsOnly();
 		assertThat(assetsOnly.get(assetsOnly.size() - 1)).isGreaterThan(BigDecimal.ZERO);
-	}
-
-	@Test
-	void getChartData_excludesInactiveAssetCreatedToday_fromHistoricalBars() {
-		// GIVEN — inactive asset created today with a backdated snapshot (archived immediately)
-		UUID mockUserId = UUID.randomUUID();
-		AssetCategory mockCategory = buildCategory(AssetType.ASSET);
-		Asset mockAsset = buildAsset(mockCategory);
-		mockAsset.setIsActive(false);
-		mockAsset.setCreatedAt(LocalDateTime.now());
-		Snapshot mockBackdatedSnapshot = buildSnapshot(
-			mockAsset,
-			new BigDecimal("450"),
-			LocalDate.now().minusMonths(6)
-		);
-		when(assetRepository.findByUserIdOrderByCreatedAtDesc(mockUserId)).thenReturn(
-			List.of(mockAsset)
-		);
-		when(snapshotRepository.findByAssetUserId(mockUserId)).thenReturn(
-			List.of(mockBackdatedSnapshot)
-		);
-		when(statusLogRepository.findByAssetIdIn(List.of(mockAsset.getId()))).thenReturn(List.of());
-
-		// WHEN
-		ChartDataDTO expectedChart = testSubject.getChartData(mockUserId, false);
-
-		// THEN — all bars must be zero: inactive + created today means it shouldn't appear anywhere
-		List<BigDecimal> assetsOnly = expectedChart.getTotalAssetsOnly();
-		assetsOnly.forEach(v -> assertThat(v).isEqualByComparingTo(BigDecimal.ZERO));
-	}
-
-	@Test
-	void getChartData_includesActiveAssetCreatedToday_inHistoricalBarsViaMBackdatedSnapshot() {
-		// GIVEN — active asset created today with a backdated snapshot (legitimate historical import)
-		UUID mockUserId = UUID.randomUUID();
-		AssetCategory mockCategory = buildCategory(AssetType.ASSET);
-		Asset mockAsset = buildAsset(mockCategory);
-		mockAsset.setIsActive(true);
-		mockAsset.setCreatedAt(LocalDateTime.now());
-		Snapshot mockBackdatedSnapshot = buildSnapshot(
-			mockAsset,
-			new BigDecimal("450"),
-			LocalDate.now().minusMonths(6)
-		);
-		AssetStatusLog creationLog = buildStatusLog(mockAsset, true, LocalDate.now());
-		when(assetRepository.findByUserIdOrderByCreatedAtDesc(mockUserId)).thenReturn(
-			List.of(mockAsset)
-		);
-		when(snapshotRepository.findByAssetUserId(mockUserId)).thenReturn(
-			List.of(mockBackdatedSnapshot)
-		);
-		when(statusLogRepository.findByAssetIdIn(List.of(mockAsset.getId()))).thenReturn(
-			List.of(creationLog)
-		);
-
-		// WHEN
-		ChartDataDTO expectedChart = testSubject.getChartData(mockUserId, false);
-
-		// THEN — the bar ~6 months back must include the backdated snapshot value
-		List<BigDecimal> assetsOnly = expectedChart.getTotalAssetsOnly();
-		assertThat(assetsOnly.get(assetsOnly.size() - 7)).isGreaterThan(BigDecimal.ZERO);
 	}
 
 	@Test
@@ -461,7 +335,7 @@ class AnalyticsServiceTest {
 			new BigDecimal("1000"),
 			LocalDate.now().minusYears(1).minusDays(1)
 		);
-		when(assetRepository.findByUserIdAndIsActiveTrueOrderByCreatedAtDesc(mockUserId)).thenReturn(
+		when(assetRepository.findByUserIdOrderByCreatedAtDesc(mockUserId)).thenReturn(
 			List.of(mockAsset)
 		);
 		when(snapshotRepository.findByAssetUserId(mockUserId)).thenReturn(
@@ -492,7 +366,7 @@ class AnalyticsServiceTest {
 			new BigDecimal("1500"),
 			LocalDate.now().minusYears(1).minusDays(1)
 		);
-		when(assetRepository.findByUserIdAndIsActiveTrueOrderByCreatedAtDesc(mockUserId)).thenReturn(
+		when(assetRepository.findByUserIdOrderByCreatedAtDesc(mockUserId)).thenReturn(
 			List.of(mockAsset)
 		);
 		when(snapshotRepository.findByAssetUserId(mockUserId)).thenReturn(

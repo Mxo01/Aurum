@@ -29,7 +29,6 @@ public record UserExportDTO(
 		String name,
 		String category,
 		String originalCurrency,
-		Boolean isActive,
 		Boolean isFavorite,
 		String liabilityType,
 		String paymentFrequency,

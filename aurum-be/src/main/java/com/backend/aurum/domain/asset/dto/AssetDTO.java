@@ -20,7 +20,6 @@ public class AssetDTO {
 	private String categoryIcon;
 	private AssetType type;
 	private Currency originalCurrency;
-	private Boolean isActive;
 	private Boolean isFavorite;
 	private List<SnapshotDTO> snapshots;
 	private BigDecimal latestValue;

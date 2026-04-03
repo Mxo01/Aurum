@@ -7,11 +7,9 @@ import com.backend.aurum.domain.analytics.dto.VariationDTO;
 import com.backend.aurum.domain.asset.dto.AssetDTO;
 import com.backend.aurum.domain.asset.mapper.AssetMapper;
 import com.backend.aurum.domain.asset.model.Asset;
-import com.backend.aurum.domain.asset.model.AssetStatusLog;
 import com.backend.aurum.domain.asset.model.AssetType;
 import com.backend.aurum.domain.asset.model.Snapshot;
 import com.backend.aurum.domain.asset.repository.AssetRepository;
-import com.backend.aurum.domain.asset.repository.AssetStatusLogRepository;
 import com.backend.aurum.domain.asset.repository.SnapshotRepository;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -31,14 +29,13 @@ public class AnalyticsService {
 
 	private final SnapshotRepository snapshotRepository;
 	private final AssetRepository assetRepository;
-	private final AssetStatusLogRepository statusLogRepository;
 	private final AssetMapper assetMapper;
 
 	public AnalyticsSummaryDTO getSummary(UUID userId) {
 		log.debug("AnalyticsService#getSummary - Computing analytics summary for userId={}", userId);
 		LocalDate now = LocalDate.now();
 
-		List<Asset> assets = assetRepository.findByUserIdAndIsActiveTrueOrderByCreatedAtDesc(userId);
+		List<Asset> assets = assetRepository.findByUserIdOrderByCreatedAtDesc(userId);
 
 		// Only load snapshots from the oldest needed date (1 year back) instead of all history.
 		// Add a 1-month buffer so carry-forward logic works for the earliest variation date.
@@ -47,8 +44,6 @@ public class AnalyticsService {
 
 		// Anchor variations at the latest snapshot date so that months without data
 		// don't collapse the delta to zero via carry-forward.
-		// e.g. if latest snapshot is Feb 2026 and today is Mar 2026:
-		//   1M = Feb vs Jan, not (Mar carry-forward=Feb) vs (Feb carry-forward=Feb)
 		LocalDate latestDataDate = snapshotsByAsset
 			.values()
 			.stream()
@@ -57,8 +52,6 @@ public class AnalyticsService {
 			.max(LocalDate::compareTo)
 			.orElse(now);
 
-		// Compute net worth and gross assets at all 4 dates in a single pass
-		// instead of calling calculateNetWorthAt/calculateGrossAssetsAt 8 times.
 		LocalDate oneMonthAgoDate = latestDataDate.minusMonths(1);
 		LocalDate sixMonthsAgoDate = latestDataDate.minusMonths(6);
 		LocalDate oneYearAgoDate = latestDataDate.minusYears(1);
@@ -123,7 +116,7 @@ public class AnalyticsService {
 
 	public BigDecimal getNetWorth(UUID userId) {
 		log.debug("AnalyticsService#getNetWorth - Computing net worth for userId={}", userId);
-		List<Asset> assets = assetRepository.findByUserIdAndIsActiveTrueOrderByCreatedAtDesc(userId);
+		List<Asset> assets = assetRepository.findByUserIdOrderByCreatedAtDesc(userId);
 		Map<UUID, List<Snapshot>> snapshotsByAsset = loadSnapshotsByAsset(userId);
 		return calculateNetWorthAt(assets, snapshotsByAsset, LocalDate.now());
 	}
@@ -164,16 +157,9 @@ public class AnalyticsService {
 		List<Asset> allAssets = assetRepository.findByUserIdOrderByCreatedAtDesc(userId);
 		Map<UUID, List<Snapshot>> snapshotsByAsset = loadSnapshotsByAsset(userId);
 
-		List<UUID> assetIds = allAssets.stream().map(Asset::getId).toList();
-		Map<UUID, List<AssetStatusLog>> statusLogsByAsset = statusLogRepository
-			.findByAssetIdIn(assetIds)
-			.stream()
-			.collect(Collectors.groupingBy(l -> l.getAsset().getId()));
-
-		// Favorites are a current concept — only active assets shown as individual series
 		List<Asset> favoriteAssets = allAssets
 			.stream()
-			.filter(a -> Boolean.TRUE.equals(a.getIsActive()) && Boolean.TRUE.equals(a.getIsFavorite()))
+			.filter(a -> Boolean.TRUE.equals(a.getIsFavorite()))
 			.toList();
 
 		List<String> labels = new ArrayList<>();
@@ -193,14 +179,10 @@ public class AnalyticsService {
 		while (!current.isAfter(endFirstOfMonth)) {
 			LocalDate monthLastDay = current.withDayOfMonth(current.lengthOfMonth());
 			final LocalDate datePoint = monthLastDay.isAfter(end) ? end : monthLastDay;
-			List<Asset> activeAtDate = allAssets
-				.stream()
-				.filter(a -> wasActiveAt(a, statusLogsByAsset, datePoint))
-				.toList();
 
 			labels.add(formatDateLabel(current));
-			totalSeries.add(calculateNetWorthAt(activeAtDate, snapshotsByAsset, datePoint));
-			assetsOnlySeries.add(calculateGrossAssetsAt(activeAtDate, snapshotsByAsset, datePoint));
+			totalSeries.add(calculateNetWorthAt(allAssets, snapshotsByAsset, datePoint));
+			assetsOnlySeries.add(calculateGrossAssetsAt(allAssets, snapshotsByAsset, datePoint));
 			for (Asset asset : favoriteAssets) {
 				List<Snapshot> snapshots = snapshotsByAsset.getOrDefault(asset.getId(), List.of());
 				BigDecimal value = calculateAssetValueAt(snapshots, datePoint);
@@ -236,7 +218,7 @@ public class AnalyticsService {
 			years,
 			assetsOnly
 		);
-		List<Asset> assets = assetRepository.findByUserIdAndIsActiveTrueOrderByCreatedAtDesc(userId);
+		List<Asset> assets = assetRepository.findByUserIdOrderByCreatedAtDesc(userId);
 		Map<UUID, List<Snapshot>> snapshotsByAsset = loadSnapshotsByAsset(userId);
 
 		BigDecimal current = assetsOnly
@@ -449,8 +431,6 @@ public class AnalyticsService {
 		Map<UUID, List<Snapshot>> snapshotsByAsset,
 		int limit
 	) {
-		// Build a map with the latest 2 snapshots per asset (desc by date),
-		// matching what AssetController does for the main asset list.
 		Map<UUID, List<Snapshot>> latestTwoByAsset = new HashMap<>();
 		for (Map.Entry<UUID, List<Snapshot>> entry : snapshotsByAsset.entrySet()) {
 			List<Snapshot> sorted = entry
@@ -477,39 +457,6 @@ public class AnalyticsService {
 			.limit(limit)
 			.map(a -> assetMapper.toDtoLight(a, latestTwoByAsset))
 			.toList();
-	}
-
-	/**
-	 * Returns true if the asset was active on the given date, based on the status log.
-	 * For today or later: the isActive flag is authoritative (matches the summary card).
-	 * For historical dates: use the latest log entry ≤ date, or assume active if no log exists
-	 * so that pre-log history is preserved (supports backdated initial snapshots).
-	 * Exception: a currently-inactive asset created after the target date could not have been
-	 * active at that date and is excluded, preventing archived assets with backdated snapshots
-	 * from inflating historical bars.
-	 */
-	private boolean wasActiveAt(
-		Asset asset,
-		Map<UUID, List<AssetStatusLog>> statusLogsByAsset,
-		LocalDate date
-	) {
-		if (!date.isBefore(LocalDate.now())) {
-			return Boolean.TRUE.equals(asset.getIsActive());
-		}
-		if (
-			!Boolean.TRUE.equals(asset.getIsActive()) &&
-			asset.getCreatedAt() != null &&
-			asset.getCreatedAt().toLocalDate().isAfter(date)
-		) {
-			return false;
-		}
-		List<AssetStatusLog> logs = statusLogsByAsset.getOrDefault(asset.getId(), List.of());
-		return logs
-			.stream()
-			.filter(l -> !l.getChangedAt().isAfter(date))
-			.max(Comparator.comparing(AssetStatusLog::getChangedAt))
-			.map(AssetStatusLog::getIsActive)
-			.orElse(true);
 	}
 
 	private BigDecimal getLatestSnapshotValue(List<Snapshot> snapshots) {

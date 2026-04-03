@@ -25,8 +25,6 @@ import { paths } from "../../app.routes";
 import { AssetFormComponent } from "./components/asset-form/asset-form.component";
 import { AssetHistoryComponent } from "./components/asset-history/asset-history.component";
 import { AssetTableComponent } from "./components/asset-table/asset-table.component";
-import { Dialog } from "primeng/dialog";
-import { DatePicker } from "primeng/datepicker";
 import { formatDateToISO } from "../../shared/utils";
 import { SnapshotService } from "../snapshot/snapshot.service";
 
@@ -42,9 +40,7 @@ import { SnapshotService } from "../snapshot/snapshot.service";
 		ReactiveFormsModule,
 		RouterLink,
 		AssetHistoryComponent,
-		AssetTableComponent,
-		Dialog,
-		DatePicker
+		AssetTableComponent
 	],
 	changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -69,10 +65,6 @@ export class AssetComponent implements OnInit {
 	readonly isDeletePermanentlyLoading = signal(false);
 	readonly isSaveLoading = signal(false);
 	readonly selectedAsset = signal<Asset | null>(null);
-
-	readonly isStatusDialogVisible = signal(false);
-	readonly pendingStatusToggle = signal<{ asset: Asset; newStatus: boolean } | null>(null);
-	statusChangeDate: Date = new Date();
 
 	ngOnInit() {
 		this.profileService
@@ -128,36 +120,6 @@ export class AssetComponent implements OnInit {
 	editAsset(asset: Asset) {
 		this.selectedAsset.set(asset);
 		this.isDrawerVisible.set(true);
-	}
-
-	toggleAssetStatus(asset: Asset) {
-		this.pendingStatusToggle.set({ asset, newStatus: !asset.isActive });
-		this.statusChangeDate = new Date();
-		this.isStatusDialogVisible.set(true);
-	}
-
-	cancelStatusToggle() {
-		this.isStatusDialogVisible.set(false);
-		this.pendingStatusToggle.set(null);
-	}
-
-	confirmStatusToggle() {
-		const pending = this.pendingStatusToggle();
-		if (!pending) return;
-
-		const { asset, newStatus } = pending;
-		const changedAt = formatDateToISO(this.statusChangeDate);
-
-		this.isStatusDialogVisible.set(false);
-		this.pendingStatusToggle.set(null);
-		this.isSaveLoading.set(true);
-
-		this.assetService
-			.patchAssetStatus(asset.id, newStatus, changedAt)
-			.pipe(finalize(() => this.isSaveLoading.set(false)))
-			.subscribe({
-				next: assets => this.assets.set(assets)
-			});
 	}
 
 	deleteAsset({ event, asset }: { event: MenuItemCommandEvent; asset: Asset }) {
