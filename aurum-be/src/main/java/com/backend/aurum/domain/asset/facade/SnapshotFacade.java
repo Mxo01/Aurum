@@ -5,7 +5,6 @@ import com.backend.aurum.domain.asset.dto.SnapshotDTO;
 import com.backend.aurum.domain.asset.mapper.SnapshotMapper;
 import com.backend.aurum.domain.asset.model.Asset;
 import com.backend.aurum.domain.asset.model.Snapshot;
-import com.backend.aurum.domain.asset.repository.AssetRepository;
 import com.backend.aurum.domain.asset.service.AssetService;
 import com.backend.aurum.domain.asset.service.SnapshotService;
 import com.backend.aurum.domain.asset.validation.SnapshotValidationService;
@@ -28,7 +27,6 @@ public class SnapshotFacade {
 	private final SnapshotMapper mapper;
 	private final SnapshotValidationService validationService;
 	private final AssetService assetService;
-	private final AssetRepository assetRepository;
 	private final ExchangeRateService exchangeRateService;
 	private final UserRepository userRepository;
 
@@ -61,15 +59,6 @@ public class SnapshotFacade {
 			dto.getReferenceDate(),
 			exchangeRate
 		);
-
-		if (
-			dto.getAmountOriginalCurrency() != null &&
-			dto.getAmountOriginalCurrency().compareTo(BigDecimal.ZERO) == 0 &&
-			asset.getLiabilityType() != null
-		) {
-			asset.setIsActive(false);
-			assetRepository.save(asset);
-		}
 
 		return mapper.toDto(saved);
 	}

@@ -11,7 +11,6 @@ const buildMockAsset = (overrides: Partial<Asset> = {}): Asset => ({
 	categoryIcon: null,
 	type: AssetType.ASSET,
 	originalCurrency: Currency.EUR,
-	isActive: true,
 	isFavorite: false,
 	...overrides
 });

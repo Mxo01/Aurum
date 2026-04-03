@@ -9,7 +9,6 @@ import { InputNumber } from "primeng/inputnumber";
 import { DatePicker } from "primeng/datepicker";
 import { Button } from "primeng/button";
 import { Drawer } from "primeng/drawer";
-import { Message } from "primeng/message";
 import { AssetFormComponent } from "./asset-form.component";
 import { Asset, AssetCategory, AssetType, LiabilityType } from "../../model/asset.model";
 import { Currency } from "../../../profile/model/currency.model";
@@ -31,7 +30,6 @@ const buildMockAsset = (overrides: Partial<Asset> = {}): Asset => ({
 	categoryIcon: null,
 	type: AssetType.ASSET,
 	originalCurrency: Currency.EUR,
-	isActive: true,
 	isFavorite: false,
 	...overrides
 });
@@ -52,8 +50,7 @@ describe("AssetFormComponent", () => {
 				MockComponent(InputNumber),
 				MockComponent(DatePicker),
 				MockComponent(Button),
-				MockComponent(Drawer),
-				MockComponent(Message)
+				MockComponent(Drawer)
 			]
 		});
 
@@ -104,18 +101,6 @@ describe("AssetFormComponent", () => {
 
 			// THEN
 			expect(testSubject.assetForm.controls.name.value).toBeFalsy();
-		});
-
-		it("should disable isFavorite for an inactive asset", () => {
-			// GIVEN
-			const mockAsset = buildMockAsset({ categoryId: mockCategory.id, isActive: false });
-			fixture.componentRef.setInput("selectedAsset", mockAsset);
-
-			// WHEN
-			fixture.detectChanges();
-
-			// THEN
-			expect(testSubject.assetForm.controls.isFavorite.disabled).toBe(true);
 		});
 	});
 

@@ -8,9 +8,7 @@ import com.backend.aurum.domain.asset.dto.CreateSnapshotDTO;
 import com.backend.aurum.domain.asset.dto.SnapshotDTO;
 import com.backend.aurum.domain.asset.mapper.SnapshotMapper;
 import com.backend.aurum.domain.asset.model.Asset;
-import com.backend.aurum.domain.asset.model.LiabilityType;
 import com.backend.aurum.domain.asset.model.Snapshot;
-import com.backend.aurum.domain.asset.repository.AssetRepository;
 import com.backend.aurum.domain.asset.service.AssetService;
 import com.backend.aurum.domain.asset.service.SnapshotService;
 import com.backend.aurum.domain.asset.validation.SnapshotValidationService;
@@ -45,9 +43,6 @@ class SnapshotFacadeTest {
 
 	@Mock
 	private AssetService assetService;
-
-	@Mock
-	private AssetRepository assetRepository;
 
 	@Mock
 	private ExchangeRateService exchangeRateService;
@@ -164,44 +159,6 @@ class SnapshotFacadeTest {
 
 		// THEN
 		assertThat(expectedDto).isEqualTo(stubbedDto);
-	}
-
-	@Test
-	void createSnapshot_deactivatesAsset_whenAmountIsZeroAndLiabilityTypeIsSet() {
-		// GIVEN
-		UUID mockUserId = UUID.randomUUID();
-		Currency sharedCurrency = Currency.EUR;
-		CreateSnapshotDTO mockDto = Instancio.of(CreateSnapshotDTO.class)
-			.set(Select.field(CreateSnapshotDTO::getExchangeRateToBase), null)
-			.set(Select.field(CreateSnapshotDTO::getAmountOriginalCurrency), BigDecimal.ZERO)
-			.create();
-		Asset mockAsset = Instancio.of(Asset.class)
-			.set(Select.field(Asset::getOriginalCurrency), sharedCurrency)
-			.set(Select.field(Asset::getLiabilityType), LiabilityType.MANUAL)
-			.create();
-		User mockUser = Instancio.of(User.class)
-			.set(Select.field(User::getId), mockUserId)
-			.set(Select.field(User::getCurrency), sharedCurrency)
-			.create();
-		Snapshot mockSaved = Instancio.create(Snapshot.class);
-		when(assetService.findById(mockDto.getAssetId(), mockUserId)).thenReturn(mockAsset);
-		when(userRepository.findById(mockUserId)).thenReturn(Optional.of(mockUser));
-		when(
-			snapshotService.saveOrUpdate(
-				mockAsset,
-				BigDecimal.ZERO,
-				mockDto.getReferenceDate(),
-				BigDecimal.ONE
-			)
-		).thenReturn(mockSaved);
-		when(mapper.toDto(mockSaved)).thenReturn(Instancio.create(SnapshotDTO.class));
-
-		// WHEN
-		testSubject.createSnapshot(mockDto, mockUserId);
-
-		// THEN
-		verify(assetRepository).save(mockAsset);
-		assertThat(mockAsset.getIsActive()).isFalse();
 	}
 
 	@Test

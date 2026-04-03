@@ -135,28 +135,6 @@ export class AssetService {
 				);
 	}
 
-	patchAssetStatus(id: string, isActive: boolean, changedAt: string) {
-		return this.http.patch<Asset>(`${this.assetsUrl}/${id}/status`, { isActive, changedAt }).pipe(
-			switchMap(() => this.getAssets()),
-			tap({
-				next: () => {
-					this.messageService.add({
-						severity: "success",
-						summary: "Success",
-						detail: isActive ? "Asset activated successfully" : "Asset archived successfully"
-					});
-				},
-				error: () => {
-					this.messageService.add({
-						severity: "error",
-						summary: "Error",
-						detail: "Failed to update asset status"
-					});
-				}
-			})
-		);
-	}
-
 	deleteAssetPermanently(id: string) {
 		return this.http.delete<void>(`${this.assetsUrl}/${id}`).pipe(
 			switchMap(() => this.getAssets()),

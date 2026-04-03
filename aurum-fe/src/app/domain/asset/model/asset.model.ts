@@ -32,7 +32,6 @@ export interface Asset {
 	categoryIcon: string | null;
 	type: AssetType;
 	originalCurrency: Currency;
-	isActive: boolean;
 	isFavorite: boolean;
 	latestValue?: number | null;
 	latestValueBase?: number | null;

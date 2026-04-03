@@ -1,4 +1,3 @@
-import { Message } from "primeng/message";
 import { ToggleButton } from "primeng/togglebutton";
 import {
 	ChangeDetectionStrategy,
@@ -49,8 +48,7 @@ import {
 		InputNumber,
 		DatePicker,
 		Button,
-		Drawer,
-		Message
+		Drawer
 	],
 	changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -106,14 +104,7 @@ export class AssetFormComponent implements OnInit {
 					paymentAmount: selectedAsset.paymentAmount ?? null
 				});
 				this.assetForm.controls.currency.disable();
-
-				if (!selectedAsset.isActive) {
-					this.assetForm.controls.isFavorite.setValue(false);
-					this.assetForm.controls.isFavorite.disable();
-				} else {
-					this.assetForm.controls.isFavorite.enable();
-				}
-
+				this.assetForm.controls.isFavorite.enable();
 				this.updateLiabilityValidators(selectedAsset.liabilityType ?? null);
 			} else {
 				this.assetForm.controls.currency.enable();
@@ -186,7 +177,6 @@ export class AssetFormComponent implements OnInit {
 			categoryIcon: form.category.icon ?? null,
 			type: form.type,
 			originalCurrency: form.currency,
-			isActive: this.selectedAsset()?.isActive ?? true,
 			isFavorite: !!form.isFavorite,
 			initialValue: isNewAsset ? form.initialValue : null,
 			referenceDate: isNewAsset && form.referenceDate ? formatDateToISO(form.referenceDate) : null,

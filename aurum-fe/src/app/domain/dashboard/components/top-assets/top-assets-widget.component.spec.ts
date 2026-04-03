@@ -19,7 +19,6 @@ const buildMockAsset = (overrides: Partial<Asset> = {}): Asset => ({
 	categoryIcon: null,
 	type: AssetType.ASSET,
 	originalCurrency: Currency.EUR,
-	isActive: true,
 	isFavorite: false,
 	latestValue: faker.number.float({ min: 100, max: 10000 }),
 	latestValueBase: faker.number.float({ min: 100, max: 10000 }),

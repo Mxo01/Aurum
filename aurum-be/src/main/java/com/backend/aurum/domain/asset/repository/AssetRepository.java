@@ -12,18 +12,9 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface AssetRepository extends JpaRepository<Asset, UUID> {
-	List<Asset> findAllByIsActiveTrue();
-
 	@EntityGraph(attributePaths = "category")
 	List<Asset> findByUserIdOrderByCreatedAtDesc(UUID userId);
 
-	@EntityGraph(attributePaths = "category")
-	List<Asset> findByUserIdAndIsActiveTrueOrderByCreatedAtDesc(UUID userId);
-
-	List<Asset> findAllByIsActiveTrueAndLiabilityType(LiabilityType liabilityType);
-
-	@Query(
-		"SELECT a FROM Asset a LEFT JOIN FETCH a.snapshots WHERE a.isActive = true AND a.liabilityType = :type"
-	)
-	List<Asset> findAllByIsActiveTrueAndLiabilityTypeWithSnapshots(@Param("type") LiabilityType type);
+	@Query("SELECT a FROM Asset a LEFT JOIN FETCH a.snapshots WHERE a.liabilityType = :type")
+	List<Asset> findAllByLiabilityTypeWithSnapshots(@Param("type") LiabilityType type);
 }

@@ -14,7 +14,6 @@ public class UpdateAssetDTO {
 	private String name;
 	private UUID categoryId;
 	private Currency originalCurrency;
-	private Boolean isActive;
 	private Boolean isFavorite;
 	private LiabilityType liabilityType;
 	private PaymentFrequency paymentFrequency;

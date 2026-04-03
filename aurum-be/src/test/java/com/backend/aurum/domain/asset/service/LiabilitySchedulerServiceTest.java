@@ -1,6 +1,5 @@
 package com.backend.aurum.domain.asset.service;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -69,7 +68,7 @@ class LiabilitySchedulerServiceTest {
 		asset.setLiabilityType(LiabilityType.AUTOMATIC);
 		asset.setPaymentFrequency(frequency);
 		asset.setPaymentAmount(paymentAmount);
-		asset.setIsActive(true);
+
 		asset.setOriginalCurrency(user.getCurrency());
 		asset.setSnapshots(new ArrayList<>());
 		return asset;
@@ -96,9 +95,9 @@ class LiabilitySchedulerServiceTest {
 			FIXED_TODAY.minusMonths(2)
 		);
 		mockAsset.getSnapshots().add(mockLatestSnapshot);
-		when(
-			assetRepository.findAllByIsActiveTrueAndLiabilityTypeWithSnapshots(LiabilityType.AUTOMATIC)
-		).thenReturn(List.of(mockAsset));
+		when(assetRepository.findAllByLiabilityTypeWithSnapshots(LiabilityType.AUTOMATIC)).thenReturn(
+			List.of(mockAsset)
+		);
 
 		// WHEN
 		testSubject.processAutomaticLiabilityPayments();
@@ -123,9 +122,9 @@ class LiabilitySchedulerServiceTest {
 			FIXED_TODAY.minusDays(5)
 		);
 		mockAsset.getSnapshots().add(mockLatestSnapshot);
-		when(
-			assetRepository.findAllByIsActiveTrueAndLiabilityTypeWithSnapshots(LiabilityType.AUTOMATIC)
-		).thenReturn(List.of(mockAsset));
+		when(assetRepository.findAllByLiabilityTypeWithSnapshots(LiabilityType.AUTOMATIC)).thenReturn(
+			List.of(mockAsset)
+		);
 
 		// WHEN
 		testSubject.processAutomaticLiabilityPayments();
@@ -139,9 +138,9 @@ class LiabilitySchedulerServiceTest {
 		// GIVEN
 		User mockUser = buildUser(Currency.EUR);
 		Asset mockAsset = buildAsset(mockUser, PaymentFrequency.MONTHLY, new BigDecimal("200"));
-		when(
-			assetRepository.findAllByIsActiveTrueAndLiabilityTypeWithSnapshots(LiabilityType.AUTOMATIC)
-		).thenReturn(List.of(mockAsset));
+		when(assetRepository.findAllByLiabilityTypeWithSnapshots(LiabilityType.AUTOMATIC)).thenReturn(
+			List.of(mockAsset)
+		);
 
 		// WHEN
 		testSubject.processAutomaticLiabilityPayments();
@@ -161,9 +160,9 @@ class LiabilitySchedulerServiceTest {
 			FIXED_TODAY.minusMonths(2)
 		);
 		mockAsset.getSnapshots().add(mockLatestSnapshot);
-		when(
-			assetRepository.findAllByIsActiveTrueAndLiabilityTypeWithSnapshots(LiabilityType.AUTOMATIC)
-		).thenReturn(List.of(mockAsset));
+		when(assetRepository.findAllByLiabilityTypeWithSnapshots(LiabilityType.AUTOMATIC)).thenReturn(
+			List.of(mockAsset)
+		);
 
 		// WHEN
 		testSubject.processAutomaticLiabilityPayments();
@@ -183,9 +182,9 @@ class LiabilitySchedulerServiceTest {
 			FIXED_TODAY.minusMonths(2)
 		);
 		mockAsset.getSnapshots().add(mockLatestSnapshot);
-		when(
-			assetRepository.findAllByIsActiveTrueAndLiabilityTypeWithSnapshots(LiabilityType.AUTOMATIC)
-		).thenReturn(List.of(mockAsset));
+		when(assetRepository.findAllByLiabilityTypeWithSnapshots(LiabilityType.AUTOMATIC)).thenReturn(
+			List.of(mockAsset)
+		);
 
 		// WHEN
 		testSubject.processAutomaticLiabilityPayments();
@@ -200,29 +199,6 @@ class LiabilitySchedulerServiceTest {
 	}
 
 	@Test
-	void processAutomaticLiabilityPayments_archivesAsset_whenValueReachesZero() {
-		// GIVEN
-		User mockUser = buildUser(Currency.EUR);
-		Asset mockAsset = buildAsset(mockUser, PaymentFrequency.MONTHLY, new BigDecimal("1000"));
-		Snapshot mockLatestSnapshot = buildSnapshot(
-			mockAsset,
-			new BigDecimal("1000"),
-			FIXED_TODAY.minusMonths(2)
-		);
-		mockAsset.getSnapshots().add(mockLatestSnapshot);
-		when(
-			assetRepository.findAllByIsActiveTrueAndLiabilityTypeWithSnapshots(LiabilityType.AUTOMATIC)
-		).thenReturn(List.of(mockAsset));
-
-		// WHEN
-		testSubject.processAutomaticLiabilityPayments();
-
-		// THEN
-		verify(assetRepository).save(mockAsset);
-		assertThat(mockAsset.getIsActive()).isFalse();
-	}
-
-	@Test
 	void processAutomaticLiabilityPayments_fetchesExchangeRate_whenCurrenciesDiffer() {
 		// GIVEN
 		User mockUser = buildUser(Currency.EUR);
@@ -234,9 +210,9 @@ class LiabilitySchedulerServiceTest {
 			FIXED_TODAY.minusMonths(2)
 		);
 		mockAsset.getSnapshots().add(mockLatestSnapshot);
-		when(
-			assetRepository.findAllByIsActiveTrueAndLiabilityTypeWithSnapshots(LiabilityType.AUTOMATIC)
-		).thenReturn(List.of(mockAsset));
+		when(assetRepository.findAllByLiabilityTypeWithSnapshots(LiabilityType.AUTOMATIC)).thenReturn(
+			List.of(mockAsset)
+		);
 		BigDecimal stubbedRate = new BigDecimal("0.92");
 		when(exchangeRateService.getRate("USD", "EUR", FIXED_TODAY)).thenReturn(stubbedRate);
 
@@ -274,9 +250,9 @@ class LiabilitySchedulerServiceTest {
 		);
 		successAsset.getSnapshots().add(mockSnapshot2);
 
-		when(
-			assetRepository.findAllByIsActiveTrueAndLiabilityTypeWithSnapshots(LiabilityType.AUTOMATIC)
-		).thenReturn(List.of(failingAsset, successAsset));
+		when(assetRepository.findAllByLiabilityTypeWithSnapshots(LiabilityType.AUTOMATIC)).thenReturn(
+			List.of(failingAsset, successAsset)
+		);
 		when(exchangeRateService.getRate("USD", "EUR", FIXED_TODAY)).thenThrow(
 			new RuntimeException("Rate fetch failed")
 		);
@@ -304,9 +280,9 @@ class LiabilitySchedulerServiceTest {
 			FIXED_TODAY.minusMonths(2)
 		);
 		mockAsset.getSnapshots().add(mockLatestSnapshot);
-		when(
-			assetRepository.findAllByIsActiveTrueAndLiabilityTypeWithSnapshots(LiabilityType.AUTOMATIC)
-		).thenReturn(List.of(mockAsset));
+		when(assetRepository.findAllByLiabilityTypeWithSnapshots(LiabilityType.AUTOMATIC)).thenReturn(
+			List.of(mockAsset)
+		);
 
 		// WHEN
 		testSubject.processAutomaticLiabilityPayments();

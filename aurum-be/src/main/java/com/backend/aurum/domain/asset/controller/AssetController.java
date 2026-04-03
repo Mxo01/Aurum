@@ -1,7 +1,6 @@
 package com.backend.aurum.domain.asset.controller;
 
 import com.backend.aurum.domain.asset.dto.AssetDTO;
-import com.backend.aurum.domain.asset.dto.AssetStatusDTO;
 import com.backend.aurum.domain.asset.dto.CreateAssetDTO;
 import com.backend.aurum.domain.asset.dto.UpdateAssetDTO;
 import com.backend.aurum.domain.asset.facade.AssetFacade;
@@ -75,27 +74,6 @@ public class AssetController {
 		);
 		AssetDTO result = assetFacade.updateAssetLight(id, dto, userId);
 		log.info("AssetController#updateAsset - Asset updated successfully: assetId={}", id);
-		return ResponseEntity.ok(result);
-	}
-
-	@PatchMapping("/{id}/status")
-	public ResponseEntity<AssetDTO> patchAssetStatus(
-		@PathVariable UUID id,
-		@RequestBody AssetStatusDTO statusDto,
-		@AuthenticationPrincipal UserPrincipal principal
-	) {
-		UUID userId = principal.user().getId();
-		log.info(
-			"AssetController#patchAssetStatus - Request to patch status of assetId={} for userId={}, isActive={}",
-			id,
-			userId,
-			statusDto.getIsActive()
-		);
-		AssetDTO result = assetFacade.patchAssetStatus(id, statusDto, userId);
-		log.info(
-			"AssetController#patchAssetStatus - Asset status patched successfully: assetId={}",
-			id
-		);
 		return ResponseEntity.ok(result);
 	}
 

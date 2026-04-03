@@ -26,7 +26,6 @@ const buildMockAsset = (overrides: Partial<Asset> = {}): Asset => ({
 	categoryIcon: null,
 	type: faker.helpers.arrayElement(Object.values(AssetType)),
 	originalCurrency: faker.helpers.arrayElement(Object.values(Currency)),
-	isActive: true,
 	isFavorite: false,
 	...overrides
 });
@@ -303,74 +302,6 @@ describe("AssetService", () => {
 			httpController
 				.expectOne(
 					req => req.method === "DELETE" && req.url.endsWith(`/categories/${stubbedCategoryId}`)
-				)
-				.flush(null, { status: 500, statusText: "Server Error" });
-
-			// THEN
-			await expect(result).rejects.toThrow();
-		});
-	});
-
-	describe("patchAssetStatus", () => {
-		it("should make a PATCH request then refetch assets when activating", async () => {
-			// GIVEN
-			const stubbedAssetId = faker.string.uuid();
-			const stubbedChangedAt = faker.date.recent().toISOString();
-			const stubbedAssets = [buildMockAsset()];
-
-			// WHEN
-			const result = lastValueFrom(
-				testSubject.patchAssetStatus(stubbedAssetId, true, stubbedChangedAt)
-			);
-			httpController
-				.expectOne(
-					req => req.method === "PATCH" && req.url.endsWith(`/assets/${stubbedAssetId}/status`)
-				)
-				.flush(buildMockAsset());
-			httpController
-				.expectOne(req => req.method === "GET" && req.url.endsWith("/assets"))
-				.flush(stubbedAssets);
-
-			// THEN
-			const expectedAssets = await result;
-			expect(expectedAssets).toEqual(stubbedAssets);
-		});
-
-		it("should make a PATCH request then refetch assets when archiving", async () => {
-			// GIVEN
-			const stubbedAssetId = faker.string.uuid();
-			const stubbedChangedAt = faker.date.recent().toISOString();
-			const stubbedAssets = [buildMockAsset()];
-
-			// WHEN
-			const result = lastValueFrom(
-				testSubject.patchAssetStatus(stubbedAssetId, false, stubbedChangedAt)
-			);
-			httpController
-				.expectOne(
-					req => req.method === "PATCH" && req.url.endsWith(`/assets/${stubbedAssetId}/status`)
-				)
-				.flush(buildMockAsset());
-			httpController
-				.expectOne(req => req.method === "GET" && req.url.endsWith("/assets"))
-				.flush(stubbedAssets);
-
-			// THEN
-			const expectedAssets = await result;
-			expect(expectedAssets).toEqual(stubbedAssets);
-		});
-
-		it("should throw on error", async () => {
-			// GIVEN
-			const stubbedAssetId = faker.string.uuid();
-
-			// WHEN
-			const result = lastValueFrom(
-				testSubject.patchAssetStatus(stubbedAssetId, true, faker.date.recent().toISOString())
-			);
-			httpController
-				.expectOne(
-					req => req.method === "PATCH" && req.url.endsWith(`/assets/${stubbedAssetId}/status`)
 				)
 				.flush(null, { status: 500, statusText: "Server Error" });
 

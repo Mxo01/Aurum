@@ -1,10 +1,8 @@
 package com.backend.aurum.domain.asset.service;
 
 import com.backend.aurum.domain.asset.model.Asset;
-import com.backend.aurum.domain.asset.model.AssetStatusLog;
 import com.backend.aurum.domain.asset.model.Snapshot;
 import com.backend.aurum.domain.asset.repository.AssetRepository;
-import com.backend.aurum.domain.asset.repository.AssetStatusLogRepository;
 import com.backend.aurum.domain.asset.repository.SnapshotRepository;
 import com.backend.aurum.infrastructure.exception.AccessDeniedException;
 import com.backend.aurum.infrastructure.exception.NotFoundException;
@@ -25,25 +23,12 @@ public class AssetService {
 
 	private final AssetRepository assetRepository;
 	private final SnapshotRepository snapshotRepository;
-	private final AssetStatusLogRepository statusLogRepository;
 
 	@Transactional(readOnly = true)
 	public List<Asset> findAll(UUID userId) {
 		log.debug("AssetService#findAll - Fetching all assets for userId={}", userId);
 		List<Asset> assets = assetRepository.findByUserIdOrderByCreatedAtDesc(userId);
 		log.debug("AssetService#findAll - Found {} asset(s) for userId={}", assets.size(), userId);
-		return assets;
-	}
-
-	@Transactional(readOnly = true)
-	public List<Asset> findAllActive(UUID userId) {
-		log.debug("AssetService#findAllActive - Fetching active assets for userId={}", userId);
-		List<Asset> assets = assetRepository.findByUserIdAndIsActiveTrueOrderByCreatedAtDesc(userId);
-		log.debug(
-			"AssetService#findAllActive - Found {} active asset(s) for userId={}",
-			assets.size(),
-			userId
-		);
 		return assets;
 	}
 
@@ -80,12 +65,6 @@ public class AssetService {
 			savedAsset.getName()
 		);
 
-		AssetStatusLog statusLog = new AssetStatusLog();
-		statusLog.setAsset(savedAsset);
-		statusLog.setChangedAt(LocalDate.now());
-		statusLog.setIsActive(true);
-		statusLogRepository.save(statusLog);
-
 		if (initialValue != null && referenceDate != null) {
 			log.debug(
 				"AssetService#save - Creating initial snapshot for assetId={}, amount={}, date={}",
@@ -109,86 +88,23 @@ public class AssetService {
 	public Asset update(UUID id, Asset assetDetails, UUID userId) {
 		log.debug("AssetService#update - Updating assetId={} for userId={}", id, userId);
 		Asset asset = findById(id, userId);
-		boolean wasActive = Boolean.TRUE.equals(asset.getIsActive());
-		boolean willBeActive = Boolean.TRUE.equals(assetDetails.getIsActive());
 
 		asset.setName(assetDetails.getName());
 		if (assetDetails.getCategory() != null) {
 			asset.setCategory(assetDetails.getCategory());
 		}
 		asset.setOriginalCurrency(assetDetails.getOriginalCurrency());
-		asset.setIsActive(assetDetails.getIsActive());
 		asset.setUser(assetDetails.getUser());
 		asset.setLiabilityType(assetDetails.getLiabilityType());
 		asset.setPaymentFrequency(assetDetails.getPaymentFrequency());
 		asset.setPaymentAmount(assetDetails.getPaymentAmount());
-
-		if (!willBeActive) {
-			asset.setIsFavorite(false);
-		} else if (Boolean.TRUE.equals(assetDetails.getIsFavorite())) {
-			asset.setIsFavorite(true);
-		} else {
-			asset.setIsFavorite(false);
-		}
+		asset.setIsFavorite(Boolean.TRUE.equals(assetDetails.getIsFavorite()));
 
 		Asset updated = assetRepository.save(Objects.requireNonNull(asset));
-
-		if (wasActive != willBeActive) {
-			AssetStatusLog statusLog = new AssetStatusLog();
-			statusLog.setAsset(updated);
-			statusLog.setChangedAt(LocalDate.now());
-			statusLog.setIsActive(willBeActive);
-			statusLogRepository.save(statusLog);
-			log.debug(
-				"AssetService#update - Status change logged: assetId={}, isActive={}",
-				updated.getId(),
-				willBeActive
-			);
-		}
 		log.info(
 			"AssetService#update - Asset updated: assetId={}, name={}",
 			updated.getId(),
 			updated.getName()
-		);
-		return updated;
-	}
-
-	@Transactional
-	public Asset patchStatus(UUID id, boolean isActive, LocalDate changedAt, UUID userId) {
-		log.debug(
-			"AssetService#patchStatus - Patching status of assetId={} for userId={}, isActive={}, changedAt={}",
-			id,
-			userId,
-			isActive,
-			changedAt
-		);
-		Asset asset = findById(id, userId);
-		LocalDate effectiveDate = changedAt != null ? changedAt : LocalDate.now();
-
-		AssetStatusLog statusLog = new AssetStatusLog();
-		statusLog.setAsset(asset);
-		statusLog.setChangedAt(effectiveDate);
-		statusLog.setIsActive(isActive);
-		statusLogRepository.save(statusLog);
-		log.debug(
-			"AssetService#patchStatus - Status log entry created: assetId={}, isActive={}, changedAt={}",
-			id,
-			isActive,
-			effectiveDate
-		);
-
-		// Always apply the explicitly requested status — the changedAt date is for historical
-		// logging only and does not drive the current asset state.
-		asset.setIsActive(isActive);
-		if (!isActive) {
-			asset.setIsFavorite(false);
-		}
-
-		Asset updated = assetRepository.save(asset);
-		log.info(
-			"AssetService#patchStatus - Asset status updated: assetId={}, isActive={}",
-			updated.getId(),
-			isActive
 		);
 		return updated;
 	}

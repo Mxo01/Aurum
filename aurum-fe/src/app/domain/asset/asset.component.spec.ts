@@ -8,8 +8,6 @@ import { FormsModule, ReactiveFormsModule } from "@angular/forms";
 import { RouterLink } from "@angular/router";
 import { Button } from "primeng/button";
 import { TableModule } from "primeng/table";
-import { DatePicker } from "primeng/datepicker";
-import { Dialog } from "primeng/dialog";
 import { AssetComponent } from "./asset.component";
 import { AssetService } from "./asset.service";
 import { ProfileService } from "../profile/profile.service";
@@ -32,7 +30,6 @@ const buildMockAsset = (overrides: Partial<Asset> = {}): Asset => ({
 	categoryIcon: null,
 	type: AssetType.ASSET,
 	originalCurrency: Currency.EUR,
-	isActive: true,
 	isFavorite: false,
 	latestValue: faker.number.float({ min: 100, max: 10000 }),
 	latestValueBase: faker.number.float({ min: 100, max: 10000 }),
@@ -64,16 +61,13 @@ describe("AssetComponent", () => {
 				MockModule(ReactiveFormsModule),
 				MockDirective(RouterLink),
 				MockComponent(AssetHistoryComponent),
-				MockComponent(AssetTableComponent),
-				MockComponent(Dialog),
-				MockComponent(DatePicker)
+				MockComponent(AssetTableComponent)
 			],
 			providers: [
 				MockProvider(AssetService, {
 					getAssets: vi.fn().mockReturnValue(of([])),
 					getAssetCategories: vi.fn().mockReturnValue(of([])),
 					saveAsset: vi.fn().mockReturnValue(of([])),
-					patchAssetStatus: vi.fn().mockReturnValue(of([])),
 					deleteAssetPermanently: vi.fn().mockReturnValue(of([]))
 				}),
 				MockProvider(ConfirmationService),
@@ -164,68 +158,6 @@ describe("AssetComponent", () => {
 			// THEN
 			expect(testSubject.selectedAsset()?.id).toBe(mockAsset.id);
 			expect(testSubject.isDrawerVisible()).toBe(true);
-		});
-	});
-
-	describe("toggleAssetStatus", () => {
-		it("should set pending status toggle and open the status dialog", () => {
-			// GIVEN
-			const mockAsset = buildMockAsset({ isActive: true });
-
-			// WHEN
-			testSubject.toggleAssetStatus(mockAsset);
-
-			// THEN
-			expect(testSubject.isStatusDialogVisible()).toBe(true);
-		});
-	});
-
-	describe("cancelStatusToggle", () => {
-		it("should close the status dialog and clear the pending toggle", () => {
-			// GIVEN
-			const mockAsset = buildMockAsset();
-			testSubject.toggleAssetStatus(mockAsset);
-
-			// WHEN
-			testSubject.cancelStatusToggle();
-
-			// THEN
-			expect(testSubject.isStatusDialogVisible()).toBe(false);
-			expect(testSubject.pendingStatusToggle()).toBeNull();
-		});
-	});
-
-	describe("confirmStatusToggle", () => {
-		it("should do nothing when pendingStatusToggle is null", () => {
-			// GIVEN
-			testSubject.pendingStatusToggle.set(null);
-			const patchAssetStatus = vi.spyOn(mockAssetService, "patchAssetStatus");
-
-			// WHEN
-			testSubject.confirmStatusToggle();
-
-			// THEN
-			expect(patchAssetStatus).not.toHaveBeenCalled();
-		});
-
-		it("should call patchAssetStatus with asset id and new status and update assets on success", () => {
-			// GIVEN
-			const mockAsset = buildMockAsset({ isActive: true });
-			const stubbedAssets = [{ ...mockAsset, isActive: false }];
-			testSubject.pendingStatusToggle.set({ asset: mockAsset, newStatus: false });
-			const patchAssetStatus = vi
-				.spyOn(mockAssetService, "patchAssetStatus")
-				.mockReturnValue(of(stubbedAssets));
-
-			// WHEN
-			testSubject.confirmStatusToggle();
-			fixture.detectChanges();
-
-			// THEN
-			expect(patchAssetStatus).toHaveBeenCalledWith(mockAsset.id, false, expect.any(String));
-			expect(testSubject.assets()).toHaveLength(1);
-			expect(testSubject.isStatusDialogVisible()).toBe(false);
-			expect(testSubject.isSaveLoading()).toBe(false);
 		});
 	});
 
