@@ -29,6 +29,9 @@ public class SnapshotValidationService {
 		if (dto.getAmountOriginalCurrency() == null) {
 			throw new IllegalArgumentException("Amount is required");
 		}
+		if (dto.getAmountOriginalCurrency().compareTo(BigDecimal.ZERO) < 0) {
+			throw new IllegalArgumentException("Amount must be non-negative");
+		}
 		if (
 			dto.getExchangeRateToBase() != null &&
 			dto.getExchangeRateToBase().compareTo(BigDecimal.ZERO) <= 0
@@ -59,6 +62,9 @@ public class SnapshotValidationService {
 		}
 		if (dto.getAmountOriginalCurrency() == null) {
 			throw new IllegalArgumentException("Amount is required");
+		}
+		if (dto.getAmountOriginalCurrency().compareTo(BigDecimal.ZERO) < 0) {
+			throw new IllegalArgumentException("Amount must be non-negative");
 		}
 		if (
 			dto.getExchangeRateToBase() != null &&
