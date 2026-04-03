@@ -110,10 +110,45 @@ class SnapshotValidationServiceTest {
 	}
 
 	@Test
+	void validate_throwsWhenAmountIsNegative() {
+		// GIVEN
+		UUID mockUserId = UUID.randomUUID();
+		CreateSnapshotDTO mockDto = Instancio.of(CreateSnapshotDTO.class)
+			.set(Select.field(CreateSnapshotDTO::getAmountOriginalCurrency), new BigDecimal("-1"))
+			.create();
+
+		// WHEN / THEN
+		assertThatThrownBy(() -> testSubject.validate(mockDto, mockUserId)).isInstanceOf(
+			IllegalArgumentException.class
+		);
+	}
+
+	@Test
+	void validate_doesNotThrowWhenAmountIsZero() {
+		// GIVEN
+		UUID mockUserId = UUID.randomUUID();
+		User mockUser = Instancio.of(User.class).set(Select.field(User::getId), mockUserId).create();
+		Asset mockAsset = Instancio.of(Asset.class)
+			.set(Select.field(Asset::getUser), mockUser)
+			.create();
+		CreateSnapshotDTO mockDto = Instancio.of(CreateSnapshotDTO.class)
+			.set(Select.field(CreateSnapshotDTO::getAssetId), mockAsset.getId())
+			.set(Select.field(CreateSnapshotDTO::getAmountOriginalCurrency), BigDecimal.ZERO)
+			.set(Select.field(CreateSnapshotDTO::getExchangeRateToBase), new BigDecimal("1.5"))
+			.create();
+		when(assetRepository.findById(mockAsset.getId())).thenReturn(Optional.of(mockAsset));
+
+		// WHEN / THEN
+		assertThatCode(() -> testSubject.validate(mockDto, mockUserId)).doesNotThrowAnyException();
+	}
+
+	@Test
 	void validate_throwsWhenAssetNotFound() {
 		// GIVEN
 		UUID mockUserId = UUID.randomUUID();
-		CreateSnapshotDTO mockDto = Instancio.create(CreateSnapshotDTO.class);
+		CreateSnapshotDTO mockDto = Instancio.of(CreateSnapshotDTO.class)
+			.set(Select.field(CreateSnapshotDTO::getAmountOriginalCurrency), new BigDecimal("100"))
+			.create();
 		when(assetRepository.findById(mockDto.getAssetId())).thenReturn(Optional.empty());
 
 		// WHEN / THEN
@@ -154,6 +189,7 @@ class SnapshotValidationServiceTest {
 			.create();
 		CreateSnapshotDTO mockDto = Instancio.of(CreateSnapshotDTO.class)
 			.set(Select.field(CreateSnapshotDTO::getAssetId), mockAsset.getId())
+			.set(Select.field(CreateSnapshotDTO::getAmountOriginalCurrency), new BigDecimal("500"))
 			.set(Select.field(CreateSnapshotDTO::getExchangeRateToBase), new BigDecimal("1.5"))
 			.create();
 		when(assetRepository.findById(mockAsset.getId())).thenReturn(Optional.of(mockAsset));
