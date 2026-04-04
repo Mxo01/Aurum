@@ -10,23 +10,23 @@
 	<ng-template #header>
 		<tr>
 			<th
-				class="tracking-wider text-sm uppercase"
+				class="tracking-wider text-sm uppercase whitespace-nowrap"
 				style="width: 8%"
 			></th>
 			<th
-				class="tracking-wider text-sm uppercase"
+				class="tracking-wider text-sm uppercase whitespace-nowrap"
 				style="width: 22%"
 			>
 				Name
 			</th>
 			<th
-				class="tracking-wider text-sm uppercase"
+				class="tracking-wider text-sm uppercase whitespace-nowrap"
 				style="width: 15%"
 			>
 				Type
 			</th>
 			<th
-				class="tracking-wider text-sm uppercase"
+				class="tracking-wider text-sm uppercase whitespace-nowrap"
 				style="width: 25%"
 			>
 				<div class="flex items-center gap-3">
@@ -39,7 +39,7 @@
 				</div>
 			</th>
 			<th
-				class="tracking-wider text-sm uppercase"
+				class="tracking-wider text-sm uppercase whitespace-nowrap"
 				style="width: 17%"
 			>
 				Trend
@@ -52,7 +52,10 @@
 		let-expanded="expanded"
 	>
 		<tr>
-			<td colspan="5">
+			<td
+				colspan="5"
+				class="whitespace-nowrap"
+			>
 				<div class="flex items-center gap-2">
 					<p-button
 						[pRowToggler]="asset"
@@ -75,7 +78,7 @@
 		let-asset
 	>
 		<tr>
-			<td>
+			<td class="whitespace-nowrap">
 				<p-button
 					icon="pi pi-cog"
 					[text]="true"
@@ -83,7 +86,7 @@
 					size="small"
 				/>
 			</td>
-			<td>
+			<td class="whitespace-nowrap">
 				<div class="flex items-center gap-2">
 					@if (asset.isFavorite) {
 						<i class="pi pi-bookmark-fill"></i>
@@ -91,7 +94,7 @@
 					<span class="uppercase tracking-wider">{{ asset.name }}</span>
 				</div>
 			</td>
-			<td>
+			<td class="whitespace-nowrap">
 				<p-tag
 					class="whitespace-nowrap"
 					[value]="asset.type === AssetType.ASSET ? 'Asset' : 'Liability'"
@@ -101,7 +104,7 @@
 				/>
 			</td>
 			<td
-				class="text-right font-mono"
+				class="text-right font-mono whitespace-nowrap"
 				[pEditableColumn]="asset.currentValue"
 				pEditableColumnField="currentValue"
 			>
@@ -129,7 +132,7 @@
 					</ng-template>
 				</p-cellEditor>
 			</td>
-			<td class="text-right font-mono">
+			<td class="text-right font-mono whitespace-nowrap">
 				@if (asset.trend !== null) {
 					<span
 						class="whitespace-nowrap text-sm font-medium font-mono"
@@ -158,11 +161,11 @@
 		<tr class="font-semibold">
 			<td
 				colspan="3"
-				class="font-medium uppercase tracking-wider text-stone-400 text-sm"
+				class="font-medium uppercase tracking-wider text-stone-400 text-sm whitespace-nowrap"
 			>
 				Total
 			</td>
-			<td class="font-mono">
+			<td class="font-mono whitespace-nowrap">
 				<p-tag
 					class="whitespace-nowrap"
 					[rounded]="true"

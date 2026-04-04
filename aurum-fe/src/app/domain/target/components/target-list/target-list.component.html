@@ -15,13 +15,13 @@
 	>
 		<ng-template #header>
 			<tr>
-				<th>Name</th>
-				<th class="text-right">Target</th>
-				<th class="text-right">Current</th>
-				<th class="text-center">Progress</th>
-				<th class="text-center">Deadline</th>
-				<th class="text-center">Status</th>
-				<th class="text-center">Actions</th>
+				<th class="whitespace-nowrap">Name</th>
+				<th class="text-right whitespace-nowrap">Target</th>
+				<th class="text-right whitespace-nowrap">Current</th>
+				<th class="text-center whitespace-nowrap">Progress</th>
+				<th class="text-center whitespace-nowrap">Deadline</th>
+				<th class="text-center whitespace-nowrap">Status</th>
+				<th class="text-center whitespace-nowrap">Actions</th>
 			</tr>
 		</ng-template>
 		<ng-template
@@ -29,14 +29,14 @@
 			let-target
 		>
 			<tr>
-				<td class="font-medium">{{ target.name }}</td>
-				<td class="text-right font-mono">
+				<td class="font-medium whitespace-nowrap">{{ target.name }}</td>
+				<td class="text-right font-mono whitespace-nowrap">
 					{{ target.targetAmount | privacyCurrency: currency() : "symbol" : "1.2-2" : locale() }}
 				</td>
-				<td class="text-right font-mono">
+				<td class="text-right font-mono whitespace-nowrap">
 					{{ target.currentAmount | privacyCurrency: currency() : "symbol" : "1.2-2" : locale() }}
 				</td>
-				<td class="text-center">
+				<td class="text-center whitespace-nowrap">
 					<div class="relative">
 						<p-progressbar
 							[value]="target.completionPercentage | number: '1.0-0'"
@@ -52,14 +52,14 @@
 				<td class="text-center whitespace-nowrap">
 					{{ target.deadline | date: "mediumDate" }}
 				</td>
-				<td class="text-center">
+				<td class="text-center whitespace-nowrap">
 					<p-tag
 						class="whitespace-nowrap"
 						[value]="statusLabel(target.status)"
 						[severity]="statusSeverity(target.status)"
 					/>
 				</td>
-				<td class="text-center">
+				<td class="text-center whitespace-nowrap">
 					<div class="flex justify-center gap-2">
 						<p-button
 							icon="pi pi-pencil"

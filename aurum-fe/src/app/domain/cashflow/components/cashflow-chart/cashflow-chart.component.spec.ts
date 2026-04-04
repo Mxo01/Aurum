@@ -6,6 +6,7 @@ import { CashflowChartComponent } from "./cashflow-chart.component";
 import { CashFlowEntry } from "../../model/cashflow.model";
 import { Currency } from "../../../profile/model/currency.model";
 import { Locale } from "../../../profile/model/locale.model";
+import { DOCUMENT } from "@angular/common";
 
 const buildMockEntry = (month: number, earned = 1000, spent = 500): CashFlowEntry => ({
 	id: null,
@@ -20,7 +21,8 @@ describe("CashflowChartComponent", () => {
 
 	beforeEach(() => {
 		TestBed.configureTestingModule({
-			imports: [CashflowChartComponent, MockModule(ChartModule), MockComponent(Skeleton)]
+			imports: [CashflowChartComponent, MockModule(ChartModule), MockComponent(Skeleton)],
+			providers: [{ provide: DOCUMENT, useValue: document }]
 		});
 		fixture = TestBed.createComponent(CashflowChartComponent);
 		testSubject = fixture.componentInstance;

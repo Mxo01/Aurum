@@ -43,6 +43,8 @@ export function mapCashFlowToChartData(entries: CashFlowEntry[]): {
 	};
 }
 
+const MOBILE_CHART_WIDTH_THRESHOLD = 500;
+
 export function buildBarLabelsPlugin(
 	currencySymbol: string,
 	isDarkMode: boolean,
@@ -54,6 +56,8 @@ export function buildBarLabelsPlugin(
 	return {
 		id: "cashflowBarLabels",
 		afterDatasetsDraw(chart: Chart<"bar">) {
+			if (chart.width < MOBILE_CHART_WIDTH_THRESHOLD) return;
+
 			const { ctx } = chart;
 			ctx.save();
 			ctx.font = font;
@@ -92,7 +96,8 @@ export function getCashFlowChartOptions(
 	isDarkMode: boolean,
 	locale: string,
 	isPrivacyMode: boolean = false,
-	entries: CashFlowEntry[] = []
+	entries: CashFlowEntry[] = [],
+	isMobile: boolean = false
 ): ChartConfiguration["options"] {
 	const textColor = isDarkMode ? "rgba(255,255,255,0.4)" : "rgba(0,0,0,0.35)";
 	const t = getChartTooltipStyle(isDarkMode);
@@ -194,7 +199,9 @@ export function getCashFlowChartOptions(
 			x: {
 				grid: { display: false },
 				border: { display: false },
-				ticks: { color: textColor, font: { size: 11 } }
+				ticks: isMobile
+					? { display: false }
+					: { color: textColor, font: { size: 11 } }
 			},
 			y: {
 				display: false,

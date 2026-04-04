@@ -147,4 +147,24 @@ describe("getCashFlowChartOptions", () => {
 		// THEN
 		expect(result.layout.padding.top).toBe(20);
 	});
+
+	it("should show x axis ticks when not mobile", () => {
+		// WHEN
+		const result = getCashFlowChartOptions("€", false, "en-US", false, [], false) as {
+			scales: { x: { ticks: { display?: boolean } } };
+		};
+
+		// THEN
+		expect(result.scales.x.ticks.display).not.toBe(false);
+	});
+
+	it("should hide x axis ticks when mobile", () => {
+		// WHEN
+		const result = getCashFlowChartOptions("€", false, "en-US", false, [], true) as {
+			scales: { x: { ticks: { display: boolean } } };
+		};
+
+		// THEN
+		expect(result.scales.x.ticks.display).toBe(false);
+	});
 });
