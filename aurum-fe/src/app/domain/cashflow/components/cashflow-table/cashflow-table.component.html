@@ -72,7 +72,7 @@
 		let-row
 	>
 		<tr>
-			<td>
+			<td class="whitespace-nowrap">
 				<span
 					class="font-mono font-semibold text-zinc-500 dark:text-zinc-400 text-xs uppercase tracking-widest"
 				>
@@ -81,7 +81,7 @@
 			</td>
 
 			<td
-				class="font-mono"
+				class="font-mono whitespace-nowrap"
 				[pEditableColumn]="getEditingValue(row.month, 'earned', row.earned)"
 				pEditableColumnField="earned"
 			>
@@ -111,7 +111,7 @@
 			</td>
 
 			<td
-				class="font-mono"
+				class="font-mono whitespace-nowrap"
 				[pEditableColumn]="getEditingValue(row.month, 'spent', row.spent)"
 				pEditableColumnField="spent"
 			>
@@ -140,7 +140,7 @@
 				</p-cellEditor>
 			</td>
 
-			<td class="font-mono">
+			<td class="font-mono whitespace-nowrap">
 				<span
 					class="font-semibold"
 					[class]="row.balance >= 0 ? 'text-green-500' : 'text-red-400'"
@@ -150,7 +150,7 @@
 				</span>
 			</td>
 
-			<td class="font-mono">
+			<td class="font-mono whitespace-nowrap">
 				@if (row.deltaPercent !== null) {
 					<span
 						class="font-mono flex flex-nowrap items-center gap-2"
@@ -169,14 +169,14 @@
 			</td>
 
 			@if (hasPrevYearData()) {
-				<td class="font-mono text-zinc-400 dark:text-zinc-500">
+				<td class="font-mono text-zinc-400 dark:text-zinc-500 whitespace-nowrap">
 					@if (row.prevYearEarned !== null) {
 						{{ row.prevYearEarned | privacyCurrency: currency() : "symbol" : "1.0-0" : locale() }}
 					} @else {
 						<span class="italic">—</span>
 					}
 				</td>
-				<td class="font-mono text-zinc-400 dark:text-zinc-500">
+				<td class="font-mono text-zinc-400 dark:text-zinc-500 whitespace-nowrap">
 					@if (row.prevYearSpent !== null) {
 						{{ row.prevYearSpent | privacyCurrency: currency() : "symbol" : "1.0-0" : locale() }}
 					} @else {
@@ -189,26 +189,26 @@
 
 	<ng-template #footer>
 		<tr class="font-semibold border-t-2 border-surface-200 dark:border-surface-700">
-			<td class="text-xs uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Total</td>
-			<td class="font-mono font-bold">
+			<td class="text-xs uppercase tracking-wider text-zinc-400 dark:text-zinc-500 whitespace-nowrap">Total</td>
+			<td class="font-mono font-bold whitespace-nowrap">
 				{{ totalEarned() | privacyCurrency: currency() : "symbol" : "1.2-2" : locale() }}
 			</td>
-			<td class="font-mono font-bold">
+			<td class="font-mono font-bold whitespace-nowrap">
 				{{ totalSpent() | privacyCurrency: currency() : "symbol" : "1.2-2" : locale() }}
 			</td>
 			<td
-				class="font-mono font-bold"
+				class="font-mono font-bold whitespace-nowrap"
 				[class]="totalBalance() >= 0 ? 'text-green-500!' : 'text-red-400!'"
 			>
 				{{ totalBalance() >= 0 ? "+" : ""
 				}}{{ totalBalance() | privacyCurrency: currency() : "symbol" : "1.2-2" : locale() }}
 			</td>
-			<td></td>
+			<td class="whitespace-nowrap"></td>
 			@if (hasPrevYearData()) {
-				<td class="font-mono text-zinc-400 dark:text-zinc-500">
+				<td class="font-mono text-zinc-400 dark:text-zinc-500 whitespace-nowrap">
 					{{ prevYearTotalEarned() | privacyCurrency: currency() : "symbol" : "1.0-0" : locale() }}
 				</td>
-				<td class="font-mono text-zinc-400 dark:text-zinc-500">
+				<td class="font-mono text-zinc-400 dark:text-zinc-500 whitespace-nowrap">
 					{{ prevYearTotalSpent() | privacyCurrency: currency() : "symbol" : "1.0-0" : locale() }}
 				</td>
 			}

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, input } from "@angular/core";
+import { ChangeDetectionStrategy, Component, computed, inject, input } from "@angular/core";
 import { ChartModule } from "primeng/chart";
 import { Skeleton } from "primeng/skeleton";
 import { CashFlowEntry } from "../../model/cashflow.model";
@@ -10,6 +10,10 @@ import {
 	getCashFlowChartOptions,
 	mapCashFlowToChartData
 } from "./cashflow-chart.utils";
+import { DOCUMENT } from "@angular/common";
+import { fromEvent } from "rxjs";
+import { map, startWith } from "rxjs/operators";
+import { toSignal } from "@angular/core/rxjs-interop";
 
 @Component({
 	selector: "app-cashflow-chart",
@@ -25,6 +29,15 @@ export class CashflowChartComponent {
 	locale = input.required<Locale>();
 	isDarkMode = input.required<boolean>();
 	isPrivacyMode = input.required<boolean>();
+
+	private readonly window = inject(DOCUMENT).defaultView!;
+	private readonly isMobile = toSignal(
+		fromEvent(this.window, "resize").pipe(
+			startWith(null),
+			map(() => this.window.innerWidth < 640)
+		),
+		{ initialValue: this.window.innerWidth < 640 }
+	);
 
 	readonly chartData = computed(() => {
 		const e = this.entries();
@@ -43,7 +56,8 @@ export class CashflowChartComponent {
 			this.isDarkMode(),
 			this.locale(),
 			this.isPrivacyMode(),
-			this.entries()
+			this.entries(),
+			this.isMobile()
 		)
 	);
 	readonly chartPlugins = computed(() => [
