@@ -199,9 +199,7 @@ export function getCashFlowChartOptions(
 			x: {
 				grid: { display: false },
 				border: { display: false },
-				ticks: isMobile
-					? { display: false }
-					: { color: textColor, font: { size: 11 } }
+				ticks: isMobile ? { display: false } : { color: textColor, font: { size: 11 } }
 			},
 			y: {
 				display: false,

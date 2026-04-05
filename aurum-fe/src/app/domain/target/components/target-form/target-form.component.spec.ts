@@ -100,6 +100,32 @@ describe("TargetFormComponent", () => {
 		});
 	});
 
+	describe("name field validation", () => {
+		it("should mark the name control invalid when it exceeds 100 characters", () => {
+			// GIVEN
+			fixture.componentRef.setInput("selectedTarget", null);
+			fixture.detectChanges();
+
+			// WHEN
+			testSubject.targetForm.controls.name.setValue("a".repeat(101));
+
+			// THEN
+			expect(testSubject.targetForm.controls.name.hasError("maxlength")).toBe(true);
+		});
+
+		it("should mark the name control valid at exactly 100 characters", () => {
+			// GIVEN
+			fixture.componentRef.setInput("selectedTarget", null);
+			fixture.detectChanges();
+
+			// WHEN
+			testSubject.targetForm.controls.name.setValue("a".repeat(100));
+
+			// THEN
+			expect(testSubject.targetForm.controls.name.valid).toBe(true);
+		});
+	});
+
 	describe("onSubmit", () => {
 		it("should emit the save output with the correctly formatted target", () => {
 			// GIVEN

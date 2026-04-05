@@ -15,6 +15,9 @@ public class AssetValidationService {
 		if (!StringUtils.hasText(dto.getName())) {
 			throw new IllegalArgumentException("Asset name is required");
 		}
+		if (dto.getName().length() > 100) {
+			throw new IllegalArgumentException("Asset name must not exceed 100 characters");
+		}
 		if (dto.getCategoryId() == null) {
 			throw new IllegalArgumentException("Asset category is required");
 		}
@@ -26,6 +29,9 @@ public class AssetValidationService {
 		}
 		if (!StringUtils.hasText(dto.getName())) {
 			throw new IllegalArgumentException("Asset name is required");
+		}
+		if (dto.getName().length() > 100) {
+			throw new IllegalArgumentException("Asset name must not exceed 100 characters");
 		}
 	}
 }

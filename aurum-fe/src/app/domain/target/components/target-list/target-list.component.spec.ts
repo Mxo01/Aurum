@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from "@angular/core/testing";
 import { faker } from "@faker-js/faker";
-import { MockComponent, MockModule, MockPipe } from "ng-mocks";
+import { MockComponent, MockDirective, MockModule, MockPipe } from "ng-mocks";
 import { CommonModule, DecimalPipe } from "@angular/common";
 import { PrivacyCurrencyPipe } from "../../../../shared/pipes/privacy-currency.pipe";
 import { TableModule } from "primeng/table";
@@ -8,6 +8,7 @@ import { Tag } from "primeng/tag";
 import { Button } from "primeng/button";
 import { Dialog } from "primeng/dialog";
 import { ProgressBar } from "primeng/progressbar";
+import { Tooltip } from "primeng/tooltip";
 import { TargetListComponent } from "./target-list.component";
 import { Target, TargetStatus, TargetType } from "../../model/target.model";
 import { Currency } from "../../../profile/model/currency.model";
@@ -35,6 +36,7 @@ describe("TargetListComponent", () => {
 				MockComponent(Button),
 				MockComponent(Dialog),
 				MockComponent(ProgressBar),
+				MockDirective(Tooltip),
 				MockPipe(PrivacyCurrencyPipe),
 				MockPipe(DecimalPipe)
 			]

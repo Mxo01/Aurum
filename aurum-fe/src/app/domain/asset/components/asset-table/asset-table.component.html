@@ -64,7 +64,13 @@
 						[icon]="expanded ? 'pi pi-chevron-down' : 'pi pi-chevron-right'"
 					/>
 					<i class="pi {{ asset.categoryIcon || 'pi-question' }} text-sm text-surface-500"></i>
-					<span class="font-bold">{{ asset.categoryName }}</span>
+					<span
+						class="font-bold truncate max-w-[200px]"
+						[pTooltip]="asset.categoryName"
+						tooltipPosition="top"
+					>
+						{{ asset.categoryName }}
+					</span>
 					<p-badge
 						[value]="categoryCounts()[asset.categoryName]?.toString()"
 						severity="secondary"
@@ -86,12 +92,18 @@
 					size="small"
 				/>
 			</td>
-			<td class="whitespace-nowrap">
-				<div class="flex items-center gap-2">
+			<td class="max-w-0 overflow-hidden">
+				<div class="flex items-center gap-2 min-w-0">
 					@if (asset.isFavorite) {
-						<i class="pi pi-bookmark-fill"></i>
+						<i class="pi pi-bookmark-fill shrink-0"></i>
 					}
-					<span class="uppercase tracking-wider">{{ asset.name }}</span>
+					<span
+						class="uppercase tracking-wider truncate"
+						[pTooltip]="asset.name"
+						tooltipPosition="top"
+					>
+						{{ asset.name }}
+					</span>
 				</div>
 			</td>
 			<td class="whitespace-nowrap">

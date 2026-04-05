@@ -56,9 +56,38 @@ class AssetCategoryValidationServiceTest {
 	}
 
 	@Test
+	void validate_createDto_throwsWhenNameExceedsMaxLength() {
+		// GIVEN
+		CreateAssetCategoryDTO mockDto = Instancio.of(CreateAssetCategoryDTO.class)
+			.set(Select.field(CreateAssetCategoryDTO::getName), "a".repeat(101))
+			.create();
+
+		// WHEN / THEN
+		assertThatThrownBy(() -> testSubject.validate(mockDto)).isInstanceOf(
+			IllegalArgumentException.class
+		);
+	}
+
+	@Test
+	void validate_createDto_throwsWhenIconExceedsMaxLength() {
+		// GIVEN
+		CreateAssetCategoryDTO mockDto = Instancio.of(CreateAssetCategoryDTO.class)
+			.set(Select.field(CreateAssetCategoryDTO::getIcon), "a".repeat(51))
+			.create();
+
+		// WHEN / THEN
+		assertThatThrownBy(() -> testSubject.validate(mockDto)).isInstanceOf(
+			IllegalArgumentException.class
+		);
+	}
+
+	@Test
 	void validate_createDto_doesNotThrowForValidDto() {
 		// GIVEN
-		CreateAssetCategoryDTO mockDto = Instancio.create(CreateAssetCategoryDTO.class);
+		CreateAssetCategoryDTO mockDto = Instancio.of(CreateAssetCategoryDTO.class)
+			.set(Select.field(CreateAssetCategoryDTO::getName), "a".repeat(100))
+			.set(Select.field(CreateAssetCategoryDTO::getIcon), "pi-bitcoin")
+			.create();
 
 		// WHEN / THEN
 		assertThatCode(() -> testSubject.validate(mockDto)).doesNotThrowAnyException();
@@ -102,9 +131,38 @@ class AssetCategoryValidationServiceTest {
 	}
 
 	@Test
+	void validate_updateDto_throwsWhenNameExceedsMaxLength() {
+		// GIVEN
+		UpdateAssetCategoryDTO mockDto = Instancio.of(UpdateAssetCategoryDTO.class)
+			.set(Select.field(UpdateAssetCategoryDTO::getName), "a".repeat(101))
+			.create();
+
+		// WHEN / THEN
+		assertThatThrownBy(() -> testSubject.validate(mockDto)).isInstanceOf(
+			IllegalArgumentException.class
+		);
+	}
+
+	@Test
+	void validate_updateDto_throwsWhenIconExceedsMaxLength() {
+		// GIVEN
+		UpdateAssetCategoryDTO mockDto = Instancio.of(UpdateAssetCategoryDTO.class)
+			.set(Select.field(UpdateAssetCategoryDTO::getIcon), "a".repeat(51))
+			.create();
+
+		// WHEN / THEN
+		assertThatThrownBy(() -> testSubject.validate(mockDto)).isInstanceOf(
+			IllegalArgumentException.class
+		);
+	}
+
+	@Test
 	void validate_updateDto_doesNotThrowForValidDto() {
 		// GIVEN
-		UpdateAssetCategoryDTO mockDto = Instancio.create(UpdateAssetCategoryDTO.class);
+		UpdateAssetCategoryDTO mockDto = Instancio.of(UpdateAssetCategoryDTO.class)
+			.set(Select.field(UpdateAssetCategoryDTO::getName), "a".repeat(100))
+			.set(Select.field(UpdateAssetCategoryDTO::getIcon), "pi-bitcoin")
+			.create();
 
 		// WHEN / THEN
 		assertThatCode(() -> testSubject.validate(mockDto)).doesNotThrowAnyException();

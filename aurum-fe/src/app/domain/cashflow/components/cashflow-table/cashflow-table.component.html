@@ -189,7 +189,11 @@
 
 	<ng-template #footer>
 		<tr class="font-semibold border-t-2 border-surface-200 dark:border-surface-700">
-			<td class="text-xs uppercase tracking-wider text-zinc-400 dark:text-zinc-500 whitespace-nowrap">Total</td>
+			<td
+				class="text-xs uppercase tracking-wider text-zinc-400 dark:text-zinc-500 whitespace-nowrap"
+			>
+				Total
+			</td>
 			<td class="font-mono font-bold whitespace-nowrap">
 				{{ totalEarned() | privacyCurrency: currency() : "symbol" : "1.2-2" : locale() }}
 			</td>

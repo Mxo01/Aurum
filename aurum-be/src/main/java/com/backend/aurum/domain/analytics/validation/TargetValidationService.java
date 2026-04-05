@@ -16,6 +16,9 @@ public class TargetValidationService {
 		if (!StringUtils.hasText(dto.getName())) {
 			throw new IllegalArgumentException("Target name is required");
 		}
+		if (dto.getName().length() > 100) {
+			throw new IllegalArgumentException("Target name must not exceed 100 characters");
+		}
 		if (dto.getTargetAmount() == null || dto.getTargetAmount().compareTo(BigDecimal.ZERO) <= 0) {
 			throw new IllegalArgumentException("Target amount must be positive");
 		}
@@ -27,6 +30,9 @@ public class TargetValidationService {
 		}
 		if (!StringUtils.hasText(dto.getName())) {
 			throw new IllegalArgumentException("Target name is required");
+		}
+		if (dto.getName().length() > 100) {
+			throw new IllegalArgumentException("Target name must not exceed 100 characters");
 		}
 		if (dto.getTargetAmount() == null || dto.getTargetAmount().compareTo(BigDecimal.ZERO) <= 0) {
 			throw new IllegalArgumentException("Target amount must be positive");

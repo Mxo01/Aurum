@@ -15,6 +15,12 @@ public class AssetCategoryValidationService {
 		if (!StringUtils.hasText(dto.getName())) {
 			throw new IllegalArgumentException("Category name is required");
 		}
+		if (dto.getName().length() > 100) {
+			throw new IllegalArgumentException("Category name must not exceed 100 characters");
+		}
+		if (dto.getIcon() != null && dto.getIcon().length() > 50) {
+			throw new IllegalArgumentException("Category icon must not exceed 50 characters");
+		}
 		if (dto.getType() == null) {
 			throw new IllegalArgumentException("Category type is required");
 		}
@@ -26,6 +32,12 @@ public class AssetCategoryValidationService {
 		}
 		if (!StringUtils.hasText(dto.getName())) {
 			throw new IllegalArgumentException("Category name is required");
+		}
+		if (dto.getName().length() > 100) {
+			throw new IllegalArgumentException("Category name must not exceed 100 characters");
+		}
+		if (dto.getIcon() != null && dto.getIcon().length() > 50) {
+			throw new IllegalArgumentException("Category icon must not exceed 50 characters");
 		}
 		if (dto.getType() == null) {
 			throw new IllegalArgumentException("Category type is required");

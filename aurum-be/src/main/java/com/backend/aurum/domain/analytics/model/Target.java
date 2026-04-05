@@ -24,7 +24,7 @@ public class Target {
 	@JoinColumn(name = "user_id", nullable = false)
 	private User user;
 
-	@Column(nullable = false)
+	@Column(nullable = false, length = 100)
 	private String name;
 
 	@Column(nullable = false, precision = 19, scale = 4)

@@ -42,7 +42,7 @@ export class CategoryFormComponent {
 	readonly icons = signal(categoryIcons);
 	readonly selectedIcon = signal<string | null>(null);
 	readonly categoryForm = new FormGroup({
-		name: new FormControl<string>("", Validators.required),
+		name: new FormControl<string>("", [Validators.required, Validators.maxLength(100)]),
 		type: new FormControl<AssetType | null>(null, Validators.required),
 		icon: new FormControl<string | null>(null)
 	});

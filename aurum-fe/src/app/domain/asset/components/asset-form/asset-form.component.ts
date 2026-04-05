@@ -62,7 +62,7 @@ export class AssetFormComponent implements OnInit {
 	save = output<Asset>();
 
 	readonly assetForm = new FormGroup({
-		name: new FormControl<string>("", Validators.required),
+		name: new FormControl<string>("", [Validators.required, Validators.maxLength(100)]),
 		category: new FormControl<AssetCategory | null>(null, Validators.required),
 		type: new FormControl<AssetType | null>({ value: null, disabled: true }, Validators.required),
 		currency: new FormControl<Currency>(Currency.EUR, Validators.required),
