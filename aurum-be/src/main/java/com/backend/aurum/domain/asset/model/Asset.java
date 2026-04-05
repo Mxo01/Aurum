@@ -46,7 +46,7 @@ public class Asset {
 	@JsonBackReference
 	private User user;
 
-	@Column(nullable = false)
+	@Column(nullable = false, length = 100)
 	private String name;
 
 	@ManyToOne(optional = false)

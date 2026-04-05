@@ -43,7 +43,7 @@ export class TargetFormComponent {
 
 	readonly targetForm = new FormGroup({
 		name: new FormControl<string>("", {
-			validators: [Validators.required],
+			validators: [Validators.required, Validators.maxLength(100)],
 			nonNullable: true
 		}),
 		type: new FormControl<TargetType>(TargetType.MANUAL, {

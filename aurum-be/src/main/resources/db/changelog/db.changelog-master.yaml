@@ -59,3 +59,6 @@ databaseChangeLog:
   - include:
       file: db/changelog/changes/2026-04-03-remove-isactive.sql
       relativeToChangelogFile: false
+  - include:
+      file: db/changelog/changes/2026-04-05-add-name-length-constraints.sql
+      relativeToChangelogFile: false

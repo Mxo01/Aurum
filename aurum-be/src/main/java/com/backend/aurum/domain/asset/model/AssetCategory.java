@@ -40,14 +40,14 @@ public class AssetCategory {
 	@JsonBackReference
 	private User user;
 
-	@Column(nullable = false)
+	@Column(nullable = false, length = 100)
 	private String name;
 
 	@Enumerated(EnumType.STRING)
 	@Column(nullable = false)
 	private AssetType type;
 
-	@Column
+	@Column(length = 50)
 	private String icon;
 
 	@OneToMany(mappedBy = "category", cascade = CascadeType.ALL, orphanRemoval = true)

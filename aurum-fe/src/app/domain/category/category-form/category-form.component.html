@@ -18,9 +18,14 @@
 					formControlName="name"
 					pSize="small"
 					placeholder="e.g. Stocks"
+					maxlength="100"
 				/>
 				@if (categoryForm.controls.name.invalid && categoryForm.controls.name.touched) {
-					<small class="text-red-500 text-xs">Name is required</small>
+					@if (categoryForm.controls.name.hasError("required")) {
+						<small class="text-red-500 text-xs">Name is required</small>
+					} @else if (categoryForm.controls.name.hasError("maxlength")) {
+						<small class="text-red-500 text-xs">Name must not exceed 100 characters</small>
+					}
 				}
 			</div>
 

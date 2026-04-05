@@ -114,6 +114,12 @@ public class UserService {
 	@Transactional
 	public void updateAuth0Name(String jwtId, UpdateNameDTO dto) {
 		log.debug("UserService#updateAuth0Name - Updating name for jwtId={}", jwtId);
+		if (dto.name() == null || dto.name().isBlank()) {
+			throw new IllegalArgumentException("Name is required");
+		}
+		if (dto.name().length() > 100) {
+			throw new IllegalArgumentException("Name must not exceed 100 characters");
+		}
 		try {
 			ManagementAPI mgmt = auth0ManagementService.getManagementAPI();
 			com.auth0.json.mgmt.users.User auth0User = new com.auth0.json.mgmt.users.User();

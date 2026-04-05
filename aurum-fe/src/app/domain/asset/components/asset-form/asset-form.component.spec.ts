@@ -104,6 +104,32 @@ describe("AssetFormComponent", () => {
 		});
 	});
 
+	describe("name field validation", () => {
+		it("should mark the name control invalid when it exceeds 100 characters", () => {
+			// GIVEN
+			fixture.componentRef.setInput("selectedAsset", null);
+			fixture.detectChanges();
+
+			// WHEN
+			testSubject.assetForm.controls.name.setValue("a".repeat(101));
+
+			// THEN
+			expect(testSubject.assetForm.controls.name.hasError("maxlength")).toBe(true);
+		});
+
+		it("should mark the name control valid at exactly 100 characters", () => {
+			// GIVEN
+			fixture.componentRef.setInput("selectedAsset", null);
+			fixture.detectChanges();
+
+			// WHEN
+			testSubject.assetForm.controls.name.setValue("a".repeat(100));
+
+			// THEN
+			expect(testSubject.assetForm.controls.name.valid).toBe(true);
+		});
+	});
+
 	describe("liabilityType validators", () => {
 		it("should add required validators on paymentFrequency and paymentAmount for AUTOMATIC liability", () => {
 			// GIVEN

@@ -84,9 +84,24 @@ class TargetValidationServiceTest {
 	}
 
 	@Test
+	void validate_createDto_throwsWhenNameExceedsMaxLength() {
+		// GIVEN
+		CreateTargetDTO mockDto = Instancio.of(CreateTargetDTO.class)
+			.set(Select.field(CreateTargetDTO::getName), "a".repeat(101))
+			.set(Select.field(CreateTargetDTO::getTargetAmount), BigDecimal.TEN)
+			.create();
+
+		// WHEN / THEN
+		assertThatThrownBy(() -> testSubject.validate(mockDto)).isInstanceOf(
+			IllegalArgumentException.class
+		);
+	}
+
+	@Test
 	void validate_createDto_doesNotThrowForValidDto() {
 		// GIVEN
 		CreateTargetDTO mockDto = Instancio.of(CreateTargetDTO.class)
+			.set(Select.field(CreateTargetDTO::getName), "a".repeat(100))
 			.set(Select.field(CreateTargetDTO::getTargetAmount), BigDecimal.TEN)
 			.create();
 
@@ -133,9 +148,24 @@ class TargetValidationServiceTest {
 	}
 
 	@Test
+	void validate_updateDto_throwsWhenNameExceedsMaxLength() {
+		// GIVEN
+		UpdateTargetDTO mockDto = Instancio.of(UpdateTargetDTO.class)
+			.set(Select.field(UpdateTargetDTO::getName), "a".repeat(101))
+			.set(Select.field(UpdateTargetDTO::getTargetAmount), BigDecimal.TEN)
+			.create();
+
+		// WHEN / THEN
+		assertThatThrownBy(() -> testSubject.validate(mockDto)).isInstanceOf(
+			IllegalArgumentException.class
+		);
+	}
+
+	@Test
 	void validate_updateDto_doesNotThrowForValidDto() {
 		// GIVEN
 		UpdateTargetDTO mockDto = Instancio.of(UpdateTargetDTO.class)
+			.set(Select.field(UpdateTargetDTO::getName), "a".repeat(100))
 			.set(Select.field(UpdateTargetDTO::getTargetAmount), BigDecimal.TEN)
 			.create();
 

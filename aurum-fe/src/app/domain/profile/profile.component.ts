@@ -80,6 +80,7 @@ export class ProfileComponent implements OnInit {
 	readonly profile = this.profileService.profile;
 	readonly hasGoogleProfile = computed(() => this.user()?.sub?.includes("google"));
 	readonly isUpdatingName = signal(false);
+	readonly nameError = signal<string | null>(null);
 	readonly isUploadingPicture = signal(false);
 	readonly currencyOptions = signal(currencyOptions);
 	readonly localeOptions = signal(localeOptions);
@@ -119,6 +120,11 @@ export class ProfileComponent implements OnInit {
 	}
 
 	updateName(name: string) {
+		if (name.length > 100) {
+			this.nameError.set("Name must not exceed 100 characters");
+			return;
+		}
+		this.nameError.set(null);
 		this.nameTrigger$.next(name);
 	}
 

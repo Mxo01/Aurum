@@ -90,11 +90,15 @@
 						[ngModel]="user()?.name"
 						(ngModelChange)="updateName($event)"
 						size="small"
+						maxlength="100"
 					/>
 					@if (isUpdatingName()) {
 						<p-inputicon class="pi pi-spinner pi-spin" />
 					}
 				</p-iconfield>
+				@if (nameError()) {
+					<small class="text-red-500 text-xs">{{ nameError() }}</small>
+				}
 			</div>
 		</div>
 	}
