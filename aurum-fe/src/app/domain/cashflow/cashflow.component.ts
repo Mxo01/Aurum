@@ -104,8 +104,14 @@ export class CashFlowComponent implements OnInit {
 	readonly totalEarned = computed(() => this.rows().reduce((sum, r) => sum + r.earned, 0));
 	readonly totalSpent = computed(() => this.rows().reduce((sum, r) => sum + r.spent, 0));
 	readonly totalBalance = computed(() => this.totalEarned() - this.totalSpent());
-	readonly avgEarned = computed(() => this.totalEarned() / 12);
-	readonly avgSpent = computed(() => this.totalSpent() / 12);
+	readonly avgEarned = computed(() => {
+		const months = this.activeMonths();
+		return months > 0 ? this.totalEarned() / months : 0;
+	});
+	readonly avgSpent = computed(() => {
+		const months = this.activeMonths();
+		return months > 0 ? this.totalSpent() / months : 0;
+	});
 	readonly prevYearTotalEarned = computed(() => {
 		const prev = this.yearData()?.previousYearEntries;
 		if (!prev) return null;
