@@ -81,7 +81,7 @@
 			[isLoading]="isLoading()"
 			leftLabel="Net Balance"
 			[leftValue]="
-				(totalBalance() > 0 ? '+' : '') +
+				(!isPrivacyMode() && totalBalance() > 0 ? '+' : '') +
 				((totalBalance() | privacyCurrency: currency() : 'symbol' : '1.0-0' : locale()) ?? '')
 			"
 			[leftValueClass]="totalBalanceClass()"

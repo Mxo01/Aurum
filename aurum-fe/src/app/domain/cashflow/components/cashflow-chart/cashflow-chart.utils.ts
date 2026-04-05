@@ -6,6 +6,7 @@ import {
 	tooltipContainer,
 	tooltipRow
 } from "../../../../shared/utils";
+import { PRIVACY_PLACEHOLDER } from "../../../../shared/pipes/privacy-currency.pipe";
 import { CashFlowEntry, MONTH_LABELS } from "../../model/cashflow.model";
 import { Chart, ChartConfiguration, ChartDataset, Plugin } from "chart.js";
 
@@ -74,7 +75,9 @@ export function buildBarLabelsPlugin(
 					const value = typeof raw === "number" ? raw : 0;
 					if (value === 0) return;
 
-					const label = isPrivacyMode ? "••••" : `${currencySymbol}${compactNumber(value)}`;
+					const label = isPrivacyMode
+						? PRIVACY_PLACEHOLDER
+						: `${currencySymbol}${compactNumber(value)}`;
 
 					ctx.fillText(label, bar.x, bar.y - 3);
 				});
