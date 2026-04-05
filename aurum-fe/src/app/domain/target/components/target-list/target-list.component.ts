@@ -9,6 +9,7 @@ import { Target, TargetStatus } from "../../model/target.model";
 import { Currency } from "../../../profile/model/currency.model";
 import { Locale } from "../../../profile/model/locale.model";
 import { ProgressBar } from "primeng/progressbar";
+import { Tooltip } from "primeng/tooltip";
 
 @Component({
 	selector: "app-target-list",
@@ -22,7 +23,8 @@ import { ProgressBar } from "primeng/progressbar";
 		Dialog,
 		ProgressBar,
 		PrivacyCurrencyPipe,
-		DecimalPipe
+		DecimalPipe,
+		Tooltip
 	],
 	changeDetection: ChangeDetectionStrategy.OnPush
 })

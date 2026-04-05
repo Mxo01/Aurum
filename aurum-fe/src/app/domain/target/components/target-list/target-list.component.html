@@ -15,7 +15,12 @@
 	>
 		<ng-template #header>
 			<tr>
-				<th class="whitespace-nowrap">Name</th>
+				<th
+					class="whitespace-nowrap"
+					style="width: 25%"
+				>
+					Name
+				</th>
 				<th class="text-right whitespace-nowrap">Target</th>
 				<th class="text-right whitespace-nowrap">Current</th>
 				<th class="text-center whitespace-nowrap">Progress</th>
@@ -29,7 +34,15 @@
 			let-target
 		>
 			<tr>
-				<td class="font-medium whitespace-nowrap">{{ target.name }}</td>
+				<td class="font-medium max-w-0 overflow-hidden">
+					<span
+						class="block truncate"
+						[pTooltip]="target.name"
+						tooltipPosition="top"
+					>
+						{{ target.name }}
+					</span>
+				</td>
 				<td class="text-right font-mono whitespace-nowrap">
 					{{ target.targetAmount | privacyCurrency: currency() : "symbol" : "1.2-2" : locale() }}
 				</td>
