@@ -106,6 +106,40 @@ describe("CashFlowComponent", () => {
 		});
 	});
 
+	describe("avgEarned / avgSpent", () => {
+		it("should return zero when there are no entries with data", () => {
+			// GIVEN
+			testSubject.yearData.set(buildMockYear({ entries: [] }));
+			fixture.detectChanges();
+
+			// THEN
+			expect(testSubject.avgEarned()).toBe(0);
+			expect(testSubject.avgSpent()).toBe(0);
+		});
+
+		it("should divide totals by number of months with data, not by 12", () => {
+			// GIVEN
+			const entries = [buildMockEntry(1, 1200, 600), buildMockEntry(2, 600, 300)];
+			testSubject.yearData.set(buildMockYear({ entries }));
+			fixture.detectChanges();
+
+			// THEN
+			expect(testSubject.avgEarned()).toBe(900);
+			expect(testSubject.avgSpent()).toBe(450);
+		});
+
+		it("should exclude months with zero earned and spent from the divisor", () => {
+			// GIVEN
+			const entries = [buildMockEntry(1, 1200, 600), { id: null, month: 2, earned: 0, spent: 0 }];
+			testSubject.yearData.set(buildMockYear({ entries }));
+			fixture.detectChanges();
+
+			// THEN
+			expect(testSubject.avgEarned()).toBe(1200);
+			expect(testSubject.avgSpent()).toBe(600);
+		});
+	});
+
 	describe("totalEarned / totalSpent / totalBalance", () => {
 		it("should sum earned and spent across all rows", () => {
 			// GIVEN
