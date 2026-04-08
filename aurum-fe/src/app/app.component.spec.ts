@@ -126,6 +126,16 @@ describe("App", () => {
 			// THEN
 			expect(getProfile).toHaveBeenCalled();
 		});
+
+		it("should update --mx and --my custom properties on mousemove", () => {
+			// WHEN
+			fixture.detectChanges();
+			doc.dispatchEvent(new MouseEvent("mousemove", { clientX: 42, clientY: 84 }));
+
+			// THEN
+			expect(doc.documentElement.style.getPropertyValue("--mx")).toBe("42px");
+			expect(doc.documentElement.style.getPropertyValue("--my")).toBe("84px");
+		});
 	});
 
 	describe("avatarUrl", () => {

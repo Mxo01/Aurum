@@ -5,6 +5,7 @@ import {
 	DestroyRef,
 	DOCUMENT,
 	inject,
+	NgZone,
 	OnInit
 } from "@angular/core";
 import { RouterOutlet, RouterLinkActive, RouterLink, Router } from "@angular/router";
@@ -12,6 +13,7 @@ import { ButtonDirective, Button } from "primeng/button";
 import { Avatar } from "primeng/avatar";
 import { AuthService } from "@auth0/auth0-angular";
 import { takeUntilDestroyed, toSignal } from "@angular/core/rxjs-interop";
+import { fromEvent } from "rxjs";
 import { Toolbar } from "primeng/toolbar";
 import { darkModeSelector } from "./app.utils";
 import { ThemeService } from "./shared/services/theme/theme.service";
@@ -51,6 +53,7 @@ export class App implements OnInit {
 	private readonly document = inject(DOCUMENT);
 	private readonly router = inject(Router);
 	private readonly destroyRef = inject(DestroyRef);
+	private readonly ngZone = inject(NgZone);
 
 	readonly user = toSignal(this.authService.user$);
 	readonly paths = Object.entries(paths).filter(
@@ -94,6 +97,17 @@ export class App implements OnInit {
 			this.document.documentElement.classList.add(darkModeSelector);
 
 		this.profileService.getProfile().pipe(takeUntilDestroyed(this.destroyRef)).subscribe();
+
+		this.ngZone.runOutsideAngular(() => {
+			fromEvent<MouseEvent>(this.document, "mousemove")
+				.pipe(takeUntilDestroyed(this.destroyRef))
+				.subscribe({
+					next: e => {
+						this.document.documentElement.style.setProperty("--mx", `${e.clientX}px`);
+						this.document.documentElement.style.setProperty("--my", `${e.clientY}px`);
+					}
+				});
+		});
 	}
 
 	togglePrivacy() {

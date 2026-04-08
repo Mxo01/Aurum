@@ -28,6 +28,12 @@
 	font-display: swap;
 }
 
+/* Off-screen defaults so dot glow mask is invisible before first mousemove */
+:root {
+	--mx: -9999px;
+	--my: -9999px;
+}
+
 html,
 body {
 	margin: 0;

@@ -4,6 +4,8 @@ import {
 	getCashFlowChartOptions
 } from "./cashflow-chart.utils";
 import { CashFlowEntry } from "../../model/cashflow.model";
+import { PRIVACY_PLACEHOLDER } from "../../../../shared/pipes/privacy-currency.pipe";
+import type { Chart } from "chart.js";
 
 const buildMockEntry = (month: number, earned: number, spent: number): CashFlowEntry => ({
 	id: null,
@@ -86,6 +88,34 @@ describe("buildBarLabelsPlugin", () => {
 
 		// THEN
 		expect(first).not.toBe(second);
+	});
+
+	it("should use PRIVACY_PLACEHOLDER as the bar label when privacy mode is on", () => {
+		// GIVEN
+		const plugin = buildBarLabelsPlugin("€", false, true);
+		const labels: string[] = [];
+		const mockCtx = {
+			save: vi.fn(),
+			restore: vi.fn(),
+			fillText: vi.fn((...args: unknown[]) => labels.push(args[0] as string))
+		} as unknown as CanvasRenderingContext2D;
+		const mockChart = {
+			width: 600,
+			ctx: mockCtx,
+			data: {
+				datasets: [{ label: "Earned", data: [1000] }]
+			},
+			getDatasetMeta: vi.fn().mockReturnValue({
+				hidden: false,
+				data: [{ x: 100, y: 50 }]
+			})
+		} as unknown as Chart<"bar">;
+
+		// WHEN
+		plugin.afterDatasetsDraw!(mockChart, {}, {}, false);
+
+		// THEN
+		expect(labels).toContain(PRIVACY_PLACEHOLDER);
 	});
 });
 
