@@ -102,6 +102,59 @@ describe("LandingComponent", () => {
 		});
 	});
 
+	describe("stat signals initial values", () => {
+		it("should initialise stat100 to 0%", () => {
+			// THEN
+			expect(testSubject.stat100()).toBe("0%");
+		});
+
+		it("should initialise stat170 to 0+", () => {
+			// THEN
+			expect(testSubject.stat170()).toBe("0+");
+		});
+
+		it("should initialise statInf to 0", () => {
+			// THEN
+			expect(testSubject.statInf()).toBe("0");
+		});
+	});
+
+	describe("hero dashboard signals initial values", () => {
+		it("should initialise heroNetWorth to €0", () => {
+			// THEN
+			expect(testSubject.heroNetWorth()).toBe("€0");
+		});
+
+		it("should initialise heroTotalAssets to €0", () => {
+			// THEN
+			expect(testSubject.heroTotalAssets()).toBe("€0");
+		});
+
+		it("should initialise heroGrowth to +0.00%", () => {
+			// THEN
+			expect(testSubject.heroGrowth()).toBe("+0.00%");
+		});
+
+		it("should initialise heroSavingsRate to 0.0%", () => {
+			// THEN
+			expect(testSubject.heroSavingsRate()).toBe("0.0%");
+		});
+	});
+
+	describe("dashboardFeatures", () => {
+		it("should expose three dashboard feature items", () => {
+			// THEN
+			expect(testSubject.dashboardFeatures).toHaveLength(3);
+		});
+	});
+
+	describe("currencies", () => {
+		it("should expose the five primary display currencies", () => {
+			// THEN
+			expect(testSubject.currencies).toEqual(["EUR", "USD", "GBP", "CHF", "JPY"]);
+		});
+	});
+
 	describe("login", () => {
 		it("should call loginWithRedirect targeting the dashboard", () => {
 			// GIVEN

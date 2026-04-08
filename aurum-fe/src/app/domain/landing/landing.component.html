@@ -1,63 +1,560 @@
 @if (!isLoading()) {
-	<div class="relative">
-		<!-- Theme toggle -->
-		<div class="absolute top-4 right-4">
-			<p-button
-				[icon]="themeService.isDarkMode() ? 'pi pi-sun' : 'pi pi-moon'"
-				severity="secondary"
-				[text]="true"
-				[rounded]="true"
-				(onClick)="themeService.toggleTheme()"
-			/>
-		</div>
+	<!-- Root: no explicit bg — bg-pattern class handles dots + color zones as one layer -->
+	<div class="relative min-h-screen overflow-x-hidden">
+		<!-- Navbar -->
+		<nav
+			class="relative z-10 flex items-center justify-between px-6 sm:px-10 py-5 max-w-7xl mx-auto"
+		>
+			<div class="flex items-center gap-2.5">
+				<img
+					src="favicon.svg"
+					alt="Aurum"
+					class="w-8 h-8"
+				/>
+				<span class="text-lg font-bold tracking-tight font-mono">Aurum</span>
+			</div>
+
+			<div class="flex items-center gap-3">
+				<p-button
+					[icon]="themeService.isDarkMode() ? 'pi pi-sun' : 'pi pi-moon'"
+					severity="secondary"
+					[text]="true"
+					[rounded]="true"
+					(onClick)="themeService.toggleTheme()"
+				/>
+				<p-button
+					label="Sign In"
+					(onClick)="login()"
+					[text]="true"
+				/>
+				<p-button
+					label="Get started"
+					size="small"
+					(onClick)="login()"
+				/>
+			</div>
+		</nav>
 
 		<!-- Hero -->
 		<section
-			class="flex flex-col items-center text-center gap-8 pt-14 pb-12 px-4 max-w-4xl mx-auto"
+			class="relative z-10 flex flex-col items-center text-center px-6 pt-10 pb-0 max-w-5xl mx-auto"
 		>
 			<!-- Live badge -->
 			<div
-				class="flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-zinc-200 dark:border-zinc-700 bg-white/70 dark:bg-zinc-900/70 backdrop-blur-sm text-sm text-zinc-500 dark:text-zinc-400"
+				class="animate-fade-up inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-zinc-200 dark:border-zinc-700/70 bg-white/70 dark:bg-zinc-900/70 backdrop-blur-sm text-sm text-zinc-500 dark:text-zinc-400 mb-8"
 			>
-				<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+				<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
 				Personal Wealth Management
 			</div>
 
-			<!-- Logo + wordmark -->
-			<div class="flex items-center gap-3">
-				<img
-					src="favicon.svg"
-					alt="Aurum Logo"
-					class="w-14 h-14"
-				/>
-				<span class="text-5xl font-bold font-mono tracking-tight">Aurum</span>
-			</div>
-
 			<!-- Headline -->
-			<h1 class="text-4xl sm:text-6xl font-bold leading-[1.1] tracking-tight max-w-3xl">
-				Your wealth,
+			<h1
+				class="animate-fade-up delay-100 text-5xl sm:text-7xl lg:text-8xl font-bold leading-[1.05] tracking-tight text-zinc-900 dark:text-zinc-50 mb-6"
+			>
+				Your net worth,
 				<br />
-				<span
-					class="bg-linear-to-r from-zinc-900 via-zinc-600 to-zinc-400 dark:from-zinc-100 dark:via-zinc-300 dark:to-zinc-500 bg-clip-text text-transparent"
-				>
-					under control.
-				</span>
+				<span class="serif-italic text-zinc-700 dark:text-zinc-200">in one place.</span>
 			</h1>
 
 			<!-- Sub-copy -->
-			<p class="text-lg sm:text-xl text-zinc-500 dark:text-zinc-400 max-w-xl leading-relaxed">
-				Aurum is a personal wealth management app. Track assets, monitor net worth over time, set
-				financial targets, track your cash flow, and get multi-currency analytics — all in one
-				place.
+			<p
+				class="animate-fade-up delay-200 text-lg sm:text-xl text-zinc-500 dark:text-zinc-400 max-w-2xl leading-relaxed mb-10"
+			>
+				Track assets, watch your net worth grow over time, decode your cash flow, and set financial
+				targets — with full multi-currency support.
 			</p>
 
-			<!-- CTA -->
+			<!-- CTA group -->
+			<div class="animate-fade-up delay-300 flex flex-wrap items-center justify-center gap-4 mb-12">
+				<div class="relative">
+					<div
+						class="absolute -inset-3 rounded-2xl bg-zinc-900 dark:bg-zinc-100 blur-xl opacity-20 dark:opacity-15 animate-pulse"
+					></div>
+					<p-button
+						label="Get Started — it's free"
+						icon="pi pi-arrow-right"
+						iconPos="right"
+						size="large"
+						(onClick)="login()"
+						styleClass="relative"
+					/>
+				</div>
+			</div>
+
+			<!-- Stats strip — #statsSection triggers count-up on first intersection -->
+			<div
+				#statsSection
+				class="animate-fade-up delay-400 flex items-center gap-8 sm:gap-12 flex-wrap justify-center mb-16"
+			>
+				<div class="flex flex-col items-center gap-0.5">
+					<span class="text-2xl font-bold font-mono tracking-tight">{{ stat100() }}</span>
+					<span class="text-xs text-zinc-500 dark:text-zinc-400 font-medium">
+						Your data, your control
+					</span>
+				</div>
+				<div class="hidden sm:block w-px h-8 bg-zinc-200 dark:bg-zinc-700"></div>
+				<div class="flex flex-col items-center gap-0.5">
+					<span class="text-2xl font-bold font-mono tracking-tight">{{ stat170() }}</span>
+					<span class="text-xs text-zinc-500 dark:text-zinc-400 font-medium">
+						Currencies supported
+					</span>
+				</div>
+				<div class="hidden sm:block w-px h-8 bg-zinc-200 dark:bg-zinc-700"></div>
+				<div class="flex flex-col items-center gap-0.5">
+					<span class="text-2xl font-bold font-mono tracking-tight">{{ statInf() }}</span>
+					<span class="text-xs text-zinc-500 dark:text-zinc-400 font-medium">Asset categories</span>
+				</div>
+			</div>
+
+			<!-- Hero animated dashboard card -->
+			<div class="relative animate-fade-up delay-500 w-full max-w-5xl mx-auto px-2 sm:px-0">
+				<!-- Glow -->
+				<div
+					class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[105%] h-3/5 rounded-full bg-zinc-900 dark:bg-zinc-100 blur-3xl opacity-15 dark:opacity-10 animate-pulse [animation-duration:3.5s]"
+				></div>
+
+				<!-- Card -->
+				<div
+					class="relative rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 overflow-hidden hero-dashboard text-left"
+				>
+					<!-- Top bar -->
+					<div
+						class="flex items-center justify-between px-5 py-3 border-b border-zinc-100 dark:border-zinc-800/80"
+					>
+						<div class="flex items-center gap-2">
+							<img
+								src="favicon.svg"
+								class="w-5 h-5"
+								alt="Aurum"
+							/>
+							<span class="text-sm font-bold font-mono text-zinc-700 dark:text-zinc-300">
+								Aurum
+							</span>
+						</div>
+						<div class="flex gap-1 text-xs font-semibold">
+							<span
+								class="px-2.5 py-1 rounded-lg bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900"
+							>
+								1Y
+							</span>
+							<span class="px-2.5 py-1 rounded-lg text-zinc-400">6M</span>
+							<span class="px-2.5 py-1 rounded-lg text-zinc-400">1M</span>
+						</div>
+					</div>
+
+					<!-- Chart section -->
+					<div class="px-5 pt-5 pb-2">
+						<!-- Net worth headline -->
+						<div class="flex items-end justify-between mb-1">
+							<div>
+								<p class="text-xs font-semibold uppercase tracking-widest text-zinc-400 mb-1">
+									Net Worth
+								</p>
+								<div class="flex items-baseline gap-3">
+									<span
+										class="text-2xl sm:text-3xl font-bold font-mono text-zinc-900 dark:text-zinc-50"
+									>
+										{{ heroNetWorth() }}
+									</span>
+									<span
+										class="text-xs font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-full"
+									>
+										↑ +12.4% vs last year
+									</span>
+								</div>
+							</div>
+							<div class="text-right hidden sm:block">
+								<p class="text-xs text-zinc-400">Avg / month</p>
+								<p class="text-sm font-bold font-mono text-emerald-500">+€1,038</p>
+							</div>
+						</div>
+
+						<!-- Animated SVG line chart -->
+						<svg
+							viewBox="0 0 560 120"
+							class="w-full hero-chart"
+							preserveAspectRatio="none"
+						>
+							<defs>
+								<linearGradient
+									id="hcg"
+									x1="0"
+									x2="0"
+									y1="0"
+									y2="1"
+								>
+									<stop
+										offset="0%"
+										stop-color="#10b981"
+										stop-opacity="0.35"
+									/>
+									<stop
+										offset="100%"
+										stop-color="#10b981"
+										stop-opacity="0"
+									/>
+								</linearGradient>
+								<!-- horizontal grid lines -->
+							</defs>
+							<!-- Grid lines -->
+							<line
+								x1="0"
+								y1="30"
+								x2="560"
+								y2="30"
+								class="chart-grid"
+							/>
+							<line
+								x1="0"
+								y1="60"
+								x2="560"
+								y2="60"
+								class="chart-grid"
+							/>
+							<line
+								x1="0"
+								y1="90"
+								x2="560"
+								y2="90"
+								class="chart-grid"
+							/>
+							<!-- Area fill -->
+							<path
+								class="hero-chart-area"
+								d="M0,105 C30,104 50,102 80,98 C110,94 130,92 160,86 C190,80 210,78 240,72 C270,66 290,63 320,57 C350,51 370,48 400,42 C430,36 450,32 480,26 C510,20 530,16 560,12 L560,118 L0,118 Z"
+							/>
+							<!-- Line -->
+							<path
+								class="hero-chart-line"
+								d="M0,105 C30,104 50,102 80,98 C110,94 130,92 160,86 C190,80 210,78 240,72 C270,66 290,63 320,57 C350,51 370,48 400,42 C430,36 450,32 480,26 C510,20 530,16 560,12"
+								fill="none"
+								stroke="#10b981"
+								stroke-width="2"
+								stroke-linecap="round"
+							/>
+							<!-- End dot -->
+							<circle
+								cx="560"
+								cy="12"
+								r="4"
+								fill="#10b981"
+								class="hero-chart-dot"
+							/>
+							<circle
+								cx="560"
+								cy="12"
+								r="8"
+								fill="#10b981"
+								fill-opacity="0.2"
+								class="hero-chart-dot-ring"
+							/>
+						</svg>
+
+						<!-- X-axis labels -->
+						<div class="flex justify-between text-[10px] text-zinc-400 mt-1">
+							<span>Jan</span>
+							<span>Mar</span>
+							<span>May</span>
+							<span>Jul</span>
+							<span>Sep</span>
+							<span>Nov</span>
+							<span>Dec</span>
+						</div>
+					</div>
+
+					<!-- KPI strip -->
+					<div
+						class="grid grid-cols-3 border-t border-zinc-100 dark:border-zinc-800/80 divide-x divide-zinc-100 dark:divide-zinc-800/80"
+					>
+						<div class="px-4 sm:px-5 py-3 sm:py-4">
+							<p class="text-[11px] text-zinc-400">Total Assets</p>
+							<p
+								class="text-sm sm:text-base font-bold font-mono text-zinc-900 dark:text-zinc-50 mt-0.5"
+							>
+								{{ heroTotalAssets() }}
+							</p>
+							<p class="text-[11px] text-emerald-500 mt-0.5">8 assets tracked</p>
+						</div>
+						<div class="px-4 sm:px-5 py-3 sm:py-4">
+							<p class="text-[11px] text-zinc-400">Asset Growth</p>
+							<p
+								class="text-sm sm:text-base font-bold font-mono text-zinc-900 dark:text-zinc-50 mt-0.5"
+							>
+								{{ heroGrowth() }}
+							</p>
+							<p class="text-[11px] text-emerald-500 mt-0.5">vs 1 year ago</p>
+						</div>
+						<div class="px-4 sm:px-5 py-3 sm:py-4">
+							<p class="text-[11px] text-zinc-400">Savings Rate</p>
+							<p
+								class="text-sm sm:text-base font-bold font-mono text-zinc-900 dark:text-zinc-50 mt-0.5"
+							>
+								{{ heroSavingsRate() }}
+							</p>
+							<p class="text-[11px] text-emerald-500 mt-0.5">↑ healthy pace</p>
+						</div>
+					</div>
+				</div>
+			</div>
+		</section>
+
+		<!-- ── Features ───────────────────────────────────── -->
+		<div
+			class="relative z-10 max-w-7xl mx-auto px-6 sm:px-10 space-y-28 sm:space-y-40 pt-28 sm:pt-40 pb-24"
+		>
+			<!-- ── Feature 1: Net Worth Overview ─── -->
+			<section class="grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-20 items-center">
+				<!-- Text — slides in from left -->
+				<div
+					class="relative"
+					data-reveal="slide-left"
+					data-delay="0"
+				>
+					<span
+						class="feature-number-bg select-none text-zinc-900 opacity-[0.06] dark:text-white dark:opacity-[0.13]"
+						aria-hidden="true"
+					>
+						01
+					</span>
+					<div class="relative z-10 flex flex-col gap-5">
+						<span
+							class="inline-flex items-center gap-2 text-xs font-semibold tracking-widest uppercase text-emerald-600 dark:text-emerald-400"
+						>
+							<span class="w-5 h-px bg-emerald-500"></span>
+							Net Worth
+						</span>
+						<h2
+							class="text-4xl sm:text-5xl font-bold leading-tight tracking-tight text-zinc-900 dark:text-zinc-50"
+						>
+							Your complete
+							<br />
+							<span class="serif-italic text-zinc-600 dark:text-zinc-300">financial picture.</span>
+						</h2>
+						<p
+							class="text-base sm:text-lg text-zinc-500 dark:text-zinc-400 leading-relaxed max-w-md"
+						>
+							A unified dashboard shows all your assets, net worth evolution over time, and key KPIs
+							at a glance. Know where you stand — always.
+						</p>
+						<ul class="flex flex-col gap-3 mt-2">
+							@for (item of dashboardFeatures; track item) {
+								<li
+									class="flex items-center gap-3 text-sm font-medium text-zinc-700 dark:text-zinc-300"
+								>
+									<span
+										class="w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center shrink-0"
+									>
+										<i class="pi pi-check text-emerald-600 dark:text-emerald-400 text-xs"></i>
+									</span>
+									{{ item }}
+								</li>
+							}
+						</ul>
+					</div>
+				</div>
+
+				<!-- Screenshot wrapper — slides in from right; inner div handles the 3D tilt -->
+				<div
+					data-reveal="slide-right"
+					data-delay="150"
+				>
+					<div class="screenshot-wrap">
+						<div class="screenshot-tilt-right screenshot-card relative">
+							<img
+								src="screenshot-dashboard-light.jpg"
+								alt="Aurum Net Worth Dashboard"
+								class="dark:hidden!"
+							/>
+							<img
+								src="screenshot-dashboard-dark.jpg"
+								alt="Aurum Net Worth Dashboard"
+								class="hidden! dark:block!"
+							/>
+						</div>
+					</div>
+				</div>
+			</section>
+
+			<!-- ── Feature 2: Cash Flow ─── -->
+			<section class="grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-20 items-center">
+				<!-- Screenshot wrapper — slides in from left -->
+				<div
+					class="order-1 lg:order-0"
+					data-reveal="slide-left"
+					data-delay="150"
+				>
+					<div class="screenshot-wrap">
+						<div class="screenshot-tilt-left screenshot-card relative">
+							<img
+								src="screenshot-cashflow-light.jpg"
+								alt="Aurum Cash Flow"
+								class="dark:hidden!"
+							/>
+							<img
+								src="screenshot-cashflow-dark.jpg"
+								alt="Aurum Cash Flow"
+								class="hidden! dark:block!"
+							/>
+						</div>
+					</div>
+				</div>
+
+				<!-- Text — slides in from right -->
+				<div
+					class="relative order-0 lg:order-1"
+					data-reveal="slide-right"
+					data-delay="0"
+				>
+					<span
+						class="feature-number-bg select-none text-zinc-900 opacity-[0.06] dark:text-white dark:opacity-[0.13]"
+						aria-hidden="true"
+					>
+						02
+					</span>
+					<div class="relative z-10 flex flex-col gap-5">
+						<span
+							class="inline-flex items-center gap-2 text-xs font-semibold tracking-widest uppercase text-blue-600 dark:text-blue-400"
+						>
+							<span class="w-5 h-px bg-blue-500"></span>
+							Cash Flow
+						</span>
+						<h2
+							class="text-4xl sm:text-5xl font-bold leading-tight tracking-tight text-zinc-900 dark:text-zinc-50"
+						>
+							Cash flow,
+							<br />
+							<span class="serif-italic text-zinc-600 dark:text-zinc-300">decoded.</span>
+						</h2>
+						<p
+							class="text-base sm:text-lg text-zinc-500 dark:text-zinc-400 leading-relaxed max-w-md"
+						>
+							Track monthly income vs. spending, compare year-over-year data, and understand your
+							savings rate. Know exactly where your money goes — and where it grows.
+						</p>
+						<div class="flex items-baseline gap-3 mt-2">
+							<span class="text-3xl font-bold font-mono tracking-tight text-emerald-500">
+								+35.2%
+							</span>
+							<span class="text-sm text-zinc-500 dark:text-zinc-400">avg. savings rate</span>
+						</div>
+					</div>
+				</div>
+			</section>
+
+			<!-- ── Feature 3: Multi-Currency & Analytics ─── -->
+			<section class="grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-20 items-center">
+				<!-- Text — slides in from left -->
+				<div
+					class="relative"
+					data-reveal="slide-left"
+					data-delay="0"
+				>
+					<span
+						class="feature-number-bg select-none text-zinc-900 opacity-[0.06] dark:text-white dark:opacity-[0.13]"
+						aria-hidden="true"
+					>
+						03
+					</span>
+					<div class="relative z-10 flex flex-col gap-5">
+						<span
+							class="inline-flex items-center gap-2 text-xs font-semibold tracking-widest uppercase text-amber-600 dark:text-amber-400"
+						>
+							<span class="w-5 h-px bg-amber-500"></span>
+							Multi-Currency
+						</span>
+						<h2
+							class="text-4xl sm:text-5xl font-bold leading-tight tracking-tight text-zinc-900 dark:text-zinc-50"
+						>
+							170+ currencies,
+							<br />
+							<span class="serif-italic text-zinc-600 dark:text-zinc-300">zero friction.</span>
+						</h2>
+						<p
+							class="text-base sm:text-lg text-zinc-500 dark:text-zinc-400 leading-relaxed max-w-md"
+						>
+							Manage assets across any currency with live exchange rate conversion. Your entire
+							portfolio, normalised to your preferred base currency — automatically.
+						</p>
+						<div class="flex flex-wrap gap-2 mt-2">
+							@for (currency of currencies; track currency) {
+								<span
+									class="px-3 py-1.5 text-xs font-semibold font-mono rounded-full border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300"
+								>
+									{{ currency }}
+								</span>
+							}
+							<span
+								class="px-3 py-1.5 text-xs font-semibold rounded-full border border-amber-200 dark:border-amber-800/50 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400"
+							>
+								+165 more
+							</span>
+						</div>
+					</div>
+				</div>
+
+				<!-- Stacked screenshots wrapper — slides in from right -->
+				<div
+					data-reveal="slide-right"
+					data-delay="150"
+				>
+					<div class="screenshot-wrap">
+						<div class="screenshots-stack relative">
+							<div class="screenshot-back">
+								<img
+									src="screenshot-cashflow-light.jpg"
+									alt="Cash Flow view"
+									class="dark:hidden!"
+								/>
+								<img
+									src="screenshot-cashflow-dark.jpg"
+									alt="Cash Flow view"
+									class="hidden! dark:block!"
+								/>
+							</div>
+							<div class="screenshot-front">
+								<img
+									src="screenshot-dashboard-light.jpg"
+									alt="Dashboard view"
+									class="dark:hidden!"
+								/>
+								<img
+									src="screenshot-dashboard-dark.jpg"
+									alt="Dashboard view"
+									class="hidden! dark:block!"
+								/>
+							</div>
+						</div>
+					</div>
+				</div>
+			</section>
+		</div>
+
+		<!-- ── Final CTA ──────────────────────────────────── -->
+		<section
+			class="relative z-10 flex flex-col items-center text-center px-6 py-24 sm:py-32"
+			data-reveal="slide-up"
+			data-delay="0"
+		>
+			<div
+				class="absolute top-0 left-1/2 -translate-x-1/2 w-px h-16 bg-linear-to-b from-transparent via-zinc-300 dark:via-zinc-700 to-transparent"
+			></div>
+
+			<h2
+				class="text-4xl sm:text-6xl font-bold leading-tight tracking-tight text-zinc-900 dark:text-zinc-50 mb-5 max-w-2xl"
+			>
+				Start tracking
+				<br />
+				<span class="serif-italic text-zinc-500 dark:text-zinc-400">your wealth today.</span>
+			</h2>
+			<p class="text-lg text-zinc-500 dark:text-zinc-400 max-w-md leading-relaxed mb-10">
+				Free to use. Your data stays yours. No subscriptions, no tracking.
+			</p>
 			<div class="relative">
 				<div
-					class="absolute -inset-3 rounded-2xl bg-zinc-800 dark:bg-zinc-200 blur-xl opacity-25 dark:opacity-20 animate-pulse"
+					class="absolute -inset-4 rounded-3xl bg-zinc-900 dark:bg-zinc-100 blur-2xl opacity-15 dark:opacity-10 animate-pulse"
 				></div>
 				<p-button
-					label="Get Started"
+					label="Get Started — it's free"
 					icon="pi pi-arrow-right"
 					iconPos="right"
 					size="large"
@@ -65,117 +562,10 @@
 					styleClass="relative"
 				/>
 			</div>
-
-			<!-- Stats strip -->
-			<div class="flex items-center gap-6 sm:gap-10 pt-2 flex-wrap justify-center">
-				<div class="flex flex-col items-center gap-0.5">
-					<span class="text-2xl font-bold font-mono tracking-tight">100%</span>
-					<span class="text-xs text-zinc-500 dark:text-zinc-400">Your data, your control</span>
-				</div>
-				<div class="hidden sm:block w-px h-8 bg-zinc-200 dark:bg-zinc-700"></div>
-				<div class="flex flex-col items-center gap-0.5">
-					<span class="text-2xl font-bold font-mono tracking-tight">170+</span>
-					<span class="text-xs text-zinc-500 dark:text-zinc-400">Currencies supported</span>
-				</div>
-				<div class="hidden sm:block w-px h-8 bg-zinc-200 dark:bg-zinc-700"></div>
-				<div class="flex flex-col items-center gap-0.5">
-					<span class="text-2xl font-bold font-mono tracking-tight">∞</span>
-					<span class="text-xs text-zinc-500 dark:text-zinc-400">Asset categories</span>
-				</div>
-			</div>
 		</section>
 
-		<!-- Bento Features Grid -->
-		<section class="max-w-4xl mx-auto px-4 pb-16">
-			<h2
-				class="text-sm font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 text-center mb-6"
-			>
-				Everything you need
-			</h2>
-
-			<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-4">
-				<!-- Asset Tracking — wide -->
-				<div
-					class="group lg:col-span-7 p-6 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-sm transition-shadow hover:shadow-md hover:shadow-black/15 dark:hover:shadow-[0_6px_18px_rgba(0,0,0,0.6)]"
-				>
-					<div class="flex flex-col gap-4">
-						<div
-							class="w-11 h-11 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center transition-colors group-hover:bg-zinc-200 dark:group-hover:bg-zinc-700"
-						>
-							<i class="pi pi-wallet text-xl text-zinc-700 dark:text-zinc-300"></i>
-						</div>
-						<div>
-							<h3 class="text-base font-semibold mb-1">Asset Tracking</h3>
-							<p class="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed">
-								Log and categorize all your assets — investments, real estate, cash, crypto, and
-								more. Everything in one dashboard.
-							</p>
-						</div>
-					</div>
-				</div>
-
-				<!-- Net Worth History — narrow -->
-				<div
-					class="group lg:col-span-5 p-6 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-sm transition-shadow hover:shadow-md hover:shadow-black/15 dark:hover:shadow-[0_6px_18px_rgba(0,0,0,0.6)]"
-				>
-					<div class="flex flex-col gap-4">
-						<div
-							class="w-11 h-11 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center transition-colors group-hover:bg-zinc-200 dark:group-hover:bg-zinc-700"
-						>
-							<i class="pi pi-chart-line text-xl text-zinc-700 dark:text-zinc-300"></i>
-						</div>
-						<div>
-							<h3 class="text-base font-semibold mb-1">Net Worth History</h3>
-							<p class="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed">
-								Interactive charts showing how your net worth evolves month over month.
-							</p>
-						</div>
-					</div>
-				</div>
-
-				<!-- Financial Targets — narrow -->
-				<div
-					class="group lg:col-span-5 p-6 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-sm transition-shadow hover:shadow-md hover:shadow-black/15 dark:hover:shadow-[0_6px_18px_rgba(0,0,0,0.6)]"
-				>
-					<div class="flex flex-col gap-4">
-						<div
-							class="w-11 h-11 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center transition-colors group-hover:bg-zinc-200 dark:group-hover:bg-zinc-700"
-						>
-							<i class="pi pi-flag text-xl text-zinc-700 dark:text-zinc-300"></i>
-						</div>
-						<div>
-							<h3 class="text-base font-semibold mb-1">Financial Targets</h3>
-							<p class="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed">
-								Set wealth goals and track progress toward each milestone.
-							</p>
-						</div>
-					</div>
-				</div>
-
-				<!-- Multi-Currency — wide -->
-				<div
-					class="group lg:col-span-7 p-6 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-sm transition-shadow hover:shadow-md hover:shadow-black/15 dark:hover:shadow-[0_6px_18px_rgba(0,0,0,0.6)]"
-				>
-					<div class="flex flex-col gap-4">
-						<div
-							class="w-11 h-11 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center transition-colors group-hover:bg-zinc-200 dark:group-hover:bg-zinc-700"
-						>
-							<i class="pi pi-globe text-xl text-zinc-700 dark:text-zinc-300"></i>
-						</div>
-						<div>
-							<h3 class="text-base font-semibold mb-1">Multi-Currency Analytics</h3>
-							<p class="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed">
-								Manage assets in any currency with live exchange rate conversion. View your entire
-								portfolio in your preferred base currency.
-							</p>
-						</div>
-					</div>
-				</div>
-			</div>
-		</section>
-
-		<!-- Footer -->
-		<footer class="flex justify-center pb-8 px-4">
+		<!-- ── Footer ─────────────────────────────────────── -->
+		<footer class="relative z-10 flex justify-center pb-10 px-4">
 			<a
 				routerLink="/privacy"
 				class="text-xs text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors hover:underline"

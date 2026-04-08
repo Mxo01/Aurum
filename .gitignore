@@ -7,3 +7,11 @@
 # Husky
 .husky/_
 
+# Playwright MCP
+.playwright-mcp/
+
+# Raw source screenshots (not served by the app)
+aurum-fe/public/screenshots/
+aurum-fe/public/screenshot-cashflow.jpg
+aurum-fe/public/screenshot-dashboard.jpg
+
