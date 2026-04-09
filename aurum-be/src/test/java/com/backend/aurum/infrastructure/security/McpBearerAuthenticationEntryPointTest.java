@@ -1,9 +1,12 @@
 package com.backend.aurum.infrastructure.security;
 
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -26,8 +29,9 @@ class McpBearerAuthenticationEntryPointTest {
 	private McpBearerAuthenticationEntryPoint testSubject;
 
 	@BeforeEach
-	void setUp() {
+	void setUp() throws Exception {
 		ReflectionTestUtils.setField(testSubject, "resourceUrl", "https://api.test.com");
+		when(response.getWriter()).thenReturn(new PrintWriter(new StringWriter()));
 	}
 
 	@Test
@@ -43,11 +47,12 @@ class McpBearerAuthenticationEntryPointTest {
 	}
 
 	@Test
-	void commence_sends401Unauthorized() throws Exception {
+	void commence_sets401StatusWithJsonContentType() throws Exception {
 		// WHEN
 		testSubject.commence(request, response, new BadCredentialsException("test"));
 
 		// THEN
-		verify(response).sendError(HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized");
+		verify(response).setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+		verify(response).setContentType("application/json");
 	}
 }
