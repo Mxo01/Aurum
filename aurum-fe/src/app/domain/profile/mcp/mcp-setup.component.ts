@@ -1,141 +1,38 @@
-import {
-	ChangeDetectionStrategy,
-	Component,
-	computed,
-	DestroyRef,
-	inject,
-	OnInit,
-	signal
-} from "@angular/core";
-import { McpService } from "./mcp.service";
-import { ApiKeyMeta } from "./model/mcp.model";
-import { DatePipe } from "@angular/common";
+import { ChangeDetectionStrategy, Component, signal, inject } from "@angular/core";
 import { Button } from "primeng/button";
-import { Dialog } from "primeng/dialog";
 import { Tooltip } from "primeng/tooltip";
-import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
-import { finalize, switchMap } from "rxjs";
-import { Message } from "primeng/message";
+import { MessageService, SelectItem } from "primeng/api";
 import { Highlight } from "ngx-highlightjs";
 import { SelectButton } from "primeng/selectbutton";
-import { SelectItem, MessageService } from "primeng/api";
 import { FormsModule } from "@angular/forms";
+import { environment } from "../../../../environments/environment";
 
 @Component({
 	selector: "app-mcp-setup",
 	standalone: true,
-	imports: [Button, Dialog, DatePipe, Tooltip, Message, Highlight, SelectButton, FormsModule],
+	imports: [Button, Tooltip, Highlight, SelectButton, FormsModule],
 	templateUrl: "./mcp-setup.component.html",
 	changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class McpSetupComponent implements OnInit {
-	private readonly mcpService = inject(McpService);
+export class McpSetupComponent {
 	private readonly messageService = inject(MessageService);
-	private readonly destroyRef = inject(DestroyRef);
 
-	readonly sseUrl = this.mcpService.mcpSseUrl;
+	readonly mcpSseUrl = environment.apiUrl + "/sse";
 	readonly isMcpDesktop = signal(true);
 	readonly mcpPlatformOptions = signal<SelectItem<boolean>[]>([
 		{ label: "Desktop", value: true },
 		{ label: "Mobile/Web", value: false }
 	]);
-	readonly keyMeta = signal<ApiKeyMeta | null>(null);
-	readonly generatedKey = signal<string | null>(null);
-	readonly isApiKeyInstructionsDialogVisible = signal(false);
-	readonly isGenerating = signal(false);
-	readonly isRevoking = signal(false);
-	readonly mcpConfig = computed(() => {
-		const key = this.generatedKey() ?? "<your-api-key>";
-		const sseUrl = `${this.sseUrl}?key=${key}`;
+
+	get mcpConfig(): string {
 		return this.isMcpDesktop()
-			? JSON.stringify({ mcpServers: { aurum: { type: "sse", url: sseUrl } } }, null, 2)
-			: sseUrl;
-	});
-
-	ngOnInit() {
-		this.mcpService
-			.getKeyMeta()
-			.pipe(takeUntilDestroyed(this.destroyRef))
-			.subscribe({
-				next: meta => this.keyMeta.set(meta),
-				error: () => this.keyMeta.set(null)
-			});
-	}
-
-	generateKey() {
-		this.isGenerating.set(true);
-		this.mcpService
-			.generateKey()
-			.pipe(
-				switchMap(generatedKey => {
-					this.generatedKey.set(generatedKey.key);
-					this.isApiKeyInstructionsDialogVisible.set(true);
-
-					return this.mcpService.getKeyMeta();
-				}),
-				finalize(() => this.isGenerating.set(false))
-			)
-			.subscribe({
-				next: meta => this.keyMeta.set(meta),
-				error: () =>
-					this.messageService.add({
-						severity: "error",
-						summary: "Error",
-						detail: "Failed to generate API key"
-					})
-			});
-	}
-
-	revokeKey() {
-		this.isRevoking.set(true);
-
-		this.mcpService
-			.revokeKey()
-			.pipe(finalize(() => this.isRevoking.set(false)))
-			.subscribe({
-				next: () => {
-					this.keyMeta.set(null);
-					this.messageService.add({
-						severity: "success",
-						summary: "Revoked",
-						detail: "API key revoked successfully"
-					});
-				},
-				error: () =>
-					this.messageService.add({
-						severity: "error",
-						summary: "Error",
-						detail: "Failed to revoke API key"
-					})
-			});
-	}
-
-	copyKey() {
-		const key = this.generatedKey();
-
-		if (key) {
-			navigator.clipboard
-				.writeText(key)
-				.then(() =>
-					this.messageService.add({
-						severity: "success",
-						summary: "Copied",
-						detail: "API key copied"
-					})
-				)
-				.catch(() =>
-					this.messageService.add({
-						severity: "error",
-						summary: "Error",
-						detail: "Failed to copy API key"
-					})
-				);
-		}
+			? JSON.stringify({ mcpServers: { aurum: { type: "sse", url: this.mcpSseUrl } } }, null, 2)
+			: this.mcpSseUrl;
 	}
 
 	copyConfig() {
 		navigator.clipboard
-			.writeText(this.mcpConfig())
+			.writeText(this.mcpConfig)
 			.then(() =>
 				this.messageService.add({
 					severity: "success",
@@ -150,10 +47,5 @@ export class McpSetupComponent implements OnInit {
 					detail: "Failed to copy config"
 				})
 			);
-	}
-
-	confirmSaved() {
-		this.isApiKeyInstructionsDialogVisible.set(false);
-		this.generatedKey.set(null);
 	}
 }
