@@ -45,6 +45,7 @@
 </div>
 
 <p-dialog
+	appendTo="body"
 	[visible]="isApiKeyInstructionsDialogVisible()"
 	[closable]="false"
 	[modal]="true"
@@ -78,7 +79,7 @@
 				</span>
 			}
 			<div class="relative rounded-lg border border-gray-600 overflow-hidden">
-				<pre class="overflow-x-auto text-xs! leading-relaxed! m-0! rounded-lg! p-4!"><code
+				<pre class="overflow-x-auto text-xs! leading-relaxed! m-0! rounded-lg!"><code
 					class="block!"
 					[highlight]="mcpConfig()"
 					[language]="isMcpDesktop() ? 'json' : 'string'"
