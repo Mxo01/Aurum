@@ -49,8 +49,7 @@ public class SecurityConfig {
 	) throws Exception {
 		http
 			.securityMatcher(
-				"/sse",
-				"/mcp/message",
+				"/mcp",
 				"/.well-known/oauth-protected-resource",
 				"/.well-known/oauth-authorization-server",
 				"/oauth/register",
@@ -125,7 +124,7 @@ public class SecurityConfig {
 	public CorsConfigurationSource mcpCorsConfigurationSource() {
 		CorsConfiguration configuration = new CorsConfiguration();
 		configuration.setAllowedOriginPatterns(List.of("*"));
-		configuration.setAllowedMethods(List.of("GET", "POST", "OPTIONS"));
+		configuration.setAllowedMethods(List.of("GET", "POST", "DELETE", "OPTIONS"));
 		configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept"));
 		configuration.setExposedHeaders(List.of("WWW-Authenticate"));
 		configuration.setAllowCredentials(true);

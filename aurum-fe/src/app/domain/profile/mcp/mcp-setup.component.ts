@@ -17,7 +17,7 @@ import { environment } from "../../../../environments/environment";
 export class McpSetupComponent {
 	private readonly messageService = inject(MessageService);
 
-	readonly mcpSseUrl = environment.apiUrl + "/sse";
+	readonly mcpUrl = environment.apiUrl + "/mcp";
 	readonly isMcpDesktop = signal(true);
 	readonly mcpPlatformOptions = signal<SelectItem<boolean>[]>([
 		{ label: "Desktop", value: true },
@@ -26,8 +26,8 @@ export class McpSetupComponent {
 
 	get mcpConfig(): string {
 		return this.isMcpDesktop()
-			? JSON.stringify({ mcpServers: { aurum: { type: "sse", url: this.mcpSseUrl } } }, null, 2)
-			: this.mcpSseUrl;
+			? JSON.stringify({ mcpServers: { aurum: { type: "http", url: this.mcpUrl } } }, null, 2)
+			: this.mcpUrl;
 	}
 
 	copyConfig() {
