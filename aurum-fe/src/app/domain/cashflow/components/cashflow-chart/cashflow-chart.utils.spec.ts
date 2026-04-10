@@ -1,7 +1,8 @@
 import {
 	mapCashFlowToChartData,
 	buildBarLabelsPlugin,
-	getCashFlowChartOptions
+	getCashFlowChartOptions,
+	BarLabelPluginState
 } from "./cashflow-chart.utils";
 import { CashFlowEntry } from "../../model/cashflow.model";
 import { PRIVACY_PLACEHOLDER } from "../../../../shared/pipes/privacy-currency.pipe";
@@ -65,43 +66,21 @@ describe("mapCashFlowToChartData", () => {
 });
 
 describe("buildBarLabelsPlugin", () => {
-	it("should return a plugin with id cashflowBarLabels", () => {
-		// WHEN
-		const result = buildBarLabelsPlugin("€", false, false);
-
-		// THEN
-		expect(result.id).toBe("cashflowBarLabels");
+	const buildMockState = (overrides: Partial<BarLabelPluginState> = {}): BarLabelPluginState => ({
+		currencySymbol: "€",
+		isDarkMode: false,
+		isPrivacyMode: false,
+		...overrides
 	});
 
-	it("should include afterDatasetsDraw hook", () => {
-		// WHEN
-		const result = buildBarLabelsPlugin("€", false, false);
-
-		// THEN
-		expect(typeof result.afterDatasetsDraw).toBe("function");
-	});
-
-	it("should return a different plugin instance each call", () => {
-		// WHEN
-		const first = buildBarLabelsPlugin("€", false, false);
-		const second = buildBarLabelsPlugin("$", true, true);
-
-		// THEN
-		expect(first).not.toBe(second);
-	});
-
-	it("should use PRIVACY_PLACEHOLDER as the bar label when privacy mode is on", () => {
-		// GIVEN
-		const plugin = buildBarLabelsPlugin("€", false, true);
-		const labels: string[] = [];
-		const mockCtx = {
-			save: vi.fn(),
-			restore: vi.fn(),
-			fillText: vi.fn((...args: unknown[]) => labels.push(args[0] as string))
-		} as unknown as CanvasRenderingContext2D;
-		const mockChart = {
+	const buildMockChart = (labels: string[]): Chart<"bar"> =>
+		({
 			width: 600,
-			ctx: mockCtx,
+			ctx: {
+				save: vi.fn(),
+				restore: vi.fn(),
+				fillText: vi.fn((...args: unknown[]) => labels.push(args[0] as string))
+			} as unknown as CanvasRenderingContext2D,
 			data: {
 				datasets: [{ label: "Earned", data: [1000] }]
 			},
@@ -109,13 +88,80 @@ describe("buildBarLabelsPlugin", () => {
 				hidden: false,
 				data: [{ x: 100, y: 50 }]
 			})
-		} as unknown as Chart<"bar">;
+		}) as unknown as Chart<"bar">;
+
+	it("should return a plugin with id cashflowBarLabels", () => {
+		// WHEN
+		const result = buildBarLabelsPlugin(buildMockState());
+
+		// THEN
+		expect(result.id).toBe("cashflowBarLabels");
+	});
+
+	it("should include afterDatasetsDraw hook", () => {
+		// WHEN
+		const result = buildBarLabelsPlugin(buildMockState());
+
+		// THEN
+		expect(typeof result.afterDatasetsDraw).toBe("function");
+	});
+
+	it("should return a different plugin instance each call", () => {
+		// WHEN
+		const first = buildBarLabelsPlugin(buildMockState());
+		const second = buildBarLabelsPlugin(
+			buildMockState({ currencySymbol: "$", isDarkMode: true, isPrivacyMode: true })
+		);
+
+		// THEN
+		expect(first).not.toBe(second);
+	});
+
+	it("should use PRIVACY_PLACEHOLDER as the bar label when privacy mode is on", () => {
+		// GIVEN
+		const state = buildMockState({ isPrivacyMode: true });
+		const plugin = buildBarLabelsPlugin(state);
+		const labels: string[] = [];
+		const mockChart = buildMockChart(labels);
 
 		// WHEN
 		plugin.afterDatasetsDraw!(mockChart, {}, {}, false);
 
 		// THEN
 		expect(labels).toContain(PRIVACY_PLACEHOLDER);
+	});
+
+	it("should show currency value when privacy mode is off", () => {
+		// GIVEN
+		const state = buildMockState({ isPrivacyMode: false, currencySymbol: "€" });
+		const plugin = buildBarLabelsPlugin(state);
+		const labels: string[] = [];
+		const mockChart = buildMockChart(labels);
+
+		// WHEN
+		plugin.afterDatasetsDraw!(mockChart, {}, {}, false);
+
+		// THEN
+		expect(labels[0]).toMatch(/^€/);
+		expect(labels[0]).not.toBe(PRIVACY_PLACEHOLDER);
+	});
+
+	it("should reflect updated state without recreating the plugin", () => {
+		// GIVEN
+		const state = buildMockState({ isPrivacyMode: false });
+		const plugin = buildBarLabelsPlugin(state);
+		const labelsBeforeToggle: string[] = [];
+		const labelsAfterToggle: string[] = [];
+
+		plugin.afterDatasetsDraw!(buildMockChart(labelsBeforeToggle), {}, {}, false);
+		expect(labelsBeforeToggle[0]).not.toBe(PRIVACY_PLACEHOLDER);
+
+		// WHEN — mutate state to enable privacy mode
+		state.isPrivacyMode = true;
+		plugin.afterDatasetsDraw!(buildMockChart(labelsAfterToggle), {}, {}, false);
+
+		// THEN — same plugin instance now emits the placeholder
+		expect(labelsAfterToggle).toContain(PRIVACY_PLACEHOLDER);
 	});
 });
 

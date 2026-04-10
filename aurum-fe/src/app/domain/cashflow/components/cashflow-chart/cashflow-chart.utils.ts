@@ -46,22 +46,22 @@ export function mapCashFlowToChartData(entries: CashFlowEntry[]): {
 
 const MOBILE_CHART_WIDTH_THRESHOLD = 500;
 
-export function buildBarLabelsPlugin(
-	currencySymbol: string,
-	isDarkMode: boolean,
-	isPrivacyMode: boolean
-): Plugin<"bar"> {
-	const labelColor = isDarkMode ? "rgba(255,255,255,0.55)" : "rgba(0,0,0,0.45)";
-	const font = "11px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace";
+export interface BarLabelPluginState {
+	currencySymbol: string;
+	isDarkMode: boolean;
+	isPrivacyMode: boolean;
+}
 
+export function buildBarLabelsPlugin(state: BarLabelPluginState): Plugin<"bar"> {
 	return {
 		id: "cashflowBarLabels",
 		afterDatasetsDraw(chart: Chart<"bar">) {
 			if (chart.width < MOBILE_CHART_WIDTH_THRESHOLD) return;
 
+			const labelColor = state.isDarkMode ? "rgba(255,255,255,0.55)" : "rgba(0,0,0,0.45)";
 			const { ctx } = chart;
 			ctx.save();
-			ctx.font = font;
+			ctx.font = "11px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace";
 			ctx.fillStyle = labelColor;
 			ctx.textAlign = "center";
 			ctx.textBaseline = "bottom";
@@ -75,9 +75,9 @@ export function buildBarLabelsPlugin(
 					const value = typeof raw === "number" ? raw : 0;
 					if (value === 0) return;
 
-					const label = isPrivacyMode
+					const label = state.isPrivacyMode
 						? PRIVACY_PLACEHOLDER
-						: `${currencySymbol}${compactNumber(value)}`;
+						: `${state.currencySymbol}${compactNumber(value)}`;
 
 					ctx.fillText(label, bar.x, bar.y - 3);
 				});

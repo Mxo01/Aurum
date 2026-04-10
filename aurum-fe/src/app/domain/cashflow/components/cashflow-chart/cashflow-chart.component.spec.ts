@@ -91,6 +91,18 @@ describe("CashflowChartComponent", () => {
 			// THEN
 			expect(testSubject.chartPlugins()[0].id).toBe("cashflowBarLabels");
 		});
+
+		it("should return the same plugin instance across privacy mode changes", () => {
+			// GIVEN
+			const pluginBefore = testSubject.chartPlugins()[0];
+
+			// WHEN
+			fixture.componentRef.setInput("isPrivacyMode", true);
+			fixture.detectChanges();
+
+			// THEN
+			expect(testSubject.chartPlugins()[0]).toBe(pluginBefore);
+		});
 	});
 
 	describe("chartOptions", () => {
