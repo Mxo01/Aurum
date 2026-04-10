@@ -54,7 +54,8 @@ public class SecurityConfig {
 				"/.well-known/oauth-protected-resource",
 				"/.well-known/oauth-authorization-server",
 				"/oauth/register",
-				"/oauth/authorize"
+				"/oauth/authorize",
+				"/oauth/callback"
 			)
 			.csrf(AbstractHttpConfigurer::disable)
 			.cors(cors -> cors.configurationSource(mcpCorsConfigurationSource()))
@@ -65,7 +66,8 @@ public class SecurityConfig {
 						"/.well-known/oauth-protected-resource",
 						"/.well-known/oauth-authorization-server",
 						"/oauth/register",
-						"/oauth/authorize"
+						"/oauth/authorize",
+						"/oauth/callback"
 					)
 					.permitAll()
 					.anyRequest()
