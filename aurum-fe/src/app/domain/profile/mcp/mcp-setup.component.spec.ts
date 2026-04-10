@@ -60,7 +60,7 @@ describe("McpSetupComponent", () => {
 	});
 
 	describe("mcpConfig", () => {
-		it("should return a JSON string containing mcpServers for desktop mode", () => {
+		it("should return a JSON string with streamable-http config for desktop mode", () => {
 			// GIVEN
 			testSubject.isMcpDesktop.set(true);
 
@@ -69,9 +69,11 @@ describe("McpSetupComponent", () => {
 
 			// THEN
 			expect(expectedConfig).toContain("mcpServers");
+			expect(expectedConfig).toContain('"http"');
+			expect(expectedConfig).toContain("/mcp");
 		});
 
-		it("should return the SSE URL directly for mobile/web mode", () => {
+		it("should return the MCP URL directly for mobile/web mode", () => {
 			// GIVEN
 			testSubject.isMcpDesktop.set(false);
 
@@ -80,7 +82,7 @@ describe("McpSetupComponent", () => {
 
 			// THEN
 			expect(expectedConfig).not.toContain("mcpServers");
-			expect(expectedConfig).toContain("/sse");
+			expect(expectedConfig).toContain("/mcp");
 		});
 	});
 
@@ -94,7 +96,7 @@ describe("McpSetupComponent", () => {
 			await Promise.resolve();
 
 			// THEN
-			expect(mockClipboard.writeText).toHaveBeenCalledWith(expect.stringContaining("/sse"));
+			expect(mockClipboard.writeText).toHaveBeenCalledWith(expect.stringContaining("/mcp"));
 		});
 
 		it("should add a success message after config copy", async () => {
