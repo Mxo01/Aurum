@@ -22,7 +22,6 @@ import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtValidators;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -43,15 +42,44 @@ public class SecurityConfig {
 
 	@Bean
 	@Order(1)
-	public SecurityFilterChain mcpFilterChain(HttpSecurity http, ApiKeyAuthFilter apiKeyAuthFilter)
-		throws Exception {
+	public SecurityFilterChain mcpFilterChain(
+		HttpSecurity http,
+		JwtConverter jwtConverter,
+		McpBearerAuthenticationEntryPoint mcpEntryPoint
+	) throws Exception {
 		http
-			.securityMatcher("/sse", "/mcp/message")
+			.securityMatcher(
+				"/sse",
+				"/mcp/message",
+				"/.well-known/oauth-protected-resource",
+				"/.well-known/oauth-authorization-server",
+				"/oauth/register",
+				"/oauth/authorize",
+				"/oauth/callback",
+				"/oauth/token"
+			)
 			.csrf(AbstractHttpConfigurer::disable)
-			.cors(cors -> cors.configurationSource(corsConfigurationSource()))
+			.cors(cors -> cors.configurationSource(mcpCorsConfigurationSource()))
 			.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-			.addFilterBefore(apiKeyAuthFilter, UsernamePasswordAuthenticationFilter.class)
-			.authorizeHttpRequests(auth -> auth.anyRequest().authenticated());
+			.authorizeHttpRequests(auth ->
+				auth
+					.requestMatchers(
+						"/.well-known/oauth-protected-resource",
+						"/.well-known/oauth-authorization-server",
+						"/oauth/register",
+						"/oauth/authorize",
+						"/oauth/callback",
+						"/oauth/token"
+					)
+					.permitAll()
+					.anyRequest()
+					.authenticated()
+			)
+			.oauth2ResourceServer(oauth2 ->
+				oauth2
+					.jwt(jwt -> jwt.decoder(jwtDecoder()).jwtAuthenticationConverter(jwtConverter))
+					.authenticationEntryPoint(mcpEntryPoint)
+			);
 		return http.build();
 	}
 
@@ -91,6 +119,21 @@ public class SecurityConfig {
 		);
 
 		return jwtDecoder;
+	}
+
+	@Bean
+	public CorsConfigurationSource mcpCorsConfigurationSource() {
+		CorsConfiguration configuration = new CorsConfiguration();
+		configuration.setAllowedOriginPatterns(List.of("*"));
+		configuration.setAllowedMethods(List.of("GET", "POST", "OPTIONS"));
+		configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept"));
+		configuration.setExposedHeaders(List.of("WWW-Authenticate"));
+		configuration.setAllowCredentials(true);
+
+		UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+		source.registerCorsConfiguration("/**", configuration);
+
+		return source;
 	}
 
 	@Bean

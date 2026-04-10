@@ -14,9 +14,7 @@ import { faker } from "@faker-js/faker";
 import { of, throwError } from "rxjs";
 import { AuthService } from "@auth0/auth0-angular";
 import { MessageService, ConfirmationService } from "primeng/api";
-import { McpService } from "./mcp/mcp.service";
 import { McpSetupComponent } from "./mcp/mcp-setup.component";
-import { GeneratedKey } from "./mcp/model/mcp.model";
 import { ProfileComponent } from "./profile.component";
 import { ProfileService } from "./profile.service";
 import { ThemeService } from "../../shared/services/theme/theme.service";
@@ -72,12 +70,6 @@ describe("ProfileComponent", () => {
 				MockProvider(ThemeService, { isDarkMode: signal(false), toggleTheme: vi.fn() }),
 				MockProvider(NavigationService, { previousRoute: signal("/assets") }),
 				MockProvider(ConfirmationService),
-				MockProvider(McpService, {
-					getKeyMeta: vi.fn().mockReturnValue(of(null)),
-					generateKey: vi.fn().mockReturnValue(of({ key: "test-key" } as GeneratedKey)),
-					revokeKey: vi.fn().mockReturnValue(of({})),
-					mcpSseUrl: "http://test-api/sse"
-				}),
 				MockProvider(MessageService, { add: vi.fn() }),
 				provideRouter([])
 			]
