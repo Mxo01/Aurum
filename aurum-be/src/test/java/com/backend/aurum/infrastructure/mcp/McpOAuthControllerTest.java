@@ -179,13 +179,15 @@ class McpOAuthControllerTest {
 		stubbedParams.add("redirect_uri", "http://localhost:55768/callback");
 		stubbedParams.add("code_verifier", "verifier-abc");
 
-		ResponseEntity<String> stubbedResponse = ResponseEntity.ok("{\"access_token\":\"tok\"}");
+		ResponseEntity<byte[]> stubbedResponse = ResponseEntity.ok(
+			"{\"access_token\":\"tok\"}".getBytes(StandardCharsets.UTF_8)
+		);
 		when(
 			mockRestTemplate.exchange(
 				org.mockito.ArgumentMatchers.anyString(),
 				org.mockito.ArgumentMatchers.eq(HttpMethod.POST),
 				org.mockito.ArgumentMatchers.any(HttpEntity.class),
-				org.mockito.ArgumentMatchers.eq(String.class)
+				org.mockito.ArgumentMatchers.eq(byte[].class)
 			)
 		).thenReturn(stubbedResponse);
 
@@ -193,14 +195,15 @@ class McpOAuthControllerTest {
 		ResponseEntity<String> expectedResult = testSubject.token(stubbedParams);
 
 		// THEN — verify the redirect_uri was replaced in the proxied request body
-		assertThat(expectedResult).isEqualTo(stubbedResponse);
+		assertThat(expectedResult.getStatusCode()).isEqualTo(HttpStatus.OK);
+		assertThat(expectedResult.getBody()).contains("access_token");
 		ArgumentCaptor<HttpEntity<MultiValueMap<String, String>>> entityCaptor =
 			ArgumentCaptor.captor();
 		verify(mockRestTemplate).exchange(
 			org.mockito.ArgumentMatchers.anyString(),
 			org.mockito.ArgumentMatchers.eq(HttpMethod.POST),
 			entityCaptor.capture(),
-			org.mockito.ArgumentMatchers.eq(String.class)
+			org.mockito.ArgumentMatchers.eq(byte[].class)
 		);
 		assertThat(entityCaptor.getValue().getBody().getFirst("redirect_uri")).isEqualTo(
 			"http://localhost:8080/oauth/callback"
@@ -220,7 +223,7 @@ class McpOAuthControllerTest {
 				org.mockito.ArgumentMatchers.anyString(),
 				org.mockito.ArgumentMatchers.eq(HttpMethod.POST),
 				org.mockito.ArgumentMatchers.any(HttpEntity.class),
-				org.mockito.ArgumentMatchers.eq(String.class)
+				org.mockito.ArgumentMatchers.eq(byte[].class)
 			)
 		).thenThrow(
 			HttpClientErrorException.create(
