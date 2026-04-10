@@ -6,6 +6,7 @@ import { Currency } from "../../../profile/model/currency.model";
 import { Locale } from "../../../profile/model/locale.model";
 import { getCurrencySymbol } from "../../../profile/profile.utils";
 import {
+	BarLabelPluginState,
 	buildBarLabelsPlugin,
 	getCashFlowChartOptions,
 	mapCashFlowToChartData
@@ -60,11 +61,17 @@ export class CashflowChartComponent {
 			this.isMobile()
 		)
 	);
-	readonly chartPlugins = computed(() => [
-		buildBarLabelsPlugin(
-			getCurrencySymbol(this.currency()),
-			this.isDarkMode(),
-			this.isPrivacyMode()
-		)
-	]);
+	private readonly barLabelState: BarLabelPluginState = {
+		currencySymbol: "",
+		isDarkMode: false,
+		isPrivacyMode: false
+	};
+	private readonly barLabelPlugin = buildBarLabelsPlugin(this.barLabelState);
+
+	readonly chartPlugins = computed(() => {
+		this.barLabelState.currencySymbol = getCurrencySymbol(this.currency());
+		this.barLabelState.isDarkMode = this.isDarkMode();
+		this.barLabelState.isPrivacyMode = this.isPrivacyMode();
+		return [this.barLabelPlugin];
+	});
 }
