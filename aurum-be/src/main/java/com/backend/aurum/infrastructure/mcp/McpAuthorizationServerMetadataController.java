@@ -30,7 +30,7 @@ public class McpAuthorizationServerMetadataController {
 			"authorization_endpoint",
 			resourceUrl + "/oauth/authorize",
 			"token_endpoint",
-			issuerUri + "oauth/token",
+			resourceUrl + "/oauth/token",
 			"registration_endpoint",
 			resourceUrl + "/oauth/register",
 			"response_types_supported",

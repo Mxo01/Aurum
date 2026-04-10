@@ -8,15 +8,26 @@ import static org.mockito.Mockito.when;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.RestTemplate;
 
 @ExtendWith(MockitoExtension.class)
 class McpOAuthControllerTest {
@@ -27,6 +38,9 @@ class McpOAuthControllerTest {
 	@Mock
 	private HttpServletResponse response;
 
+	@Mock
+	private RestTemplate mockRestTemplate;
+
 	@InjectMocks
 	private McpOAuthController testSubject;
 
@@ -36,6 +50,7 @@ class McpOAuthControllerTest {
 		ReflectionTestUtils.setField(testSubject, "resourceUrl", "http://localhost:8080");
 		ReflectionTestUtils.setField(testSubject, "issuerUri", "https://auth.test.com/");
 		ReflectionTestUtils.setField(testSubject, "audience", "https://api.test.com");
+		ReflectionTestUtils.setField(testSubject, "restTemplate", mockRestTemplate);
 	}
 
 	@Test
@@ -152,5 +167,76 @@ class McpOAuthControllerTest {
 
 		// THEN
 		assertThat(expectedResult.get("redirect_uris")).isEqualTo(List.of());
+	}
+
+	@Test
+	@SuppressWarnings("unchecked")
+	void token_replacesRedirectUriForAuthorizationCodeGrant() {
+		// GIVEN
+		MultiValueMap<String, String> stubbedParams = new LinkedMultiValueMap<>();
+		stubbedParams.add("grant_type", "authorization_code");
+		stubbedParams.add("code", "auth-code-123");
+		stubbedParams.add("redirect_uri", "http://localhost:55768/callback");
+		stubbedParams.add("code_verifier", "verifier-abc");
+
+		ResponseEntity<String> stubbedResponse = ResponseEntity.ok("{\"access_token\":\"tok\"}");
+		when(
+			mockRestTemplate.exchange(
+				org.mockito.ArgumentMatchers.anyString(),
+				org.mockito.ArgumentMatchers.eq(HttpMethod.POST),
+				org.mockito.ArgumentMatchers.any(HttpEntity.class),
+				org.mockito.ArgumentMatchers.eq(String.class)
+			)
+		).thenReturn(stubbedResponse);
+
+		// WHEN
+		ResponseEntity<String> expectedResult = testSubject.token(stubbedParams);
+
+		// THEN — verify the redirect_uri was replaced in the proxied request body
+		assertThat(expectedResult).isEqualTo(stubbedResponse);
+		ArgumentCaptor<HttpEntity<MultiValueMap<String, String>>> entityCaptor =
+			ArgumentCaptor.captor();
+		verify(mockRestTemplate).exchange(
+			org.mockito.ArgumentMatchers.anyString(),
+			org.mockito.ArgumentMatchers.eq(HttpMethod.POST),
+			entityCaptor.capture(),
+			org.mockito.ArgumentMatchers.eq(String.class)
+		);
+		assertThat(entityCaptor.getValue().getBody().getFirst("redirect_uri")).isEqualTo(
+			"http://localhost:8080/oauth/callback"
+		);
+	}
+
+	@Test
+	void token_returnsErrorResponseFromAuth0() {
+		// GIVEN
+		MultiValueMap<String, String> stubbedParams = new LinkedMultiValueMap<>();
+		stubbedParams.add("grant_type", "authorization_code");
+		stubbedParams.add("code", "bad-code");
+		stubbedParams.add("redirect_uri", "http://localhost:55768/callback");
+
+		when(
+			mockRestTemplate.exchange(
+				org.mockito.ArgumentMatchers.anyString(),
+				org.mockito.ArgumentMatchers.eq(HttpMethod.POST),
+				org.mockito.ArgumentMatchers.any(HttpEntity.class),
+				org.mockito.ArgumentMatchers.eq(String.class)
+			)
+		).thenThrow(
+			HttpClientErrorException.create(
+				HttpStatus.UNAUTHORIZED,
+				"Unauthorized",
+				HttpHeaders.EMPTY,
+				"{\"error\":\"invalid_grant\"}".getBytes(StandardCharsets.UTF_8),
+				StandardCharsets.UTF_8
+			)
+		);
+
+		// WHEN
+		ResponseEntity<String> expectedResult = testSubject.token(stubbedParams);
+
+		// THEN
+		assertThat(expectedResult.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+		assertThat(expectedResult.getBody()).contains("invalid_grant");
 	}
 }

@@ -11,8 +11,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -20,6 +27,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 @RestController
@@ -43,6 +53,8 @@ public class McpOAuthController {
 	/** state → original redirect_uri, TTL 10 minutes */
 	private final ConcurrentHashMap<String, PendingCallback> pendingCallbacks =
 		new ConcurrentHashMap<>();
+
+	private RestTemplate restTemplate = new RestTemplate();
 
 	/**
 	 * Proxy for the Auth0 authorization endpoint.
@@ -142,6 +154,39 @@ public class McpOAuthController {
 			"redirect_uris",
 			redirectUris
 		);
+	}
+
+	/**
+	 * Token endpoint proxy.
+	 *
+	 * <p>For authorization_code grants, substitutes the MCP client's random-port
+	 * redirect_uri with our fixed /oauth/callback before forwarding to Auth0 — the
+	 * redirect_uri in the token exchange must match the one used in the authorization
+	 * request. Refresh-token grants are forwarded unchanged.
+	 */
+	@PostMapping(value = "/token", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
+	public ResponseEntity<String> token(@RequestParam MultiValueMap<String, String> params) {
+		MultiValueMap<String, String> proxyParams = new LinkedMultiValueMap<>(params);
+
+		if ("authorization_code".equals(params.getFirst("grant_type"))) {
+			proxyParams.set("redirect_uri", resourceUrl + "/oauth/callback");
+		}
+
+		HttpHeaders headers = new HttpHeaders();
+		headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+
+		try {
+			return restTemplate.exchange(
+				issuerUri + "oauth/token",
+				HttpMethod.POST,
+				new HttpEntity<>(proxyParams, headers),
+				String.class
+			);
+		} catch (HttpClientErrorException | HttpServerErrorException e) {
+			return ResponseEntity.status(e.getStatusCode())
+				.contentType(MediaType.APPLICATION_JSON)
+				.body(e.getResponseBodyAsString());
+		}
 	}
 
 	@Scheduled(fixedRateString = "PT5M")

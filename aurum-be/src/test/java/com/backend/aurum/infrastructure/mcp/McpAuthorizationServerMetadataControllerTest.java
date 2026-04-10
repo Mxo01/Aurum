@@ -44,12 +44,12 @@ class McpAuthorizationServerMetadataControllerTest {
 	}
 
 	@Test
-	void authorizationServerMetadata_pointsTokenEndpointToAuth0() {
+	void authorizationServerMetadata_proxiesTokenEndpointThroughBackend() {
 		// WHEN
 		Map<String, Object> result = testSubject.authorizationServerMetadata();
 
 		// THEN
-		assertThat(result.get("token_endpoint")).isEqualTo("https://auth.test.com/oauth/token");
+		assertThat(result.get("token_endpoint")).isEqualTo("https://api.test.com/oauth/token");
 	}
 
 	@Test
