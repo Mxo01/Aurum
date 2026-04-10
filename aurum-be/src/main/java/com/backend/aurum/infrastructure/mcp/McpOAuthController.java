@@ -9,6 +9,7 @@ import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
@@ -177,12 +178,18 @@ public class McpOAuthController {
 		headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
 
 		try {
-			return restTemplate.exchange(
+			ResponseEntity<byte[]> auth0Response = restTemplate.exchange(
 				issuerUri + "oauth/token",
 				HttpMethod.POST,
 				new HttpEntity<>(proxyParams, headers),
-				String.class
+				byte[].class
 			);
+			String body = Optional.ofNullable(auth0Response.getBody())
+				.map(b -> new String(b, StandardCharsets.UTF_8))
+				.orElse(null);
+			return ResponseEntity.status(auth0Response.getStatusCode())
+				.contentType(MediaType.APPLICATION_JSON)
+				.body(body);
 		} catch (HttpClientErrorException | HttpServerErrorException e) {
 			return ResponseEntity.status(e.getStatusCode())
 				.contentType(MediaType.APPLICATION_JSON)
