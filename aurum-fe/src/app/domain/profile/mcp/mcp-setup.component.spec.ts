@@ -6,6 +6,7 @@ import { Button } from "primeng/button";
 import { Tooltip } from "primeng/tooltip";
 import { SelectButton } from "primeng/selectbutton";
 import { MessageService } from "primeng/api";
+import { HighlightLoader } from "ngx-highlightjs";
 import { McpSetupComponent } from "./mcp-setup.component";
 
 // eslint-disable-next-line @angular-eslint/directive-selector
@@ -38,7 +39,19 @@ describe("McpSetupComponent", () => {
 				MockComponent(SelectButton),
 				MockModule(FormsModule)
 			],
-			providers: [MockProvider(MessageService, { add: vi.fn() })]
+			providers: [
+				MockProvider(MessageService, { add: vi.fn() }),
+				{
+					provide: HighlightLoader,
+					useValue: {
+						ready: Promise.resolve({
+							highlight: vi.fn().mockReturnValue({ value: "" }),
+							highlightElement: vi.fn(),
+							configure: vi.fn()
+						})
+					}
+				}
+			]
 		});
 		fixture = TestBed.createComponent(McpSetupComponent);
 		testSubject = fixture.componentInstance;
