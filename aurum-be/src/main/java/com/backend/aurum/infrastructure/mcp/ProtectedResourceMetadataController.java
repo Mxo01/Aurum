@@ -21,7 +21,7 @@ public class ProtectedResourceMetadataController {
 			"resource",
 			resourceUrl,
 			"authorization_servers",
-			List.of(issuerUri),
+			List.of(resourceUrl),
 			"scopes_supported",
 			List.of("openid", "profile"),
 			"bearer_methods_supported",

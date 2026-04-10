@@ -30,7 +30,7 @@ class ProtectedResourceMetadataControllerTest {
 
 		// THEN
 		assertThat(result.get("resource")).isEqualTo("https://api.test.com");
-		assertThat(result.get("authorization_servers")).isEqualTo(List.of("https://auth.test.com/"));
+		assertThat(result.get("authorization_servers")).isEqualTo(List.of("https://api.test.com"));
 		assertThat(result.get("scopes_supported")).isEqualTo(List.of("openid", "profile"));
 		assertThat(result.get("bearer_methods_supported")).isEqualTo(List.of("header"));
 	}

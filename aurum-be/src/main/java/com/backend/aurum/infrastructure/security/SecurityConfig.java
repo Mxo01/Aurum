@@ -48,13 +48,25 @@ public class SecurityConfig {
 		McpBearerAuthenticationEntryPoint mcpEntryPoint
 	) throws Exception {
 		http
-			.securityMatcher("/sse", "/mcp/message", "/.well-known/oauth-protected-resource")
+			.securityMatcher(
+				"/sse",
+				"/mcp/message",
+				"/.well-known/oauth-protected-resource",
+				"/.well-known/oauth-authorization-server",
+				"/oauth/register",
+				"/oauth/authorize"
+			)
 			.csrf(AbstractHttpConfigurer::disable)
 			.cors(cors -> cors.configurationSource(mcpCorsConfigurationSource()))
 			.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 			.authorizeHttpRequests(auth ->
 				auth
-					.requestMatchers("/.well-known/oauth-protected-resource")
+					.requestMatchers(
+						"/.well-known/oauth-protected-resource",
+						"/.well-known/oauth-authorization-server",
+						"/oauth/register",
+						"/oauth/authorize"
+					)
 					.permitAll()
 					.anyRequest()
 					.authenticated()
