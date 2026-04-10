@@ -29,6 +29,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -186,6 +187,12 @@ public class McpOAuthController {
 			return ResponseEntity.status(e.getStatusCode())
 				.contentType(MediaType.APPLICATION_JSON)
 				.body(e.getResponseBodyAsString());
+		} catch (ResourceAccessException e) {
+			return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
+				.contentType(MediaType.APPLICATION_JSON)
+				.body(
+					"{\"error\":\"server_error\",\"error_description\":\"Could not reach authorization server\"}"
+				);
 		}
 	}
 
