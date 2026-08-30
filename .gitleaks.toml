@@ -9,14 +9,21 @@ useDefault = true
 id = "auth0-management-client-secret"
 description = "Auth0 Management API client secret hardcoded in un properties file"
 # I placeholder ${VAR} non matchano: dopo l'= servirebbe un char di [A-Za-z0-9_-], ma c'e' '$'
-regex = '''(?i)auth0\.management\.clientSecret\s*=\s*[A-Za-z0-9_\-]{20,}'''
+# [ \t] e non \s intorno all'=, o una property vuota si prende il valore della riga dopo.
+regex = '''(?i)auth0\.management\.clientSecret[ \t]*=[ \t]*([A-Za-z0-9_\-]{20,})'''
+# Senza secretGroup gitleaks redige il match intero: nel report finirebbe
+# "auth0.management.clientREDACTED=<valore in chiaro>".
+secretGroup = 1
 tags = ["auth0", "secret"]
 
 [[rules]]
 id = "spring-property-hardcoded-secret"
 description = "Proprieta' Spring con secret/password hardcoded invece di ${ENV_VAR}"
-# [^\s$] come primo char del valore esclude i placeholder ${...}
-regex = '''(?im)^\s*[a-z0-9._-]*(secret|password|api[._-]?key|token)\s*=\s*[^\s$][^\s]{11,}'''
+# [^\s$] come primo char del valore esclude i placeholder ${...} e i valori vuoti.
+# [ \t] e non \s intorno all'=: con \s una property lasciata vuota matchava il
+# valore della riga successiva, segnalando la property sbagliata.
+regex = '''(?im)^[ \t]*[a-z0-9._-]*(?:secret|password|api[._-]?key|token)[ \t]*=[ \t]*([^\s$][^\s]{11,})'''
+secretGroup = 1
 path = '''\.properties$'''
 tags = ["spring", "secret"]
 
