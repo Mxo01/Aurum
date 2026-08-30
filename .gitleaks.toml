@@ -1,0 +1,39 @@
+# Configurazione gitleaks per Aurum.
+# Estende il ruleset di default e aggiunge una allowlist per i falsi positivi noti.
+# NB: gitleaks usa RE2 (Go) — niente lookahead/lookbehind nelle regex.
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "auth0-management-client-secret"
+description = "Auth0 Management API client secret hardcoded in un properties file"
+# I placeholder ${VAR} non matchano: dopo l'= servirebbe un char di [A-Za-z0-9_-], ma c'e' '$'
+regex = '''(?i)auth0\.management\.clientSecret\s*=\s*[A-Za-z0-9_\-]{20,}'''
+tags = ["auth0", "secret"]
+
+[[rules]]
+id = "spring-property-hardcoded-secret"
+description = "Proprieta' Spring con secret/password hardcoded invece di ${ENV_VAR}"
+# [^\s$] come primo char del valore esclude i placeholder ${...}
+regex = '''(?im)^\s*[a-z0-9._-]*(secret|password|api[._-]?key|token)\s*=\s*[^\s$][^\s]{11,}'''
+path = '''\.properties$'''
+tags = ["spring", "secret"]
+
+[allowlist]
+description = "Falsi positivi noti"
+
+paths = [
+  # Client ID della SPA: pubblico per design, viaggia nel bundle JS servito al browser
+  '''aurum-fe/src/environments/environment.*\.ts$''',
+  # Template senza valori reali
+  '''application-local\.properties\.example$''',
+  # Fixture di test con credenziali finte
+  '''aurum-be/src/test/.*\.java$''',
+  '''.*\.spec\.ts$''',
+]
+
+regexes = [
+  # I default del PostgreSQL locale di compose.yaml, non sono credenziali di produzione
+  '''spring\.datasource\.(username|password)=(user|password)''',
+]

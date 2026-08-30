@@ -1,0 +1,28 @@
+# Copia questo file in application-local.properties e compila i valori.
+# application-local.properties e' gitignored: NON deve mai essere committato.
+# Caricato quando spring.profiles.active=local (cioe' via `make start`).
+
+# Database — i default sotto corrispondono al PostgreSQL di compose.yaml
+spring.datasource.url=jdbc:postgresql://localhost:5432/aurum
+spring.datasource.username=user
+spring.datasource.password=password
+
+# Auth0 — resource server
+spring.security.oauth2.resourceserver.jwt.issuer-uri=https://<tenant>.<region>.auth0.com/
+spring.security.oauth2.resourceserver.jwt.audiences=<api-identifier>
+
+# Auth0 — Management API (applicazione M2M "Aurum Backend Admin")
+# Scope necessari: update:users, delete:users
+auth0.management.domain=<tenant>.<region>.auth0.com
+auth0.management.clientId=
+auth0.management.clientSecret=
+
+# CORS
+cors.allowed-origins=http://localhost:4200
+
+# MCP server
+spring.ai.mcp.server.name=aurum-mcp-server
+spring.ai.mcp.server.version=1.0.0
+spring.ai.mcp.server.sse-message-endpoint=/mcp/message
+mcp.resource-url=http://localhost:8080
+mcp.auth0-client-id=
