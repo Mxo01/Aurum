@@ -72,8 +72,9 @@ export function Providers() {
 					audience: env.auth0Audience
 				}}
 				onRedirectCallback={(appState: AppState | undefined) => {
-					const returnTo = appState?.returnTo;
-					if (returnTo) window.history.replaceState({}, "", returnTo);
+					// A full reload lets the data router pick up the callback URL;
+					// replaceState alone leaves the router on the landing route.
+					window.location.replace(appState?.returnTo ?? "/dashboard");
 				}}
 			>
 				<ApiBridge>
