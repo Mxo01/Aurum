@@ -26,7 +26,7 @@ explicit OK.
 - [x] 2. Dashboard.
 - [x] 3. Assets, snapshots, categories.
 - [x] 4. Cash flow.
-- [ ] 5. Targets, profile, MCP, GDPR.
+- [x] 5. Targets, profile, MCP, GDPR.
 - [ ] 6. Shortcuts, ⌘K, polish, swap, docs, CI.
 
 ## Public configuration

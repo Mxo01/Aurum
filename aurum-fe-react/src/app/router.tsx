@@ -1,7 +1,6 @@
 import { createBrowserRouter, Navigate } from "react-router";
 import { RootLayout } from "./root-layout";
 import { RouteError } from "./route-error";
-import { PlaceholderPage } from "./shell/placeholder-page";
 import { ProtectedLayout } from "./shell/protected-layout";
 
 export const router = createBrowserRouter([
@@ -53,9 +52,10 @@ export const router = createBrowserRouter([
 					},
 					{
 						path: "profile",
-						element: (
-							<PlaceholderPage title="Profile" description="Preferences, integrations and data." />
-						)
+						lazy: async () => {
+							const module = await import("@/features/profile/page");
+							return { Component: module.ProfilePage };
+						}
 					}
 				]
 			},

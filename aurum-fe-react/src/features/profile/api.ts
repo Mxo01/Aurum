@@ -92,4 +92,13 @@ export function useDeleteProfile() {
 	});
 }
 
+export function useExportData() {
+	const api = useApi();
+
+	return useMutation({
+		mutationFn: async () => unwrap(await api.GET("/users/export")),
+		onError: () => toast.error("Could not export your data")
+	});
+}
+
 export type ExportPayload = UserDTO;
