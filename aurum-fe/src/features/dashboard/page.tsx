@@ -158,7 +158,7 @@ export function DashboardPage() {
 						isLoading={chart.isLoading}
 					/>
 
-					<div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-3">
+					<div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
 						<TargetsCard
 							targets={targets.data}
 							isLoading={targets.isLoading}
