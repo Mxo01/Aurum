@@ -224,11 +224,11 @@ export function CashFlowPage() {
 							</table>
 						</div>
 
-						<div className="flex flex-col gap-2 p-3 md:hidden">
+						<div className="divide-border divide-y md:hidden">
 							{rows.map(row => (
 								<div
 									key={row.month}
-									className="border-border rounded-lg border p-3"
+									className="px-3 py-3"
 								>
 									<div className="mb-2 flex items-center justify-between">
 										<span className="text-muted-foreground num text-[11px] font-medium">
