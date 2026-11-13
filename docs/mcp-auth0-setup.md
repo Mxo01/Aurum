@@ -145,7 +145,7 @@ MCP_MAX_BATCH_SIZE=500
 3. Merge and deploy the backend.
 
 The deploy workflow refuses to start if `MCP_RESOURCE_URL` is missing from
-`/opt/aurum/.env`. If you deploy before the Auth0 API exists, the backend still
+`/opt/aurum/.env` or is not an `https://…/mcp` URL. If you deploy before the Auth0 API exists, the backend still
 starts but `/mcp` rejects every token (the audience was never issued) — fail
 closed, not open.
 

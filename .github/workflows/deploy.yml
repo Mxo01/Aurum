@@ -58,10 +58,14 @@ jobs:
           script: |
             echo "$GHCR_TOKEN" | docker login ghcr.io -u "$(echo $GITHUB_OWNER | tr '[:upper:]' '[:lower:]')" --password-stdin
             cd /opt/aurum
-            if ! grep -q '^MCP_RESOURCE_URL=.' .env; then
-              echo "MCP_RESOURCE_URL is missing in /opt/aurum/.env; refusing to deploy"
-              exit 1
-            fi
+            MCP_URL="$(grep '^MCP_RESOURCE_URL=' .env | cut -d= -f2-)"
+            case "$MCP_URL" in
+              https://*/mcp) ;;
+              *)
+                echo "MCP_RESOURCE_URL in /opt/aurum/.env must be an https URL ending in /mcp; refusing to deploy"
+                exit 1
+                ;;
+            esac
             docker compose -f docker-compose.prod.yml pull backend
             docker compose -f docker-compose.prod.yml up -d --remove-orphans
             docker image prune -f
