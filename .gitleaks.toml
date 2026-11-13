@@ -30,6 +30,16 @@ tags = ["spring", "secret"]
 [allowlist]
 description = "Falsi positivi noti"
 
+# Il client secret di gestione Auth0 committato in f2d8c4a (marzo 2026) e'
+# stato ruotato: il valore nella history non e' piu' valido. La history non si
+# riscrive (invaliderebbe ogni clone e ogni PR aperta senza aggiungere
+# sicurezza, perche' il valore e' gia' pubblico e i fork lo conservano), quindi
+# si esclude quel commit. L'esclusione e' per commit, non per path: un secret
+# nuovo nello stesso file viene comunque segnalato.
+commits = [
+  "f2d8c4a5a0a2a32f13dcbbf887bc8494af3d5b52",
+]
+
 paths = [
   # Client ID della SPA: pubblico per design, viaggia nel bundle JS servito al browser
   '''aurum-fe/src/environments/environment.*\.ts$''',
