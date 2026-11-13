@@ -12,7 +12,7 @@ Aurum is a full-stack personal wealth management app. Users track financial asse
 
 Monorepo with two apps:
 - `aurum-be/` — Spring Boot 4 backend (Java 25)
-- `aurum-fe/` — Angular 21 frontend (TypeScript)
+- `aurum-fe/` — React 19 + Vite 8 frontend (TypeScript)
 - `Makefile` — orchestrates both apps
 
 ## Development Commands
@@ -28,11 +28,15 @@ make restart  # Restart all services
 
 ### Frontend (`aurum-fe/`)
 ```bash
-npm start           # ng serve with HMR on port 4200
-npm run build       # Production build
-npm run lint        # ESLint fix
-npm run format      # Prettier format
-npm run clean-code  # lint + format combined
+npm start            # Vite dev server on port 4200
+npm run build        # typecheck + production build
+npm run lint         # ESLint
+npm run typecheck    # tsc --noEmit
+npm test             # Vitest watch
+npm run test:run     # Vitest once
+npm run test:coverage
+npm run test:e2e     # Playwright + axe
+npm run api:types    # regenerate types from aurum-be/openapi.json
 ```
 
 ### Backend (`aurum-be/`)
@@ -88,15 +92,26 @@ Infrastructure:
 - `infrastructure/exchange/` — External exchange rate API service
 - `infrastructure/config/` — OpenAPI/Swagger configuration
 
-### Frontend Domain Structure
-Lazy-loaded Angular routes under `src/app/domain/`:
-- `asset/` — Asset CRUD with form, table, category, and history components
-- `dashboard/` — Main overview with Chart.js visualizations
-- `snapshot/` — Point-in-time asset value management
-- `target/` — Financial goals tracking
-- `profile/` — User preferences (currency, locale)
+### Frontend Structure
+Feature-sliced React app under `aurum-fe/src/`:
+- `app/` — providers, router, shell (top bar, bottom tabs, command palette)
+- `features/<domain>/` — page, components, and query hooks: `dashboard`, `assets`,
+  `categories`, `snapshots`, `cashflow`, `targets`, `profile`, `legal`, `landing`
+- `lib/` — typed API client and generated types, keys, formatting, stores, utils
+- `components/ui/` — vendored shadcn primitives; `components/app/` — shared app components
+- `test/` — MSW server, fixtures, render helper
 
-Shared: `src/app/shared/services/` contains `NavigationService` and `ThemeService`.
+Rules:
+- A feature never imports from another feature. Shared code goes to `lib/` or
+  `components/`.
+- Pages do not call `fetch`: they use the feature's TanStack Query hooks, and
+  hooks use the `useApi()` client built with `openapi-fetch`.
+- Server state lives in TanStack Query only. Client state lives in Zustand
+  (theme, privacy, command palette) or the URL (year, filters). No Redux.
+- Query keys are centralized in `lib/api/keys.ts`; every mutation invalidates
+  what it changes.
+- UI: warm neutral + gold accent, Geist Sans/Mono. No glass, glow, dot-grid,
+  serif italics, or uppercase tracking. Details open in sheets, not new pages.
 
 ### Data Model
 ```
@@ -111,7 +126,7 @@ Asset → AssetCategory (N:1)
 Assets have `LiabilityType` (MANUAL/AUTOMATIC) and `PaymentFrequency` (WEEKLY/MONTHLY/YEARLY). Automatic liabilities are processed by `LiabilitySchedulerService` (scheduled via `@EnableScheduling`).
 
 ### Authentication
-- Frontend uses `@auth0/auth0-angular` — Auth0 login redirects, JWT attached via HTTP interceptor
+- Frontend uses `@auth0/auth0-react` — Auth0 login redirects; the access token is attached by the `openapi-fetch` client
 - Backend validates JWT via Spring Security OAuth2 resource server (`issuer-uri` + `audiences` in `application.properties`)
 - The MCP endpoint validates a separate audience (`mcp.audience`, defaulting to `mcp.resource-url`); a web-app token is not valid there. Setup: `docs/mcp-auth0-setup.md`
 - All endpoints require auth except Swagger paths and the protected-resource metadata
@@ -124,189 +139,40 @@ Assets have `LiabilityType` (MANUAL/AUTOMATIC) and `PaymentFrequency` (WEEKLY/MO
 ## Key Conventions
 
 - Backend uses **Lombok** extensively — `@Data`, `@Builder`, `@RequiredArgsConstructor` on models/DTOs
-- Frontend uses **standalone Angular components** (no NgModules)
-- Frontend UI is **PrimeNG 21** + **Tailwind CSS 4** — **always prefer PrimeNG components over custom HTML/CSS implementations**; only build custom components when PrimeNG has no equivalent
+- Frontend is **React 19 + Vite 8 + TypeScript strict** (no `any`), **Tailwind CSS 4** and **shadcn/ui** (Radix). Prefer a shadcn primitive or a Radix package over a custom widget
+- Data fetching is **openapi-fetch** + **TanStack Query**; forms are **react-hook-form + zod**; charts are **Recharts**
+- Never hand-write a request/response shape: generate it from `aurum-be/openapi.json`
 - Currency amounts use `BigDecimal` on the backend; format with user's locale/currency on the frontend
 - Never add `: void` as an explicit return type on functions or methods — omit it entirely
 - Git pre-commit hook runs ESLint + Prettier via lint-staged (husky) for the frontend, and `spotless:apply` for any staged Java files in the backend
 - Backend Java formatting uses **Prettier + prettier-plugin-java** (same tool as frontend), reading `prettier.config.cjs` at the repo root — run `npx prettier --write 'aurum-be/src/**/*.java'` manually or let the pre-commit hook handle it
 
-### Observable unsubscription rule
-
-Always unsubscribe from observables in components unless you have explicitly accounted for the request outliving the component. The rule splits by HTTP intent:
-
-- **GET / read operations** — always add `takeUntilDestroyed(this.destroyRef)` (inject `DestroyRef`). If the subscription is started in the constructor context (field initializer or constructor body), `takeUntilDestroyed()` with no argument is also fine. For signal-based reactive chains inside a `constructor()`, prefer `toObservable()` + `switchMap()` + `takeUntilDestroyed()` — this also cancels stale in-flight requests when the source signal changes.
-- **Mutations (POST / PUT / PATCH / DELETE)** — it is acceptable to omit `takeUntilDestroyed` because the server-side effect should complete even if the user navigates away. However, if the response handler mutates component state (signals, etc.), make sure it does not assume the component is still alive — or add `takeUntilDestroyed` anyway.
-- **Long-lived streams** (router events, singleton services, etc.) — subscriptions in root-level singleton services are intentionally permanent; no unsubscription needed.
-
-Never use `ngOnDestroy` + manual `Subscription` variables — use `takeUntilDestroyed` instead.
-
-### RxJS subscribe/tap syntax
-
-Always use the object-notation overload for `.subscribe()` and `.tap()` — never pass positional callback arguments:
-
-```typescript
-// correct
-observable$.pipe(
-  tap({ next: val => doSomething(val) })
-).subscribe({
-  next: val => handle(val),
-  error: err => handleError(err)
-});
-
-// wrong
-observable$.pipe(tap(val => doSomething(val))).subscribe(val => handle(val), err => handleError(err));
-```
-
-Only include the `next`, `error`, or `complete` keys that are actually needed — omit the others.
-
 ## Frontend Testing
 
 ### Setup
-- Test runner: **Vitest** via `@angular/build:unit-test` — run with `npm test` (or `npm run test:watch`)
-- Coverage: **@vitest/coverage-v8** — run with `npm test -- --coverage`
-- Mocking Angular schematics (services, components, directives, pipes): **ng-mocks** (`MockProvider`, `MockComponent`, etc.)
-- Random test data generation: **@faker-js/faker**
+- Unit and integration: **Vitest** + **React Testing Library** + **MSW** +
+  `@faker-js/faker`. Run with `npm test` / `npm run test:coverage`.
+- End-to-end: **Playwright** + `@axe-core/playwright`. Run with `npm run test:e2e`.
+- Coverage: `@vitest/coverage-v8`.
 
 ### Rules
-
-- **No comments** except `// GIVEN`, `// WHEN`, `// THEN` block separators
-- **No `any`** — never use `any` for casting or accessing members
-- **No private method testing** — test behavior through public API only
-- **Test subject naming** — the class under test must always be assigned to a variable named `testSubject`
-- **Mock everything** — all dependencies must be mocked; never rely on real implementations
-- **No `MockBuilder`** — use `TestBed.configureTestingModule` with `MockProvider`, `MockComponent`, `MockDirective`, `MockModule` instead
-- **No `protected` / no `*Internals`** — never use `protected` on component fields/methods accessed in tests; never cast with `as unknown as XxxInternals` to reach members; access all members directly via `testSubject`
-- **Single `beforeEach`** — one `beforeEach` per describe block containing all `configureTestingModule`, `TestBed.inject`, and fixture/testSubject assignments
-- **`TestBed.inject` once in `beforeEach`** — inject services into describe-scoped variables inside `beforeEach`; do not inject inside individual `it` blocks (exception: when a fresh instance is needed per test, e.g. constructor-time state)
-- **Component isolation via mocked imports** — never use `NO_ERRORS_SCHEMA` and never use `TestBed.overrideComponent`; instead, mirror the component's own `imports` array in `configureTestingModule` by replacing every entry except the component under test with the matching ng-mocks wrapper:
-  - Angular/PrimeNG/custom **components** → `MockComponent(Foo)`
-  - Angular/PrimeNG/custom **directives** (including `RouterLink`, `RouterLinkActive`, `RouterOutlet`) → `MockDirective(Foo)`
-  - **Modules** (`FormsModule`, `ReactiveFormsModule`, `TableModule`, etc.) → `MockModule(Foo)`
-  - **Pipes** → `MockPipe(Foo)`
-  - Because mocked sub-components carry no real DI tree, transitive service dependencies are never needed in `providers`
-  - **Exception — aliased signal inputs**: if a third-party directive uses `input(null, { alias: 'foo' })` (e.g. `Highlight` from `ngx-highlightjs`), `MockDirective` cannot replicate the alias and Angular will throw `NG0303`. In this case, declare a minimal inline stub that matches the directive's **exact** selector and declares `@Input()` for every binding used in the template:
-    ```typescript
-    @Directive({ selector: '[highlight]', standalone: true })
-    class HighlightStub {
-      @Input() highlight!: string | null;
-      @Input() language!: string;
-    }
-    ```
-- **GIVEN naming** — mock object instances: `mock<Name>` (e.g. `mockAsset`); stub return values: `stubbed<Name>` (e.g. `stubbedAssets`)
-- **THEN naming** — resolved/actual values: `expected<Name>` (e.g. `const expectedAssets = await result`)
-- **HTTP success AND error** — for every HTTP-backed method write both a success case and an error case; in success tests assert the result: `expect(expectedResult).toEqual(stubbedResult)`
-- **HTTP calls** — use `lastValueFrom()` with `async/await` and `HttpTestingController`; always call `httpController.verify()` in `afterEach`; match requests by URL suffix (`req.url.endsWith(...)`) or `req.urlWithParams` for query params
-- **No `vi.mock`** — the Angular unit-test runner does not support `vi.mock` for relative imports; use TestBed providers for all mocking
-- **Form controls** — access form controls via dot notation: `form.controls.name`, `form.controls.email`, etc. — never use bracket notation `form.controls["name"]`; also never use `form.get("")?.value`
-- **`fixture.detectChanges()` over `TestBed.tick()`** — always use `fixture.detectChanges()` to flush effects and trigger change detection; never use `TestBed.tick()`; never combine the two in the same test
-- **Max 1 nesting level** — at most one level of nested `describe` inside the outer `describe` of the class; do not add a second layer of `describe` blocks
-- **BDD structure** — use `describe` blocks for grouping and `it` descriptions that read as sentences from the subject's perspective
-
-### Example — Service
-
-```typescript
-vi.mock("../../../environments/environment", () => ({
-  environment: { apiUrl: "http://test-api" }
-}));
-
-describe("MyService", () => {
-  let testSubject: MyService;
-  let httpController: HttpTestingController;
-
-  beforeEach(() => {
-    TestBed.configureTestingModule({
-      providers: [MyService, MockProvider(SomeDep), provideHttpClient(), provideHttpClientTesting()]
-    });
-    testSubject = TestBed.inject(MyService);
-    httpController = TestBed.inject(HttpTestingController);
-  });
-
-  afterEach(() => httpController.verify());
-
-  describe("getItems", () => {
-    it("should return items on success", async () => {
-      // GIVEN
-      const stubbedItems = [buildMockItem()];
-
-      // WHEN
-      const result = lastValueFrom(testSubject.getItems());
-      httpController.expectOne(req => req.method === "GET" && req.url.endsWith("/items")).flush(stubbedItems);
-
-      // THEN
-      const expectedItems = await result;
-      expect(expectedItems).toEqual(stubbedItems);
-    });
-
-    it("should throw on error", async () => {
-      // WHEN
-      const result = lastValueFrom(testSubject.getItems());
-      httpController.expectOne(req => req.method === "GET").flush(null, { status: 500, statusText: "Server Error" });
-
-      // THEN
-      await expect(result).rejects.toThrow();
-    });
-  });
-});
-```
-
-### Example — Component
-
-Suppose `MyComponent` is declared as:
-
-```typescript
-@Component({
-  standalone: true,
-  imports: [SomeChildComponent, RouterLink, FormsModule, SomePipe]
-  // ...
-})
-export class MyComponent {
-  private readonly myService = inject(MyService);
-  // ...
-}
-```
-
-The spec mirrors the `imports` array, replacing every entry (except `MyComponent` itself) with its ng-mocks wrapper:
-
-```typescript
-describe("MyComponent", () => {
-  let fixture: ComponentFixture<MyComponent>;
-  let testSubject: MyComponent;
-  let mockMyService: MyService;
-
-  beforeEach(() => {
-    TestBed.configureTestingModule({
-      imports: [
-        MyComponent,
-        MockComponent(SomeChildComponent),
-        MockDirective(RouterLink),
-        MockModule(FormsModule),
-        MockPipe(SomePipe)
-      ],
-      providers: [MockProvider(MyService, { getData: vi.fn().mockReturnValue(of([])) })]
-    });
-    fixture = TestBed.createComponent(MyComponent);
-    testSubject = fixture.componentInstance;
-    mockMyService = TestBed.inject(MyService);
-    fixture.detectChanges();
-  });
-
-  describe("someMethod", () => {
-    it("should update state on success", () => {
-      // GIVEN
-      const stubbedData = [buildMockItem()];
-      vi.spyOn(mockMyService, "getData").mockReturnValue(of(stubbedData));
-
-      // WHEN
-      testSubject.someMethod();
-      fixture.detectChanges();
-
-      // THEN
-      expect(testSubject.items()).toHaveLength(stubbedData.length);
-    });
-  });
-});
-```
+- **100% coverage** of statements, branches, functions and lines is the gate.
+  The only exclusions are generated or vendored files (`src/components/ui/**`,
+  `src/lib/api/schema.d.ts`, `src/main.tsx`, `*.d.ts`). No exclusion for a
+  component that is merely hard to test.
+- Mock every external dependency: network, Auth0, clock, storage. A unit test
+  never touches the real world.
+- Assign the unit under test to `testSubject`.
+- Build inputs with factories/builders and named fixtures; assert against named
+  expectations. Table-driven tests over copy-pasted cases.
+- Test the public surface. Query by role, label or text, not by test id, unless
+  no accessible alternative exists.
+- Query hooks are tested with `renderHook` + MSW, including the error path.
+- No snapshot tests. No `any`. Comments only for `// GIVEN`, `// WHEN`, `// THEN`.
+- E2E runs against the production build (`vite build` + `vite preview`) with a
+  stateful in-memory API mock and a network-stubbed Auth0. Deterministic clock,
+  no `waitForTimeout`, fresh context per test, axe scan on the main pages.
+- A bug fix ships with a test that fails before the fix and passes after.
 
 ## Backend Testing
 
@@ -396,13 +262,13 @@ class AssetServiceTest {
 
 **Always add tests for new code — this is implied by every code generation request.** Whenever you create or modify a feature, service, component, or fix a bug, you must also write the corresponding tests in the same response, without being asked. Every new feature, service method, component, or bug fix must be accompanied by tests:
 - Backend: JUnit 5 unit tests following the rules in the [Backend Testing](#backend-testing) section
-- Frontend: Vitest unit tests following the rules in the [Frontend Testing](#frontend-testing) section
+- Frontend: Vitest/RTL/MSW unit and integration tests plus Playwright e2e, following the [Frontend Testing](#frontend-testing) section. New frontend code must keep the 100% coverage gate green
 
 PRs without tests for new code will not be merged.
 
 ## SEO Maintenance
 
-Whenever Angular routes are added, removed, or renamed, you must update both:
+Whenever frontend routes are added, removed, or renamed, you must update both:
 - `aurum-fe/public/robots.txt` — adjust `Disallow`/`Allow` entries if the new route should be crawled or blocked
 - `aurum-fe/public/sitemap.xml` — add, remove, or update the corresponding `<url>` entry (including `<loc>`, `<changefreq>`, and `<priority>`)
 
@@ -428,7 +294,7 @@ Use a concise kebab-case short name that describes the change (e.g., `feat/targe
 
 ### Domain / Routing Structure
 
-- `aurum-networth.com` → Vercel (Angular SPA)
+- `aurum-networth.com` → Vercel (React SPA)
 - `api.aurum-networth.com` → Hetzner VPS → Spring Boot on port 8080
 
 Backend endpoints are served **directly at the root** of `api.aurum-networth.com` (e.g. `api.aurum-networth.com/users`, `/assets`). There is **no `/api` path prefix** — the subdomain itself conveys that. Any reverse proxy (nginx/Caddy) on the VPS should forward all traffic straight to port 8080 without adding a path prefix.
@@ -460,16 +326,18 @@ spring.datasource.password=
 ```
 
 ### Frontend
-- Local: `aurum-fe/src/environments/environment.ts` (gitignored for sensitive values)
-- Production: set as environment variables on Vercel
+There are no frontend secrets. Vite reads public build-time configuration from
+`VITE_*` environment variables (local `.env.local`, production Vercel env vars):
 
-Key secrets required:
 ```
-AUTH0_DOMAIN=
-AUTH0_CLIENT_ID=
-AUTH0_AUDIENCE=
-API_BASE_URL=
+VITE_API_URL=
+VITE_AUTH0_DOMAIN=
+VITE_AUTH0_CLIENT_ID=
+VITE_AUTH0_AUDIENCE=
 ```
+
+The Auth0 SPA client ID, domain and audience are public by design: they ship in
+the browser bundle. Never put a client secret in the frontend.
 
 ## Audit
 
@@ -490,7 +358,7 @@ When asked to perform an audit (`esegui un audit`), always perform a **comprehen
 11. **First user access flow** — race conditions on user creation, default values, onboarding data seeding, transaction isolation
 12. **SEO** — robots.txt, sitemap.xml, meta tags, structured data, SSR/pre-rendering for public pages
 13. **Test quality & coverage** — missing test files, missing edge cases, incorrect mocking patterns, adherence to project test conventions
-14. **Memory leaks** — missing `takeUntilDestroyed()` on GET observables, nested subscribes, POST/PUT/DELETE subscriptions that write to component state without error handlers
+14. **Memory leaks** — event listeners, timers, observers, subscriptions or abort controllers not cleaned up on unmount; state updates after unmount
 
 ### Audit Tools
 

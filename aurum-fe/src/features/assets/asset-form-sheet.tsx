@@ -1,0 +1,363 @@
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useEffect } from "react";
+import { useForm, useWatch } from "react-hook-form";
+import { z } from "zod";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+	Sheet,
+	SheetContent,
+	SheetDescription,
+	SheetFooter,
+	SheetHeader,
+	SheetTitle
+} from "@/components/ui/sheet";
+import { Switch } from "@/components/ui/switch";
+import { todayISO } from "@/lib/format/date";
+import {
+	ASSET_TYPE,
+	CURRENCIES,
+	LIABILITY_TYPE,
+	PAYMENT_FREQUENCY,
+	type AssetCategoryDTO,
+	type AssetDTO,
+	type Currency
+} from "@/lib/api/types";
+import { useCreateAsset, useUpdateAsset } from "./api";
+
+const NAME_MAX_LENGTH = 100;
+
+const assetSchema = z
+	.object({
+		name: z
+			.string()
+			.trim()
+			.min(1, "Name is required")
+			.max(NAME_MAX_LENGTH, "Maximum 100 characters"),
+		categoryId: z.string().min(1, "Category is required"),
+		currency: z.custom<Currency>(value => CURRENCIES.includes(value as Currency), {
+			message: "Select a currency"
+		}),
+		isFavorite: z.boolean(),
+		initialValue: z.number().min(0, "Cannot be negative"),
+		referenceDate: z.string().min(1, "Pick a date"),
+		liabilityType: z.enum(["MANUAL", "AUTOMATIC"]).nullable(),
+		paymentFrequency: z.enum(["WEEKLY", "MONTHLY", "YEARLY"]).nullable(),
+		paymentAmount: z.number().min(0, "Cannot be negative").nullable()
+	})
+	.superRefine((values, context) => {
+		if (values.liabilityType !== LIABILITY_TYPE.AUTOMATIC) return;
+
+		if (!values.paymentFrequency) {
+			context.addIssue({
+				code: "custom",
+				path: ["paymentFrequency"],
+				message: "Select a frequency"
+			});
+		}
+		if (!values.paymentAmount || values.paymentAmount <= 0) {
+			context.addIssue({
+				code: "custom",
+				path: ["paymentAmount"],
+				message: "Enter the payment amount"
+			});
+		}
+	});
+
+type AssetFormValues = z.infer<typeof assetSchema>;
+
+function emptyValues(): AssetFormValues {
+	return {
+		name: "",
+		categoryId: "",
+		currency: "EUR",
+		isFavorite: false,
+		initialValue: 0,
+		referenceDate: todayISO(),
+		liabilityType: null,
+		paymentFrequency: null,
+		paymentAmount: null
+	};
+}
+
+function valuesFrom(asset: AssetDTO | null): AssetFormValues {
+	if (!asset) return emptyValues();
+
+	return {
+		name: asset.name,
+		categoryId: asset.categoryId,
+		currency: asset.originalCurrency,
+		isFavorite: asset.isFavorite,
+		initialValue: 0,
+		referenceDate: todayISO(),
+		liabilityType: asset.liabilityType ?? null,
+		paymentFrequency: asset.paymentFrequency ?? null,
+		paymentAmount: asset.paymentAmount ?? null
+	};
+}
+
+interface AssetFormSheetProps {
+	open: boolean;
+	onOpenChange: (open: boolean) => void;
+	asset: AssetDTO | null;
+	categories: AssetCategoryDTO[];
+}
+
+export function AssetFormSheet({ open, onOpenChange, asset, categories }: AssetFormSheetProps) {
+	const createAsset = useCreateAsset();
+	const updateAsset = useUpdateAsset();
+
+	const form = useForm<AssetFormValues>({
+		resolver: zodResolver(assetSchema),
+		mode: "onChange",
+		defaultValues: emptyValues()
+	});
+
+	const categoryId = useWatch({ control: form.control, name: "categoryId" });
+	const liabilityType = useWatch({ control: form.control, name: "liabilityType" });
+	const isFavorite = useWatch({ control: form.control, name: "isFavorite" });
+	const category = categories.find(item => item.id === categoryId);
+	const type = category?.type ?? ASSET_TYPE.ASSET;
+	const isEditing = Boolean(asset?.id);
+	const isSaving = createAsset.isPending || updateAsset.isPending;
+
+	useEffect(() => {
+		if (open) form.reset(valuesFrom(asset));
+	}, [open, asset, form]);
+
+	const submit = form.handleSubmit(values => {
+		const selectedCategory = categories.find(item => item.id === values.categoryId);
+		const isLiability = selectedCategory?.type === ASSET_TYPE.LIABILITY;
+
+		const body = {
+			name: values.name.trim(),
+			categoryId: values.categoryId,
+			originalCurrency: values.currency,
+			isFavorite: isLiability ? false : values.isFavorite,
+			liabilityType: isLiability ? (values.liabilityType ?? LIABILITY_TYPE.MANUAL) : undefined,
+			paymentFrequency:
+				isLiability && values.liabilityType === LIABILITY_TYPE.AUTOMATIC
+					? (values.paymentFrequency ?? undefined)
+					: undefined,
+			paymentAmount:
+				isLiability && values.liabilityType === LIABILITY_TYPE.AUTOMATIC
+					? (values.paymentAmount ?? undefined)
+					: undefined
+		};
+
+		const onSuccess = () => onOpenChange(false);
+
+		if (asset?.id) {
+			updateAsset.mutate({ id: asset.id, body }, { onSuccess });
+			return;
+		}
+
+		createAsset.mutate(
+			{
+				...body,
+				initialValue: values.initialValue,
+				referenceDate: values.referenceDate
+			},
+			{ onSuccess }
+		);
+	});
+
+	const assets = categories.filter(item => item.type === ASSET_TYPE.ASSET);
+	const liabilities = categories.filter(item => item.type === ASSET_TYPE.LIABILITY);
+
+	return (
+		<Sheet
+			open={open}
+			onOpenChange={onOpenChange}
+		>
+			<SheetContent>
+				<SheetHeader>
+					<SheetTitle>{isEditing ? "Edit asset" : "New asset"}</SheetTitle>
+					<SheetDescription>
+						{isEditing
+							? "Update the asset details. Values are recorded from the history sheet."
+							: "Add the asset and, if you know it, its current value."}
+					</SheetDescription>
+				</SheetHeader>
+
+				<form
+					onSubmit={submit}
+					className="flex flex-1 flex-col gap-4 overflow-y-auto"
+				>
+					<div className="flex flex-col gap-2">
+						<Label htmlFor="asset-name">Name</Label>
+						<Input
+							id="asset-name"
+							maxLength={NAME_MAX_LENGTH}
+							{...form.register("name")}
+						/>
+						{form.formState.errors.name ? (
+							<p className="text-danger text-xs">{form.formState.errors.name.message}</p>
+						) : null}
+					</div>
+
+					<div className="flex flex-col gap-2">
+						<Label htmlFor="asset-category">Category</Label>
+						<select
+							id="asset-category"
+							{...form.register("categoryId")}
+							className="border-input bg-background focus-visible:ring-ring h-9 rounded-md border px-3 text-sm focus-visible:ring-2 focus-visible:outline-none"
+						>
+							<option value="">Select a category</option>
+							{assets.length ? (
+								<optgroup label="Assets">
+									{assets.map(item => (
+										<option
+											key={item.id}
+											value={item.id}
+										>
+											{item.name}
+										</option>
+									))}
+								</optgroup>
+							) : null}
+							{liabilities.length ? (
+								<optgroup label="Liabilities">
+									{liabilities.map(item => (
+										<option
+											key={item.id}
+											value={item.id}
+										>
+											{item.name}
+										</option>
+									))}
+								</optgroup>
+							) : null}
+						</select>
+						{form.formState.errors.categoryId ? (
+							<p className="text-danger text-xs">{form.formState.errors.categoryId.message}</p>
+						) : null}
+					</div>
+
+					<div className="flex flex-col gap-2">
+						<Label htmlFor="asset-currency">Currency</Label>
+						<select
+							id="asset-currency"
+							{...form.register("currency")}
+							disabled={isEditing}
+							className="border-input bg-background focus-visible:ring-ring h-9 rounded-md border px-3 text-sm focus-visible:ring-2 focus-visible:outline-none disabled:opacity-60"
+						>
+							{CURRENCIES.map(code => (
+								<option
+									key={code}
+									value={code}
+								>
+									{code}
+								</option>
+							))}
+						</select>
+					</div>
+
+					{type === ASSET_TYPE.LIABILITY ? (
+						<>
+							<div className="flex flex-col gap-2">
+								<Label htmlFor="asset-liability-type">Liability type</Label>
+								<select
+									id="asset-liability-type"
+									{...form.register("liabilityType")}
+									className="border-input bg-background focus-visible:ring-ring h-9 rounded-md border px-3 text-sm focus-visible:ring-2 focus-visible:outline-none"
+								>
+									<option value="">Select a type</option>
+									<option value={LIABILITY_TYPE.MANUAL}>Manual</option>
+									<option value={LIABILITY_TYPE.AUTOMATIC}>Automatic</option>
+								</select>
+								{form.formState.errors.liabilityType ? (
+									<p className="text-danger text-xs">
+										{form.formState.errors.liabilityType.message}
+									</p>
+								) : null}
+							</div>
+
+							{liabilityType === LIABILITY_TYPE.AUTOMATIC ? (
+								<>
+									<div className="flex flex-col gap-2">
+										<Label htmlFor="asset-frequency">Payment frequency</Label>
+										<select
+											id="asset-frequency"
+											{...form.register("paymentFrequency")}
+											className="border-input bg-background focus-visible:ring-ring h-9 rounded-md border px-3 text-sm focus-visible:ring-2 focus-visible:outline-none"
+										>
+											<option value="">Select a frequency</option>
+											<option value={PAYMENT_FREQUENCY.WEEKLY}>Weekly</option>
+											<option value={PAYMENT_FREQUENCY.MONTHLY}>Monthly</option>
+											<option value={PAYMENT_FREQUENCY.YEARLY}>Yearly</option>
+										</select>
+									</div>
+									<div className="flex flex-col gap-2">
+										<Label htmlFor="asset-payment">Payment amount</Label>
+										<Input
+											id="asset-payment"
+											type="number"
+											step="0.01"
+											min={0}
+											{...form.register("paymentAmount", { valueAsNumber: true })}
+										/>
+									</div>
+								</>
+							) : null}
+						</>
+					) : (
+						<div className="flex items-center justify-between gap-3 rounded-lg border p-3">
+							<div className="flex flex-col">
+								<Label htmlFor="asset-favorite">Track in dashboard</Label>
+								<span className="text-muted-foreground text-[11px]">
+									Show this asset as a line on the net worth chart.
+								</span>
+							</div>
+							<Switch
+								id="asset-favorite"
+								checked={isFavorite}
+								onCheckedChange={checked => form.setValue("isFavorite", checked)}
+							/>
+						</div>
+					)}
+
+					{!isEditing ? (
+						<>
+							<div className="flex flex-col gap-2">
+								<Label htmlFor="asset-initial">Initial value</Label>
+								<Input
+									id="asset-initial"
+									type="number"
+									step="0.01"
+									min={0}
+									{...form.register("initialValue", { valueAsNumber: true })}
+								/>
+							</div>
+							<div className="flex flex-col gap-2">
+								<Label htmlFor="asset-date">Value date</Label>
+								<Input
+									id="asset-date"
+									type="date"
+									{...form.register("referenceDate")}
+								/>
+							</div>
+						</>
+					) : null}
+
+					<SheetFooter>
+						<Button
+							type="button"
+							variant="outline"
+							onClick={() => onOpenChange(false)}
+						>
+							Cancel
+						</Button>
+						<Button
+							type="submit"
+							disabled={isSaving || !form.formState.isValid}
+						>
+							{isEditing ? "Save changes" : "Add asset"}
+						</Button>
+					</SheetFooter>
+				</form>
+			</SheetContent>
+		</Sheet>
+	);
+}

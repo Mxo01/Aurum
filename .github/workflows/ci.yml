@@ -49,9 +49,21 @@ jobs:
         working-directory: aurum-fe
         run: npm ci
 
+      - name: Lint
+        working-directory: aurum-fe
+        run: npm run lint
+
+      - name: Typecheck
+        working-directory: aurum-fe
+        run: npm run typecheck
+
       - name: Run frontend tests
         working-directory: aurum-fe
-        run: npm test -- --watch=false
+        run: npm test -- --run --coverage
+
+      - name: Build
+        working-directory: aurum-fe
+        run: npm run build
 
       - name: Upload frontend coverage
         if: always()
@@ -59,6 +71,40 @@ jobs:
         with:
           name: frontend-coverage
           path: aurum-fe/coverage
+          retention-days: 7
+
+  test-frontend-e2e:
+    name: Frontend E2E
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: aurum-fe/package-lock.json
+
+      - name: Install dependencies
+        working-directory: aurum-fe
+        run: npm ci
+
+      - name: Install Playwright browsers
+        working-directory: aurum-fe
+        run: npx playwright install --with-deps chromium
+
+      - name: Run end-to-end tests
+        working-directory: aurum-fe
+        run: npm run test:e2e
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: aurum-fe/playwright-report
           retention-days: 7
 
   gitleaks:

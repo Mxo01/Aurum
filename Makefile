@@ -7,7 +7,7 @@ start:
 
 stop:
 	@cd aurum-be && docker compose down
-	@pkill -f "ng serve" || true
+	@pkill -f "vite" || true
 	@pkill -f "spring-boot" || true
 
 restart:

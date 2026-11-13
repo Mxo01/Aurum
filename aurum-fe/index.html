@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta
+			name="viewport"
+			content="width=device-width, initial-scale=1.0"
+		/>
+		<title>Aurum — Your net worth, finally legible.</title>
+		<meta
+			name="description"
+			content="Track assets, liabilities and cash flow in one place. Multi-currency, private by default, exportable anytime."
+		/>
+		<meta
+			name="theme-color"
+			content="#0f0e0c"
+		/>
+		<meta
+			property="og:type"
+			content="website"
+		/>
+		<meta
+			property="og:title"
+			content="Aurum — Your net worth, finally legible."
+		/>
+		<meta
+			property="og:description"
+			content="Track assets, liabilities and cash flow in one place. Multi-currency, private by default, exportable anytime."
+		/>
+		<meta
+			property="og:url"
+			content="https://aurum-networth.com/"
+		/>
+		<meta
+			property="og:image"
+			content="https://aurum-networth.com/og-image.png"
+		/>
+		<meta
+			name="twitter:card"
+			content="summary_large_image"
+		/>
+		<link
+			rel="icon"
+			type="image/svg+xml"
+			href="/favicon.svg"
+		/>
+		<link
+			rel="canonical"
+			href="https://aurum-networth.com/"
+		/>
+		<script>
+			(function () {
+				try {
+					var stored = localStorage.getItem("theme");
+					var dark =
+						stored === "dark" ||
+						(!stored && window.matchMedia("(prefers-color-scheme: dark)").matches);
+					document.documentElement.classList.toggle("dark", dark);
+					document.documentElement.style.colorScheme = dark ? "dark" : "light";
+				} catch (_) {
+					document.documentElement.classList.add("dark");
+				}
+			})();
+		</script>
+	</head>
+	<body>
+		<div id="root"></div>
+		<script
+			type="module"
+			src="/src/main.tsx"
+		></script>
+	</body>
+</html>

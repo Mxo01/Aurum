@@ -1,96 +1,50 @@
-const eslint = require("@eslint/js");
-const tseslint = require("typescript-eslint");
-const angular = require("angular-eslint");
-const importPlugin = require("eslint-plugin-import");
-const eslintUnusedImports = require("eslint-plugin-unused-imports");
+import js from "@eslint/js";
+import prettier from "eslint-config-prettier";
+import jsxA11y from "eslint-plugin-jsx-a11y";
+import reactHooks from "eslint-plugin-react-hooks";
+import reactRefresh from "eslint-plugin-react-refresh";
+import globals from "globals";
+import tseslint from "typescript-eslint";
 
-module.exports = tseslint.config(
+export default tseslint.config(
 	{
-		ignores: [
-			"dist/",
-			"coverage/",
-			"dist/",
-			".angular/",
-			".husky/",
-			".idea/",
-			".vscode/",
-			"cypress/",
-			"nginx/",
-			"node_modules/",
-			"public/",
-			"src/assets/"
-		]
+		ignores: ["dist", "coverage", "playwright-report", "test-results", "src/lib/api/schema.d.ts"]
 	},
+	js.configs.recommended,
+	...tseslint.configs.recommended,
+	jsxA11y.flatConfigs.recommended,
 	{
-		files: ["**/*.ts"],
-		plugins: {
-			import: importPlugin,
-			"unused-imports": eslintUnusedImports
+		files: ["**/*.{ts,tsx}"],
+		languageOptions: {
+			ecmaVersion: 2022,
+			globals: { ...globals.browser, ...globals.node }
 		},
-		extends: [
-			eslint.configs.recommended,
-			...tseslint.configs.recommended,
-			...tseslint.configs.stylistic,
-			...angular.configs.tsRecommended
-		],
-		processor: angular.processInlineTemplates,
+		plugins: {
+			"react-hooks": reactHooks,
+			"react-refresh": reactRefresh
+		},
 		rules: {
-			"@typescript-eslint/no-explicit-any": "error",
-			"@typescript-eslint/no-unused-vars": "off",
-			"no-unused-vars": "off",
-			"unused-imports/no-unused-imports": "error",
-			"unused-imports/no-unused-vars": "error",
-			"import/no-duplicates": ["error", { considerQueryString: true }],
-			"@typescript-eslint/consistent-type-definitions": "off",
-			"@typescript-eslint/no-namespace": "error",
-			"@typescript-eslint/no-empty-function": "error",
-			"@typescript-eslint/no-inferrable-types": "off",
-			"@typescript-eslint/consistent-generic-constructors": "error",
-			"@typescript-eslint/adjacent-overload-signatures": "error",
-			"@typescript-eslint/consistent-indexed-object-style": "off",
-			"@typescript-eslint/consistent-type-assertions": "error",
-			"@typescript-eslint/array-type": "error",
-			"@typescript-eslint/no-empty-object-type": "error",
-			"@typescript-eslint/ban-ts-comment": "error",
-			"@typescript-eslint/prefer-for-of": "off",
-			"@typescript-eslint/no-duplicate-enum-values": "error",
-			"no-useless-escape": "error",
-			"no-var": "error",
-			"prefer-const": "error",
-			"@angular-eslint/no-output-native": "error",
-			"@angular-eslint/no-output-rename": "warn",
-			"@angular-eslint/prefer-standalone": "error",
-			"@angular-eslint/prefer-inject": "error",
-			"@angular-eslint/no-output-on-prefix": "error",
-			eqeqeq: "error",
-			"@angular-eslint/directive-selector": [
+			...reactHooks.configs.recommended.rules,
+			"react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
+			"@typescript-eslint/no-unused-vars": [
 				"error",
-				{
-					type: "attribute",
-					prefix: "app",
-					style: "camelCase"
-				}
+				{ argsIgnorePattern: "^_", varsIgnorePattern: "^_" }
 			],
-			"@angular-eslint/component-selector": [
-				"error",
-				{
-					type: "element",
-					prefix: "app",
-					style: "kebab-case"
-				}
-			]
+			"@typescript-eslint/no-explicit-any": "error",
+			"@typescript-eslint/consistent-type-imports": "error"
 		}
 	},
 	{
-		files: ["**/*.html"],
-		extends: [...angular.configs.templateRecommended, ...angular.configs.templateAccessibility],
-		rules: {
-			"@angular-eslint/template/prefer-self-closing-tags": "error",
-			"@angular-eslint/template/label-has-associated-control": "error",
-			"@angular-eslint/template/click-events-have-key-events": "off",
-			"@angular-eslint/template/interactive-supports-focus": "off",
-			"@angular-eslint/template/alt-text": "error",
-			"@angular-eslint/template/eqeqeq": "error"
-		}
-	}
+		files: ["e2e/**/*.ts", "playwright.config.ts", "vite.config.ts"],
+		rules: { "react-refresh/only-export-components": "off" }
+	},
+	{
+		files: ["src/components/ui/**/*.tsx", "src/lib/api/api-context.tsx", "src/test/**"],
+		rules: { "react-refresh/only-export-components": "off" }
+	},
+	{
+		files: ["src/**/*.test.{ts,tsx}"],
+		rules: { "react-hooks/rules-of-hooks": "off" }
+	},
+	prettier
 );

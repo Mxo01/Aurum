@@ -1,8 +1,12 @@
 # Security audit — November 2026
 
 Scope: `aurum-be` (Spring Boot API and MCP server) and `aurum-fe` (Angular
-SPA). Focus: the MCP authorization layer, which was written before the MCP
-authorization spec was adopted and had grown a custom OAuth proxy.
+SPA at the time of the audit; now React). Focus: the MCP authorization layer,
+which was written before the MCP authorization spec was adopted and had grown a
+custom OAuth proxy.
+
+> Historical note: the frontend findings were about the Angular app. The React
+> rewrite keeps the same API, auth and hosting boundaries.
 
 Status key: **fixed** in the `fix/mcp-native-auth` branch, **open** as a
 follow-up, **info** for accepted risk or context.
