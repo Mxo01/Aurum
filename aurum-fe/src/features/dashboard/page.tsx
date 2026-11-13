@@ -166,15 +166,17 @@ export function DashboardPage() {
 					/>
 
 					<div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-						<TargetsCard
-							targets={targets.data}
-							isLoading={targets.isLoading}
-							currency={currency}
-						/>
-						<div className="lg:col-span-2">
+						<div className="lg:order-2 lg:col-span-2">
 							<TopAssetsCard
 								summary={summary.data}
 								isLoading={isLoadingSummary}
+							/>
+						</div>
+						<div className="lg:order-1">
+							<TargetsCard
+								targets={targets.data}
+								isLoading={targets.isLoading}
+								currency={currency}
 							/>
 						</div>
 					</div>

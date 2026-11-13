@@ -171,7 +171,7 @@ export function TargetsCard({ targets, isLoading, currency }: TargetsCardProps) 
 	const monthlyPace = monthsLeft > 0 ? remaining / monthsLeft : 0;
 
 	return (
-		<section className="bg-card border-border flex flex-col rounded-xl border p-4 sm:p-5">
+		<section className="bg-card border-border flex h-full flex-col rounded-xl border p-4 sm:p-5">
 			<div className="flex items-center justify-between gap-2">
 				<span className="text-muted-foreground flex items-center gap-2 text-[11px] font-medium">
 					<TargetIcon className="size-3.5" /> Financial target

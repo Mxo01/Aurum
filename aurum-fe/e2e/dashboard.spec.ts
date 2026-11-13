@@ -21,3 +21,15 @@ test("opens the command palette with the keyboard", async ({ page }) => {
 	await page.keyboard.press("Escape");
 	await expect(page.getByPlaceholder("Type a command or search…")).toBeHidden();
 });
+
+test("shows the financial target after the top assets on mobile", async ({ page }) => {
+	await page.setViewportSize({ width: 390, height: 844 });
+	await page.goto("/dashboard");
+
+	const topAssets = await page.getByText("Top assets").boundingBox();
+	const financialTarget = await page.getByText("Financial target").boundingBox();
+
+	expect(topAssets).not.toBeNull();
+	expect(financialTarget).not.toBeNull();
+	expect(financialTarget!.y).toBeGreaterThan(topAssets!.y);
+});
