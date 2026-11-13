@@ -1,5 +1,4 @@
 import { ComponentFixture, TestBed } from "@angular/core/testing";
-import { faker } from "@faker-js/faker";
 import { MockComponent, MockDirective, MockModule, MockPipe } from "ng-mocks";
 import { DecimalPipe } from "@angular/common";
 import { FormsModule } from "@angular/forms";
@@ -11,23 +10,9 @@ import { Button } from "primeng/button";
 import { InputNumber } from "primeng/inputnumber";
 import { Menu } from "primeng/menu";
 import { AssetTableComponent } from "./asset-table.component";
-import { Asset, AssetType } from "../../model/asset.model";
-import { Currency } from "../../../profile/model/currency.model";
+import { Asset } from "../../model/asset.model";
 import { NoArrowSpinDirective } from "../../../../shared/directives/no-arrow-spin.directive";
-
-const buildMockAsset = (overrides: Partial<Asset> = {}): Asset => ({
-	id: faker.string.uuid(),
-	name: faker.lorem.word(),
-	categoryId: faker.string.uuid(),
-	categoryName: "Stocks",
-	categoryIcon: null,
-	type: AssetType.ASSET,
-	originalCurrency: Currency.EUR,
-	isFavorite: false,
-	latestValue: 1000,
-	latestValueBase: 1000,
-	...overrides
-});
+import { buildMockAsset } from "../../../../shared/testing/asset.fixture";
 
 describe("AssetTableComponent", () => {
 	let fixture: ComponentFixture<AssetTableComponent>;

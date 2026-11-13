@@ -10,9 +10,9 @@ import com.backend.aurum.domain.asset.model.LiabilityType;
 import com.backend.aurum.domain.asset.model.PaymentFrequency;
 import com.backend.aurum.domain.asset.model.Snapshot;
 import com.backend.aurum.domain.asset.repository.AssetRepository;
+import com.backend.aurum.domain.shared.port.ExchangeRateProvider;
 import com.backend.aurum.domain.user.enums.Currency;
 import com.backend.aurum.domain.user.model.User;
-import com.backend.aurum.infrastructure.exchange.ExchangeRateService;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.LocalDate;
@@ -38,7 +38,7 @@ class LiabilitySchedulerServiceTest {
 	private SnapshotService snapshotService;
 
 	@Mock
-	private ExchangeRateService exchangeRateService;
+	private ExchangeRateProvider exchangeRateService;
 
 	private LiabilitySchedulerService testSubject;
 

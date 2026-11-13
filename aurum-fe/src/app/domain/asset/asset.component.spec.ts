@@ -16,25 +16,11 @@ import { ThemeService } from "../../shared/services/theme/theme.service";
 import { AssetFormComponent } from "./components/asset-form/asset-form.component";
 import { AssetHistoryComponent } from "./components/asset-history/asset-history.component";
 import { AssetTableComponent } from "./components/asset-table/asset-table.component";
-import { Asset, AssetType } from "./model/asset.model";
 import { Currency } from "../profile/model/currency.model";
 import { Locale } from "../profile/model/locale.model";
 import { UserProfile } from "../profile/model/user-profile.model";
 import { SnapshotService } from "../snapshot/snapshot.service";
-
-const buildMockAsset = (overrides: Partial<Asset> = {}): Asset => ({
-	id: faker.string.uuid(),
-	name: faker.lorem.word(),
-	categoryId: faker.string.uuid(),
-	categoryName: faker.lorem.word(),
-	categoryIcon: null,
-	type: AssetType.ASSET,
-	originalCurrency: Currency.EUR,
-	isFavorite: false,
-	latestValue: faker.number.float({ min: 100, max: 10000 }),
-	latestValueBase: faker.number.float({ min: 100, max: 10000 }),
-	...overrides
-});
+import { buildMockAsset } from "../../shared/testing/asset.fixture";
 
 const buildMockProfile = (): UserProfile => ({
 	id: faker.string.uuid(),

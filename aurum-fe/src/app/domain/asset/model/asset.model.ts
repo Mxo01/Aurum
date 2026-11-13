@@ -1,44 +1,44 @@
+import type { AssetCategoryDTO, AssetDTO } from "../../../shared/api/contract";
 import { Currency } from "../../profile/model/currency.model";
 
-export enum AssetType {
-	LIABILITY = "LIABILITY",
-	ASSET = "ASSET"
-}
+export type AssetType = AssetDTO["type"];
+export const AssetType = {
+	LIABILITY: "LIABILITY",
+	ASSET: "ASSET"
+} as const satisfies Record<AssetType, AssetType>;
 
-export enum LiabilityType {
-	MANUAL = "MANUAL",
-	AUTOMATIC = "AUTOMATIC"
-}
+export type LiabilityType = NonNullable<AssetDTO["liabilityType"]>;
+export const LiabilityType = {
+	MANUAL: "MANUAL",
+	AUTOMATIC: "AUTOMATIC"
+} as const satisfies Record<LiabilityType, LiabilityType>;
 
-export enum PaymentFrequency {
-	WEEKLY = "WEEKLY",
-	MONTHLY = "MONTHLY",
-	YEARLY = "YEARLY"
-}
+export type PaymentFrequency = NonNullable<AssetDTO["paymentFrequency"]>;
+export const PaymentFrequency = {
+	WEEKLY: "WEEKLY",
+	MONTHLY: "MONTHLY",
+	YEARLY: "YEARLY"
+} as const satisfies Record<PaymentFrequency, PaymentFrequency>;
 
-export interface AssetCategory {
-	id: string;
-	name: string;
-	type: AssetType;
-	icon: string | null;
-	isDefault: boolean;
-}
+export type AssetCategory = AssetCategoryDTO;
 
-export interface Asset {
-	id: string;
-	name: string;
-	categoryId: string;
-	categoryName: string;
-	categoryIcon: string | null;
-	type: AssetType;
+/**
+ * The client's view of an asset: the contract minus the fields the server
+ * computes from snapshots (latest/previous value, snapshot list), plus the
+ * `Date` the form works with instead of an ISO string.
+ */
+export type Asset = Omit<
+	AssetDTO,
+	| "snapshots"
+	| "latestValue"
+	| "latestValueBase"
+	| "previousValue"
+	| "referenceDate"
+	| "originalCurrency"
+> & {
 	originalCurrency: Currency;
-	isFavorite: boolean;
 	latestValue?: number | null;
 	latestValueBase?: number | null;
 	previousValue?: number | null;
-	initialValue?: number | null;
 	referenceDate?: string | Date | null;
-	liabilityType?: LiabilityType | null;
-	paymentFrequency?: PaymentFrequency | null;
-	paymentAmount?: number | null;
-}
+};

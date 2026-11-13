@@ -1,19 +1,5 @@
-import { faker } from "@faker-js/faker";
-import { AssetType, Asset } from "../../model/asset.model";
-import { Currency } from "../../../profile/model/currency.model";
 import { mapAssetsToAssetsWithBalance } from "./asset-table.utils";
-
-const buildMockAsset = (overrides: Partial<Asset> = {}): Asset => ({
-	id: faker.string.uuid(),
-	name: faker.lorem.word(),
-	categoryId: faker.string.uuid(),
-	categoryName: faker.lorem.word(),
-	categoryIcon: null,
-	type: AssetType.ASSET,
-	originalCurrency: Currency.EUR,
-	isFavorite: false,
-	...overrides
-});
+import { buildMockAsset } from "../../../../shared/testing/asset.fixture";
 
 describe("mapAssetsToAssetsWithBalance", () => {
 	it("should use latestValue as currentValue when set", () => {

@@ -5,9 +5,9 @@ import { faker } from "@faker-js/faker";
 import { MockProvider } from "ng-mocks";
 import { MessageService } from "primeng/api";
 import { lastValueFrom } from "rxjs";
-import { Currency } from "../profile/model/currency.model";
 import { AssetService } from "./asset.service";
-import { Asset, AssetCategory, AssetType } from "./model/asset.model";
+import { AssetCategory, AssetType } from "./model/asset.model";
+import { buildMockAsset } from "../../shared/testing/asset.fixture";
 
 const buildMockCategory = (overrides: Partial<AssetCategory> = {}): AssetCategory => ({
 	id: faker.string.uuid(),
@@ -15,18 +15,6 @@ const buildMockCategory = (overrides: Partial<AssetCategory> = {}): AssetCategor
 	type: faker.helpers.arrayElement(Object.values(AssetType)),
 	icon: null,
 	isDefault: false,
-	...overrides
-});
-
-const buildMockAsset = (overrides: Partial<Asset> = {}): Asset => ({
-	id: faker.string.uuid(),
-	name: faker.lorem.word(),
-	categoryId: faker.string.uuid(),
-	categoryName: faker.lorem.word(),
-	categoryIcon: null,
-	type: faker.helpers.arrayElement(Object.values(AssetType)),
-	originalCurrency: faker.helpers.arrayElement(Object.values(Currency)),
-	isFavorite: false,
 	...overrides
 });
 

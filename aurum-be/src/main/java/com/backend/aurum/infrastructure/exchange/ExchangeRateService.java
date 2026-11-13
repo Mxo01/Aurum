@@ -1,5 +1,6 @@
 package com.backend.aurum.infrastructure.exchange;
 
+import com.backend.aurum.domain.shared.port.ExchangeRateProvider;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Map;
@@ -11,11 +12,12 @@ import org.springframework.web.client.RestClient;
 
 @Slf4j
 @Service
-public class ExchangeRateService {
+public class ExchangeRateService implements ExchangeRateProvider {
 
 	private final RestClient restClient = RestClient.create("https://api.frankfurter.app");
 
 	@Cacheable(value = "exchangeRates", key = "#from + '-' + #to + '-' + #date")
+	@Override
 	public BigDecimal getRate(String from, String to, LocalDate date) {
 		if (from.equals(to)) return BigDecimal.ONE;
 		log.debug(

@@ -164,10 +164,11 @@ describe("getOrCreateTooltipEl", () => {
 describe("createBarGradient", () => {
 	it("should return topColor when chart has no chartArea", () => {
 		// GIVEN
+		const mockCtx = { createLinearGradient: vi.fn() };
 		const fn = createBarGradient("red", "blue");
 
 		// WHEN
-		const result = fn({ chart: { ctx: {}, chartArea: null } });
+		const result = fn({ chart: { ctx: mockCtx, chartArea: null } });
 
 		// THEN
 		expect(result).toBe("red");
@@ -191,10 +192,11 @@ describe("createBarGradient", () => {
 describe("createGradientFill", () => {
 	it("should return 'transparent' when chart has no chartArea", () => {
 		// GIVEN
+		const mockCtx = { createLinearGradient: vi.fn() };
 		const fn = createGradientFill("#abc123");
 
 		// WHEN
-		const result = fn({ chart: { ctx: {}, chartArea: null } });
+		const result = fn({ chart: { ctx: mockCtx, chartArea: null } });
 
 		// THEN
 		expect(result).toBe("transparent");

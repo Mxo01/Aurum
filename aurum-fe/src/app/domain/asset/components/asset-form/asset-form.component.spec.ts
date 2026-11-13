@@ -12,6 +12,7 @@ import { Drawer } from "primeng/drawer";
 import { AssetFormComponent } from "./asset-form.component";
 import { Asset, AssetCategory, AssetType, LiabilityType } from "../../model/asset.model";
 import { Currency } from "../../../profile/model/currency.model";
+import { buildMockAsset } from "../../../../shared/testing/asset.fixture";
 
 const buildMockCategory = (overrides: Partial<AssetCategory> = {}): AssetCategory => ({
 	id: faker.string.uuid(),
@@ -19,18 +20,6 @@ const buildMockCategory = (overrides: Partial<AssetCategory> = {}): AssetCategor
 	type: AssetType.ASSET,
 	icon: null,
 	isDefault: false,
-	...overrides
-});
-
-const buildMockAsset = (overrides: Partial<Asset> = {}): Asset => ({
-	id: faker.string.uuid(),
-	name: faker.lorem.word(),
-	categoryId: faker.string.uuid(),
-	categoryName: faker.lorem.word(),
-	categoryIcon: null,
-	type: AssetType.ASSET,
-	originalCurrency: Currency.EUR,
-	isFavorite: false,
 	...overrides
 });
 

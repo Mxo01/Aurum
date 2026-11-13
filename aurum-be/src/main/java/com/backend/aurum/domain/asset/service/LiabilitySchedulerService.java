@@ -5,7 +5,7 @@ import com.backend.aurum.domain.asset.model.LiabilityType;
 import com.backend.aurum.domain.asset.model.PaymentFrequency;
 import com.backend.aurum.domain.asset.model.Snapshot;
 import com.backend.aurum.domain.asset.repository.AssetRepository;
-import com.backend.aurum.infrastructure.exchange.ExchangeRateService;
+import com.backend.aurum.domain.shared.port.ExchangeRateProvider;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.LocalDate;
@@ -25,7 +25,7 @@ public class LiabilitySchedulerService {
 
 	private final AssetRepository assetRepository;
 	private final SnapshotService snapshotService;
-	private final ExchangeRateService exchangeRateService;
+	private final ExchangeRateProvider exchangeRateService;
 	private final Clock clock;
 
 	/**

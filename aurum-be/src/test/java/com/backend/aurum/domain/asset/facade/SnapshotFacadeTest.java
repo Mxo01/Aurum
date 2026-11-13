@@ -12,10 +12,10 @@ import com.backend.aurum.domain.asset.model.Snapshot;
 import com.backend.aurum.domain.asset.service.AssetService;
 import com.backend.aurum.domain.asset.service.SnapshotService;
 import com.backend.aurum.domain.asset.validation.SnapshotValidationService;
+import com.backend.aurum.domain.shared.port.ExchangeRateProvider;
 import com.backend.aurum.domain.user.enums.Currency;
 import com.backend.aurum.domain.user.model.User;
 import com.backend.aurum.domain.user.repository.UserRepository;
-import com.backend.aurum.infrastructure.exchange.ExchangeRateService;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
@@ -45,7 +45,7 @@ class SnapshotFacadeTest {
 	private AssetService assetService;
 
 	@Mock
-	private ExchangeRateService exchangeRateService;
+	private ExchangeRateProvider exchangeRateService;
 
 	@Mock
 	private UserRepository userRepository;
