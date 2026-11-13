@@ -5,7 +5,7 @@ import { EmptyState } from "@/components/app/empty-state";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePreferences } from "@/lib/format/use-preferences";
-import { assetTrend } from "./chart-utils";
+import { assetTrend } from "@/lib/format/asset";
 import type { AnalyticsSummaryDTO } from "@/lib/api/types";
 import { ASSET_TYPE } from "@/lib/api/types";
 

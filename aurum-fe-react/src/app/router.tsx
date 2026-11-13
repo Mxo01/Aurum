@@ -35,9 +35,10 @@ export const router = createBrowserRouter([
 					},
 					{
 						path: "assets",
-						element: (
-							<PlaceholderPage title="Assets" description="Assets, liabilities and categories." />
-						)
+						lazy: async () => {
+							const module = await import("@/features/assets/page");
+							return { Component: module.AssetsPage };
+						}
 					},
 					{
 						path: "assets/categories",
