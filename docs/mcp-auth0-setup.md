@@ -116,7 +116,19 @@ open registration endpoint.
 
 ## 4. Configure the backend
 
-On the server (`/opt/aurum/.env`) and in local development:
+In production the values are read from **GitHub Actions repository
+variables**; the deploy workflow writes them into `/opt/aurum/.env` before
+`docker compose up`:
+
+```bash
+gh variable set MCP_RESOURCE_URL --body "https://api.aurum-networth.com/mcp"
+gh variable set MCP_AUDIENCE --body "https://api.aurum-networth.com/mcp"
+gh variable set MCP_READ_SCOPES --body "mcp:read"
+gh variable set MCP_WRITE_SCOPES --body "mcp:write"
+# MCP_ALLOWED_ORIGINS is optional and empty by default
+```
+
+For local development use the same keys in `application-local.properties`:
 
 ```dotenv
 MCP_RESOURCE_URL=https://api.aurum-networth.com/mcp
@@ -145,8 +157,8 @@ MCP_MAX_BATCH_SIZE=500
 2. Add the environment variables on the server.
 3. Merge and deploy the backend.
 
-The deploy workflow refuses to start if `MCP_RESOURCE_URL` is missing from
-`/opt/aurum/.env`. If you deploy before the Auth0 API exists, the backend still
+The deploy workflow refuses to start if `MCP_RESOURCE_URL` is not an
+`https://…/mcp` URL. It also removes the obsolete `MCP_AUTH0_CLIENT_ID` line. If you deploy before the Auth0 API exists, the backend still
 starts but `/mcp` rejects every token (the audience was never issued) — fail
 closed, not open.
 
