@@ -58,6 +58,8 @@ describe("AssetsPage", () => {
 
 		// THEN
 		expect(await screen.findByText("€558,450.00")).toBeInTheDocument();
+		expect(screen.getByText("Type")).toBeInTheDocument();
+		expect(screen.getAllByText("Liability").length).toBeGreaterThan(1);
 		expect(screen.getAllByText("€268,000.00").length).toBeGreaterThan(0);
 		expect(screen.getByText("€290,450.00")).toBeInTheDocument();
 		expect(screen.getAllByText("Apartment Berlin").length).toBeGreaterThan(0);

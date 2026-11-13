@@ -96,8 +96,9 @@ export function AssetList({
 	return (
 		<>
 			<div className="border-border hidden overflow-hidden rounded-xl border md:block">
-				<div className="bg-muted/40 text-muted-foreground grid grid-cols-[minmax(0,1fr)_160px_120px_100px] gap-2 px-3 py-2 text-[11px] font-medium">
+				<div className="bg-muted/40 text-muted-foreground grid grid-cols-[minmax(0,1fr)_92px_160px_120px_100px] gap-2 px-3 py-2 text-[11px] font-medium">
 					<span>Asset</span>
+					<span>Type</span>
 					<span className="text-right">Value</span>
 					<span className="text-right">Monthly Delta</span>
 					<span className="text-right">Actions</span>
@@ -142,7 +143,7 @@ export function AssetList({
 										return (
 											<div
 												key={asset.id}
-												className="border-border/60 hover:bg-muted/30 grid grid-cols-[minmax(0,1fr)_160px_120px_100px] items-center gap-2 border-t px-3 py-2 transition-colors"
+												className="border-border/60 hover:bg-muted/30 grid grid-cols-[minmax(0,1fr)_92px_160px_120px_100px] items-center gap-2 border-t px-3 py-2 transition-colors"
 											>
 												<div className="flex min-w-0 items-center gap-2 pl-6">
 													{asset.type === ASSET_TYPE.ASSET ? (
@@ -173,6 +174,14 @@ export function AssetList({
 														onSave={name => onRename(asset, name)}
 														className="min-w-0"
 													/>
+												</div>
+												<div>
+													<Badge
+														variant="outline"
+														className="text-muted-foreground font-normal"
+													>
+														{isLiability ? "Liability" : "Asset"}
+													</Badge>
 												</div>
 												<div className="text-right">
 													<EditableValue
