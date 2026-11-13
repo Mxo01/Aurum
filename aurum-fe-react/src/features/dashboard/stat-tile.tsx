@@ -22,7 +22,7 @@ export function StatTile({ label, value, hint, right, className }: StatTileProps
 				{right}
 			</div>
 			<div className="flex flex-col gap-0.5">
-				<span className="num text-xl font-semibold tracking-tight">{value}</span>
+				<div className="num text-xl font-semibold tracking-tight">{value}</div>
 				{hint ? <span className="text-muted-foreground text-[11px]">{hint}</span> : null}
 			</div>
 		</div>

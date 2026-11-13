@@ -1,6 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { MoreHorizontal, Pencil, Plus, Target as TargetIcon, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { differenceInMonths } from "date-fns";
 import { useForm, useWatch } from "react-hook-form";
 import { useSearchParams } from "react-router";
 import { z } from "zod";
@@ -35,6 +36,7 @@ import {
 	SheetTitle
 } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
+import { parseDateOnly } from "@/lib/format/date";
 import { usePreferences } from "@/lib/format/use-preferences";
 import type { TargetDTO, TargetStatus } from "@/lib/api/types";
 import { useCreateTarget, useDeleteTarget, useUpdateTarget } from "@/features/targets/api";
@@ -155,6 +157,10 @@ export function TargetsCard({ targets, isLoading, currency }: TargetsCardProps) 
 	const isSaving = createTarget.isPending || updateTarget.isPending;
 	const completion = active?.completionPercentage ?? 0;
 	const remaining = active ? Math.max(active.targetAmount - (active.currentAmount ?? 0), 0) : 0;
+	const monthsLeft = active
+		? Math.max(1, differenceInMonths(parseDateOnly(active.deadline), new Date()))
+		: 0;
+	const monthlyPace = monthsLeft > 0 ? remaining / monthsLeft : 0;
 
 	return (
 		<section className="bg-card border-border flex flex-col rounded-xl border p-4 sm:p-5">
@@ -221,9 +227,15 @@ export function TargetsCard({ targets, isLoading, currency }: TargetsCardProps) 
 						</div>
 					</div>
 
-					<div className="text-muted-foreground mt-auto flex items-center justify-between text-[11px]">
-						<span>Deadline</span>
-						<span>{date(active.deadline)}</span>
+					<div className="text-muted-foreground mt-auto flex flex-col gap-1 border-t pt-3 text-[11px]">
+						<div className="flex items-center justify-between">
+							<span>Monthly pace needed</span>
+							<span className="num text-foreground">{money(monthlyPace, { digits: 0 })}</span>
+						</div>
+						<div className="flex items-center justify-between">
+							<span>Deadline</span>
+							<span>{date(active.deadline)}</span>
+						</div>
 					</div>
 				</div>
 			) : (

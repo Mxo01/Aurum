@@ -28,12 +28,10 @@ export const router = createBrowserRouter([
 				children: [
 					{
 						path: "dashboard",
-						element: (
-							<PlaceholderPage
-								title="Dashboard"
-								description="Net worth, targets and top assets."
-							/>
-						)
+						lazy: async () => {
+							const module = await import("@/features/dashboard/page");
+							return { Component: module.DashboardPage };
+						}
 					},
 					{
 						path: "assets",

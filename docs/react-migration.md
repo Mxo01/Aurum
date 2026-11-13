@@ -22,8 +22,8 @@ explicit OK.
 ## Slices
 
 - [x] 0. Scaffold, shell, router, auth, landing, legal, tooling.
-- [ ] 1. Typed API layer, query hooks, MSW fixtures, error boundary.
-- [ ] 2. Dashboard.
+- [x] 1. Typed API layer, query hooks, MSW fixtures, error boundary.
+- [x] 2. Dashboard.
 - [ ] 3. Assets, snapshots, categories.
 - [ ] 4. Cash flow.
 - [ ] 5. Targets, profile, MCP, GDPR.

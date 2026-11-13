@@ -1,4 +1,4 @@
-import type { ChartDataDTO } from "@/lib/api/types";
+import type { AssetDTO, ChartDataDTO } from "@/lib/api/types";
 
 export interface ChartRow {
 	label: string;
@@ -76,4 +76,12 @@ export function yearOptions(oldestYear: number | null | undefined, currentYear: 
 	const years: number[] = [];
 	for (let year = currentYear; year >= start; year -= 1) years.push(year);
 	return years;
+}
+
+export function assetTrend(asset: AssetDTO) {
+	const { latestValue, previousValue } = asset;
+	if (typeof latestValue !== "number" || typeof previousValue !== "number") return null;
+	if (previousValue === 0) return null;
+
+	return ((latestValue - previousValue) / previousValue) * 100;
 }
