@@ -50,14 +50,34 @@ jobs:
         env:
           GHCR_TOKEN: ${{ secrets.GHCR_PAT }}
           GITHUB_OWNER: ${{ github.repository_owner }}
+          MCP_RESOURCE_URL: ${{ vars.MCP_RESOURCE_URL }}
+          MCP_AUDIENCE: ${{ vars.MCP_AUDIENCE }}
+          MCP_READ_SCOPES: ${{ vars.MCP_READ_SCOPES }}
+          MCP_WRITE_SCOPES: ${{ vars.MCP_WRITE_SCOPES }}
+          MCP_ALLOWED_ORIGINS: ${{ vars.MCP_ALLOWED_ORIGINS }}
         with:
           host: ${{ secrets.HETZNER_HOST }}
           username: ${{ secrets.HETZNER_USER }}
           key: ${{ secrets.HETZNER_SSH_KEY }}
-          envs: GHCR_TOKEN,GITHUB_OWNER
+          envs: GHCR_TOKEN,GITHUB_OWNER,MCP_RESOURCE_URL,MCP_AUDIENCE,MCP_READ_SCOPES,MCP_WRITE_SCOPES,MCP_ALLOWED_ORIGINS
           script: |
             echo "$GHCR_TOKEN" | docker login ghcr.io -u "$(echo $GITHUB_OWNER | tr '[:upper:]' '[:lower:]')" --password-stdin
             cd /opt/aurum
+            case "$MCP_RESOURCE_URL" in
+              https://*/mcp) ;;
+              *)
+                echo "MCP_RESOURCE_URL must be an https URL ending in /mcp; refusing to deploy"
+                exit 1
+                ;;
+            esac
+            sed -i '/^MCP_RESOURCE_URL=/d; /^MCP_AUDIENCE=/d; /^MCP_READ_SCOPES=/d; /^MCP_WRITE_SCOPES=/d; /^MCP_ALLOWED_ORIGINS=/d; /^MCP_AUTH0_CLIENT_ID=/d' .env
+            {
+              printf 'MCP_RESOURCE_URL=%s\n' "$MCP_RESOURCE_URL"
+              printf 'MCP_AUDIENCE=%s\n' "$MCP_AUDIENCE"
+              printf 'MCP_READ_SCOPES=%s\n' "$MCP_READ_SCOPES"
+              printf 'MCP_WRITE_SCOPES=%s\n' "$MCP_WRITE_SCOPES"
+              printf 'MCP_ALLOWED_ORIGINS=%s\n' "$MCP_ALLOWED_ORIGINS"
+            } >> .env
             docker compose -f docker-compose.prod.yml pull backend
             docker compose -f docker-compose.prod.yml up -d --remove-orphans
             docker image prune -f

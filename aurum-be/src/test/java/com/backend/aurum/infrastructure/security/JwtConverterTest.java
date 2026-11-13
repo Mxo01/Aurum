@@ -1,6 +1,7 @@
 package com.backend.aurum.infrastructure.security;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -14,9 +15,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
 class JwtConverterTest {
@@ -30,7 +32,6 @@ class JwtConverterTest {
 	@Test
 	void convert_returnsAuthenticationWithUserPrincipal() {
 		// GIVEN
-		ReflectionTestUtils.setField(testSubject, "audience", "https://api.aurum-networth.com");
 		String mockJwtId = "auth0|testuser";
 		User mockUser = Instancio.of(User.class).set(Select.field(User::getJwtId), mockJwtId).create();
 		Jwt mockJwt = mock(Jwt.class);
@@ -49,9 +50,29 @@ class JwtConverterTest {
 	}
 
 	@Test
+	void convert_mapsScopeClaimToAuthorities() {
+		// GIVEN
+		String mockJwtId = "auth0|scopeduser";
+		User mockUser = Instancio.create(User.class);
+		Jwt mockJwt = Jwt.withTokenValue("token")
+			.header("alg", "none")
+			.subject(mockJwtId)
+			.claim("scope", "openid mcp:read")
+			.build();
+		when(userService.findOrCreate(mockJwtId)).thenReturn(mockUser);
+
+		// WHEN
+		Authentication expectedAuth = testSubject.convert(mockJwt);
+
+		// THEN
+		assertThat(expectedAuth.getAuthorities())
+			.extracting(GrantedAuthority::getAuthority)
+			.contains("SCOPE_openid", "SCOPE_mcp:read");
+	}
+
+	@Test
 	void convert_callsFindOrCreateWithJwtSubject() {
 		// GIVEN
-		ReflectionTestUtils.setField(testSubject, "audience", "https://api.aurum-networth.com");
 		String mockJwtId = "auth0|anothertestuser";
 		User mockUser = Instancio.create(User.class);
 		Jwt mockJwt = mock(Jwt.class);
@@ -65,5 +86,31 @@ class JwtConverterTest {
 		Authentication expectedAuth = testSubject.convert(mockJwt);
 		UserPrincipal expectedPrincipal = (UserPrincipal) expectedAuth.getPrincipal();
 		assertThat(expectedPrincipal.user()).isEqualTo(mockUser);
+	}
+
+	@Test
+	void convert_rejectsMachineTokens() {
+		// GIVEN
+		Jwt mockJwt = Jwt.withTokenValue("token")
+			.header("alg", "none")
+			.subject("client-id@clients")
+			.build();
+
+		// WHEN / THEN
+		assertThatThrownBy(() -> testSubject.convert(mockJwt)).isInstanceOf(
+			BadCredentialsException.class
+		);
+	}
+
+	@Test
+	void convert_rejectsTokensWithoutASubject() {
+		// GIVEN
+		Jwt mockJwt = mock(Jwt.class);
+		when(mockJwt.getSubject()).thenReturn(null);
+
+		// WHEN / THEN
+		assertThatThrownBy(() -> testSubject.convert(mockJwt)).isInstanceOf(
+			BadCredentialsException.class
+		);
 	}
 }

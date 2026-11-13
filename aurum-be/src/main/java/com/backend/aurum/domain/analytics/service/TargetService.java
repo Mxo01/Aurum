@@ -3,6 +3,7 @@ package com.backend.aurum.domain.analytics.service;
 import com.backend.aurum.domain.analytics.model.Target;
 import com.backend.aurum.domain.analytics.model.TargetType;
 import com.backend.aurum.domain.analytics.repository.TargetRepository;
+import com.backend.aurum.domain.shared.exception.AccessDeniedException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.List;
@@ -58,14 +59,9 @@ public class TargetService {
 	}
 
 	@Transactional
-	public Target update(UUID id, Target targetDetails, BigDecimal netWorth) {
-		log.debug("TargetService#update - Updating targetId={}", id);
-		Target target = targetRepository
-			.findById(Objects.requireNonNull(id))
-			.orElseThrow(() -> {
-				log.warn("TargetService#update - Target not found: targetId={}", id);
-				return new RuntimeException("Target not found");
-			});
+	public Target update(UUID id, Target targetDetails, UUID userId, BigDecimal netWorth) {
+		log.debug("TargetService#update - Updating targetId={}, userId={}", id, userId);
+		Target target = findOwnedTarget(id, userId);
 
 		target.setName(targetDetails.getName());
 		target.setTargetAmount(targetDetails.getTargetAmount());
@@ -87,17 +83,29 @@ public class TargetService {
 	@Transactional
 	public void delete(UUID id, UUID userId) {
 		log.debug("TargetService#delete - Deleting targetId={} for userId={}", id, userId);
+		Target target = findOwnedTarget(id, userId);
+		targetRepository.delete(target);
+		log.info("TargetService#delete - Target deleted: targetId={}", id);
+	}
+
+	private Target findOwnedTarget(UUID id, UUID userId) {
 		Target target = targetRepository
 			.findById(Objects.requireNonNull(id))
 			.orElseThrow(() -> {
-				log.warn("TargetService#delete - Target not found: targetId={}", id);
+				log.warn("TargetService#findOwnedTarget - Target not found: targetId={}", id);
 				return new RuntimeException("Target not found");
 			});
-		if (!target.getUser().getId().equals(Objects.requireNonNull(userId))) {
-			throw new IllegalArgumentException("Target does not belong to the requesting user");
+
+		if (target.getUser() == null || !target.getUser().getId().equals(userId)) {
+			log.warn(
+				"TargetService#findOwnedTarget - Access denied: targetId={} does not belong to userId={}",
+				id,
+				userId
+			);
+			throw new AccessDeniedException("Access denied: Target does not belong to user");
 		}
-		targetRepository.delete(target);
-		log.info("TargetService#delete - Target deleted: targetId={}", id);
+
+		return target;
 	}
 
 	private void checkAndSyncCompletion(Target target, BigDecimal netWorth) {

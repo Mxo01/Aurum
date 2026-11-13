@@ -8,7 +8,7 @@ the user's own currency and locale for every formatted number.
 
 ```
 aurum/
-├── aurum-be/            Spring Boot 4 API (Java 25) + MCP tools
+├── aurum-be/            Spring Boot 3.4 API (Java 25) + MCP tools
 ├── aurum-fe/            Angular 21 single-page app
 ├── docker-compose.prod.yml   production stack (Postgres + backend)
 └── Makefile             starts both apps for local development
@@ -57,6 +57,43 @@ Migrations are Liquibase YAML/SQL under
 `aurum-be/src/main/resources/db/changelog/changes/`, applied automatically at
 startup. Schema validation is on (`ddl-auto: validate`), so an entity that
 disagrees with the changelog fails fast instead of silently diverging.
+
+### MCP authorization
+
+The MCP endpoint is an OAuth 2.1 resource server. Auth0 is the authorization
+server; the backend only publishes the resource metadata and validates the
+token. There is no OAuth proxy, no client secret and no per-session state.
+
+```mermaid
+sequenceDiagram
+    participant Client as MCP client
+    participant API as aurum-be
+    participant AS as Auth0
+    Client->>API: POST /mcp (no token)
+    API-->>Client: 401 + WWW-Authenticate resource_metadata
+    Client->>API: GET /.well-known/oauth-protected-resource/mcp
+    API-->>Client: resource, authorization_servers, scopes_supported
+    Client->>AS: GET /.well-known/oauth-authorization-server
+    Client->>AS: authorize + PKCE + resource
+    AS-->>Client: code
+    Client->>AS: token + code_verifier
+    AS-->>Client: access token with aud = MCP resource
+    Client->>API: POST /mcp + Bearer token
+    API-->>Client: tools
+```
+
+- `mcp.resource-url` is the canonical MCP URI and must match the Auth0 API
+  identifier; `mcp.audience` defaults to it. A token minted for the web app is
+  rejected at `/mcp`.
+- The transport is stateless (`spring.ai.mcp.server.protocol=STATELESS`), so
+  every request is authenticated independently.
+- Read/write scopes are optional. When `MCP_READ_SCOPES` and `MCP_WRITE_SCOPES`
+  are set, `get*` tools require the read scope and every other tool requires
+  the write scope.
+- `MCP_ALLOWED_ORIGINS` is the browser-origin allowlist for `/mcp`; native MCP
+  clients send no `Origin` and are unaffected.
+- The full tenant setup is in
+  [`docs/mcp-auth0-setup.md`](docs/mcp-auth0-setup.md).
 
 ### Frontend
 
@@ -152,8 +189,16 @@ root; the API is served at the root of its own subdomain, with no `/api` prefix.
 ## Security
 
 - Auth0 issues the JWTs; the backend validates them as an OAuth2 resource
-  server. Every endpoint requires a token except the Swagger paths.
+  server. Every endpoint requires a token except the Swagger paths and the
+  protected-resource metadata documents.
+- The MCP endpoint has its own audience (`mcp.audience`, defaulting to the MCP
+  resource URI), so web-app tokens cannot be replayed against it. See
+  [`docs/mcp-auth0-setup.md`](docs/mcp-auth0-setup.md).
+- The MCP transport is stateless and rejects browser origins that are not
+  explicitly allowlisted.
 - Secrets never live in the repository: local values in
   `application-local.properties`, production values as environment variables on
   the VPS and in Vercel.
 - gitleaks runs on staged changes (pre-commit) and in CI.
+- The full audit and the open follow-ups are in
+  [`docs/security-audit.md`](docs/security-audit.md).

@@ -74,7 +74,9 @@ class TargetFacadeTest {
 		TargetDTO stubbedDto = Instancio.create(TargetDTO.class);
 		when(analyticsService.getNetWorth(mockUserId)).thenReturn(mockNetWorth);
 		when(mapper.toEntity(mockDto, mockUserId)).thenReturn(mockDetails);
-		when(targetService.update(mockId, mockDetails, mockNetWorth)).thenReturn(mockUpdated);
+		when(targetService.update(mockId, mockDetails, mockUserId, mockNetWorth)).thenReturn(
+			mockUpdated
+		);
 		when(mapper.toDto(mockUpdated, mockNetWorth)).thenReturn(stubbedDto);
 
 		// WHEN
@@ -147,10 +149,10 @@ class TargetFacadeTest {
 		when(analyticsService.getNetWorth(mockUserId)).thenReturn(mockNetWorth);
 		when(mapper.toEntity(mockDto1, mockUserId)).thenReturn(mockDetails1);
 		when(mapper.toEntity(mockDto2, mockUserId)).thenReturn(mockDetails2);
-		when(targetService.update(mockDto1.getId(), mockDetails1, mockNetWorth)).thenReturn(
+		when(targetService.update(mockDto1.getId(), mockDetails1, mockUserId, mockNetWorth)).thenReturn(
 			mockUpdated1
 		);
-		when(targetService.update(mockDto2.getId(), mockDetails2, mockNetWorth)).thenReturn(
+		when(targetService.update(mockDto2.getId(), mockDetails2, mockUserId, mockNetWorth)).thenReturn(
 			mockUpdated2
 		);
 		when(mapper.toDto(mockUpdated1, mockNetWorth)).thenReturn(stubbedDto1);

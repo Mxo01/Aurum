@@ -34,8 +34,10 @@ import java.util.Objects;
 import java.util.UUID;
 import javax.imageio.IIOImage;
 import javax.imageio.ImageIO;
+import javax.imageio.ImageReader;
 import javax.imageio.ImageWriteParam;
 import javax.imageio.ImageWriter;
+import javax.imageio.stream.ImageInputStream;
 import javax.imageio.stream.ImageOutputStream;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -209,6 +211,10 @@ public class UserService {
 	private static final byte[] MAGIC_WEBP_RIFF = { 0x52, 0x49, 0x46, 0x46 };
 	private static final byte[] MAGIC_WEBP_TYPE = { 0x57, 0x45, 0x42, 0x50 };
 
+	// A 5 MB compressed image can decode to hundreds of megapixels and exhaust the
+	// heap before the crop to 200x200 ever happens.
+	private static final long MAX_IMAGE_PIXELS = 40_000_000L;
+
 	private boolean isValidImageBytes(byte[] bytes) {
 		if (bytes.length < 12) return false;
 		if (startsWith(bytes, MAGIC_JPEG)) return true;
@@ -235,6 +241,40 @@ public class UserService {
 		return true;
 	}
 
+	static boolean exceedsPixelLimit(long width, long height) {
+		return width <= 0 || height <= 0 || width * height > MAX_IMAGE_PIXELS;
+	}
+
+	private void assertImageDimensionsWithinLimit(byte[] bytes) throws IOException {
+		try (ImageInputStream input = ImageIO.createImageInputStream(new ByteArrayInputStream(bytes))) {
+			if (input == null) {
+				throw new IllegalArgumentException("Invalid or unsupported image format");
+			}
+
+			Iterator<ImageReader> readers = ImageIO.getImageReaders(input);
+			if (!readers.hasNext()) {
+				throw new IllegalArgumentException("Invalid or unsupported image format");
+			}
+
+			ImageReader reader = readers.next();
+			try {
+				reader.setInput(input, true, true);
+				int width = reader.getWidth(0);
+				int height = reader.getHeight(0);
+				if (exceedsPixelLimit(width, height)) {
+					log.warn(
+						"UserService#processImage - Rejected oversized image: {}x{} pixels",
+						width,
+						height
+					);
+					throw new IllegalArgumentException("Image dimensions exceed the allowed limit");
+				}
+			} finally {
+				reader.dispose();
+			}
+		}
+	}
+
 	private String processImage(MultipartFile file) throws IOException {
 		log.debug(
 			"UserService#processImage - Reading image bytes, originalName={}",
@@ -248,6 +288,8 @@ public class UserService {
 				"Unsupported file type: only JPEG, PNG, GIF, BMP, and WebP are allowed"
 			);
 		}
+
+		assertImageDimensionsWithinLimit(bytes);
 
 		// Read EXIF orientation before decoding the image
 		int orientation = 1;

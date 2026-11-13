@@ -164,38 +164,6 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
-	"/oauth/token": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		post: operations["token"];
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/oauth/register": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		post: operations["register"];
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
 	"/categories": {
 		parameters: {
 			query?: never;
@@ -236,22 +204,6 @@ export interface paths {
 			cookie?: never;
 		};
 		get: operations["exportUserData"];
-		put?: never;
-		post?: never;
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/oauth/callback": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get: operations["callback"];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -324,38 +276,6 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
-	"/.well-known/oauth-protected-resource": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get: operations["protectedResourceMetadata"];
-		put?: never;
-		post?: never;
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/.well-known/oauth-authorization-server": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get: operations["authorizationServerMetadata"];
-		put?: never;
-		post?: never;
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
 	"/snapshots/bulk": {
 		parameters: {
 			query?: never;
@@ -370,22 +290,6 @@ export interface paths {
 		options?: never;
 		head?: never;
 		patch?: never;
-		trace?: never;
-	};
-	"/oauth/authorize": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get: operations["authorize"];
-		put: operations["authorize_2"];
-		post: operations["authorize_1"];
-		delete: operations["authorize_3"];
-		options: operations["authorize_6"];
-		head: operations["authorize_5"];
-		patch: operations["authorize_4"];
 		trace?: never;
 	};
 }
@@ -619,14 +523,6 @@ export interface components {
 			referenceDate?: string;
 			amountOriginalCurrency?: number;
 			exchangeRateToBase?: number;
-		};
-		MultiValueMapStringString: {
-			all?: {
-				[key: string]: string;
-			};
-			empty?: boolean;
-		} & {
-			[key: string]: string[];
 		};
 		CreateAssetCategoryDTO: {
 			name?: string;
@@ -1331,58 +1227,6 @@ export interface operations {
 			};
 		};
 	};
-	token: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody?: {
-			content: {
-				"application/x-www-form-urlencoded": components["schemas"]["MultiValueMapStringString"];
-			};
-		};
-		responses: {
-			/** @description OK */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"*/*": string;
-				};
-			};
-		};
-	};
-	register: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody: {
-			content: {
-				"application/json": {
-					[key: string]: Record<string, never>;
-				};
-			};
-		};
-		responses: {
-			/** @description Created */
-			201: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"*/*": {
-						[key: string]: Record<string, never>;
-					};
-				};
-			};
-		};
-	};
 	getAllCategories: {
 		parameters: {
 			query?: never;
@@ -1491,29 +1335,6 @@ export interface operations {
 			};
 		};
 	};
-	callback: {
-		parameters: {
-			query: {
-				code?: string;
-				error?: string;
-				errorDescription?: string;
-				state: string;
-			};
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description OK */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-		};
-	};
 	getYear: {
 		parameters: {
 			query?: never;
@@ -1604,50 +1425,6 @@ export interface operations {
 			};
 		};
 	};
-	protectedResourceMetadata: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description OK */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"*/*": {
-						[key: string]: Record<string, never>;
-					};
-				};
-			};
-		};
-	};
-	authorizationServerMetadata: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description OK */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"*/*": {
-						[key: string]: Record<string, never>;
-					};
-				};
-			};
-		};
-	};
 	deleteSnapshotsBulk: {
 		parameters: {
 			query: {
@@ -1662,132 +1439,6 @@ export interface operations {
 				"application/json": string[];
 			};
 		};
-		responses: {
-			/** @description OK */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-		};
-	};
-	authorize: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description OK */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-		};
-	};
-	authorize_2: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description OK */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-		};
-	};
-	authorize_1: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description OK */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-		};
-	};
-	authorize_3: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description OK */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-		};
-	};
-	authorize_6: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description OK */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-		};
-	};
-	authorize_5: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description OK */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-		};
-	};
-	authorize_4: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody?: never;
 		responses: {
 			/** @description OK */
 			200: {

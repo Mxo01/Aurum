@@ -1,6 +1,8 @@
 package com.backend.aurum.domain.mcp.tools;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.backend.aurum.domain.analytics.dto.AnalyticsSummaryDTO;
@@ -40,6 +42,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
 class AurumMcpToolsTest {
@@ -341,5 +344,46 @@ class AurumMcpToolsTest {
 
 		// THEN
 		assertThat(expectedDtos).containsExactly(stubbedResult1, stubbedResult2);
+	}
+
+	@Test
+	void bulkAddAssets_rejectsABatchOverTheConfiguredLimit() {
+		// GIVEN
+		ReflectionTestUtils.setField(testSubject, "maxBatchSize", 1);
+		List<CreateAssetDTO> mockAssets = List.of(
+			Instancio.create(CreateAssetDTO.class),
+			Instancio.create(CreateAssetDTO.class)
+		);
+
+		// WHEN / THEN
+		assertThatThrownBy(() -> testSubject.bulkAddAssets(mockAssets)).isInstanceOf(
+			IllegalArgumentException.class
+		);
+		verifyNoInteractions(assetFacade);
+	}
+
+	@Test
+	void bulkAddAssets_rejectsANullBatch() {
+		// WHEN / THEN
+		assertThatThrownBy(() -> testSubject.bulkAddAssets(null)).isInstanceOf(
+			IllegalArgumentException.class
+		);
+		verifyNoInteractions(assetFacade);
+	}
+
+	@Test
+	void bulkUpdateCashFlowEntries_rejectsABatchOverTheConfiguredLimit() {
+		// GIVEN
+		ReflectionTestUtils.setField(testSubject, "maxBatchSize", 1);
+		List<CashFlowEntryDTO> mockEntries = List.of(
+			Instancio.create(CashFlowEntryDTO.class),
+			Instancio.create(CashFlowEntryDTO.class)
+		);
+
+		// WHEN / THEN
+		assertThatThrownBy(() -> testSubject.bulkUpdateCashFlowEntries(2025, mockEntries)).isInstanceOf(
+			IllegalArgumentException.class
+		);
+		verifyNoInteractions(cashFlowFacade);
 	}
 }

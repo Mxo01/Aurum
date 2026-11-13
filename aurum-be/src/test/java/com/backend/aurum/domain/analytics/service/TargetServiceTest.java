@@ -2,12 +2,15 @@ package com.backend.aurum.domain.analytics.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.backend.aurum.domain.analytics.model.Target;
 import com.backend.aurum.domain.analytics.model.TargetType;
 import com.backend.aurum.domain.analytics.repository.TargetRepository;
+import com.backend.aurum.domain.shared.exception.AccessDeniedException;
 import com.backend.aurum.domain.user.model.User;
 import java.math.BigDecimal;
 import java.util.List;
@@ -140,10 +143,13 @@ class TargetServiceTest {
 	@Test
 	void update_returnsUpdatedTarget() {
 		// GIVEN
+		UUID mockUserId = UUID.randomUUID();
 		BigDecimal mockNetWorth = BigDecimal.TEN;
+		User mockUser = Instancio.of(User.class).set(Select.field(User::getId), mockUserId).create();
 		Target mockTarget = Instancio.of(Target.class)
 			.set(Select.field(Target::getIsCompleted), false)
 			.set(Select.field(Target::getTargetAmount), new BigDecimal("1000"))
+			.set(Select.field(Target::getUser), mockUser)
 			.create();
 		Target mockDetails = Instancio.of(Target.class)
 			.set(Select.field(Target::getTargetAmount), new BigDecimal("2000"))
@@ -153,10 +159,36 @@ class TargetServiceTest {
 		when(targetRepository.save(mockTarget)).thenReturn(stubbedUpdated);
 
 		// WHEN
-		Target expectedTarget = testSubject.update(mockTarget.getId(), mockDetails, mockNetWorth);
+		Target expectedTarget = testSubject.update(
+			mockTarget.getId(),
+			mockDetails,
+			mockUserId,
+			mockNetWorth
+		);
 
 		// THEN
 		assertThat(expectedTarget).isEqualTo(stubbedUpdated);
+	}
+
+	@Test
+	void update_throwsAccessDenied_whenTargetBelongsToAnotherUser() {
+		// GIVEN
+		UUID mockUserId = UUID.randomUUID();
+		UUID mockOtherUserId = UUID.randomUUID();
+		User mockOwner = Instancio.of(User.class)
+			.set(Select.field(User::getId), mockOtherUserId)
+			.create();
+		Target mockTarget = Instancio.of(Target.class)
+			.set(Select.field(Target::getUser), mockOwner)
+			.create();
+		Target mockDetails = Instancio.create(Target.class);
+		when(targetRepository.findById(mockTarget.getId())).thenReturn(Optional.of(mockTarget));
+
+		// WHEN / THEN
+		assertThatThrownBy(() ->
+			testSubject.update(mockTarget.getId(), mockDetails, mockUserId, BigDecimal.TEN)
+		).isInstanceOf(AccessDeniedException.class);
+		verify(targetRepository, never()).save(any());
 	}
 
 	@Test
@@ -191,7 +223,7 @@ class TargetServiceTest {
 
 		// WHEN / THEN
 		assertThatThrownBy(() -> testSubject.delete(mockTarget.getId(), mockUserId)).isInstanceOf(
-			IllegalArgumentException.class
+			AccessDeniedException.class
 		);
 	}
 }
