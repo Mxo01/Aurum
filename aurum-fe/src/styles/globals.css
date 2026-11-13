@@ -93,7 +93,7 @@
 	--color-chart-grid: var(--chart-grid);
 	--color-chart-text: var(--chart-text);
 
-	--font-sans: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+	--font-sans: "Plus Jakarta Sans Variable", ui-sans-serif, system-ui, sans-serif;
 	--font-mono: "Geist Mono Variable", ui-monospace, SFMono-Regular, monospace;
 
 	--radius-sm: calc(var(--radius) - 4px);

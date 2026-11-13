@@ -110,7 +110,7 @@ Rules:
   (theme, privacy, command palette) or the URL (year, filters). No Redux.
 - Query keys are centralized in `lib/api/keys.ts`; every mutation invalidates
   what it changes.
-- UI: warm neutral + gold accent, Geist Sans/Mono. No glass, glow, dot-grid,
+- UI: warm neutral + gold accent, Plus Jakarta Sans for UI and Geist Mono for numbers. No glass, glow, dot-grid,
   serif italics, or uppercase tracking. Details open in sheets, not new pages.
 
 ### Data Model
