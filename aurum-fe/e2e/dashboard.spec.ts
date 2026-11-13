@@ -33,3 +33,15 @@ test("shows the financial target after the top assets on mobile", async ({ page 
 	expect(financialTarget).not.toBeNull();
 	expect(financialTarget!.y).toBeGreaterThan(topAssets!.y);
 });
+
+test("shows the net worth chart before the stat tiles on mobile", async ({ page }) => {
+	await page.setViewportSize({ width: 390, height: 844 });
+	await page.goto("/dashboard");
+
+	const chart = await page.getByRole("combobox", { name: "Select year" }).boundingBox();
+	const firstTile = await page.getByText("Projected net worth").boundingBox();
+
+	expect(chart).not.toBeNull();
+	expect(firstTile).not.toBeNull();
+	expect(chart!.y).toBeLessThan(firstTile!.y);
+});

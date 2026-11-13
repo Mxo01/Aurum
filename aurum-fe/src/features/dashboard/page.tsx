@@ -86,7 +86,17 @@ export function DashboardPage() {
 				</div>
 			) : (
 				<>
-					<div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+					<div className="md:order-2">
+						<NetWorthChart
+							summary={summary.data}
+							chart={chart.data}
+							year={year}
+							onYearChange={onYearChange}
+							isLoading={chart.isLoading}
+						/>
+					</div>
+
+					<div className="md:order-1 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
 						<StatTile
 							label="Projected net worth"
 							value={
@@ -157,15 +167,7 @@ export function DashboardPage() {
 						/>
 					</div>
 
-					<NetWorthChart
-						summary={summary.data}
-						chart={chart.data}
-						year={year}
-						onYearChange={onYearChange}
-						isLoading={chart.isLoading}
-					/>
-
-					<div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+					<div className="md:order-3 grid grid-cols-1 gap-4 lg:grid-cols-3">
 						<div className="lg:order-2 lg:col-span-2">
 							<TopAssetsCard
 								summary={summary.data}
