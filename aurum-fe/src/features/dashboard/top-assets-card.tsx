@@ -87,9 +87,9 @@ export function TopAssetsCard({ summary, isLoading }: TopAssetsCardProps) {
 								</th>
 								<th
 									scope="col"
-									className="pb-1.5 text-right font-medium"
+									className="pb-1.5 text-right font-medium whitespace-nowrap"
 								>
-									1M
+									Monthly Delta
 								</th>
 							</tr>
 						</thead>
