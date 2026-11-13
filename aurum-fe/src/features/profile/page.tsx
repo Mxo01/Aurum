@@ -295,18 +295,11 @@ function PreferencesTab() {
 							value={theme}
 							onValueChange={value => value && setTheme(value as "light" | "dark")}
 							aria-label="Theme"
-							className="h-8"
 						>
-							<ToggleGroupItem
-								value="light"
-								className="h-8 px-3 text-xs"
-							>
+							<ToggleGroupItem value="light">
 								<Sun className="size-3.5" /> Light
 							</ToggleGroupItem>
-							<ToggleGroupItem
-								value="dark"
-								className="h-8 px-3 text-xs"
-							>
+							<ToggleGroupItem value="dark">
 								<Moon className="size-3.5" /> Dark
 							</ToggleGroupItem>
 						</ToggleGroup>

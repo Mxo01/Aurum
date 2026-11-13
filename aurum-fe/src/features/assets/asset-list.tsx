@@ -1,16 +1,9 @@
-import {
-	ChevronDown,
-	ChevronRight,
-	History,
-	MoreHorizontal,
-	Pencil,
-	Star,
-	Trash2
-} from "lucide-react";
+import { ChevronDown, ChevronRight, History, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { Delta } from "@/components/app/delta";
 import { EditableText } from "@/components/app/editable-text";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -35,6 +28,7 @@ interface AssetListProps {
 	onHistory: (asset: AssetDTO) => void;
 	onDelete: (asset: AssetDTO) => void;
 	onRename: (asset: AssetDTO, name: string) => void;
+	onToggleFavorite: (asset: AssetDTO) => void;
 	onValueSave: (asset: AssetDTO, value: number) => void;
 }
 
@@ -45,32 +39,34 @@ function RowActions({
 	onDelete
 }: Pick<AssetListProps, "onEdit" | "onHistory" | "onDelete"> & { asset: AssetDTO }) {
 	return (
-		<DropdownMenu>
-			<DropdownMenuTrigger asChild>
-				<Button
-					variant="ghost"
-					size="icon-sm"
-					aria-label={`Actions for ${asset.name}`}
-				>
-					<MoreHorizontal className="size-4" />
-				</Button>
-			</DropdownMenuTrigger>
-			<DropdownMenuContent align="end">
-				<DropdownMenuItem onSelect={() => onEdit(asset)}>
-					<Pencil className="size-4" /> Edit
-				</DropdownMenuItem>
-				<DropdownMenuItem onSelect={() => onHistory(asset)}>
-					<History className="size-4" /> History
-				</DropdownMenuItem>
-				<DropdownMenuSeparator />
-				<DropdownMenuItem
-					className="text-danger focus:text-danger"
-					onSelect={() => onDelete(asset)}
-				>
-					<Trash2 className="size-4" /> Delete
-				</DropdownMenuItem>
-			</DropdownMenuContent>
-		</DropdownMenu>
+		<div className="flex w-full items-center justify-end">
+			<DropdownMenu>
+				<DropdownMenuTrigger asChild>
+					<Button
+						variant="ghost"
+						size="icon-sm"
+						aria-label={`Actions for ${asset.name}`}
+					>
+						<MoreHorizontal className="size-4" />
+					</Button>
+				</DropdownMenuTrigger>
+				<DropdownMenuContent align="end">
+					<DropdownMenuItem onSelect={() => onEdit(asset)}>
+						<Pencil className="size-4" /> Edit
+					</DropdownMenuItem>
+					<DropdownMenuItem onSelect={() => onHistory(asset)}>
+						<History className="size-4" /> History
+					</DropdownMenuItem>
+					<DropdownMenuSeparator />
+					<DropdownMenuItem
+						className="text-danger focus:text-danger"
+						onSelect={() => onDelete(asset)}
+					>
+						<Trash2 className="size-4" /> Delete
+					</DropdownMenuItem>
+				</DropdownMenuContent>
+			</DropdownMenu>
+		</div>
 	);
 }
 
@@ -82,6 +78,7 @@ export function AssetList({
 	onHistory,
 	onDelete,
 	onRename,
+	onToggleFavorite,
 	onValueSave
 }: AssetListProps) {
 	const { money } = usePreferences();
@@ -139,8 +136,13 @@ export function AssetList({
 												className="border-border/60 hover:bg-muted/30 grid grid-cols-[minmax(0,1fr)_160px_120px_100px] items-center gap-2 border-t px-3 py-2 transition-colors"
 											>
 												<div className="flex min-w-0 items-center gap-2 pl-6">
-													{asset.isFavorite ? (
-														<Star className="text-primary fill-primary size-3.5 shrink-0" />
+													{asset.type === ASSET_TYPE.ASSET ? (
+														<Switch
+															checked={asset.isFavorite}
+															onCheckedChange={() => onToggleFavorite(asset)}
+															aria-label={`Track ${asset.name} in the dashboard`}
+															className="mr-1"
+														/>
 													) : null}
 													<EditableText
 														value={asset.name}
@@ -223,8 +225,13 @@ export function AssetList({
 											>
 												<div className="flex items-start justify-between gap-2">
 													<div className="flex min-w-0 items-center gap-1.5">
-														{asset.isFavorite ? (
-															<Star className="text-primary fill-primary size-3.5 shrink-0" />
+														{asset.type === ASSET_TYPE.ASSET ? (
+															<Switch
+																checked={asset.isFavorite}
+																onCheckedChange={() => onToggleFavorite(asset)}
+																aria-label={`Track ${asset.name} in the dashboard`}
+																className="mr-1"
+															/>
 														) : null}
 														<EditableText
 															value={asset.name}

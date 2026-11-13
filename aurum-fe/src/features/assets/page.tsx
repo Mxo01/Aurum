@@ -24,7 +24,13 @@ import type { AssetDTO } from "@/lib/api/types";
 import { AssetFormSheet } from "./asset-form-sheet";
 import { AssetList } from "./asset-list";
 import { portfolioTotals } from "./assets.utils";
-import { useAssets, useDeleteAsset, useRenameAsset, useUpdateCurrentValue } from "./api";
+import {
+	useAssets,
+	useDeleteAsset,
+	useRenameAsset,
+	useToggleFavorite,
+	useUpdateCurrentValue
+} from "./api";
 import { SnapshotsSheet } from "@/features/snapshots/snapshots-sheet";
 
 type TypeFilter = "ALL" | "ASSET" | "LIABILITY";
@@ -43,6 +49,7 @@ export function AssetsPage() {
 	const deleteAsset = useDeleteAsset();
 	const updateValue = useUpdateCurrentValue();
 	const renameAsset = useRenameAsset();
+	const toggleFavorite = useToggleFavorite();
 
 	const query = searchParams.get("search") ?? "";
 	const [filter, setFilter] = useState<TypeFilter>("ALL");
@@ -181,13 +188,11 @@ export function AssetsPage() {
 					value={filter}
 					onValueChange={value => value && setFilter(value as TypeFilter)}
 					aria-label="Filter by type"
-					className="h-8"
 				>
 					{FILTERS.map(item => (
 						<ToggleGroupItem
 							key={item.value}
 							value={item.value}
-							className="h-8 px-3 text-xs"
 						>
 							{item.label}
 						</ToggleGroupItem>
@@ -231,6 +236,9 @@ export function AssetsPage() {
 					onDelete={setDeleteTarget}
 					onRename={(asset, name) => {
 						if (asset.id) renameAsset.mutate({ id: asset.id, name });
+					}}
+					onToggleFavorite={asset => {
+						if (asset.id) toggleFavorite.mutate({ id: asset.id, isFavorite: !asset.isFavorite });
 					}}
 					onValueSave={(asset, value) => {
 						if (asset.id) updateValue.mutate({ assetId: asset.id, value });

@@ -71,7 +71,7 @@ export function LandingPage() {
 
 	return (
 		<div className="flex min-h-dvh flex-col">
-			<header className="border-border/70 sticky top-0 z-40 border-b">
+			<header className="border-border/70 bg-background/80 supports-[backdrop-filter]:bg-background/60 sticky top-0 z-40 border-b backdrop-blur-md">
 				<div className="mx-auto flex h-14 max-w-6xl items-center gap-6 px-4">
 					<Link
 						to="/"
@@ -172,7 +172,7 @@ export function LandingPage() {
 							size="lg"
 							onClick={() => void start()}
 						>
-							Get started — it&apos;s free
+							Get started free
 							<ArrowRight className="size-4" />
 						</Button>
 						<Button
@@ -426,7 +426,7 @@ export function LandingPage() {
 							className="mt-8"
 							onClick={() => void start()}
 						>
-							Get started — it&apos;s free
+							Get started free
 							<ArrowRight className="size-4" />
 						</Button>
 					</div>

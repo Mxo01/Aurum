@@ -76,14 +76,17 @@ export function NetWorthChart({
 							<span className="num text-2xl font-semibold tracking-tight sm:text-3xl">
 								{money(summary?.totalNetWorth ?? 0)}
 							</span>
-							{variation ? (
+							{variation && variation.percentage !== 0 ? (
 								<span
 									className={cn(
 										"rounded-md px-1.5 py-0.5",
 										variation.percentage >= 0 ? "bg-success/10" : "bg-danger/10"
 									)}
 								>
-									<Delta value={variation.percentage} />
+									<Delta
+										value={variation.percentage}
+										hideZero
+									/>
 								</span>
 							) : null}
 						</div>
@@ -140,7 +143,6 @@ export function NetWorthChart({
 									<ToggleGroupItem
 										key={item.value}
 										value={item.value}
-										className="h-8 px-2.5 text-[11px]"
 									>
 										{item.label}
 									</ToggleGroupItem>

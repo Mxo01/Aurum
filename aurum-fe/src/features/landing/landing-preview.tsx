@@ -31,18 +31,11 @@ export function LandingPreview() {
 					value={theme}
 					onValueChange={value => value && setTheme(value as Theme)}
 					aria-label="Preview theme"
-					className="h-8"
 				>
-					<ToggleGroupItem
-						value="light"
-						className="h-8 px-2 text-[11px]"
-					>
+					<ToggleGroupItem value="light">
 						<Sun className="size-3" /> Light
 					</ToggleGroupItem>
-					<ToggleGroupItem
-						value="dark"
-						className="h-8 px-2 text-[11px]"
-					>
+					<ToggleGroupItem value="dark">
 						<Moon className="size-3" /> Dark
 					</ToggleGroupItem>
 				</ToggleGroup>

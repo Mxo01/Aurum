@@ -98,7 +98,7 @@ export function DashboardPage() {
 							}
 							hint="Based on 1 year growth rate"
 							right={
-								growth === undefined ? undefined : (
+								growth === undefined || growth === 0 ? undefined : (
 									<Badge variant="outline">{percent(growth, GROWTH_DIGITS)}</Badge>
 								)
 							}
@@ -116,7 +116,14 @@ export function DashboardPage() {
 								)
 							}
 							hint="Gross asset change vs 1 year ago"
-							right={assetVariation ? <Delta value={assetVariation.percentage} /> : undefined}
+							right={
+								assetVariation && assetVariation.percentage !== 0 ? (
+									<Delta
+										value={assetVariation.percentage}
+										hideZero
+									/>
+								) : undefined
+							}
 						/>
 						<StatTile
 							label="Total liabilities"

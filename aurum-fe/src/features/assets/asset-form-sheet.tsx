@@ -4,6 +4,7 @@ import { Controller, useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
+import { CategoryIcon } from "@/features/categories/icon-map";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -223,7 +224,14 @@ export function AssetFormSheet({ open, onOpenChange, asset, categories }: AssetF
 										onBlur={field.onBlur}
 										ref={field.ref}
 									>
-										<SelectValue placeholder="Select a category" />
+										<SelectValue placeholder="Select a category">
+											{category ? (
+												<span className="flex items-center gap-1.5">
+													<CategoryIcon name={category.icon} />
+													{category.name}
+												</span>
+											) : undefined}
+										</SelectValue>
 									</SelectTrigger>
 									<SelectContent>
 										{assets.length ? (
@@ -234,7 +242,10 @@ export function AssetFormSheet({ open, onOpenChange, asset, categories }: AssetF
 														key={item.id}
 														value={item.id}
 													>
-														{item.name}
+														<span className="flex items-center gap-1.5">
+															<CategoryIcon name={item.icon} />
+															{item.name}
+														</span>
 													</SelectItem>
 												))}
 											</SelectGroup>
@@ -247,7 +258,10 @@ export function AssetFormSheet({ open, onOpenChange, asset, categories }: AssetF
 														key={item.id}
 														value={item.id}
 													>
-														{item.name}
+														<span className="flex items-center gap-1.5">
+															<CategoryIcon name={item.icon} />
+															{item.name}
+														</span>
 													</SelectItem>
 												))}
 											</SelectGroup>

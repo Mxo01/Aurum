@@ -38,7 +38,7 @@ export function TopBar() {
 	const navigate = useNavigate();
 
 	return (
-		<header className="bg-background sticky top-0 z-40 border-b">
+		<header className="bg-background/80 supports-[backdrop-filter]:bg-background/60 sticky top-0 z-40 border-b backdrop-blur-md">
 			<div className="mx-auto flex h-14 max-w-[1440px] items-center gap-6 px-4">
 				<Brand />
 
@@ -89,23 +89,6 @@ export function TopBar() {
 						aria-label="Search"
 					>
 						<Search className="size-4" />
-					</Button>
-					<Button
-						variant="ghost"
-						size="icon-sm"
-						onClick={togglePrivacy}
-						aria-label={isPrivacy ? "Show amounts" : "Hide amounts"}
-						aria-pressed={isPrivacy}
-					>
-						{isPrivacy ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-					</Button>
-					<Button
-						variant="ghost"
-						size="icon-sm"
-						onClick={toggleTheme}
-						aria-label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
-					>
-						{theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
 					</Button>
 
 					<DropdownMenu>

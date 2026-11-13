@@ -53,6 +53,34 @@ export function useUpdateAsset() {
 	});
 }
 
+export function useToggleFavorite() {
+	const api = useApi();
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: async ({ id, isFavorite }: { id: string; isFavorite: boolean }) =>
+			unwrap(await api.PUT("/assets/{id}", { params: { path: { id } }, body: { isFavorite } })),
+		onMutate: async ({ id, isFavorite }) => {
+			await queryClient.cancelQueries({ queryKey: queryKeys.assets });
+			const previous = queryClient.getQueryData<AssetDTO[]>(queryKeys.assets);
+
+			queryClient.setQueryData<AssetDTO[]>(queryKeys.assets, current =>
+				current?.map(asset => (asset.id === id ? { ...asset, isFavorite } : asset))
+			);
+
+			return { previous };
+		},
+		onError: (_error, _variables, context) => {
+			if (context?.previous) queryClient.setQueryData(queryKeys.assets, context.previous);
+			toast.error("Could not update the dashboard tracking");
+		},
+		onSettled: () => {
+			void queryClient.invalidateQueries({ queryKey: queryKeys.assets });
+			void queryClient.invalidateQueries({ queryKey: ["analytics"] });
+		}
+	});
+}
+
 export function useRenameAsset() {
 	const api = useApi();
 	const queryClient = useQueryClient();

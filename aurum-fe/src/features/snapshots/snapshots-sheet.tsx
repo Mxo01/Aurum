@@ -148,7 +148,7 @@ function SnapshotsBody({ asset }: { asset: AssetDTO }) {
 							description="Record the current value to start the history."
 						/>
 					) : (
-						<div className="flex-1 overflow-y-auto">
+						<div className="flex-1 overflow-y-auto px-2">
 							<table className="w-full text-sm">
 								<thead className="text-muted-foreground sticky top-0 bg-card text-[11px]">
 									<tr>
@@ -194,7 +194,7 @@ function SnapshotsBody({ asset }: { asset: AssetDTO }) {
 
 					{!isAutomatic ? (
 						<div className="border-border mt-3 flex flex-col gap-2 border-t pt-3">
-							<div className="grid grid-cols-[1fr_1fr_auto] items-end gap-2">
+							<div className="grid grid-cols-[1fr_1fr_auto] items-end gap-2 px-1">
 								<div className="flex flex-col gap-1">
 									<span className="text-muted-foreground text-[11px]">Date</span>
 									<DatePicker

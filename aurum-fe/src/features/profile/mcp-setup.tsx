@@ -54,7 +54,6 @@ export function McpSetup() {
 					<ToggleGroupItem
 						key={item.value}
 						value={item.value}
-						className="h-8 px-3 text-xs"
 					>
 						{item.label}
 					</ToggleGroupItem>

@@ -6,6 +6,7 @@ interface DeltaProps {
 	value: number | null | undefined;
 	invert?: boolean;
 	showIcon?: boolean;
+	hideZero?: boolean;
 	digits?: number;
 	className?: string;
 }
@@ -14,12 +15,14 @@ export function Delta({
 	value,
 	invert = false,
 	showIcon = true,
+	hideZero = false,
 	digits = 2,
 	className
 }: DeltaProps) {
 	const { percent } = usePreferences();
 
 	if (value === null || value === undefined) return null;
+	if (hideZero && value === 0) return null;
 
 	const positive = invert ? value < 0 : value >= 0;
 	const Icon = value >= 0 ? ArrowUpRight : ArrowDownRight;

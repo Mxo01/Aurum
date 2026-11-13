@@ -29,6 +29,9 @@ export function CashFlowPage() {
 	const rows = buildCashflowRows(query.data);
 	const totals = cashflowTotals(rows);
 	const previousYear = query.data?.previousYearEntries ?? null;
+	const availableYears = query.data?.availableYears ?? [];
+	const canGoPrevious = availableYears.includes(year - 1);
+	const canGoNext = availableYears.includes(year + 1);
 
 	const prevYearEarned = previousYear?.reduce((sum, entry) => sum + entry.earned, 0);
 	const prevYearSpent = previousYear?.reduce((sum, entry) => sum + entry.spent, 0);
@@ -62,7 +65,7 @@ export function CashFlowPage() {
 							variant="ghost"
 							size="icon-sm"
 							aria-label="Previous year"
-							disabled={year <= 2000}
+							disabled={!canGoPrevious}
 							onClick={() => setYear(year - 1)}
 						>
 							<ChevronLeft className="size-4" />
@@ -72,7 +75,7 @@ export function CashFlowPage() {
 							variant="ghost"
 							size="icon-sm"
 							aria-label="Next year"
-							disabled={year >= currentYear}
+							disabled={!canGoNext}
 							onClick={() => setYear(year + 1)}
 						>
 							<ChevronRight className="size-4" />
