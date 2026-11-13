@@ -97,7 +97,7 @@ export function NetWorthChart({
 									{money(averageAbsolute ?? 0, { signDisplay: "exceptZero" })}
 								</span>
 							</span>
-							{averagePercent !== undefined ? (
+							{averagePercent !== undefined && averagePercent !== 0 ? (
 								<span className="num">
 									({averagePercent >= 0 ? "+" : ""}
 									{averagePercent.toFixed(2)}%)
