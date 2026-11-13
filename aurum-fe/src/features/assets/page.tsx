@@ -16,9 +16,12 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCategories } from "@/features/categories/api";
 import { CategoriesSheet } from "@/features/categories/categories-sheet";
+import { assetValue } from "@/lib/format/asset";
 import { usePreferences } from "@/lib/format/use-preferences";
 import type { AssetDTO } from "@/lib/api/types";
 import { AssetFormSheet } from "./asset-form-sheet";
@@ -53,6 +56,7 @@ export function AssetsPage() {
 
 	const query = searchParams.get("search") ?? "";
 	const [filter, setFilter] = useState<TypeFilter>("ALL");
+	const [hideZero, setHideZero] = useState(true);
 	const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
 	const [formOpen, setFormOpen] = useState(false);
 	const [editing, setEditing] = useState<AssetDTO | null>(null);
@@ -75,8 +79,9 @@ export function AssetsPage() {
 			normalizedQuery.length === 0 ||
 			asset.name.toLowerCase().includes(normalizedQuery) ||
 			asset.categoryName.toLowerCase().includes(normalizedQuery);
+		const matchesValue = !hideZero || assetValue(asset) !== 0;
 
-		return matchesType && matchesQuery;
+		return matchesType && matchesQuery && matchesValue;
 	});
 
 	const setQuery = (value: string) => {
@@ -198,6 +203,19 @@ export function AssetsPage() {
 						</ToggleGroupItem>
 					))}
 				</ToggleGroup>
+				<div className="flex items-center gap-2">
+					<Switch
+						id="hide-zero"
+						checked={hideZero}
+						onCheckedChange={setHideZero}
+					/>
+					<Label
+						htmlFor="hide-zero"
+						className="text-muted-foreground text-xs font-normal"
+					>
+						Hide zero values
+					</Label>
+				</div>
 			</div>
 
 			{assets.isLoading ? (

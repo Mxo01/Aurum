@@ -163,6 +163,32 @@ describe("AssetsPage", () => {
 		await waitFor(() => expect(deleteCalls).toBe(1));
 	});
 
+	it("should hide zero-valued assets by default", async () => {
+		// GIVEN
+		const mockZeroAsset = buildAsset({
+			id: "a4",
+			name: "Empty Wallet",
+			categoryName: "Cash",
+			categoryIcon: "pi-wallet",
+			latestValue: 0,
+			latestValueBase: 0,
+			previousValue: 0
+		});
+		server.use(
+			http.get(`${env.apiUrl}/assets`, () => HttpResponse.json([...mockAssets, mockZeroAsset]))
+		);
+		const testSubject = AssetsPage;
+		renderWithProviders(createElement(testSubject), { route: "/assets" });
+		await screen.findAllByText("Apartment Berlin");
+
+		// WHEN
+		expect(screen.queryByText("Empty Wallet")).not.toBeInTheDocument();
+		fireEvent.click(screen.getByLabelText("Hide zero values"));
+
+		// THEN
+		expect((await screen.findAllByText("Empty Wallet")).length).toBeGreaterThan(0);
+	});
+
 	it("should open the new asset form from the URL", async () => {
 		// GIVEN
 		useAssetsFixture();
