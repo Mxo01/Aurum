@@ -23,10 +23,12 @@ public class Auth0ManagementService {
 	@Value("${auth0.management.clientSecret}")
 	private String clientSecret;
 
-	private String cachedToken;
-	private Instant expiresAt;
+	// The management API is called from request threads; without these guarantees a
+	// concurrent first request can mint several tokens and publish a stale expiry.
+	private volatile String cachedToken;
+	private volatile Instant expiresAt;
 
-	public String getAccessToken() throws Auth0Exception {
+	public synchronized String getAccessToken() throws Auth0Exception {
 		if (
 			cachedToken != null && expiresAt != null && Instant.now().isBefore(expiresAt.minusSeconds(60))
 		) {
