@@ -1,22 +1,14 @@
-export interface CashFlowEntry {
-	id: string | null;
-	month: number;
-	earned: number;
-	spent: number;
-}
+import type {
+	CashFlowEntryDTO,
+	CashFlowYearDTO,
+	UpdateCashFlowEntryDTO
+} from "../../../shared/api/contract";
 
-export interface CashFlowYear {
-	year: number;
-	entries: CashFlowEntry[];
-	previousYearEntries: CashFlowEntry[] | null;
-	availableYears: number[];
-}
+export type CashFlowEntry = CashFlowEntryDTO;
+export type CashFlowYear = CashFlowYearDTO;
+export type UpdateCashFlowEntry = UpdateCashFlowEntryDTO;
 
-export interface UpdateCashFlowEntry {
-	earned?: number;
-	spent?: number;
-}
-
+/** A month rendered as a table row: derived values the API never returns. */
 export interface CashFlowRow {
 	month: number;
 	monthLabel: string;

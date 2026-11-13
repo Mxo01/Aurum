@@ -2,6 +2,9 @@ package com.backend.aurum.infrastructure.exception;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.backend.aurum.domain.shared.exception.AccessDeniedException;
+import com.backend.aurum.domain.shared.exception.NotFoundException;
+import com.backend.aurum.domain.shared.exception.ValidationException;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

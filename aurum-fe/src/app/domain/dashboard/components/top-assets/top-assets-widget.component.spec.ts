@@ -1,5 +1,4 @@
 import { ComponentFixture, TestBed } from "@angular/core/testing";
-import { faker } from "@faker-js/faker";
 import { MockComponent, MockModule, MockPipe } from "ng-mocks";
 import { CommonModule, DecimalPipe } from "@angular/common";
 import { PrivacyCurrencyPipe } from "../../../../shared/pipes/privacy-currency.pipe";
@@ -8,22 +7,7 @@ import { ButtonModule } from "primeng/button";
 import { Divider } from "primeng/divider";
 import { TopAssetsWidgetComponent } from "./top-assets-widget.component";
 import { AssetAllocationChartComponent } from "../asset-allocation-chart/asset-allocation-chart.component";
-import { Asset, AssetType } from "../../../asset/model/asset.model";
-import { Currency } from "../../../profile/model/currency.model";
-
-const buildMockAsset = (overrides: Partial<Asset> = {}): Asset => ({
-	id: faker.string.uuid(),
-	name: faker.lorem.word(),
-	categoryId: faker.string.uuid(),
-	categoryName: faker.lorem.word(),
-	categoryIcon: null,
-	type: AssetType.ASSET,
-	originalCurrency: Currency.EUR,
-	isFavorite: false,
-	latestValue: faker.number.float({ min: 100, max: 10000 }),
-	latestValueBase: faker.number.float({ min: 100, max: 10000 }),
-	...overrides
-});
+import { buildMockAsset } from "../../../../shared/testing/asset.fixture";
 
 describe("TopAssetsWidgetComponent", () => {
 	let fixture: ComponentFixture<TopAssetsWidgetComponent>;

@@ -1,4 +1,4 @@
-package com.backend.aurum.infrastructure.exception;
+package com.backend.aurum.domain.shared.exception;
 
 public class AccessDeniedException extends RuntimeException {
 

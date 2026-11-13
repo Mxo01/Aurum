@@ -1,4 +1,21 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+/**
+ * The slice of a Chart.js scriptable context the gradient helpers need. Kept
+ * structural so the helpers stay usable with both bar and line datasets without
+ * pinning a chart type at the call site.
+ */
+type GradientContext = {
+	chart: {
+		ctx: {
+			createLinearGradient(
+				x0: number,
+				y0: number,
+				x1: number,
+				y1: number
+			): { addColorStop(offset: number, color: string): void };
+		};
+		chartArea?: { top: number; bottom: number } | null;
+	};
+};
 
 type Truthy<T> = Exclude<T, false | "" | null | undefined>;
 
@@ -30,7 +47,7 @@ export function formatDateToISO(date: Date): string {
 export function createBarGradient(
 	topColor: string,
 	bottomColor: string
-): (context: any) => CanvasGradient | string {
+): (context: GradientContext) => CanvasGradient | string {
 	return context => {
 		const chart = context.chart;
 		const { ctx, chartArea } = chart;
@@ -44,7 +61,7 @@ export function createBarGradient(
 
 export function createGradientFill(
 	borderColorHex: string
-): (context: any) => CanvasGradient | string {
+): (context: GradientContext) => CanvasGradient | string {
 	return context => {
 		const chart = context.chart;
 		const { ctx, chartArea } = chart;

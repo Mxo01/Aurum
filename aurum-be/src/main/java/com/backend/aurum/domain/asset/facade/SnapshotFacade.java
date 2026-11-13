@@ -8,9 +8,9 @@ import com.backend.aurum.domain.asset.model.Snapshot;
 import com.backend.aurum.domain.asset.service.AssetService;
 import com.backend.aurum.domain.asset.service.SnapshotService;
 import com.backend.aurum.domain.asset.validation.SnapshotValidationService;
+import com.backend.aurum.domain.shared.port.ExchangeRateProvider;
 import com.backend.aurum.domain.user.model.User;
 import com.backend.aurum.domain.user.repository.UserRepository;
-import com.backend.aurum.infrastructure.exchange.ExchangeRateService;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
@@ -27,7 +27,7 @@ public class SnapshotFacade {
 	private final SnapshotMapper mapper;
 	private final SnapshotValidationService validationService;
 	private final AssetService assetService;
-	private final ExchangeRateService exchangeRateService;
+	private final ExchangeRateProvider exchangeRateService;
 	private final UserRepository userRepository;
 
 	public List<SnapshotDTO> getSnapshots(UUID assetId, UUID userId) {

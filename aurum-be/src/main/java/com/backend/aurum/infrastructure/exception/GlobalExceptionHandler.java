@@ -1,5 +1,8 @@
 package com.backend.aurum.infrastructure.exception;
 
+import com.backend.aurum.domain.shared.exception.AccessDeniedException;
+import com.backend.aurum.domain.shared.exception.NotFoundException;
+import com.backend.aurum.domain.shared.exception.ValidationException;
 import java.time.Instant;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;

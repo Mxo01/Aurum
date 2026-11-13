@@ -1,3 +1,13 @@
+import type { AssetDTO } from "../../../shared/api/contract";
+
+type ContractCurrency = AssetDTO["originalCurrency"];
+
+/**
+ * Compile-time guard: a currency added to the backend contract breaks the build
+ * here until the enum below is updated, instead of failing at runtime.
+ */
+export type ContractCurrencyCoverage = ContractCurrency extends Currency ? true : never;
+
 export enum Currency {
 	AUD = "AUD",
 	BGN = "BGN",

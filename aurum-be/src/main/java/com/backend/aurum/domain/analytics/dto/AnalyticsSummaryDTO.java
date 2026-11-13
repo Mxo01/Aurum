@@ -1,6 +1,7 @@
 package com.backend.aurum.domain.analytics.dto;
 
 import com.backend.aurum.domain.asset.dto.AssetDTO;
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
@@ -9,6 +10,20 @@ import lombok.Data;
 
 @Data
 @Builder
+@Schema(
+	requiredProperties = {
+		"totalNetWorth",
+		"totalGrossAssets",
+		"variations",
+		"assetVariations",
+		"assetAllocation",
+		"currencyImpact",
+		"totalLiabilities",
+		"debtToAssetRatio",
+		"topAssets",
+		"oldestSnapshotYear"
+	}
+)
 public class AnalyticsSummaryDTO {
 
 	private BigDecimal totalNetWorth;
@@ -20,5 +35,7 @@ public class AnalyticsSummaryDTO {
 	private BigDecimal totalLiabilities;
 	private BigDecimal debtToAssetRatio;
 	private List<AssetDTO> topAssets;
+
+	@Schema(nullable = true)
 	private Integer oldestSnapshotYear;
 }

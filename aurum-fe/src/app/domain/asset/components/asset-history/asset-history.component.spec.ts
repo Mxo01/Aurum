@@ -17,22 +17,11 @@ import { of } from "rxjs";
 import { AssetHistoryComponent } from "./asset-history.component";
 import { SnapshotService } from "../../../snapshot/snapshot.service";
 import { ThemeService } from "../../../../shared/services/theme/theme.service";
-import { Asset, AssetType, LiabilityType } from "../../model/asset.model";
+import { AssetType, LiabilityType } from "../../model/asset.model";
 import { Snapshot } from "../../../snapshot/model/snapshot.model";
 import { Currency } from "../../../profile/model/currency.model";
 import { ViewMode } from "./model/asset-history.model";
-
-const buildMockAsset = (overrides: Partial<Asset> = {}): Asset => ({
-	id: faker.string.uuid(),
-	name: faker.lorem.word(),
-	categoryId: faker.string.uuid(),
-	categoryName: faker.lorem.word(),
-	categoryIcon: null,
-	type: AssetType.ASSET,
-	originalCurrency: Currency.EUR,
-	isFavorite: false,
-	...overrides
-});
+import { buildMockAsset } from "../../../../shared/testing/asset.fixture";
 
 const buildMockSnapshot = (assetId: string, overrides: Partial<Snapshot> = {}): Snapshot => ({
 	id: faker.string.uuid(),
