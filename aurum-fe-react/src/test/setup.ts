@@ -1,6 +1,8 @@
 import "@testing-library/jest-dom/vitest";
+import { faker } from "@faker-js/faker";
 import { cleanup } from "@testing-library/react";
-import { afterEach } from "vitest";
+import { afterAll, afterEach, beforeAll } from "vitest";
+import { server } from "./msw/server";
 
 class MemoryStorage implements Storage {
 	private readonly items = new Map<string, string>();
@@ -38,6 +40,16 @@ if (!window.localStorage) {
 	Object.defineProperty(globalThis, "localStorage", { value: storage, configurable: true });
 }
 
+beforeAll(() => {
+	faker.seed(42);
+	server.listen({ onUnhandledRequest: "error" });
+});
+
 afterEach(() => {
 	cleanup();
+	server.resetHandlers();
+});
+
+afterAll(() => {
+	server.close();
 });

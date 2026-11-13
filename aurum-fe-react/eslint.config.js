@@ -45,8 +45,12 @@ export default tseslint.config(
 		rules: { "react-refresh/only-export-components": "off" }
 	},
 	{
-		files: ["src/components/ui/**/*.tsx", "src/lib/api/api-context.tsx"],
+		files: ["src/components/ui/**/*.tsx", "src/lib/api/api-context.tsx", "src/test/**"],
 		rules: { "react-refresh/only-export-components": "off" }
+	},
+	{
+		files: ["src/**/*.test.{ts,tsx}"],
+		rules: { "react-hooks/rules-of-hooks": "off" }
 	},
 	prettier
 );

@@ -3,12 +3,12 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useEffect, useMemo, type ReactNode } from "react";
 import { RouterProvider } from "react-router";
 import { Toaster } from "sonner";
-import { ConsentBanner } from "@/features/legal/consent-banner";
 import { ApiProvider } from "@/lib/api/api-context";
 import { registerUnauthorizedHandler } from "@/lib/api/client";
 import { env } from "@/lib/env";
 import { useThemeStore } from "@/stores/theme";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { ErrorBoundary } from "./error-boundary";
 import { router } from "./router";
 
 const queryClient = new QueryClient({
@@ -71,9 +71,10 @@ export function Providers() {
 			>
 				<ApiBridge>
 					<TooltipProvider delayDuration={200}>
-						<RouterProvider router={router} />
+						<ErrorBoundary>
+							<RouterProvider router={router} />
+						</ErrorBoundary>
 						<AppToaster />
-						<ConsentBanner />
 					</TooltipProvider>
 				</ApiBridge>
 			</Auth0Provider>
