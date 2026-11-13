@@ -290,4 +290,20 @@ class UserServiceTest {
 			RuntimeException.class
 		);
 	}
+
+	@Test
+	void exceedsPixelLimit_isFalseWithinTheLimit() {
+		assertThat(UserService.exceedsPixelLimit(2_000, 2_000)).isFalse();
+	}
+
+	@Test
+	void exceedsPixelLimit_isTrueAboveTheLimit() {
+		assertThat(UserService.exceedsPixelLimit(10_000, 5_000)).isTrue();
+	}
+
+	@Test
+	void exceedsPixelLimit_isTrueForNonPositiveDimensions() {
+		assertThat(UserService.exceedsPixelLimit(0, 100)).isTrue();
+		assertThat(UserService.exceedsPixelLimit(100, -1)).isTrue();
+	}
 }
