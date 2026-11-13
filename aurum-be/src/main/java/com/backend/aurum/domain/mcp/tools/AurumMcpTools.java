@@ -27,6 +27,7 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -41,6 +42,9 @@ public class AurumMcpTools {
 	private final AnalyticsFacade analyticsFacade;
 	private final AssetCategoryFacade categoryFacade;
 	private final CashFlowFacade cashFlowFacade;
+
+	@Value("${mcp.max-batch-size:500}")
+	private int maxBatchSize = 500;
 
 	@Tool(description = "Get all assets for the current user")
 	public List<AssetDTO> getAssets() {
@@ -77,6 +81,7 @@ public class AurumMcpTools {
 	public List<AssetDTO> bulkAddAssets(
 		@ToolParam(description = "List of assets to create") List<CreateAssetDTO> assets
 	) {
+		validateBatch(assets, "bulkAddAssets");
 		return assets
 			.stream()
 			.map(dto -> assetFacade.createAsset(dto, currentUser().getId()))
@@ -96,6 +101,7 @@ public class AurumMcpTools {
 			UpdateAssetDTO
 		> assets
 	) {
+		validateBatch(assets, "bulkUpdateAssets");
 		return assets
 			.stream()
 			.map(dto -> assetFacade.updateAsset(dto.getId(), dto, currentUser().getId()))
@@ -113,6 +119,7 @@ public class AurumMcpTools {
 	public List<SnapshotDTO> bulkAddSnapshots(
 		@ToolParam(description = "List of snapshots to create") List<CreateSnapshotDTO> snapshots
 	) {
+		validateBatch(snapshots, "bulkAddSnapshots");
 		return snapshots
 			.stream()
 			.map(dto -> snapshotFacade.createSnapshot(dto, currentUser().getId()))
@@ -132,6 +139,7 @@ public class AurumMcpTools {
 	public List<SnapshotDTO> bulkUpdateSnapshots(
 		@ToolParam(description = "List of snapshots to update") List<CreateSnapshotDTO> snapshots
 	) {
+		validateBatch(snapshots, "bulkUpdateSnapshots");
 		return snapshots
 			.stream()
 			.map(dto -> snapshotFacade.createSnapshot(dto, currentUser().getId()))
@@ -149,6 +157,7 @@ public class AurumMcpTools {
 	public List<TargetDTO> bulkAddTargets(
 		@ToolParam(description = "List of targets to create") List<CreateTargetDTO> targets
 	) {
+		validateBatch(targets, "bulkAddTargets");
 		return targetFacade.bulkCreateTargets(targets, currentUser().getId());
 	}
 
@@ -165,6 +174,7 @@ public class AurumMcpTools {
 			UpdateTargetDTO
 		> targets
 	) {
+		validateBatch(targets, "bulkUpdateTargets");
 		return targetFacade.bulkUpdateTargets(targets, currentUser().getId());
 	}
 
@@ -184,6 +194,7 @@ public class AurumMcpTools {
 	public List<AssetCategoryDTO> bulkAddCategories(
 		@ToolParam(description = "List of categories to create") List<CreateAssetCategoryDTO> categories
 	) {
+		validateBatch(categories, "bulkAddCategories");
 		return categories
 			.stream()
 			.map(dto -> categoryFacade.createCategory(dto, currentUser().getId()))
@@ -203,6 +214,7 @@ public class AurumMcpTools {
 			description = "List of categories to update, each must include the category id"
 		) List<UpdateAssetCategoryDTO> categories
 	) {
+		validateBatch(categories, "bulkUpdateCategories");
 		return categories
 			.stream()
 			.map(dto -> categoryFacade.updateCategory(dto.getId(), dto, currentUser().getId()))
@@ -240,6 +252,7 @@ public class AurumMcpTools {
 			description = "List of monthly entries to update; each item must have a month (1–12), earned, and spent"
 		) List<CashFlowEntryDTO> entries
 	) {
+		validateBatch(entries, "bulkUpdateCashFlowEntries");
 		return entries
 			.stream()
 			.map(entry -> {
@@ -249,6 +262,20 @@ public class AurumMcpTools {
 				return cashFlowFacade.updateEntry(currentUser().getId(), year, entry.getMonth(), dto);
 			})
 			.toList();
+	}
+
+	private void validateBatch(List<?> items, String toolName) {
+		if (maxBatchSize < 1) {
+			throw new IllegalStateException("mcp.max-batch-size must be positive");
+		}
+		if (items == null) {
+			throw new IllegalArgumentException(toolName + " requires a list of items");
+		}
+		if (items.size() > maxBatchSize) {
+			throw new IllegalArgumentException(
+				toolName + " accepts at most " + maxBatchSize + " items per call"
+			);
+		}
 	}
 
 	private User currentUser() {
