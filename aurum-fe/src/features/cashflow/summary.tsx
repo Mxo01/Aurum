@@ -1,7 +1,6 @@
 import { Activity, ArrowLeftRight, Shield, type LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { Delta } from "@/components/app/delta";
-import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePreferences } from "@/lib/format/use-preferences";
 import { cn } from "@/lib/utils";
@@ -49,17 +48,11 @@ export function CashflowSummary({
 				title="Total cashflow"
 				hint={hasPreviousYear ? `vs ${year - 1}` : undefined}
 				footer={
-					<div className="flex flex-col gap-1.5">
-						<div className="text-muted-foreground flex items-center justify-between text-[11px]">
-							<span>Spent / earned</span>
-							<span className="num text-foreground">
-								{spendRatio === null ? "—" : percent(spendRatio, 1)}
-							</span>
-						</div>
-						<Progress
-							value={Math.max(0, Math.min(100, spendRatio ?? 0))}
-							label="Spent to earned ratio"
-						/>
+					<div className="text-muted-foreground flex items-center justify-between text-[11px]">
+						<span>Spent / earned</span>
+						<span className="num text-foreground">
+							{spendRatio === null ? "—" : percent(spendRatio, 1)}
+						</span>
 					</div>
 				}
 			>
@@ -85,11 +78,6 @@ export function CashflowSummary({
 			<SummaryCard
 				icon={Activity}
 				title="Monthly average"
-				footer={
-					<span className="text-muted-foreground text-[11px]">
-						{activeMonths} {activeMonths === 1 ? "month" : "months"} with recorded data
-					</span>
-				}
 			>
 				<div className="grid grid-cols-2 divide-x divide-border">
 					<Metric
@@ -108,14 +96,6 @@ export function CashflowSummary({
 			<SummaryCard
 				icon={Shield}
 				title="Balance & rate"
-				footer={
-					savingsRate === null ? undefined : (
-						<Progress
-							value={savingsRate}
-							label="Savings rate"
-						/>
-					)
-				}
 			>
 				<div className="grid grid-cols-2 divide-x divide-border">
 					<Metric
