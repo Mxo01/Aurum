@@ -1,9 +1,9 @@
 import { Check, Copy } from "lucide-react";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { env } from "@/lib/env";
-import { cn } from "@/lib/utils";
 
 type Platform = "desktop" | "mobile";
 
@@ -42,24 +42,24 @@ export function McpSetup() {
 				</span>
 			</div>
 
-			<div className="bg-muted flex w-fit items-center gap-0.5 rounded-md p-0.5">
+			<ToggleGroup
+				type="single"
+				variant="outline"
+				value={platform}
+				onValueChange={value => value && setPlatform(value as Platform)}
+				aria-label="MCP platform"
+				className="h-8"
+			>
 				{PLATFORMS.map(item => (
-					<button
+					<ToggleGroupItem
 						key={item.value}
-						type="button"
-						onClick={() => setPlatform(item.value)}
-						aria-pressed={platform === item.value}
-						className={cn(
-							"focus-ring rounded px-2.5 py-1 text-[11px] font-medium transition-colors",
-							platform === item.value
-								? "bg-card text-foreground shadow-sm"
-								: "text-muted-foreground hover:text-foreground"
-						)}
+						value={item.value}
+						className="h-8 px-3 text-xs"
 					>
 						{item.label}
-					</button>
+					</ToggleGroupItem>
 				))}
-			</div>
+			</ToggleGroup>
 
 			<div className="relative">
 				<pre className="border-border bg-muted/40 overflow-x-auto rounded-lg border p-3 text-xs leading-relaxed">

@@ -7,6 +7,7 @@ import { useSearchParams } from "react-router";
 import { z } from "zod";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -358,10 +359,18 @@ export function TargetsCard({ targets, isLoading, currency }: TargetsCardProps) 
 
 						<div className="flex flex-col gap-2">
 							<Label htmlFor="target-deadline">Deadline</Label>
-							<Input
-								id="target-deadline"
-								type="date"
-								{...form.register("deadline")}
+							<Controller
+								control={form.control}
+								name="deadline"
+								render={({ field }) => (
+									<DatePicker
+										id="target-deadline"
+										value={field.value}
+										onChange={field.onChange}
+										label="Deadline"
+										toYear={new Date().getFullYear() + 30}
+									/>
+								)}
 							/>
 							{form.formState.errors.deadline ? (
 								<p className="text-danger text-xs">{form.formState.errors.deadline.message}</p>

@@ -1,6 +1,6 @@
 import { ArrowDownRight, ArrowUpRight, Moon, Sun } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { useThemeStore } from "@/stores/theme";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { useThemeStore, type Theme } from "@/stores/theme";
 import { cn } from "@/lib/utils";
 
 const SAMPLE_ASSETS = [
@@ -25,24 +25,27 @@ export function LandingPreview() {
 					<span className="text-xs font-semibold">Aurum</span>
 					<span className="text-muted-foreground hidden text-[11px] sm:inline">Sample data</span>
 				</div>
-				<div className="bg-muted flex items-center gap-0.5 rounded-md p-0.5">
-					<Button
-						variant={theme === "light" ? "secondary" : "ghost"}
-						size="sm"
-						className="h-6 gap-1 px-2 text-[11px]"
-						onClick={() => setTheme("light")}
+				<ToggleGroup
+					type="single"
+					variant="outline"
+					value={theme}
+					onValueChange={value => value && setTheme(value as Theme)}
+					aria-label="Preview theme"
+					className="h-8"
+				>
+					<ToggleGroupItem
+						value="light"
+						className="h-8 px-2 text-[11px]"
 					>
 						<Sun className="size-3" /> Light
-					</Button>
-					<Button
-						variant={theme === "dark" ? "secondary" : "ghost"}
-						size="sm"
-						className="h-6 gap-1 px-2 text-[11px]"
-						onClick={() => setTheme("dark")}
+					</ToggleGroupItem>
+					<ToggleGroupItem
+						value="dark"
+						className="h-8 px-2 text-[11px]"
 					>
 						<Moon className="size-3" /> Dark
-					</Button>
-				</div>
+					</ToggleGroupItem>
+				</ToggleGroup>
 			</div>
 
 			<div className="grid gap-4 p-4 sm:p-5 lg:grid-cols-[1.7fr_1fr]">

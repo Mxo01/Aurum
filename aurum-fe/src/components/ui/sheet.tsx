@@ -15,11 +15,14 @@ export function SheetContent({
 }: ComponentProps<typeof DialogPrimitive.Content> & { side?: "right" | "left" }) {
 	return (
 		<DialogPrimitive.Portal>
-			<DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/50" />
+			<DialogPrimitive.Overlay className="data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-black/50" />
 			<DialogPrimitive.Content
 				className={cn(
 					"bg-card border-border fixed inset-y-0 z-50 flex w-full flex-col gap-4 border-l p-5 shadow-xl sm:max-w-md",
-					side === "right" ? "right-0" : "left-0 border-r border-l-0",
+					side === "right"
+						? "right-0 data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right"
+						: "left-0 border-r border-l-0 data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left",
+					"data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:duration-300 data-[state=closed]:duration-200",
 					className
 				)}
 				{...props}

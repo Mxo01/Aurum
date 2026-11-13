@@ -1,5 +1,18 @@
 import { expect, test } from "./fixtures/aurum";
 
+test("keeps the header actions at the same height", async ({ page }) => {
+	await page.goto("/assets");
+
+	const categories = page.getByRole("button", { name: "Categories" });
+	const addAsset = page.getByRole("button", { name: "Add asset" });
+	const [categoriesBox, addAssetBox] = await Promise.all([
+		categories.boundingBox(),
+		addAsset.boundingBox()
+	]);
+
+	expect(categoriesBox?.height).toBe(addAssetBox?.height);
+});
+
 test("lists the grouped assets", async ({ page }) => {
 	await page.goto("/assets");
 
@@ -28,7 +41,7 @@ test("edits a value inline", async ({ page }) => {
 	await page.goto("/assets");
 
 	await page
-		.getByRole("button", { name: /Edit Apartment Berlin, currently/ })
+		.getByRole("button", { name: /Edit Apartment Berlin, currently €430,000\.00/ })
 		.filter({ visible: true })
 		.first()
 		.click();

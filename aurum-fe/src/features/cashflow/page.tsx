@@ -1,17 +1,15 @@
 import { ChevronLeft, ChevronRight, TriangleAlert } from "lucide-react";
-import type { ReactNode } from "react";
 import { useSearchParams } from "react-router";
 import { Delta } from "@/components/app/delta";
 import { EditableValue } from "@/components/app/editable-value";
 import { PageHeader } from "@/components/app/page-header";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
-import { Skeleton } from "@/components/ui/skeleton";
 import { usePreferences } from "@/lib/format/use-preferences";
 import type { CashFlowRow } from "./utils";
 import { buildCashflowRows, cashflowTotals } from "./utils";
 import { useCashflowYear, useUpdateCashflowEntry } from "./api";
 import { CashflowChart } from "./chart";
+import { CashflowSummary } from "./summary";
 
 function parseYear(value: string | null, fallback: number) {
 	if (!value) return fallback;
@@ -21,7 +19,7 @@ function parseYear(value: string | null, fallback: number) {
 
 export function CashFlowPage() {
 	const [searchParams, setSearchParams] = useSearchParams();
-	const { money, percent, currency } = usePreferences();
+	const { money, currency } = usePreferences();
 	const currentYear = new Date().getFullYear();
 	const year = parseYear(searchParams.get("year"), currentYear);
 
@@ -34,14 +32,6 @@ export function CashFlowPage() {
 
 	const prevYearEarned = previousYear?.reduce((sum, entry) => sum + entry.earned, 0);
 	const prevYearSpent = previousYear?.reduce((sum, entry) => sum + entry.spent, 0);
-	const yoyEarned =
-		prevYearEarned && prevYearEarned > 0
-			? ((totals.earned - prevYearEarned) / prevYearEarned) * 100
-			: undefined;
-	const yoySpent =
-		prevYearSpent && prevYearSpent > 0
-			? ((totals.spent - prevYearSpent) / prevYearSpent) * 100
-			: undefined;
 
 	const setYear = (next: number) => {
 		const params = new URLSearchParams(searchParams);
@@ -107,81 +97,14 @@ export function CashFlowPage() {
 				</div>
 			) : (
 				<>
-					<div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-						<SummaryTile
-							label="Earned"
-							value={
-								query.isLoading ? (
-									<Skeleton className="h-6 w-24" />
-								) : (
-									money(totals.earned, { digits: 0 })
-								)
-							}
-							hint={previousYear ? `vs ${year - 1}` : undefined}
-							right={yoyEarned === undefined ? undefined : <Delta value={yoyEarned} />}
-						/>
-						<SummaryTile
-							label="Spent"
-							value={
-								query.isLoading ? (
-									<Skeleton className="h-6 w-24" />
-								) : (
-									money(totals.spent, { digits: 0 })
-								)
-							}
-							hint={previousYear ? `vs ${year - 1}` : undefined}
-							right={
-								yoySpent === undefined ? undefined : (
-									<Delta
-										value={yoySpent}
-										invert
-									/>
-								)
-							}
-						/>
-						<SummaryTile
-							label="Net balance"
-							value={
-								query.isLoading ? (
-									<Skeleton className="h-6 w-24" />
-								) : (
-									<span
-										className={
-											totals.balance > 0
-												? "text-success"
-												: totals.balance < 0
-													? "text-danger"
-													: undefined
-										}
-									>
-										{money(totals.balance, { digits: 0, signDisplay: "exceptZero" })}
-									</span>
-								)
-							}
-							hint={`${rows.filter(row => row.earned > 0 || row.spent > 0).length} months recorded`}
-						/>
-						<SummaryTile
-							label="Savings rate"
-							value={
-								query.isLoading ? (
-									<Skeleton className="h-6 w-24" />
-								) : totals.savingsRate === null ? (
-									"—"
-								) : (
-									percent(totals.savingsRate, 1)
-								)
-							}
-							hint="Net balance / earned"
-							footer={
-								totals.savingsRate === null ? null : (
-									<Progress
-										value={Math.max(0, Math.min(100, totals.savingsRate))}
-										label="Savings rate"
-									/>
-								)
-							}
-						/>
-					</div>
+					<CashflowSummary
+						year={year}
+						totals={totals}
+						previousYearEarned={prevYearEarned}
+						previousYearSpent={prevYearSpent}
+						activeMonths={rows.filter(row => row.earned > 0 || row.spent > 0).length}
+						isLoading={query.isLoading}
+					/>
 
 					<CashflowChart
 						rows={rows}
@@ -190,7 +113,7 @@ export function CashFlowPage() {
 
 					<section className="bg-card border-border overflow-hidden rounded-xl border">
 						<div className="hidden md:block">
-							<table className="w-full text-sm">
+							<table className="w-full table-fixed text-sm">
 								<thead className="text-muted-foreground border-border border-b text-[11px]">
 									<tr>
 										<th className="px-3 py-2 text-left font-medium">Month</th>
@@ -221,6 +144,7 @@ export function CashFlowPage() {
 													currency={currency}
 													label={`${row.label} earned`}
 													onSave={value => save(row, "earned", value)}
+													className="h-7 w-28"
 												/>
 											</td>
 											<td className="px-3 py-2 text-right">
@@ -229,6 +153,7 @@ export function CashFlowPage() {
 													currency={currency}
 													label={`${row.label} spent`}
 													onSave={value => save(row, "spent", value)}
+													className="h-7 w-28"
 												/>
 											</td>
 											<td
@@ -345,8 +270,8 @@ export function CashFlowPage() {
 					</section>
 
 					{!previousYear && !query.isLoading ? (
-						<div className="border-border flex items-start gap-2 rounded-lg border p-3">
-							<TriangleAlert className="text-muted-foreground mt-0.5 size-4 shrink-0" />
+						<div className="border-border flex items-center gap-2 rounded-lg border p-3">
+							<TriangleAlert className="text-muted-foreground size-4 shrink-0" />
 							<p className="text-muted-foreground text-xs">
 								No data for {year - 1}. The year-over-year columns appear once that year has
 								entries.
@@ -355,30 +280,6 @@ export function CashFlowPage() {
 					) : null}
 				</>
 			)}
-		</div>
-	);
-}
-
-interface SummaryTileProps {
-	label: string;
-	value: ReactNode;
-	hint?: string;
-	right?: ReactNode;
-	footer?: ReactNode;
-}
-
-function SummaryTile({ label, value, hint, right, footer }: SummaryTileProps) {
-	return (
-		<div className="bg-card border-border flex min-h-[96px] flex-col justify-between gap-2 rounded-xl border p-4">
-			<div className="flex items-start justify-between gap-2">
-				<span className="text-muted-foreground text-[11px] font-medium">{label}</span>
-				{right}
-			</div>
-			<div className="flex flex-col gap-1">
-				<span className="num text-xl font-semibold tracking-tight">{value}</span>
-				{hint ? <span className="text-muted-foreground text-[11px]">{hint}</span> : null}
-				{footer}
-			</div>
 		</div>
 	);
 }

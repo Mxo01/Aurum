@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -400,10 +401,18 @@ export function AssetFormSheet({ open, onOpenChange, asset, categories }: AssetF
 							</div>
 							<div className="flex flex-col gap-2">
 								<Label htmlFor="asset-date">Value date</Label>
-								<Input
-									id="asset-date"
-									type="date"
-									{...form.register("referenceDate")}
+								<Controller
+									control={form.control}
+									name="referenceDate"
+									render={({ field }) => (
+										<DatePicker
+											id="asset-date"
+											value={field.value}
+											onChange={field.onChange}
+											label="Value date"
+											toYear={new Date().getFullYear()}
+										/>
+									)}
 								/>
 							</div>
 						</>

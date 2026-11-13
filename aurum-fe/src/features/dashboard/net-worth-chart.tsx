@@ -11,6 +11,7 @@ import {
 	YAxis
 } from "recharts";
 import { Delta } from "@/components/app/delta";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { EmptyState } from "@/components/app/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -86,9 +87,9 @@ export function NetWorthChart({
 								</span>
 							) : null}
 						</div>
-						<div className="text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
-							<span>
-								avg / month{" "}
+						<div className="text-muted-foreground flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px]">
+							<span className="flex items-center gap-1.5">
+								avg / month
 								<span className="num text-foreground font-medium">
 									{money(averageAbsolute ?? 0, { signDisplay: "exceptZero" })}
 								</span>
@@ -127,24 +128,24 @@ export function NetWorthChart({
 						</Select>
 
 						{!year ? (
-							<div className="bg-muted flex items-center gap-0.5 rounded-md p-0.5">
+							<ToggleGroup
+								type="single"
+								variant="outline"
+								value={period}
+								onValueChange={value => value && setPeriod(value as keyof VariationDTO)}
+								aria-label="Chart period"
+								className="h-8"
+							>
 								{PERIODS.map(item => (
-									<button
+									<ToggleGroupItem
 										key={item.value}
-										type="button"
-										onClick={() => setPeriod(item.value)}
-										className={cn(
-											"focus-ring rounded px-2 py-1 text-[11px] font-medium transition-colors",
-											period === item.value
-												? "bg-card text-foreground shadow-sm"
-												: "text-muted-foreground hover:text-foreground"
-										)}
-										aria-pressed={period === item.value}
+										value={item.value}
+										className="h-8 px-2.5 text-[11px]"
 									>
 										{item.label}
-									</button>
+									</ToggleGroupItem>
 								))}
-							</div>
+							</ToggleGroup>
 						) : null}
 					</div>
 				</div>

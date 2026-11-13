@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { Link } from "react-router";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/app/page-header";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -288,32 +289,27 @@ function PreferencesTab() {
 							<span className="text-sm">Theme</span>
 							<span className="text-muted-foreground text-xs">Light or dark, your call.</span>
 						</div>
-						<div className="bg-muted flex w-fit items-center gap-0.5 rounded-md p-0.5">
-							<button
-								type="button"
-								onClick={() => setTheme("light")}
-								aria-pressed={theme === "light"}
-								className={`focus-ring flex items-center gap-1.5 rounded px-2.5 py-1 text-[11px] font-medium transition-colors ${
-									theme === "light"
-										? "bg-card text-foreground shadow-sm"
-										: "text-muted-foreground hover:text-foreground"
-								}`}
+						<ToggleGroup
+							type="single"
+							variant="outline"
+							value={theme}
+							onValueChange={value => value && setTheme(value as "light" | "dark")}
+							aria-label="Theme"
+							className="h-8"
+						>
+							<ToggleGroupItem
+								value="light"
+								className="h-8 px-3 text-xs"
 							>
 								<Sun className="size-3.5" /> Light
-							</button>
-							<button
-								type="button"
-								onClick={() => setTheme("dark")}
-								aria-pressed={theme === "dark"}
-								className={`focus-ring flex items-center gap-1.5 rounded px-2.5 py-1 text-[11px] font-medium transition-colors ${
-									theme === "dark"
-										? "bg-card text-foreground shadow-sm"
-										: "text-muted-foreground hover:text-foreground"
-								}`}
+							</ToggleGroupItem>
+							<ToggleGroupItem
+								value="dark"
+								className="h-8 px-3 text-xs"
 							>
 								<Moon className="size-3.5" /> Dark
-							</button>
-						</div>
+							</ToggleGroupItem>
+						</ToggleGroup>
 					</div>
 				</CardContent>
 			</Card>

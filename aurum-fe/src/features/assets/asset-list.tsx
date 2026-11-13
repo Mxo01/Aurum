@@ -1,7 +1,23 @@
-import { ChevronDown, ChevronRight, History, Pencil, Star, Trash2 } from "lucide-react";
+import {
+	ChevronDown,
+	ChevronRight,
+	History,
+	MoreHorizontal,
+	Pencil,
+	Star,
+	Trash2
+} from "lucide-react";
 import { Delta } from "@/components/app/delta";
+import { EditableText } from "@/components/app/editable-text";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu";
 import { CategoryIcon } from "@/features/categories/icon-map";
 import type { AssetDTO } from "@/lib/api/types";
 import { ASSET_TYPE } from "@/lib/api/types";
@@ -18,6 +34,7 @@ interface AssetListProps {
 	onEdit: (asset: AssetDTO) => void;
 	onHistory: (asset: AssetDTO) => void;
 	onDelete: (asset: AssetDTO) => void;
+	onRename: (asset: AssetDTO, name: string) => void;
 	onValueSave: (asset: AssetDTO, value: number) => void;
 }
 
@@ -28,33 +45,32 @@ function RowActions({
 	onDelete
 }: Pick<AssetListProps, "onEdit" | "onHistory" | "onDelete"> & { asset: AssetDTO }) {
 	return (
-		<div className="flex items-center justify-end gap-0.5">
-			<Button
-				variant="ghost"
-				size="icon-sm"
-				aria-label={`Edit ${asset.name}`}
-				onClick={() => onEdit(asset)}
-			>
-				<Pencil className="size-3.5" />
-			</Button>
-			<Button
-				variant="ghost"
-				size="icon-sm"
-				aria-label={`History of ${asset.name}`}
-				onClick={() => onHistory(asset)}
-			>
-				<History className="size-3.5" />
-			</Button>
-			<Button
-				variant="ghost"
-				size="icon-sm"
-				className="hover:text-danger"
-				aria-label={`Delete ${asset.name}`}
-				onClick={() => onDelete(asset)}
-			>
-				<Trash2 className="size-3.5" />
-			</Button>
-		</div>
+		<DropdownMenu>
+			<DropdownMenuTrigger asChild>
+				<Button
+					variant="ghost"
+					size="icon-sm"
+					aria-label={`Actions for ${asset.name}`}
+				>
+					<MoreHorizontal className="size-4" />
+				</Button>
+			</DropdownMenuTrigger>
+			<DropdownMenuContent align="end">
+				<DropdownMenuItem onSelect={() => onEdit(asset)}>
+					<Pencil className="size-4" /> Edit
+				</DropdownMenuItem>
+				<DropdownMenuItem onSelect={() => onHistory(asset)}>
+					<History className="size-4" /> History
+				</DropdownMenuItem>
+				<DropdownMenuSeparator />
+				<DropdownMenuItem
+					className="text-danger focus:text-danger"
+					onSelect={() => onDelete(asset)}
+				>
+					<Trash2 className="size-4" /> Delete
+				</DropdownMenuItem>
+			</DropdownMenuContent>
+		</DropdownMenu>
 	);
 }
 
@@ -65,6 +81,7 @@ export function AssetList({
 	onEdit,
 	onHistory,
 	onDelete,
+	onRename,
 	onValueSave
 }: AssetListProps) {
 	const { money } = usePreferences();
@@ -76,8 +93,8 @@ export function AssetList({
 				<div className="bg-muted/40 text-muted-foreground grid grid-cols-[minmax(0,1fr)_160px_120px_100px] gap-2 px-3 py-2 text-[11px] font-medium">
 					<span>Asset</span>
 					<span className="text-right">Value</span>
-					<span className="text-right">1M</span>
-					<span className="sr-only">Actions</span>
+					<span className="text-right">Monthly Delta</span>
+					<span className="text-right">Actions</span>
 				</div>
 
 				{groups.map(group => {
@@ -125,7 +142,12 @@ export function AssetList({
 													{asset.isFavorite ? (
 														<Star className="text-primary fill-primary size-3.5 shrink-0" />
 													) : null}
-													<span className="truncate text-sm font-medium">{asset.name}</span>
+													<EditableText
+														value={asset.name}
+														label={asset.name}
+														onSave={name => onRename(asset, name)}
+														className="min-w-0"
+													/>
 												</div>
 												<div className="text-right">
 													<EditableValue
@@ -204,7 +226,12 @@ export function AssetList({
 														{asset.isFavorite ? (
 															<Star className="text-primary fill-primary size-3.5 shrink-0" />
 														) : null}
-														<span className="truncate text-sm font-medium">{asset.name}</span>
+														<EditableText
+															value={asset.name}
+															label={asset.name}
+															onSave={name => onRename(asset, name)}
+															className="min-w-0"
+														/>
 													</div>
 													{trend === null ? (
 														<span className="text-muted-foreground text-[11px]">No data</span>

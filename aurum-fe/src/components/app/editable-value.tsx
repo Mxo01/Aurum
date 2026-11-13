@@ -28,7 +28,10 @@ export function EditableValue({
 	const inputRef = useRef<HTMLInputElement>(null);
 
 	useEffect(() => {
-		if (editing) inputRef.current?.focus();
+		if (editing) {
+			inputRef.current?.focus();
+			inputRef.current?.select();
+		}
 	}, [editing]);
 
 	const display = formatCurrency(value, { currency, locale, privacy: isPrivacy });
@@ -57,7 +60,7 @@ export function EditableValue({
 					if (event.key === "Enter") event.currentTarget.blur();
 					if (event.key === "Escape") setEditing(false);
 				}}
-				className={cn("num h-8 w-32 text-right", className)}
+				className={cn("num ml-auto h-8 w-32 text-right", className)}
 				aria-label={`Edit ${label} in ${currency}`}
 			/>
 		);
@@ -69,7 +72,7 @@ export function EditableValue({
 			onClick={start}
 			disabled={disabled}
 			className={cn(
-				"num focus-ring group inline-flex items-center gap-1.5 rounded-md px-1.5 py-0.5 text-right transition-colors",
+				"num focus-ring group inline-flex items-center justify-end gap-1.5 rounded-md px-1.5 py-0.5 text-right transition-colors",
 				!disabled && "hover:bg-accent",
 				className
 			)}

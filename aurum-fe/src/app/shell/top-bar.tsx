@@ -1,6 +1,8 @@
 import { useAuth0 } from "@auth0/auth0-react";
 import { Eye, EyeOff, LogOut, Moon, Search, Sun, User } from "lucide-react";
 import { NavLink, useNavigate } from "react-router";
+import { Kbd } from "@/components/app/kbd";
+import { commandLabel } from "@/lib/platform";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -68,11 +70,23 @@ export function TopBar() {
 
 				<div className="ml-auto flex items-center gap-1">
 					<Button
+						variant="outline"
+						size="sm"
+						className="hidden h-8 gap-2 md:inline-flex"
+						onClick={() => setCommandOpen(true)}
+						aria-label="Search"
+						aria-keyshortcuts="Meta+K Control+K"
+					>
+						<Search className="size-3.5" />
+						<span className="text-muted-foreground text-xs">Search</span>
+						<Kbd>{commandLabel} + K</Kbd>
+					</Button>
+					<Button
 						variant="ghost"
 						size="icon-sm"
-						className="hidden sm:inline-flex"
+						className="md:hidden"
 						onClick={() => setCommandOpen(true)}
-						aria-label="Open command palette"
+						aria-label="Search"
 					>
 						<Search className="size-4" />
 					</Button>

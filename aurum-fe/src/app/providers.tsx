@@ -2,6 +2,7 @@ import { Auth0Provider, useAuth0 } from "@auth0/auth0-react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useEffect, useMemo, type ReactNode } from "react";
 import { RouterProvider } from "react-router";
+import { CircleCheck, CircleX, Info, TriangleAlert } from "lucide-react";
 import { Toaster } from "sonner";
 import { ApiProvider } from "@/lib/api/api-context";
 import { registerUnauthorizedHandler } from "@/lib/api/client";
@@ -48,12 +49,27 @@ function ApiBridge({ children }: { children: ReactNode }) {
 
 function AppToaster() {
 	const theme = useThemeStore(state => state.theme);
+
 	return (
 		<Toaster
 			theme={theme}
 			position="top-right"
-			closeButton
-			richColors={false}
+			closeButton={false}
+			icons={{
+				success: <CircleCheck className="text-success size-4" />,
+				error: <CircleX className="text-danger size-4" />,
+				warning: <TriangleAlert className="text-primary size-4" />,
+				info: <Info className="text-foreground size-4" />
+			}}
+			toastOptions={{
+				classNames: {
+					toast: "border bg-card text-card-foreground",
+					success: "border-success/40",
+					error: "border-danger/40",
+					warning: "border-primary/50",
+					info: "border-border"
+				}
+			}}
 		/>
 	);
 }

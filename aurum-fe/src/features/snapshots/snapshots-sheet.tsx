@@ -1,9 +1,9 @@
 import { LineChart as LineChartIcon, Plus, Trash2, TriangleAlert } from "lucide-react";
 import { useState } from "react";
 import {
+	Area,
+	AreaChart,
 	CartesianGrid,
-	Line,
-	LineChart,
 	ResponsiveContainer,
 	Tooltip,
 	XAxis,
@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import {
 	Sheet,
@@ -196,11 +197,12 @@ function SnapshotsBody({ asset }: { asset: AssetDTO }) {
 							<div className="grid grid-cols-[1fr_1fr_auto] items-end gap-2">
 								<div className="flex flex-col gap-1">
 									<span className="text-muted-foreground text-[11px]">Date</span>
-									<Input
-										type="date"
+									<DatePicker
+										id="snapshot-date"
 										value={newDate}
-										onChange={event => setNewDate(event.target.value)}
-										aria-label="Snapshot date"
+										onChange={setNewDate}
+										label="Snapshot date"
+										toYear={new Date().getFullYear()}
 									/>
 								</div>
 								<div className="flex flex-col gap-1">
@@ -282,10 +284,30 @@ function SnapshotsBody({ asset }: { asset: AssetDTO }) {
 								width="100%"
 								height="100%"
 							>
-								<LineChart
+								<AreaChart
 									data={chartData}
 									margin={{ top: 8, right: 4, left: 0, bottom: 0 }}
 								>
+									<defs>
+										<linearGradient
+											id="snapshot-area"
+											x1="0"
+											y1="0"
+											x2="0"
+											y2="1"
+										>
+											<stop
+												offset="0%"
+												stopColor="var(--chart-1)"
+												stopOpacity={0.32}
+											/>
+											<stop
+												offset="100%"
+												stopColor="var(--chart-1)"
+												stopOpacity={0}
+											/>
+										</linearGradient>
+									</defs>
 									<CartesianGrid
 										vertical={false}
 										stroke="var(--chart-grid)"
@@ -319,16 +341,17 @@ function SnapshotsBody({ asset }: { asset: AssetDTO }) {
 											fontSize: 12
 										}}
 									/>
-									<Line
+									<Area
 										type="monotone"
 										dataKey="value"
 										name="Value"
 										stroke="var(--chart-1)"
 										strokeWidth={2}
+										fill="url(#snapshot-area)"
 										dot={false}
 										isAnimationActive={false}
 									/>
-								</LineChart>
+								</AreaChart>
 							</ResponsiveContainer>
 						</div>
 					)}

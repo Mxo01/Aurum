@@ -1,9 +1,8 @@
 import { useEffect } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { usePrivacyStore } from "@/stores/privacy";
+import { useThemeStore } from "@/stores/theme";
 import { useUiStore } from "@/stores/ui";
-
-const SEQUENCE_TIMEOUT_MS = 900;
 
 function isEditableTarget(target: EventTarget | null) {
 	if (!(target instanceof HTMLElement)) return false;
@@ -22,10 +21,9 @@ export function useShortcuts() {
 	const location = useLocation();
 	const togglePrivacy = usePrivacyStore(state => state.togglePrivacy);
 	const toggleCommand = useUiStore(state => state.toggleCommand);
+	const toggleTheme = useThemeStore(state => state.toggleTheme);
 
 	useEffect(() => {
-		let pendingG = 0;
-
 		const onKeyDown = (event: KeyboardEvent) => {
 			if (event.metaKey || event.ctrlKey) {
 				if (event.key.toLowerCase() === "k") {
@@ -37,51 +35,52 @@ export function useShortcuts() {
 
 			if (isEditableTarget(event.target)) return;
 
-			const key = event.key.toLowerCase();
-			const now = Date.now();
-
-			if (key === "g") {
-				pendingG = now;
-				return;
-			}
-
-			if (now - pendingG < SEQUENCE_TIMEOUT_MS) {
+			if (event.altKey) {
 				const routes: Record<string, string> = {
-					d: "/dashboard",
-					a: "/assets",
-					c: "/cashflow",
-					p: "/profile"
+					Digit1: "/dashboard",
+					Digit2: "/assets",
+					Digit3: "/cashflow",
+					Digit4: "/profile"
 				};
-				const route = routes[key];
+				const route = routes[event.code];
+
 				if (route) {
 					event.preventDefault();
-					pendingG = 0;
 					navigate(route);
 					return;
 				}
-			}
 
-			if (key === "n") {
-				event.preventDefault();
-				navigate("/assets?new=1");
+				if (event.code === "KeyN") {
+					event.preventDefault();
+					navigate("/assets?new=1");
+					return;
+				}
+				if (event.code === "KeyT") {
+					event.preventDefault();
+					navigate("/dashboard?target=new");
+					return;
+				}
+				if (event.code === "KeyP") {
+					event.preventDefault();
+					togglePrivacy();
+					return;
+				}
+				if (event.code === "KeyM") {
+					event.preventDefault();
+					toggleTheme();
+				}
 				return;
 			}
 
-			if (key === "/") {
+			if (event.key === "/") {
 				event.preventDefault();
 				toggleCommand();
-				return;
-			}
-
-			if (key === "p") {
-				event.preventDefault();
-				togglePrivacy();
 			}
 		};
 
 		window.addEventListener("keydown", onKeyDown);
 		return () => window.removeEventListener("keydown", onKeyDown);
-	}, [navigate, toggleCommand, togglePrivacy]);
+	}, [navigate, toggleCommand, togglePrivacy, toggleTheme]);
 
 	useEffect(() => {
 		window.scrollTo({ top: 0 });

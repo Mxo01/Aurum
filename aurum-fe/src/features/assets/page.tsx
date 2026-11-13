@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useSearchParams } from "react-router";
 import { EmptyState } from "@/components/app/empty-state";
 import { PageHeader } from "@/components/app/page-header";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -20,11 +21,10 @@ import { useCategories } from "@/features/categories/api";
 import { CategoriesSheet } from "@/features/categories/categories-sheet";
 import { usePreferences } from "@/lib/format/use-preferences";
 import type { AssetDTO } from "@/lib/api/types";
-import { cn } from "@/lib/utils";
 import { AssetFormSheet } from "./asset-form-sheet";
 import { AssetList } from "./asset-list";
 import { portfolioTotals } from "./assets.utils";
-import { useAssets, useDeleteAsset, useUpdateCurrentValue } from "./api";
+import { useAssets, useDeleteAsset, useRenameAsset, useUpdateCurrentValue } from "./api";
 import { SnapshotsSheet } from "@/features/snapshots/snapshots-sheet";
 
 type TypeFilter = "ALL" | "ASSET" | "LIABILITY";
@@ -42,8 +42,9 @@ export function AssetsPage() {
 	const categories = useCategories();
 	const deleteAsset = useDeleteAsset();
 	const updateValue = useUpdateCurrentValue();
+	const renameAsset = useRenameAsset();
 
-	const [query, setQuery] = useState("");
+	const query = searchParams.get("search") ?? "";
 	const [filter, setFilter] = useState<TypeFilter>("ALL");
 	const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
 	const [formOpen, setFormOpen] = useState(false);
@@ -70,6 +71,13 @@ export function AssetsPage() {
 
 		return matchesType && matchesQuery;
 	});
+
+	const setQuery = (value: string) => {
+		const next = new URLSearchParams(searchParams);
+		if (value) next.set("search", value);
+		else next.delete("search");
+		setSearchParams(next, { replace: true });
+	};
 
 	const clearParam = (key: string) => {
 		if (!searchParams.has(key)) return;
@@ -167,24 +175,24 @@ export function AssetsPage() {
 						aria-label="Search assets"
 					/>
 				</div>
-				<div className="bg-muted flex items-center gap-0.5 rounded-md p-0.5">
+				<ToggleGroup
+					type="single"
+					variant="outline"
+					value={filter}
+					onValueChange={value => value && setFilter(value as TypeFilter)}
+					aria-label="Filter by type"
+					className="h-8"
+				>
 					{FILTERS.map(item => (
-						<button
+						<ToggleGroupItem
 							key={item.value}
-							type="button"
-							onClick={() => setFilter(item.value)}
-							aria-pressed={filter === item.value}
-							className={cn(
-								"focus-ring rounded px-2.5 py-1 text-[11px] font-medium transition-colors",
-								filter === item.value
-									? "bg-card text-foreground shadow-sm"
-									: "text-muted-foreground hover:text-foreground"
-							)}
+							value={item.value}
+							className="h-8 px-3 text-xs"
 						>
 							{item.label}
-						</button>
+						</ToggleGroupItem>
 					))}
-				</div>
+				</ToggleGroup>
 			</div>
 
 			{assets.isLoading ? (
@@ -221,6 +229,9 @@ export function AssetsPage() {
 					onEdit={openEdit}
 					onHistory={openHistory}
 					onDelete={setDeleteTarget}
+					onRename={(asset, name) => {
+						if (asset.id) renameAsset.mutate({ id: asset.id, name });
+					}}
 					onValueSave={(asset, value) => {
 						if (asset.id) updateValue.mutate({ assetId: asset.id, value });
 					}}

@@ -3,15 +3,16 @@ import { toast } from "sonner";
 import { useApi } from "@/lib/api/api-context";
 import { unwrap } from "@/lib/api/client";
 import { queryKeys } from "@/lib/api/keys";
-import type { CreateAssetDTO, UpdateAssetDTO } from "@/lib/api/types";
+import type { AssetDTO, CreateAssetDTO, UpdateAssetDTO } from "@/lib/api/types";
 import { todayISO } from "@/lib/format/date";
 
-export function useAssets() {
+export function useAssets(enabled = true) {
 	const api = useApi();
 
 	return useQuery({
 		queryKey: queryKeys.assets,
-		queryFn: async () => unwrap(await api.GET("/assets"))
+		queryFn: async () => unwrap(await api.GET("/assets")),
+		enabled
 	});
 }
 
@@ -49,6 +50,31 @@ export function useUpdateAsset() {
 			toast.success("Asset updated");
 		},
 		onError: () => toast.error("Could not update the asset")
+	});
+}
+
+export function useRenameAsset() {
+	const api = useApi();
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: async ({ id, name }: { id: string; name: string }) =>
+			unwrap(await api.PUT("/assets/{id}", { params: { path: { id } }, body: { name } })),
+		onMutate: async ({ id, name }) => {
+			await queryClient.cancelQueries({ queryKey: queryKeys.assets });
+			const previous = queryClient.getQueryData<AssetDTO[]>(queryKeys.assets);
+
+			queryClient.setQueryData<AssetDTO[]>(queryKeys.assets, current =>
+				current?.map(asset => (asset.id === id ? { ...asset, name } : asset))
+			);
+
+			return { previous };
+		},
+		onError: (_error, _variables, context) => {
+			if (context?.previous) queryClient.setQueryData(queryKeys.assets, context.previous);
+			toast.error("Could not rename the asset");
+		},
+		onSettled: () => queryClient.invalidateQueries({ queryKey: queryKeys.assets })
 	});
 }
 
