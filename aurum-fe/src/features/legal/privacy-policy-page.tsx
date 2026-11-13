@@ -150,7 +150,7 @@ const SECTIONS = [
 
 export function PrivacyPolicyPage() {
 	return (
-		<div className="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-10">
+		<div className="mx-auto flex max-w-3xl flex-col gap-6 px-4 pt-[calc(2.5rem_+_env(safe-area-inset-top))] pb-10">
 			<Button
 				variant="ghost"
 				size="sm"

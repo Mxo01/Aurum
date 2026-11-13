@@ -71,7 +71,7 @@ export function LandingPage() {
 
 	return (
 		<div className="flex min-h-dvh flex-col">
-			<header className="border-border/70 bg-background/80 supports-[backdrop-filter]:bg-background/60 sticky top-0 z-40 border-b backdrop-blur-md">
+			<header className="border-border/70 bg-background/80 supports-[backdrop-filter]:bg-background/60 sticky top-0 z-40 border-b pt-[env(safe-area-inset-top)] backdrop-blur-md">
 				<div className="mx-auto flex h-14 max-w-6xl items-center gap-6 px-4">
 					<Link
 						to="/"
