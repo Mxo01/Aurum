@@ -41,7 +41,7 @@ services:
       MCP_ALLOWED_ORIGINS: ${MCP_ALLOWED_ORIGINS:-}
       MCP_MAX_BATCH_SIZE: ${MCP_MAX_BATCH_SIZE:-500}
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
     networks:
       - aurum-net
     healthcheck:
