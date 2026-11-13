@@ -113,6 +113,11 @@
 		text-rendering: optimizeLegibility;
 	}
 
+	html,
+	body {
+		overscroll-behavior: none;
+	}
+
 	body {
 		@apply bg-background text-foreground min-h-dvh font-sans text-sm antialiased;
 	}

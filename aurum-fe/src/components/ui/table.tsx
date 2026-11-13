@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 
 export function Table({ className, ...props }: TableHTMLAttributes<HTMLTableElement>) {
 	return (
-		<div className="w-full overflow-x-auto">
+		<div className="w-full overflow-x-auto overscroll-x-contain">
 			<table
 				className={cn("w-full caption-bottom text-sm", className)}
 				{...props}

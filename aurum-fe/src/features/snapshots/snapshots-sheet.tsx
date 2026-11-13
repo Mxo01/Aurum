@@ -148,7 +148,7 @@ function SnapshotsBody({ asset }: { asset: AssetDTO }) {
 							description="Record the current value to start the history."
 						/>
 					) : (
-						<div className="flex-1 overflow-y-auto px-2">
+						<div className="flex-1 overflow-y-auto overscroll-contain px-2">
 							<table className="w-full text-sm">
 								<thead className="text-muted-foreground sticky top-0 bg-card text-[11px]">
 									<tr>
