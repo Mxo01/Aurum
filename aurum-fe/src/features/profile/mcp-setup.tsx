@@ -1,5 +1,5 @@
 import { Check, Copy } from "lucide-react";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -42,23 +42,22 @@ export function McpSetup() {
 				</span>
 			</div>
 
-			<ToggleGroup
-				type="single"
-				variant="outline"
+			<Tabs
 				value={platform}
-				onValueChange={value => value && setPlatform(value as Platform)}
-				aria-label="MCP platform"
-				className="h-8"
+				onValueChange={value => setPlatform(value as Platform)}
 			>
-				{PLATFORMS.map(item => (
-					<ToggleGroupItem
-						key={item.value}
-						value={item.value}
-					>
-						{item.label}
-					</ToggleGroupItem>
-				))}
-			</ToggleGroup>
+				<TabsList aria-label="MCP platform">
+					{PLATFORMS.map(item => (
+						<TabsTrigger
+							key={item.value}
+							value={item.value}
+							aria-controls={undefined}
+						>
+							{item.label}
+						</TabsTrigger>
+					))}
+				</TabsList>
+			</Tabs>
 
 			<div className="relative">
 				<pre className="border-border bg-muted/40 overflow-x-auto rounded-lg border p-3 text-xs leading-relaxed">

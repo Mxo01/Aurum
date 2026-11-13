@@ -11,7 +11,7 @@ import {
 	YAxis
 } from "recharts";
 import { Delta } from "@/components/app/delta";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmptyState } from "@/components/app/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -131,23 +131,22 @@ export function NetWorthChart({
 						</Select>
 
 						{!year ? (
-							<ToggleGroup
-								type="single"
-								variant="outline"
+							<Tabs
 								value={period}
-								onValueChange={value => value && setPeriod(value as keyof VariationDTO)}
-								aria-label="Chart period"
-								className="h-8"
+								onValueChange={value => setPeriod(value as keyof VariationDTO)}
 							>
-								{PERIODS.map(item => (
-									<ToggleGroupItem
-										key={item.value}
-										value={item.value}
-									>
-										{item.label}
-									</ToggleGroupItem>
-								))}
-							</ToggleGroup>
+								<TabsList aria-label="Chart period">
+									{PERIODS.map(item => (
+										<TabsTrigger
+											key={item.value}
+											value={item.value}
+											aria-controls={undefined}
+										>
+											{item.label}
+										</TabsTrigger>
+									))}
+								</TabsList>
+							</Tabs>
 						) : null}
 					</div>
 				</div>

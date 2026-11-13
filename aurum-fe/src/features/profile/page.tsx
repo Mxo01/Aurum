@@ -4,7 +4,6 @@ import { useRef, useState } from "react";
 import { Link } from "react-router";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/app/page-header";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -58,23 +57,14 @@ export function ProfilePage() {
 			/>
 
 			<Tabs defaultValue="preferences">
-				<TabsList className="grid h-auto w-full grid-cols-3 p-1 sm:inline-flex sm:h-9 sm:w-auto">
-					<TabsTrigger
-						value="preferences"
-						className="px-2 py-1.5"
-					>
+				<TabsList className="w-full sm:w-fit">
+					<TabsTrigger value="preferences">
 						<User className="hidden size-4 sm:block" /> Preferences
 					</TabsTrigger>
-					<TabsTrigger
-						value="integrations"
-						className="px-2 py-1.5"
-					>
+					<TabsTrigger value="integrations">
 						<Plug className="hidden size-4 sm:block" /> Integrations
 					</TabsTrigger>
-					<TabsTrigger
-						value="data"
-						className="px-2 py-1.5"
-					>
+					<TabsTrigger value="data">
 						<Shield className="hidden size-4 sm:block" /> Data
 						<span className="hidden sm:inline">&nbsp;& privacy</span>
 					</TabsTrigger>
@@ -289,20 +279,25 @@ function PreferencesTab() {
 							<span className="text-sm">Theme</span>
 							<span className="text-muted-foreground text-xs">Light or dark, your call.</span>
 						</div>
-						<ToggleGroup
-							type="single"
-							variant="outline"
+						<Tabs
 							value={theme}
-							onValueChange={value => value && setTheme(value as "light" | "dark")}
-							aria-label="Theme"
+							onValueChange={value => setTheme(value as "light" | "dark")}
 						>
-							<ToggleGroupItem value="light">
-								<Sun className="size-3.5" /> Light
-							</ToggleGroupItem>
-							<ToggleGroupItem value="dark">
-								<Moon className="size-3.5" /> Dark
-							</ToggleGroupItem>
-						</ToggleGroup>
+							<TabsList aria-label="Theme">
+								<TabsTrigger
+									value="light"
+									aria-controls={undefined}
+								>
+									<Sun className="size-3.5" /> Light
+								</TabsTrigger>
+								<TabsTrigger
+									value="dark"
+									aria-controls={undefined}
+								>
+									<Moon className="size-3.5" /> Dark
+								</TabsTrigger>
+							</TabsList>
+						</Tabs>
 					</div>
 				</CardContent>
 			</Card>

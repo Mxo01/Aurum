@@ -1,5 +1,5 @@
 import { ArrowDownRight, ArrowUpRight, Moon, Sun } from "lucide-react";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useThemeStore, type Theme } from "@/stores/theme";
 import { cn } from "@/lib/utils";
 
@@ -25,20 +25,25 @@ export function LandingPreview() {
 					<span className="text-xs font-semibold">Aurum</span>
 					<span className="text-muted-foreground hidden text-[11px] sm:inline">Sample data</span>
 				</div>
-				<ToggleGroup
-					type="single"
-					variant="outline"
+				<Tabs
 					value={theme}
-					onValueChange={value => value && setTheme(value as Theme)}
-					aria-label="Preview theme"
+					onValueChange={value => setTheme(value as Theme)}
 				>
-					<ToggleGroupItem value="light">
-						<Sun className="size-3" /> Light
-					</ToggleGroupItem>
-					<ToggleGroupItem value="dark">
-						<Moon className="size-3" /> Dark
-					</ToggleGroupItem>
-				</ToggleGroup>
+					<TabsList aria-label="Preview theme">
+						<TabsTrigger
+							value="light"
+							aria-controls={undefined}
+						>
+							<Sun className="size-3" /> Light
+						</TabsTrigger>
+						<TabsTrigger
+							value="dark"
+							aria-controls={undefined}
+						>
+							<Moon className="size-3" /> Dark
+						</TabsTrigger>
+					</TabsList>
+				</Tabs>
 			</div>
 
 			<div className="grid gap-4 p-4 sm:p-5 lg:grid-cols-[1.7fr_1fr]">

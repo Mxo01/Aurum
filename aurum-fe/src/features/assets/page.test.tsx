@@ -89,7 +89,7 @@ describe("AssetsPage", () => {
 		await screen.findAllByText("Apartment Berlin");
 
 		// WHEN
-		fireEvent.click(screen.getByRole("radio", { name: "Liabilities" }));
+		fireEvent.mouseDown(screen.getByRole("tab", { name: "Liabilities" }));
 
 		// THEN
 		expect(screen.queryByText("Apartment Berlin")).not.toBeInTheDocument();

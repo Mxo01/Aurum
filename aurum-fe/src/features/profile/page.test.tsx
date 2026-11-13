@@ -98,7 +98,7 @@ describe("ProfilePage", () => {
 		renderWithProviders(createElement(testSubject));
 
 		// WHEN
-		fireEvent.click(screen.getByRole("radio", { name: "Dark" }));
+		fireEvent.mouseDown(screen.getByRole("tab", { name: "Dark" }));
 
 		// THEN
 		expect(document.documentElement.classList.contains("dark")).toBe(true);

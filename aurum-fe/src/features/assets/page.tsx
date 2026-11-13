@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useSearchParams } from "react-router";
 import { EmptyState } from "@/components/app/empty-state";
 import { PageHeader } from "@/components/app/page-header";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -187,22 +187,22 @@ export function AssetsPage() {
 						aria-label="Search assets"
 					/>
 				</div>
-				<ToggleGroup
-					type="single"
-					variant="outline"
+				<Tabs
 					value={filter}
-					onValueChange={value => value && setFilter(value as TypeFilter)}
-					aria-label="Filter by type"
+					onValueChange={value => setFilter(value as TypeFilter)}
 				>
-					{FILTERS.map(item => (
-						<ToggleGroupItem
-							key={item.value}
-							value={item.value}
-						>
-							{item.label}
-						</ToggleGroupItem>
-					))}
-				</ToggleGroup>
+					<TabsList aria-label="Filter by type">
+						{FILTERS.map(item => (
+							<TabsTrigger
+								key={item.value}
+								value={item.value}
+								aria-controls={undefined}
+							>
+								{item.label}
+							</TabsTrigger>
+						))}
+					</TabsList>
+				</Tabs>
 				<div className="flex items-center gap-2">
 					<Switch
 						id="hide-zero"
