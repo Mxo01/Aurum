@@ -9,11 +9,19 @@ interface EditableValueProps {
 	value: number;
 	currency: string;
 	onSave: (value: number) => void;
+	label?: string;
 	disabled?: boolean;
 	className?: string;
 }
 
-export function EditableValue({ value, currency, onSave, disabled, className }: EditableValueProps) {
+export function EditableValue({
+	value,
+	currency,
+	onSave,
+	label = "value",
+	disabled,
+	className
+}: EditableValueProps) {
 	const { locale, isPrivacy } = usePreferences();
 	const [editing, setEditing] = useState(false);
 	const [draft, setDraft] = useState(String(value));
@@ -46,11 +54,11 @@ export function EditableValue({ value, currency, onSave, disabled, className }: 
 				onChange={event => setDraft(event.target.value)}
 				onBlur={commit}
 				onKeyDown={event => {
-					if (event.key === "Enter") commit();
+					if (event.key === "Enter") event.currentTarget.blur();
 					if (event.key === "Escape") setEditing(false);
 				}}
 				className={cn("num h-8 w-32 text-right", className)}
-				aria-label={`Edit value in ${currency}`}
+				aria-label={`Edit ${label} in ${currency}`}
 			/>
 		);
 	}
@@ -65,7 +73,7 @@ export function EditableValue({ value, currency, onSave, disabled, className }: 
 				!disabled && "hover:bg-accent",
 				className
 			)}
-			aria-label={`Edit value, currently ${display}`}
+			aria-label={`Edit ${label}, currently ${display}`}
 		>
 			{display}
 			{!disabled ? (

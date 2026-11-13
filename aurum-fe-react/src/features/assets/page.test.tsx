@@ -122,12 +122,12 @@ describe("AssetsPage", () => {
 		const testSubject = AssetsPage;
 		renderWithProviders(createElement(testSubject), { route: "/assets" });
 		const valueButtons = await screen.findAllByRole("button", {
-			name: /Edit value, currently €430,000.00/
+			name: /Edit Apartment Berlin, currently €430,000.00/
 		});
 
 		// WHEN
 		fireEvent.click(valueButtons[0] as HTMLElement);
-		const input = screen.getByLabelText("Edit value in EUR");
+		const input = screen.getByLabelText("Edit Apartment Berlin in EUR");
 		fireEvent.change(input, { target: { value: "440000" } });
 		fireEvent.blur(input);
 

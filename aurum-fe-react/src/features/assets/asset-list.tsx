@@ -9,7 +9,7 @@ import { assetTrend } from "@/lib/format/asset";
 import { usePreferences } from "@/lib/format/use-preferences";
 import { cn } from "@/lib/utils";
 import { groupAssets } from "./assets.utils";
-import { EditableValue } from "./editable-value";
+import { EditableValue } from "@/components/app/editable-value";
 
 interface AssetListProps {
 	assets: AssetDTO[];
@@ -128,6 +128,7 @@ export function AssetList({
 													<EditableValue
 														value={asset.latestValue ?? 0}
 														currency={asset.originalCurrency}
+														label={asset.name}
 														onSave={value => onValueSave(asset, value)}
 													/>
 												</div>
@@ -214,6 +215,7 @@ export function AssetList({
 													<EditableValue
 														value={asset.latestValue ?? 0}
 														currency={asset.originalCurrency}
+														label={asset.name}
 														onSave={value => onValueSave(asset, value)}
 														className="text-sm"
 													/>

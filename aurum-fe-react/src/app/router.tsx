@@ -46,9 +46,10 @@ export const router = createBrowserRouter([
 					},
 					{
 						path: "cashflow",
-						element: (
-							<PlaceholderPage title="Cash flow" description="Earned, spent and savings rate." />
-						)
+						lazy: async () => {
+							const module = await import("@/features/cashflow/page");
+							return { Component: module.CashFlowPage };
+						}
 					},
 					{
 						path: "profile",

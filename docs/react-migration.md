@@ -25,7 +25,7 @@ explicit OK.
 - [x] 1. Typed API layer, query hooks, MSW fixtures, error boundary.
 - [x] 2. Dashboard.
 - [x] 3. Assets, snapshots, categories.
-- [ ] 4. Cash flow.
+- [x] 4. Cash flow.
 - [ ] 5. Targets, profile, MCP, GDPR.
 - [ ] 6. Shortcuts, ⌘K, polish, swap, docs, CI.
 
