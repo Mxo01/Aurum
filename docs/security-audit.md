@@ -110,13 +110,13 @@ through asset names, but the storage choice remains the largest XSS blast
 radius in the app. Moving to `memory` (with silent-auth/refresh fallback) is a
 UX trade-off that deserves its own change.
 
-### 12. End-of-life framework — open
+### 12. End-of-life framework — fixed in `chore/spring-boot-4`
 
-`spring-boot-starter-parent` is 3.4.4 and Spring AI is 1.1.3 (MCP Java SDK
-0.17, protocol 2025-06-18). Spring Boot 3.4 is out of OSS support and the MCP
-SDK is two protocol revisions behind. A separate branch will move to Spring
-Boot 4.1.x + Spring AI 2.0.x (MCP SDK 2.1, protocol 2025-11-25) and re-run the
-suite.
+`spring-boot-starter-parent` was 3.4.4 and Spring AI was 1.1.3 (MCP Java SDK
+0.17, protocol 2025-06-18). The platform is now Spring Boot 4.1.2 + Spring AI
+2.0.2 (MCP Java SDK 2.1, protocol 2025-11-25), with springdoc 3.2.0, Lombok
+1.18.48 and JUnit 6. The suite was re-run and the application was started
+against the local database to validate Liquibase/Hibernate 7 schema checks.
 
 ### 13. CI supply chain — open
 

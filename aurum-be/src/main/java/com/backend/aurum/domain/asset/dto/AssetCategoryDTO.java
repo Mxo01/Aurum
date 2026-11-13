@@ -19,4 +19,9 @@ public class AssetCategoryDTO {
 
 	@JsonProperty("isDefault")
 	private boolean isDefault;
+
+	@JsonProperty("isDefault")
+	public boolean isDefault() {
+		return isDefault;
+	}
 }

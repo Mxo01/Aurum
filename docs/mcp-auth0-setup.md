@@ -2,7 +2,8 @@
 
 The backend is an OAuth 2.1 **resource server**. Auth0 is the **authorization
 server**. There is no OAuth proxy in the backend any more: the old `/oauth/*`
-endpoints are gone.
+endpoints are gone. The MCP transport is the stateless profile of Spring AI
+2.0 / MCP Java SDK 2.1 (protocol 2025-11-25).
 
 ```
 MCP client ──POST /mcp──────────────▶ 401 + WWW-Authenticate: resource_metadata=…

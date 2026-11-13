@@ -49,6 +49,26 @@ public class SecurityConfig {
 	@Value("${mcp.allowed-origins:}")
 	private String mcpAllowedOrigins;
 
+	/**
+	 * Serves the protected-resource metadata without installing the framework's
+	 * default document (which has no authorization server and no scopes).
+	 *
+	 * <p>The filter is not added here because this chain has no resource-server
+	 * configurer; the controller renders the canonical document.
+	 */
+	@Bean
+	@Order(0)
+	public SecurityFilterChain protectedResourceMetadataFilterChain(HttpSecurity http)
+		throws Exception {
+		http
+			.securityMatcher(PROTECTED_RESOURCE_METADATA, PROTECTED_RESOURCE_METADATA + "/**")
+			.csrf(AbstractHttpConfigurer::disable)
+			.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+			.requestCache(AbstractHttpConfigurer::disable)
+			.authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
+		return http.build();
+	}
+
 	@Bean
 	@Order(1)
 	public SecurityFilterChain mcpFilterChain(
@@ -58,17 +78,11 @@ public class SecurityConfig {
 		@Qualifier("mcpJwtDecoder") JwtDecoder mcpJwtDecoder
 	) throws Exception {
 		http
-			.securityMatcher("/mcp", PROTECTED_RESOURCE_METADATA, PROTECTED_RESOURCE_METADATA + "/mcp")
+			.securityMatcher("/mcp")
 			.csrf(AbstractHttpConfigurer::disable)
 			.cors(cors -> cors.configurationSource(mcpCorsConfigurationSource()))
 			.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-			.authorizeHttpRequests(auth ->
-				auth
-					.requestMatchers(PROTECTED_RESOURCE_METADATA, PROTECTED_RESOURCE_METADATA + "/mcp")
-					.permitAll()
-					.anyRequest()
-					.authenticated()
-			)
+			.authorizeHttpRequests(auth -> auth.anyRequest().authenticated())
 			.addFilterBefore(new McpOriginValidationFilter(mcpAllowedOrigins), AuthorizationFilter.class)
 			.oauth2ResourceServer(oauth2 ->
 				oauth2
@@ -88,7 +102,13 @@ public class SecurityConfig {
 			.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 			.authorizeHttpRequests(auth ->
 				auth
-					.requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html", "/error")
+					.requestMatchers(
+						"/v3/api-docs/**",
+						"/swagger-ui/**",
+						"/swagger-ui.html",
+						"/actuator/health",
+						"/error"
+					)
 					.permitAll()
 					.anyRequest()
 					.authenticated()
