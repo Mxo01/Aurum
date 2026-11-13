@@ -257,14 +257,14 @@ export function CashFlowPage() {
 												className="text-sm"
 											/>
 										</div>
-										<div className="flex flex-col gap-1">
+										<div className="flex flex-col items-end gap-1">
 											<span className="text-muted-foreground text-[10px]">Spent</span>
 											<EditableValue
 												value={row.spent}
 												currency={currency}
 												label={`${row.label} spent`}
 												onSave={value => save(row, "spent", value)}
-												align="left"
+												align="right"
 												className="text-sm"
 											/>
 										</div>
