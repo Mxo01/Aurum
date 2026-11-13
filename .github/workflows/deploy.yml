@@ -78,6 +78,7 @@ jobs:
               printf 'MCP_WRITE_SCOPES=%s\n' "$MCP_WRITE_SCOPES"
               printf 'MCP_ALLOWED_ORIGINS=%s\n' "$MCP_ALLOWED_ORIGINS"
             } >> .env
+            chmod 600 .env
             docker compose -f docker-compose.prod.yml pull backend
             docker compose -f docker-compose.prod.yml up -d --remove-orphans
             docker image prune -f

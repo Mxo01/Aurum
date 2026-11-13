@@ -135,26 +135,29 @@ is clean.
 
 ## Low and informational
 
-| Finding                                                                                              | Status                                                           |
-| ---------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
-| `cors.allowed-origins` can be configured as `*` while `allowCredentials(true)`                       | open — validate at startup                                       |
-| Swagger UI and `/v3/api-docs` are public in production                                               | open — disable or protect outside development                    |
-| `GET /users` returns the JPA entity, including `jwtId` and the base64 picture                        | open — return a DTO                                              |
-| `deleteUser` deletes the local row before Auth0, so an Auth0 failure leaves the account half-deleted | open                                                             |
-| No HSTS/CSP/Referrer-Policy headers on the API or the Vercel app                                     | open — Caddy/Vercel config                                       |
-| Backend publishes `8080:8080` on all interfaces; only Caddy should reach it                          | open — bind `127.0.0.1` or use an internal network               |
-| No rate limiting on `/mcp` (token brute force is impractical, DoS is not)                            | open                                                             |
-| Auth0 Management API token was cached in non-volatile fields                                         | fixed — `volatile` + `synchronized`                              |
-| Auth0 DCR, once enabled, is open registration                                                        | accepted — strict mode, default permissions, monitor/rotate      |
-| MCP protocol is 2025-06-18, not 2025-11-25/2026-07-28                                                | info — stateless transport is forward-compatible; upgrade branch |
-| Historical `Co-Authored-By` trailers and the revoked Auth0 secret in history                         | info — not rewritten                                             |
+| Finding                                                                                              | Status                                                                       |
+| ---------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| `cors.allowed-origins` can be configured as `*` while `allowCredentials(true)`                       | open — validate at startup                                                   |
+| Swagger UI and `/v3/api-docs` are public in production                                               | open — disable or protect outside development                                |
+| `GET /users` returns the JPA entity, including `jwtId` and the base64 picture                        | open — return a DTO                                                          |
+| `deleteUser` deletes the local row before Auth0, so an Auth0 failure leaves the account half-deleted | open                                                                         |
+| No CSP on the API or the Vercel app                                                                  | open — HSTS/Referrer-Policy added at Caddy                                   |
+| Backend publishes `8080:8080` on all interfaces                                                      | fixed — bound to `127.0.0.1`                                                 |
+| No rate limiting on `/mcp` (token brute force is impractical, DoS is not)                            | open                                                                         |
+| Auth0 Management API token was cached in non-volatile fields                                         | fixed — `volatile` + `synchronized`                                          |
+| `/opt/aurum/.env` was mode `644`                                                                     | fixed — `600` on the host and in the deploy workflow                         |
+| The backend image had no `curl`, so the Docker healthcheck always failed                             | fixed — `curl` installed in the runtime image                                |
+| No database backups                                                                                  | fixed — daily `pg_dump` with 7-day retention; offsite copy still recommended |
+| SSH password authentication enabled; `ufw` inactive                                                  | open — key-only SSH and a host/cloud firewall are recommended                |
+| Auth0 DCR, once enabled, is open registration                                                        | accepted — strict mode, default permissions, monitor/rotate                  |
+| MCP SDK 2.1 supports protocol 2025-11-25; 2026-07-28 is not in the SDK yet                           | info — stateless transport is the shape that revision requires               |
+| Historical `Co-Authored-By` trailers and the revoked Auth0 secret in history                         | info — not rewritten                                                         |
 
 ## Not in scope
 
 - Auth0 tenant configuration itself (MFA policy, anomaly detection, session
   lifetime, DCR hygiene). The setup checklist is in
   [`mcp-auth0-setup.md`](mcp-auth0-setup.md).
-- Infrastructure hardening of the Hetzner host (firewall, fail2ban, Caddy TLS
-  policy, database backups).
+- Offsite backups, SSH/UFW hardening and the host/cloud firewall policy (local backups and HSTS are in place; see [`operations.md`](operations.md)).
 - Frontend dependency review (`npm audit`) — no dependency changes were made in
   this branch.

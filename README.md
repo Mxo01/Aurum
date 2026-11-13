@@ -189,6 +189,11 @@ over SSH. There is no staging environment: **a merge to `main` that touches the
 backend is a production deploy.** Frontend routes are served by Vercel at the
 root; the API is served at the root of its own subdomain, with no `/api` prefix.
 
+Production operations — logs, restarts, database backup/restore, TLS and
+rollback — are documented in [`docs/operations.md`](docs/operations.md). The
+host is a Hetzner VPS; SSH details and the private runbook stay out of this
+public repository.
+
 ## Security
 
 - Auth0 issues the JWTs; the backend validates them as an OAuth2 resource
