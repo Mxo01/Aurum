@@ -1,9 +1,18 @@
-import { ChevronDown, ChevronRight, History, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import {
+	ChevronDown,
+	ChevronRight,
+	History,
+	LineChart,
+	MoreHorizontal,
+	Pencil,
+	Trash2
+} from "lucide-react";
 import { Delta } from "@/components/app/delta";
 import { EditableText } from "@/components/app/editable-text";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
+import { Toggle } from "@/components/ui/toggle";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -137,12 +146,26 @@ export function AssetList({
 											>
 												<div className="flex min-w-0 items-center gap-2 pl-6">
 													{asset.type === ASSET_TYPE.ASSET ? (
-														<Switch
-															checked={asset.isFavorite}
-															onCheckedChange={() => onToggleFavorite(asset)}
-															aria-label={`Track ${asset.name} in the dashboard`}
-															className="mr-1"
-														/>
+														<Tooltip>
+															<TooltipTrigger asChild>
+																<Toggle
+																	pressed={asset.isFavorite}
+																	onPressedChange={() => onToggleFavorite(asset)}
+																	variant="outline"
+																	size="sm"
+																	aria-label={`Dashboard chart for ${asset.name}`}
+																	className="aria-pressed:border-primary aria-pressed:bg-primary aria-pressed:text-primary-foreground shrink-0 gap-1 px-2 text-xs"
+																>
+																	<LineChart className="size-3.5" />
+																	Chart
+																</Toggle>
+															</TooltipTrigger>
+															<TooltipContent>
+																{asset.isFavorite
+																	? "Shown in the dashboard chart"
+																	: "Not shown in the dashboard chart"}
+															</TooltipContent>
+														</Tooltip>
 													) : null}
 													<EditableText
 														value={asset.name}
@@ -226,12 +249,17 @@ export function AssetList({
 												<div className="flex items-start justify-between gap-2">
 													<div className="flex min-w-0 items-center gap-1.5">
 														{asset.type === ASSET_TYPE.ASSET ? (
-															<Switch
-																checked={asset.isFavorite}
-																onCheckedChange={() => onToggleFavorite(asset)}
-																aria-label={`Track ${asset.name} in the dashboard`}
-																className="mr-1"
-															/>
+															<Toggle
+																pressed={asset.isFavorite}
+																onPressedChange={() => onToggleFavorite(asset)}
+																variant="outline"
+																size="sm"
+																aria-label={`Dashboard chart for ${asset.name}`}
+																className="aria-pressed:border-primary aria-pressed:bg-primary aria-pressed:text-primary-foreground gap-1 px-2 text-[11px]"
+															>
+																<LineChart className="size-3.5" />
+																Chart
+															</Toggle>
 														) : null}
 														<EditableText
 															value={asset.name}

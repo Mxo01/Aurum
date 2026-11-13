@@ -189,6 +189,31 @@ describe("AssetsPage", () => {
 		expect((await screen.findAllByText("Empty Wallet")).length).toBeGreaterThan(0);
 	});
 
+	it("should send the full asset when toggling the dashboard tracking", async () => {
+		// GIVEN
+		useAssetsFixture();
+		let requestBody: Record<string, unknown> | null = null;
+		server.use(
+			http.put(`${env.apiUrl}/assets/:id`, async ({ request }) => {
+				requestBody = (await request.json()) as Record<string, unknown>;
+				return HttpResponse.json(mockAssets[0]);
+			})
+		);
+		const testSubject = AssetsPage;
+		renderWithProviders(createElement(testSubject), { route: "/assets" });
+		await screen.findAllByText("Apartment Berlin");
+
+		// WHEN
+		const [dashboardToggle] = screen.getAllByRole("button", {
+			name: "Dashboard chart for Apartment Berlin"
+		});
+		fireEvent.click(dashboardToggle!);
+
+		// THEN
+		await waitFor(() => expect(requestBody).not.toBeNull());
+		expect(requestBody).toMatchObject({ name: "Apartment Berlin", isFavorite: true });
+	});
+
 	it("should open the new asset form from the URL", async () => {
 		// GIVEN
 		useAssetsFixture();

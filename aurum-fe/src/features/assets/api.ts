@@ -24,6 +24,21 @@ function useInvalidatePortfolio() {
 	};
 }
 
+// The backend PUT replaces every editable field, so a partial body would wipe
+// the name, the currency and the dashboard tracking. Always send the full set.
+function updateBody(asset: AssetDTO, overrides: Partial<UpdateAssetDTO> = {}): UpdateAssetDTO {
+	return {
+		name: asset.name,
+		categoryId: asset.categoryId,
+		originalCurrency: asset.originalCurrency,
+		isFavorite: asset.isFavorite,
+		liabilityType: asset.liabilityType ?? undefined,
+		paymentFrequency: asset.paymentFrequency ?? undefined,
+		paymentAmount: asset.paymentAmount ?? undefined,
+		...overrides
+	};
+}
+
 export function useCreateAsset() {
 	const api = useApi();
 	const invalidate = useInvalidatePortfolio();
@@ -58,14 +73,21 @@ export function useToggleFavorite() {
 	const queryClient = useQueryClient();
 
 	return useMutation({
-		mutationFn: async ({ id, isFavorite }: { id: string; isFavorite: boolean }) =>
-			unwrap(await api.PUT("/assets/{id}", { params: { path: { id } }, body: { isFavorite } })),
-		onMutate: async ({ id, isFavorite }) => {
+		mutationFn: async ({ asset }: { asset: AssetDTO }) =>
+			unwrap(
+				await api.PUT("/assets/{id}", {
+					params: { path: { id: asset.id } },
+					body: updateBody(asset, { isFavorite: !asset.isFavorite })
+				})
+			),
+		onMutate: async ({ asset: target }) => {
 			await queryClient.cancelQueries({ queryKey: queryKeys.assets });
 			const previous = queryClient.getQueryData<AssetDTO[]>(queryKeys.assets);
 
 			queryClient.setQueryData<AssetDTO[]>(queryKeys.assets, current =>
-				current?.map(asset => (asset.id === id ? { ...asset, isFavorite } : asset))
+				current?.map(asset =>
+					asset.id === target.id ? { ...asset, isFavorite: !target.isFavorite } : asset
+				)
 			);
 
 			return { previous };
@@ -86,14 +108,19 @@ export function useRenameAsset() {
 	const queryClient = useQueryClient();
 
 	return useMutation({
-		mutationFn: async ({ id, name }: { id: string; name: string }) =>
-			unwrap(await api.PUT("/assets/{id}", { params: { path: { id } }, body: { name } })),
-		onMutate: async ({ id, name }) => {
+		mutationFn: async ({ asset, name }: { asset: AssetDTO; name: string }) =>
+			unwrap(
+				await api.PUT("/assets/{id}", {
+					params: { path: { id: asset.id } },
+					body: updateBody(asset, { name })
+				})
+			),
+		onMutate: async ({ asset: target, name }) => {
 			await queryClient.cancelQueries({ queryKey: queryKeys.assets });
 			const previous = queryClient.getQueryData<AssetDTO[]>(queryKeys.assets);
 
 			queryClient.setQueryData<AssetDTO[]>(queryKeys.assets, current =>
-				current?.map(asset => (asset.id === id ? { ...asset, name } : asset))
+				current?.map(asset => (asset.id === target.id ? { ...asset, name } : asset))
 			);
 
 			return { previous };

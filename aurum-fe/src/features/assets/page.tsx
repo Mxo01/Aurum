@@ -253,11 +253,9 @@ export function AssetsPage() {
 					onHistory={openHistory}
 					onDelete={setDeleteTarget}
 					onRename={(asset, name) => {
-						if (asset.id) renameAsset.mutate({ id: asset.id, name });
+						renameAsset.mutate({ asset, name });
 					}}
-					onToggleFavorite={asset => {
-						if (asset.id) toggleFavorite.mutate({ id: asset.id, isFavorite: !asset.isFavorite });
-					}}
+					onToggleFavorite={asset => toggleFavorite.mutate({ asset })}
 					onValueSave={(asset, value) => {
 						if (asset.id) updateValue.mutate({ assetId: asset.id, value });
 					}}
