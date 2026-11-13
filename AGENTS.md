@@ -84,6 +84,7 @@ Controllers accept Create/Update DTOs for write operations; the combined respons
 
 Infrastructure:
 - `infrastructure/security/` — JWT/OAuth2 resource server config (stateless, Auth0)
+- `infrastructure/mcp/` — protected-resource metadata, MCP audience/scopes, origin filter, tool scope guard
 - `infrastructure/exchange/` — External exchange rate API service
 - `infrastructure/config/` — OpenAPI/Swagger configuration
 
@@ -112,7 +113,8 @@ Assets have `LiabilityType` (MANUAL/AUTOMATIC) and `PaymentFrequency` (WEEKLY/MO
 ### Authentication
 - Frontend uses `@auth0/auth0-angular` — Auth0 login redirects, JWT attached via HTTP interceptor
 - Backend validates JWT via Spring Security OAuth2 resource server (`issuer-uri` + `audiences` in `application.properties`)
-- All endpoints require auth except Swagger paths
+- The MCP endpoint validates a separate audience (`mcp.audience`, defaulting to `mcp.resource-url`); a web-app token is not valid there. Setup: `docs/mcp-auth0-setup.md`
+- All endpoints require auth except Swagger paths and the protected-resource metadata
 
 ### Database
 - PostgreSQL 17 via Docker Compose (`compose.yaml`) — same setup for local dev and production (Hetzner VPS)
