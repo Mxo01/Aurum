@@ -253,6 +253,7 @@ export function CashFlowPage() {
 												currency={currency}
 												label={`${row.label} earned`}
 												onSave={value => save(row, "earned", value)}
+												align="left"
 												className="text-sm"
 											/>
 										</div>
@@ -263,6 +264,7 @@ export function CashFlowPage() {
 												currency={currency}
 												label={`${row.label} spent`}
 												onSave={value => save(row, "spent", value)}
+												align="left"
 												className="text-sm"
 											/>
 										</div>

@@ -38,7 +38,7 @@ export function TopBar() {
 	const navigate = useNavigate();
 
 	return (
-		<header className="bg-background/80 supports-[backdrop-filter]:bg-background/60 sticky top-0 z-40 border-b backdrop-blur-md">
+		<header className="bg-background/80 supports-[backdrop-filter]:bg-background/60 sticky top-0 z-40 hidden border-b backdrop-blur-md md:block">
 			<div className="mx-auto flex h-14 max-w-[1440px] items-center gap-6 px-4">
 				<Brand />
 

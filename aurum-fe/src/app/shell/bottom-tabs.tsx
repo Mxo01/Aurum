@@ -38,7 +38,7 @@ export function BottomTabs() {
 	return (
 		<nav
 			aria-label="Main"
-			className="bg-background fixed inset-x-0 bottom-0 z-40 border-t pb-[env(safe-area-inset-bottom)] md:hidden"
+			className="bg-background/80 supports-[backdrop-filter]:bg-background/60 fixed inset-x-0 bottom-0 z-40 border-t pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden"
 		>
 			<div className="grid grid-cols-4">
 				{NAV_ITEMS.map(item => (
