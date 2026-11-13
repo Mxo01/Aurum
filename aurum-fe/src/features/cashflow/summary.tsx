@@ -60,14 +60,12 @@ export function CashflowSummary({
 					<Metric
 						className="pr-4"
 						label="Earned"
-						tone="success"
 						value={isLoading ? null : money(totals.earned, { digits: 0 })}
 						delta={yoyEarned}
 					/>
 					<Metric
 						className="pl-4"
 						label="Spent"
-						tone="danger"
 						value={isLoading ? null : money(totals.spent, { digits: 0 })}
 						delta={yoySpent}
 						invertDelta
