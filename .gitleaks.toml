@@ -45,9 +45,10 @@ paths = [
   '''aurum-fe/src/environments/environment.*\.ts$''',
   # Template senza valori reali
   '''application-local\.properties\.example$''',
-  # Fixture di test con credenziali finte
-  '''aurum-be/src/test/.*\.java$''',
-  '''.*\.spec\.ts$''',
+  # Fixture con una credenziale finta: solo i file che la contengono, non tutti i test
+  '''aurum-be/src/test/java/com/backend/aurum/domain/auth/service/Auth0ManagementServiceTest\.java$''',
+  '''aurum-be/src/test/java/com/backend/aurum/domain/mcp/controller/ApiKeyControllerTest\.java$''',
+  '''aurum-be/src/test/java/com/backend/aurum/domain/mcp/service/ApiKeyServiceTest\.java$''',
 ]
 
 regexes = [
