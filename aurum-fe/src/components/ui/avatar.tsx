@@ -1,32 +1,30 @@
+import * as AvatarPrimitive from "@radix-ui/react-avatar";
+import type { ComponentProps } from "react";
 import { cn } from "@/lib/utils";
 
-interface AvatarProps {
+interface AvatarProps extends ComponentProps<typeof AvatarPrimitive.Root> {
 	src?: string | null;
 	alt: string;
 	fallback: string;
-	className?: string;
 }
 
-export function Avatar({ src, alt, fallback, className }: AvatarProps) {
+export function Avatar({ src, alt, fallback, className, ...props }: AvatarProps) {
 	return (
-		<span
-			className={cn(
-				"bg-muted text-muted-foreground relative flex size-8 shrink-0 overflow-hidden rounded-full",
-				className
-			)}
+		<AvatarPrimitive.Root
+			className={cn("relative flex size-8 shrink-0 overflow-hidden rounded-full", className)}
+			{...props}
 		>
 			{src ? (
-				<img
+				<AvatarPrimitive.Image
 					src={src}
 					alt={alt}
 					className="size-full object-cover"
 					referrerPolicy="no-referrer"
 				/>
-			) : (
-				<span className="flex size-full items-center justify-center text-[11px] font-semibold">
-					{fallback}
-				</span>
-			)}
-		</span>
+			) : null}
+			<AvatarPrimitive.Fallback className="bg-muted text-muted-foreground flex size-full items-center justify-center text-[11px] font-semibold">
+				{fallback}
+			</AvatarPrimitive.Fallback>
+		</AvatarPrimitive.Root>
 	);
 }

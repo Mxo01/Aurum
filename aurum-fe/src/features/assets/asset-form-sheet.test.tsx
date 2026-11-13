@@ -1,4 +1,5 @@
 import { fireEvent, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { describe, expect, it, vi } from "vitest";
 import { env } from "@/lib/env";
@@ -56,8 +57,10 @@ describe("AssetFormSheet", () => {
 		);
 
 		// WHEN
+		const user = userEvent.setup();
 		fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Apartment" } });
-		fireEvent.change(screen.getByLabelText("Category"), { target: { value: "c1" } });
+		await user.click(screen.getByLabelText("Category"));
+		await user.click(await screen.findByRole("option", { name: "Investments" }));
 		fireEvent.change(screen.getByLabelText("Initial value"), { target: { value: "430000" } });
 		await waitFor(() => expect(screen.getByRole("button", { name: "Add asset" })).toBeEnabled());
 		fireEvent.submit(
@@ -96,17 +99,19 @@ describe("AssetFormSheet", () => {
 		);
 
 		// WHEN
+		const user = userEvent.setup();
 		fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Mortgage" } });
-		fireEvent.change(screen.getByLabelText("Category"), { target: { value: "c2" } });
-		expect(screen.getByLabelText("Liability type")).toBeInTheDocument();
+		await user.click(screen.getByLabelText("Category"));
+		await user.click(await screen.findByRole("option", { name: "Mortgage" }));
 
-		fireEvent.change(screen.getByLabelText("Liability type"), { target: { value: "AUTOMATIC" } });
-		expect(screen.getByLabelText("Payment frequency")).toBeInTheDocument();
+		const liabilityType = await screen.findByLabelText("Liability type");
+		await user.click(liabilityType);
+		await user.click(await screen.findByRole("option", { name: "Automatic" }));
+
+		const frequency = await screen.findByLabelText("Payment frequency");
 		expect(screen.getByLabelText("Payment amount")).toBeInTheDocument();
-
-		fireEvent.change(screen.getByLabelText("Payment frequency"), {
-			target: { value: "MONTHLY" }
-		});
+		await user.click(frequency);
+		await user.click(await screen.findByRole("option", { name: "Monthly" }));
 		fireEvent.change(screen.getByLabelText("Payment amount"), { target: { value: "500" } });
 		await waitFor(() => expect(screen.getByRole("button", { name: "Add asset" })).toBeEnabled());
 		fireEvent.submit(

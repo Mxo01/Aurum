@@ -17,6 +17,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue
+} from "@/components/ui/select";
+import {
 	Sheet,
 	SheetContent,
 	SheetDescription,
@@ -247,15 +254,21 @@ function CategoryForm({
 
 			<div className="flex flex-col gap-2">
 				<Label htmlFor="category-type">Type</Label>
-				<select
-					id="category-type"
+				<Select
 					value={type}
-					onChange={event => setType(event.target.value as AssetType)}
-					className="border-input bg-background focus-visible:ring-ring h-9 rounded-md border px-3 text-sm focus-visible:ring-2 focus-visible:outline-none"
+					onValueChange={value => setType(value as AssetType)}
 				>
-					<option value={ASSET_TYPE.ASSET}>Asset</option>
-					<option value={ASSET_TYPE.LIABILITY}>Liability</option>
-				</select>
+					<SelectTrigger
+						id="category-type"
+						aria-label="Type"
+					>
+						<SelectValue />
+					</SelectTrigger>
+					<SelectContent>
+						<SelectItem value={ASSET_TYPE.ASSET}>Asset</SelectItem>
+						<SelectItem value={ASSET_TYPE.LIABILITY}>Liability</SelectItem>
+					</SelectContent>
+				</Select>
 			</div>
 
 			<div className="flex flex-col gap-2">

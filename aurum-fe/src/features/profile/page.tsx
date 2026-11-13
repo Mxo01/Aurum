@@ -21,6 +21,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue
+} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CURRENCIES, LOCALES, type Currency, type Locale } from "@/lib/api/types";
 import { todayISO } from "@/lib/format/date";
@@ -219,22 +226,28 @@ function PreferencesTab() {
 								Every amount is converted to this currency.
 							</span>
 						</div>
-						<select
-							aria-label="Currency"
+						<Select
 							value={profile.data?.currency ?? "EUR"}
-							onChange={event => updateCurrency.mutate(event.target.value as Currency)}
+							onValueChange={value => updateCurrency.mutate(value as Currency)}
 							disabled={updateCurrency.isPending}
-							className="border-input bg-background focus-visible:ring-ring h-9 rounded-md border px-3 text-sm focus-visible:ring-2 focus-visible:outline-none disabled:opacity-60 sm:w-40"
 						>
-							{CURRENCIES.map(code => (
-								<option
-									key={code}
-									value={code}
-								>
-									{code}
-								</option>
-							))}
-						</select>
+							<SelectTrigger
+								aria-label="Currency"
+								className="sm:w-40"
+							>
+								<SelectValue />
+							</SelectTrigger>
+							<SelectContent>
+								{CURRENCIES.map(code => (
+									<SelectItem
+										key={code}
+										value={code}
+									>
+										{code}
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
 					</div>
 
 					<Separator />
@@ -244,22 +257,28 @@ function PreferencesTab() {
 							<span className="text-sm">Locale</span>
 							<span className="text-muted-foreground text-xs">Number and date formatting.</span>
 						</div>
-						<select
-							aria-label="Locale"
+						<Select
 							value={profile.data?.locale ?? "en-US"}
-							onChange={event => updateLocale.mutate(event.target.value as Locale)}
+							onValueChange={value => updateLocale.mutate(value as Locale)}
 							disabled={updateLocale.isPending}
-							className="border-input bg-background focus-visible:ring-ring h-9 rounded-md border px-3 text-sm focus-visible:ring-2 focus-visible:outline-none disabled:opacity-60 sm:w-48"
 						>
-							{LOCALES.map(locale => (
-								<option
-									key={locale.value}
-									value={locale.value}
-								>
-									{locale.label}
-								</option>
-							))}
-						</select>
+							<SelectTrigger
+								aria-label="Locale"
+								className="sm:w-48"
+							>
+								<SelectValue />
+							</SelectTrigger>
+							<SelectContent>
+								{LOCALES.map(locale => (
+									<SelectItem
+										key={locale.value}
+										value={locale.value}
+									>
+										{locale.label}
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
 					</div>
 
 					<Separator />

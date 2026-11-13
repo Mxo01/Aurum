@@ -2,13 +2,20 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { MoreHorizontal, Pencil, Plus, Target as TargetIcon, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { differenceInMonths } from "date-fns";
-import { useForm, useWatch } from "react-hook-form";
+import { Controller, useForm, useWatch } from "react-hook-form";
 import { useSearchParams } from "react-router";
 import { z } from "zod";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue
+} from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
 import {
 	AlertDialog,
@@ -280,15 +287,28 @@ export function TargetsCard({ targets, isLoading, currency }: TargetsCardProps) 
 					>
 						<div className="flex flex-col gap-2">
 							<Label htmlFor="target-type">Type</Label>
-							<select
-								id="target-type"
-								{...form.register("type")}
-								disabled={Boolean(editing)}
-								className="border-input bg-background focus-visible:ring-ring h-9 rounded-md border px-3 text-sm disabled:opacity-60"
-							>
-								<option value="MANUAL">Manual</option>
-								<option value="NET_WORTH">Net worth</option>
-							</select>
+							<Controller
+								control={form.control}
+								name="type"
+								render={({ field }) => (
+									<Select
+										value={field.value}
+										onValueChange={field.onChange}
+										disabled={Boolean(editing)}
+									>
+										<SelectTrigger
+											id="target-type"
+											aria-label="Type"
+										>
+											<SelectValue />
+										</SelectTrigger>
+										<SelectContent>
+											<SelectItem value="MANUAL">Manual</SelectItem>
+											<SelectItem value="NET_WORTH">Net worth</SelectItem>
+										</SelectContent>
+									</Select>
+								)}
+							/>
 						</div>
 
 						<div className="flex flex-col gap-2">

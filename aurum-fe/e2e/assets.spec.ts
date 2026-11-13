@@ -16,7 +16,8 @@ test("adds an asset and shows it in the list", async ({ page }) => {
 	const sheet = page.getByRole("dialog");
 	await expect(sheet.getByRole("heading", { name: "New asset" })).toBeVisible();
 	await sheet.getByLabel("Name").fill("New Asset");
-	await sheet.getByLabel("Category").selectOption({ label: "Investments" });
+	await sheet.getByLabel("Category").click();
+	await page.getByRole("option", { name: "Investments" }).click();
 	await sheet.getByLabel("Initial value").fill("10000");
 	await sheet.getByRole("button", { name: "Add asset" }).click();
 

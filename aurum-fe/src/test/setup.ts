@@ -45,6 +45,16 @@ beforeAll(() => {
 	server.listen({ onUnhandledRequest: "error" });
 });
 
+if (!HTMLElement.prototype.hasPointerCapture) {
+	HTMLElement.prototype.hasPointerCapture = () => false;
+	HTMLElement.prototype.setPointerCapture = () => undefined;
+	HTMLElement.prototype.releasePointerCapture = () => undefined;
+}
+
+if (!Element.prototype.scrollIntoView) {
+	Element.prototype.scrollIntoView = () => undefined;
+}
+
 afterEach(() => {
 	cleanup();
 	server.resetHandlers();

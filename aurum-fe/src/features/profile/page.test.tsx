@@ -1,4 +1,5 @@
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { createElement } from "react";
 import { http, HttpResponse } from "msw";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -56,8 +57,8 @@ describe("ProfilePage", () => {
 		// THEN
 		expect(screen.getByRole("heading", { name: "Profile" })).toBeInTheDocument();
 		expect(await screen.findByDisplayValue("Mario Di Modica")).toBeInTheDocument();
-		expect(screen.getByLabelText("Currency")).toHaveValue("EUR");
-		expect(screen.getByLabelText("Locale")).toHaveValue("en-US");
+		expect(screen.getByLabelText("Currency")).toHaveTextContent("EUR");
+		expect(screen.getByLabelText("Locale")).toHaveTextContent("English · 1,234.56");
 	});
 
 	it("should update the currency and the locale", async () => {
@@ -79,8 +80,11 @@ describe("ProfilePage", () => {
 		renderWithProviders(createElement(testSubject));
 
 		// WHEN
-		fireEvent.change(await screen.findByLabelText("Currency"), { target: { value: "USD" } });
-		fireEvent.change(screen.getByLabelText("Locale"), { target: { value: "it-IT" } });
+		const user = userEvent.setup();
+		await user.click(await screen.findByLabelText("Currency"));
+		await user.click(await screen.findByRole("option", { name: "USD" }));
+		await user.click(screen.getByLabelText("Locale"));
+		await user.click(await screen.findByRole("option", { name: /Italian/ }));
 
 		// THEN
 		await waitFor(() => expect(currencyBody).toEqual({ currency: "USD" }));

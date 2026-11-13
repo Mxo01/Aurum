@@ -1,10 +1,19 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect } from "react";
-import { useForm, useWatch } from "react-hook-form";
+import { Controller, useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+	Select,
+	SelectContent,
+	SelectGroup,
+	SelectItem,
+	SelectLabel,
+	SelectTrigger,
+	SelectValue
+} from "@/components/ui/select";
 import {
 	Sheet,
 	SheetContent,
@@ -199,37 +208,53 @@ export function AssetFormSheet({ open, onOpenChange, asset, categories }: AssetF
 
 					<div className="flex flex-col gap-2">
 						<Label htmlFor="asset-category">Category</Label>
-						<select
-							id="asset-category"
-							{...form.register("categoryId")}
-							className="border-input bg-background focus-visible:ring-ring h-9 rounded-md border px-3 text-sm focus-visible:ring-2 focus-visible:outline-none"
-						>
-							<option value="">Select a category</option>
-							{assets.length ? (
-								<optgroup label="Assets">
-									{assets.map(item => (
-										<option
-											key={item.id}
-											value={item.id}
-										>
-											{item.name}
-										</option>
-									))}
-								</optgroup>
-							) : null}
-							{liabilities.length ? (
-								<optgroup label="Liabilities">
-									{liabilities.map(item => (
-										<option
-											key={item.id}
-											value={item.id}
-										>
-											{item.name}
-										</option>
-									))}
-								</optgroup>
-							) : null}
-						</select>
+						<Controller
+							control={form.control}
+							name="categoryId"
+							render={({ field }) => (
+								<Select
+									value={field.value}
+									onValueChange={field.onChange}
+								>
+									<SelectTrigger
+										id="asset-category"
+										aria-label="Category"
+										onBlur={field.onBlur}
+										ref={field.ref}
+									>
+										<SelectValue placeholder="Select a category" />
+									</SelectTrigger>
+									<SelectContent>
+										{assets.length ? (
+											<SelectGroup>
+												<SelectLabel>Assets</SelectLabel>
+												{assets.map(item => (
+													<SelectItem
+														key={item.id}
+														value={item.id}
+													>
+														{item.name}
+													</SelectItem>
+												))}
+											</SelectGroup>
+										) : null}
+										{liabilities.length ? (
+											<SelectGroup>
+												<SelectLabel>Liabilities</SelectLabel>
+												{liabilities.map(item => (
+													<SelectItem
+														key={item.id}
+														value={item.id}
+													>
+														{item.name}
+													</SelectItem>
+												))}
+											</SelectGroup>
+										) : null}
+									</SelectContent>
+								</Select>
+							)}
+						/>
 						{form.formState.errors.categoryId ? (
 							<p className="text-danger text-xs">{form.formState.errors.categoryId.message}</p>
 						) : null}
@@ -237,36 +262,65 @@ export function AssetFormSheet({ open, onOpenChange, asset, categories }: AssetF
 
 					<div className="flex flex-col gap-2">
 						<Label htmlFor="asset-currency">Currency</Label>
-						<select
-							id="asset-currency"
-							{...form.register("currency")}
-							disabled={isEditing}
-							className="border-input bg-background focus-visible:ring-ring h-9 rounded-md border px-3 text-sm focus-visible:ring-2 focus-visible:outline-none disabled:opacity-60"
-						>
-							{CURRENCIES.map(code => (
-								<option
-									key={code}
-									value={code}
+						<Controller
+							control={form.control}
+							name="currency"
+							render={({ field }) => (
+								<Select
+									value={field.value}
+									onValueChange={value => field.onChange(value as Currency)}
+									disabled={isEditing}
 								>
-									{code}
-								</option>
-							))}
-						</select>
+									<SelectTrigger
+										id="asset-currency"
+										aria-label="Currency"
+										onBlur={field.onBlur}
+										ref={field.ref}
+									>
+										<SelectValue />
+									</SelectTrigger>
+									<SelectContent>
+										{CURRENCIES.map(code => (
+											<SelectItem
+												key={code}
+												value={code}
+											>
+												{code}
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
+							)}
+						/>
 					</div>
 
 					{type === ASSET_TYPE.LIABILITY ? (
 						<>
 							<div className="flex flex-col gap-2">
 								<Label htmlFor="asset-liability-type">Liability type</Label>
-								<select
-									id="asset-liability-type"
-									{...form.register("liabilityType")}
-									className="border-input bg-background focus-visible:ring-ring h-9 rounded-md border px-3 text-sm focus-visible:ring-2 focus-visible:outline-none"
-								>
-									<option value="">Select a type</option>
-									<option value={LIABILITY_TYPE.MANUAL}>Manual</option>
-									<option value={LIABILITY_TYPE.AUTOMATIC}>Automatic</option>
-								</select>
+								<Controller
+									control={form.control}
+									name="liabilityType"
+									render={({ field }) => (
+										<Select
+											value={field.value ?? undefined}
+											onValueChange={value => field.onChange(value === "" ? null : value)}
+										>
+											<SelectTrigger
+												id="asset-liability-type"
+												aria-label="Liability type"
+												onBlur={field.onBlur}
+												ref={field.ref}
+											>
+												<SelectValue placeholder="Select a type" />
+											</SelectTrigger>
+											<SelectContent>
+												<SelectItem value={LIABILITY_TYPE.MANUAL}>Manual</SelectItem>
+												<SelectItem value={LIABILITY_TYPE.AUTOMATIC}>Automatic</SelectItem>
+											</SelectContent>
+										</Select>
+									)}
+								/>
 								{form.formState.errors.liabilityType ? (
 									<p className="text-danger text-xs">
 										{form.formState.errors.liabilityType.message}
@@ -278,16 +332,30 @@ export function AssetFormSheet({ open, onOpenChange, asset, categories }: AssetF
 								<>
 									<div className="flex flex-col gap-2">
 										<Label htmlFor="asset-frequency">Payment frequency</Label>
-										<select
-											id="asset-frequency"
-											{...form.register("paymentFrequency")}
-											className="border-input bg-background focus-visible:ring-ring h-9 rounded-md border px-3 text-sm focus-visible:ring-2 focus-visible:outline-none"
-										>
-											<option value="">Select a frequency</option>
-											<option value={PAYMENT_FREQUENCY.WEEKLY}>Weekly</option>
-											<option value={PAYMENT_FREQUENCY.MONTHLY}>Monthly</option>
-											<option value={PAYMENT_FREQUENCY.YEARLY}>Yearly</option>
-										</select>
+										<Controller
+											control={form.control}
+											name="paymentFrequency"
+											render={({ field }) => (
+												<Select
+													value={field.value ?? undefined}
+													onValueChange={value => field.onChange(value === "" ? null : value)}
+												>
+													<SelectTrigger
+														id="asset-frequency"
+														aria-label="Payment frequency"
+														onBlur={field.onBlur}
+														ref={field.ref}
+													>
+														<SelectValue placeholder="Select a frequency" />
+													</SelectTrigger>
+													<SelectContent>
+														<SelectItem value={PAYMENT_FREQUENCY.WEEKLY}>Weekly</SelectItem>
+														<SelectItem value={PAYMENT_FREQUENCY.MONTHLY}>Monthly</SelectItem>
+														<SelectItem value={PAYMENT_FREQUENCY.YEARLY}>Yearly</SelectItem>
+													</SelectContent>
+												</Select>
+											)}
+										/>
 									</div>
 									<div className="flex flex-col gap-2">
 										<Label htmlFor="asset-payment">Payment amount</Label>
