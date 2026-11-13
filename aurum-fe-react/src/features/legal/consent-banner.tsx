@@ -14,8 +14,8 @@ export function ConsentBanner() {
 	};
 
 	return (
-		<div className="fixed inset-x-4 bottom-20 z-50 mx-auto max-w-2xl md:bottom-4">
-			<div className="bg-card border-border flex flex-col gap-3 rounded-xl border p-4 shadow-lg sm:flex-row sm:items-center">
+		<div className="bg-background fixed inset-x-0 bottom-16 z-50 border-t md:bottom-0">
+			<div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center">
 				<p className="text-muted-foreground flex-1 text-xs leading-relaxed">
 					Aurum stores your financial data to provide the service. No tracking cookies, no third
 					parties.{" "}
@@ -24,7 +24,7 @@ export function ConsentBanner() {
 					</Link>
 					.
 				</p>
-				<Button size="sm" onClick={accept} className="shrink-0">
+				<Button size="sm" onClick={accept} className="shrink-0 self-start sm:self-auto">
 					Accept
 				</Button>
 			</div>
