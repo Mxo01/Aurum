@@ -68,7 +68,7 @@ export function TopBar() {
 					))}
 				</nav>
 
-				<div className="ml-auto flex items-center gap-1">
+				<div className="ml-auto flex items-center gap-3">
 					<Button
 						variant="outline"
 						size="sm"
@@ -88,7 +88,7 @@ export function TopBar() {
 								<Button
 									variant="ghost"
 									size="icon-sm"
-									className="ml-1 rounded-full"
+									className="rounded-full"
 									aria-label="Account menu"
 								>
 									<Avatar
