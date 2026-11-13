@@ -1,9 +1,9 @@
 import { LineChart as LineChartIcon } from "lucide-react";
 import { useState } from "react";
 import {
-	Bar,
+	Area,
+	AreaChart,
 	CartesianGrid,
-	ComposedChart,
 	Line,
 	ResponsiveContainer,
 	Tooltip,
@@ -159,7 +159,7 @@ export function NetWorthChart({
 							width="100%"
 							height="100%"
 						>
-							<ComposedChart
+							<AreaChart
 								data={rows}
 								margin={{ top: 8, right: 4, left: 0, bottom: 0 }}
 							>
@@ -183,7 +183,7 @@ export function NetWorthChart({
 									tickFormatter={(value: number) => money(value, { compact: true, digits: 0 })}
 								/>
 								<Tooltip
-									cursor={{ fill: "var(--muted)", opacity: 0.5 }}
+									cursor={{ stroke: "var(--border)" }}
 									formatter={(value, name) => [money(Number(value), { digits: 0 }), name]}
 									labelStyle={{ color: "var(--muted-foreground)", fontSize: 11 }}
 									contentStyle={{
@@ -193,13 +193,34 @@ export function NetWorthChart({
 										fontSize: 12
 									}}
 								/>
-								<Bar
+								<defs>
+									<linearGradient
+										id="net-worth-fill"
+										x1="0"
+										y1="0"
+										x2="0"
+										y2="1"
+									>
+										<stop
+											offset="0%"
+											stopColor="var(--chart-1)"
+											stopOpacity={0.35}
+										/>
+										<stop
+											offset="100%"
+											stopColor="var(--chart-1)"
+											stopOpacity={0.02}
+										/>
+									</linearGradient>
+								</defs>
+								<Area
+									type="monotone"
 									dataKey="netWorth"
 									name="Net worth"
-									fill="var(--chart-1)"
-									opacity={0.8}
-									radius={[4, 4, 0, 0]}
-									maxBarSize={28}
+									stroke="var(--chart-1)"
+									strokeWidth={2}
+									fill="url(#net-worth-fill)"
+									dot={false}
 									isAnimationActive={false}
 								/>
 								{favorites.map((favorite, index) => (
@@ -214,7 +235,7 @@ export function NetWorthChart({
 										isAnimationActive={false}
 									/>
 								))}
-							</ComposedChart>
+							</AreaChart>
 						</ResponsiveContainer>
 					</div>
 				) : (
