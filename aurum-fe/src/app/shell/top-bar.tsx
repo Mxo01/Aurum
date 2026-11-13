@@ -81,66 +81,59 @@ export function TopBar() {
 						<span className="text-muted-foreground text-xs">Search</span>
 						<Kbd>{commandLabel} + K</Kbd>
 					</Button>
-					<Button
-						variant="ghost"
-						size="icon-sm"
-						className="md:hidden"
-						onClick={() => setCommandOpen(true)}
-						aria-label="Search"
-					>
-						<Search className="size-4" />
-					</Button>
 
-					<DropdownMenu>
-						<DropdownMenuTrigger asChild>
-							<Button
-								variant="ghost"
-								size="icon-sm"
-								className="ml-1 rounded-full"
-								aria-label="Account menu"
+					<div className="hidden md:block">
+						<DropdownMenu>
+							<DropdownMenuTrigger asChild>
+								<Button
+									variant="ghost"
+									size="icon-sm"
+									className="ml-1 rounded-full"
+									aria-label="Account menu"
+								>
+									<Avatar
+										src={user?.picture}
+										alt={user?.name ?? "User"}
+										fallback={initials(user?.name)}
+									/>
+								</Button>
+							</DropdownMenuTrigger>
+							<DropdownMenuContent
+								align="end"
+								className="w-60"
 							>
-								<Avatar
-									src={user?.picture}
-									alt={user?.name ?? "User"}
-									fallback={initials(user?.name)}
-								/>
-							</Button>
-						</DropdownMenuTrigger>
-						<DropdownMenuContent
-							align="end"
-							className="w-60"
-						>
-							<DropdownMenuLabel className="flex flex-col gap-0.5 px-2 py-2">
-								<span className="text-foreground truncate text-sm font-medium">
-									{isPrivacy ? "••••••••" : (user?.name ?? "Account")}
-								</span>
-								<span className="truncate text-[11px] font-normal">
-									{isPrivacy ? "••••••••••••" : user?.email}
-								</span>
-							</DropdownMenuLabel>
-							<DropdownMenuSeparator />
-							<DropdownMenuItem onSelect={() => navigate("/profile")}>
-								<User className="size-4" />
-								Profile
-							</DropdownMenuItem>
-							<DropdownMenuItem onSelect={togglePrivacy}>
-								{isPrivacy ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-								{isPrivacy ? "Show amounts" : "Hide amounts"}
-							</DropdownMenuItem>
-							<DropdownMenuItem onSelect={toggleTheme}>
-								{theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
-								{theme === "dark" ? "Light theme" : "Dark theme"}
-							</DropdownMenuItem>
-							<DropdownMenuSeparator />
-							<DropdownMenuItem
-								className="text-danger focus:text-danger"
-								onSelect={() => logout({ logoutParams: { returnTo: window.location.origin } })}
-							>
-								<LogOut className="size-4" />
-								Log out
-							</DropdownMenuItem>
-						</DropdownMenuContent>
-					</DropdownMenu>
+								<DropdownMenuLabel className="flex flex-col gap-0.5 px-2 py-2">
+									<span className="text-foreground truncate text-sm font-medium">
+										{isPrivacy ? "••••••••" : (user?.name ?? "Account")}
+									</span>
+									<span className="truncate text-[11px] font-normal">
+										{isPrivacy ? "••••••••••••" : user?.email}
+									</span>
+								</DropdownMenuLabel>
+								<DropdownMenuSeparator />
+								<DropdownMenuItem onSelect={() => navigate("/profile")}>
+									<User className="size-4" />
+									Profile
+								</DropdownMenuItem>
+								<DropdownMenuItem onSelect={togglePrivacy}>
+									{isPrivacy ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+									{isPrivacy ? "Show amounts" : "Hide amounts"}
+								</DropdownMenuItem>
+								<DropdownMenuItem onSelect={toggleTheme}>
+									{theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
+									{theme === "dark" ? "Light theme" : "Dark theme"}
+								</DropdownMenuItem>
+								<DropdownMenuSeparator />
+								<DropdownMenuItem
+									className="text-danger focus:text-danger"
+									onSelect={() => logout({ logoutParams: { returnTo: window.location.origin } })}
+								>
+									<LogOut className="size-4" />
+									Log out
+								</DropdownMenuItem>
+							</DropdownMenuContent>
+						</DropdownMenu>
+					</div>
 				</div>
 			</div>
 		</header>

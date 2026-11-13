@@ -1,21 +1,39 @@
 import { useAuth0 } from "@auth0/auth0-react";
-import { Eye, EyeOff, LogOut, Menu, Moon, Sun, User } from "lucide-react";
+import { Eye, EyeOff, LogOut, Moon, Sun, User } from "lucide-react";
 import { useState } from "react";
 import { NavLink, useNavigate } from "react-router";
+import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import {
+	Drawer,
+	DrawerContent,
+	DrawerDescription,
+	DrawerHeader,
+	DrawerTitle,
+	DrawerTrigger
+} from "@/components/ui/drawer";
 import { Separator } from "@/components/ui/separator";
 import { usePrivacyStore } from "@/stores/privacy";
 import { useThemeStore } from "@/stores/theme";
 import { cn } from "@/lib/utils";
 import { NAV_ITEMS } from "./nav-items";
 
+function initials(name?: string) {
+	if (!name) return "AU";
+	return name
+		.split(" ")
+		.filter(Boolean)
+		.slice(0, 2)
+		.map(part => part[0]?.toUpperCase() ?? "")
+		.join("");
+}
+
 export function BottomTabs() {
 	const { theme, toggleTheme } = useThemeStore();
 	const { isPrivacy, togglePrivacy } = usePrivacyStore();
-	const { logout } = useAuth0();
+	const { user, logout } = useAuth0();
 	const navigate = useNavigate();
-	const [moreOpen, setMoreOpen] = useState(false);
+	const [accountOpen, setAccountOpen] = useState(false);
 
 	return (
 		<nav
@@ -42,35 +60,52 @@ export function BottomTabs() {
 					</NavLink>
 				))}
 
-				<Sheet
-					open={moreOpen}
-					onOpenChange={setMoreOpen}
+				<Drawer
+					open={accountOpen}
+					onOpenChange={setAccountOpen}
 				>
-					<SheetTrigger asChild>
+					<DrawerTrigger asChild>
 						<button
 							type="button"
-							className="text-muted-foreground flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium"
+							aria-label="Profile"
+							className={cn(
+								"flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium",
+								accountOpen ? "text-foreground" : "text-muted-foreground"
+							)}
 						>
-							<Menu
+							<Avatar
+								src={user?.picture}
+								alt={user?.name ?? "User"}
+								fallback={initials(user?.name)}
 								className="size-5"
-								aria-hidden
 							/>
-							More
+							Profile
 						</button>
-					</SheetTrigger>
-					<SheetContent
-						side="right"
-						className="md:hidden"
-					>
-						<SheetHeader>
-							<SheetTitle>More</SheetTitle>
-						</SheetHeader>
-						<div className="flex flex-col gap-1">
+					</DrawerTrigger>
+					<DrawerContent>
+						<DrawerHeader className="flex-row items-center gap-3 pb-2">
+							<Avatar
+								src={user?.picture}
+								alt={user?.name ?? "User"}
+								fallback={initials(user?.name)}
+								className="size-10"
+							/>
+							<div className="flex min-w-0 flex-col">
+								<DrawerTitle className="truncate text-base">
+									{isPrivacy ? "••••••••" : (user?.name ?? "Account")}
+								</DrawerTitle>
+								<DrawerDescription className="truncate text-xs">
+									{isPrivacy ? "••••••••••••" : user?.email}
+								</DrawerDescription>
+							</div>
+						</DrawerHeader>
+
+						<div className="flex flex-col gap-1 px-2 pb-6">
 							<Button
 								variant="ghost"
 								className="justify-start"
 								onClick={() => {
-									setMoreOpen(false);
+									setAccountOpen(false);
 									navigate("/profile");
 								}}
 							>
@@ -101,8 +136,8 @@ export function BottomTabs() {
 								<LogOut className="size-4" /> Log out
 							</Button>
 						</div>
-					</SheetContent>
-				</Sheet>
+					</DrawerContent>
+				</Drawer>
 			</div>
 		</nav>
 	);
