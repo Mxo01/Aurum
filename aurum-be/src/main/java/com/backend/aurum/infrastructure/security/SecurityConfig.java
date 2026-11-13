@@ -1,9 +1,12 @@
 package com.backend.aurum.infrastructure.security;
 
+import com.backend.aurum.infrastructure.mcp.McpOriginValidationFilter;
+import com.backend.aurum.infrastructure.mcp.McpSettings;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -22,6 +25,7 @@ import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtValidators;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.intercept.AuthorizationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -30,6 +34,8 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 @EnableWebSecurity
 @EnableMethodSecurity
 public class SecurityConfig {
+
+	private static final String PROTECTED_RESOURCE_METADATA = "/.well-known/oauth-protected-resource";
 
 	@Value("${spring.security.oauth2.resourceserver.jwt.issuer-uri}")
 	private String issuerUri;
@@ -40,43 +46,33 @@ public class SecurityConfig {
 	@Value("${cors.allowed-origins:http://localhost:4200}")
 	private String corsAllowedOrigins;
 
+	@Value("${mcp.allowed-origins:}")
+	private String mcpAllowedOrigins;
+
 	@Bean
 	@Order(1)
 	public SecurityFilterChain mcpFilterChain(
 		HttpSecurity http,
 		JwtConverter jwtConverter,
-		McpBearerAuthenticationEntryPoint mcpEntryPoint
+		McpBearerAuthenticationEntryPoint mcpEntryPoint,
+		@Qualifier("mcpJwtDecoder") JwtDecoder mcpJwtDecoder
 	) throws Exception {
 		http
-			.securityMatcher(
-				"/mcp",
-				"/.well-known/oauth-protected-resource",
-				"/.well-known/oauth-authorization-server",
-				"/oauth/register",
-				"/oauth/authorize",
-				"/oauth/callback",
-				"/oauth/token"
-			)
+			.securityMatcher("/mcp", PROTECTED_RESOURCE_METADATA, PROTECTED_RESOURCE_METADATA + "/mcp")
 			.csrf(AbstractHttpConfigurer::disable)
 			.cors(cors -> cors.configurationSource(mcpCorsConfigurationSource()))
 			.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 			.authorizeHttpRequests(auth ->
 				auth
-					.requestMatchers(
-						"/.well-known/oauth-protected-resource",
-						"/.well-known/oauth-authorization-server",
-						"/oauth/register",
-						"/oauth/authorize",
-						"/oauth/callback",
-						"/oauth/token"
-					)
+					.requestMatchers(PROTECTED_RESOURCE_METADATA, PROTECTED_RESOURCE_METADATA + "/mcp")
 					.permitAll()
 					.anyRequest()
 					.authenticated()
 			)
+			.addFilterBefore(new McpOriginValidationFilter(mcpAllowedOrigins), AuthorizationFilter.class)
 			.oauth2ResourceServer(oauth2 ->
 				oauth2
-					.jwt(jwt -> jwt.decoder(jwtDecoder()).jwtAuthenticationConverter(jwtConverter))
+					.jwt(jwt -> jwt.decoder(mcpJwtDecoder).jwtAuthenticationConverter(jwtConverter))
 					.authenticationEntryPoint(mcpEntryPoint)
 			);
 		return http.build();
@@ -106,11 +102,27 @@ public class SecurityConfig {
 
 	@Bean
 	public JwtDecoder jwtDecoder() {
+		return buildJwtDecoder(audience);
+	}
+
+	/**
+	 * The MCP resource only accepts tokens issued for its own audience.
+	 *
+	 * <p>This is the RFC 8707 requirement: a token minted for the web app must not
+	 * be replayable against the MCP endpoint, even though both belong to the same
+	 * user.
+	 */
+	@Bean
+	public JwtDecoder mcpJwtDecoder(McpSettings settings) {
+		return buildJwtDecoder(settings.audience());
+	}
+
+	private JwtDecoder buildJwtDecoder(String expectedAudience) {
 		NimbusJwtDecoder jwtDecoder = NimbusJwtDecoder.withIssuerLocation(issuerUri).build();
 		OAuth2TokenValidator<Jwt> issuerValidator = JwtValidators.createDefaultWithIssuer(issuerUri);
 		OAuth2TokenValidator<Jwt> audienceValidator = new JwtClaimValidator<Collection<String>>(
 			JwtClaimNames.AUD,
-			aud -> aud != null && aud.contains(audience)
+			aud -> aud != null && aud.contains(expectedAudience)
 		);
 
 		jwtDecoder.setJwtValidator(
@@ -120,14 +132,23 @@ public class SecurityConfig {
 		return jwtDecoder;
 	}
 
-	@Bean
-	public CorsConfigurationSource mcpCorsConfigurationSource() {
+	private CorsConfigurationSource mcpCorsConfigurationSource() {
 		CorsConfiguration configuration = new CorsConfiguration();
-		configuration.setAllowedOriginPatterns(List.of("*"));
+		List<String> origins = new ArrayList<>(Arrays.asList(mcpAllowedOrigins.split(",")));
+		configuration.setAllowedOrigins(
+			origins
+				.stream()
+				.map(String::trim)
+				.filter(origin -> !origin.isEmpty())
+				.toList()
+		);
 		configuration.setAllowedMethods(List.of("GET", "POST", "DELETE", "OPTIONS"));
-		configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept"));
-		configuration.setExposedHeaders(List.of("WWW-Authenticate"));
-		configuration.setAllowCredentials(true);
+		configuration.setAllowedHeaders(
+			List.of("Authorization", "Content-Type", "Accept", "Mcp-Protocol-Version")
+		);
+		configuration.setExposedHeaders(List.of("WWW-Authenticate", "Mcp-Session-Id"));
+		configuration.setAllowCredentials(false);
+		configuration.setMaxAge(3600L);
 
 		UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
 		source.registerCorsConfiguration("/**", configuration);

@@ -20,9 +20,16 @@ auth0.management.clientSecret=
 # CORS
 cors.allowed-origins=http://localhost:4200
 
-# MCP server
+# MCP server — Auth0 is the authorization server; no proxy and no client secret.
 spring.ai.mcp.server.name=aurum-mcp-server
 spring.ai.mcp.server.version=1.0.0
-spring.ai.mcp.server.sse-message-endpoint=/mcp/message
-mcp.resource-url=http://localhost:8080
-mcp.auth0-client-id=
+spring.ai.mcp.server.protocol=STATELESS
+mcp.resource-url=http://localhost:8080/mcp
+# Defaults to mcp.resource-url; it must match the Auth0 API identifier.
+mcp.audience=http://localhost:8080/mcp
+# Optional: set both to enforce read/write scopes (define them on the Auth0 API).
+mcp.scopes.read=
+mcp.scopes.write=
+# Browser origins allowed to call /mcp. Empty blocks every browser origin.
+mcp.allowed-origins=
+mcp.max-batch-size=500
