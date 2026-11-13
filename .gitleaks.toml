@@ -43,6 +43,9 @@ commits = [
 paths = [
   # Client ID della SPA: pubblico per design, viaggia nel bundle JS servito al browser
   '''aurum-fe/src/environments/environment.*\.ts$''',
+  # Stesso client ID pubblico nel nuovo frontend React (default di build e template)
+  '''aurum-fe-react/\.env\.example$''',
+  '''aurum-fe-react/src/lib/env\.ts$''',
   # Template senza valori reali
   '''application-local\.properties\.example$''',
   # Fixture con una credenziale finta: solo i file che la contengono, non tutti i test
