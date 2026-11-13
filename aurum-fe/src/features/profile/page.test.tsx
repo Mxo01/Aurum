@@ -111,7 +111,7 @@ describe("ProfilePage", () => {
 		fireEvent.mouseDown(screen.getByRole("tab", { name: "Integrations" }));
 
 		// WHEN
-		const copy = screen.getByRole("button", { name: "Copy MCP config" });
+		const copy = screen.getByRole("button", { name: "Copy" });
 		fireEvent.click(copy);
 
 		// THEN
@@ -119,6 +119,7 @@ describe("ProfilePage", () => {
 		await waitFor(() =>
 			expect(navigator.clipboard.writeText).toHaveBeenCalledWith(expect.stringContaining("/mcp"))
 		);
+		expect(await screen.findByRole("button", { name: "Copied" })).toBeInTheDocument();
 	});
 
 	it("should export the data", async () => {

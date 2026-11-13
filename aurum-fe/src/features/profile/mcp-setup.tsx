@@ -1,8 +1,14 @@
-import { Check, Copy } from "lucide-react";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Terminal } from "lucide-react";
 import { useState } from "react";
-import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
+import {
+	CodeBlock,
+	CodeBlockActions,
+	CodeBlockContent,
+	CodeBlockCopyButton,
+	CodeBlockHeader,
+	CodeBlockTitle
+} from "@/components/ui/code-block";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { env } from "@/lib/env";
 
 type Platform = "desktop" | "mobile";
@@ -14,24 +20,12 @@ const PLATFORMS: { value: Platform; label: string }[] = [
 
 export function McpSetup() {
 	const [platform, setPlatform] = useState<Platform>("desktop");
-	const [copied, setCopied] = useState(false);
 
 	const mcpUrl = `${env.apiUrl}/mcp`;
 	const config =
 		platform === "desktop"
 			? JSON.stringify({ mcpServers: { aurum: { type: "http", url: mcpUrl } } }, null, 2)
 			: mcpUrl;
-
-	const copy = async () => {
-		try {
-			await navigator.clipboard.writeText(config);
-			setCopied(true);
-			toast.success("Config copied");
-			window.setTimeout(() => setCopied(false), 1500);
-		} catch {
-			toast.error("Could not copy the config");
-		}
-	};
 
 	return (
 		<div className="flex flex-col gap-3">
@@ -59,20 +53,17 @@ export function McpSetup() {
 				</TabsList>
 			</Tabs>
 
-			<div className="relative">
-				<pre className="border-border bg-muted/40 overflow-x-auto rounded-lg border p-3 text-xs leading-relaxed">
-					<code>{config}</code>
-				</pre>
-				<Button
-					variant="ghost"
-					size="icon-sm"
-					className="absolute top-2 right-2"
-					onClick={() => void copy()}
-					aria-label="Copy MCP config"
-				>
-					{copied ? <Check className="size-4" /> : <Copy className="size-4" />}
-				</Button>
-			</div>
+			<CodeBlock>
+				<CodeBlockHeader>
+					<CodeBlockTitle>
+						<Terminal className="size-3.5" /> MCP config
+					</CodeBlockTitle>
+					<CodeBlockActions>
+						<CodeBlockCopyButton value={config} />
+					</CodeBlockActions>
+				</CodeBlockHeader>
+				<CodeBlockContent wrap>{config}</CodeBlockContent>
+			</CodeBlock>
 
 			<p className="text-muted-foreground text-xs italic">
 				On first connection your MCP client will open a browser window for login.
