@@ -25,8 +25,8 @@ import com.backend.aurum.domain.user.model.User;
 import com.backend.aurum.domain.user.model.UserPrincipal;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
-import org.springframework.ai.tool.annotation.Tool;
-import org.springframework.ai.tool.annotation.ToolParam;
+import org.springframework.ai.mcp.annotation.McpTool;
+import org.springframework.ai.mcp.annotation.McpToolParam;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -46,40 +46,40 @@ public class AurumMcpTools {
 	@Value("${mcp.max-batch-size:500}")
 	private int maxBatchSize = 500;
 
-	@Tool(description = "Get all assets for the current user")
+	@McpTool(description = "Get all assets for the current user")
 	public List<AssetDTO> getAssets() {
 		return assetFacade.getAllAssets(currentUser().getId());
 	}
 
-	@Tool(description = "Get all value snapshots for a specific asset")
+	@McpTool(description = "Get all value snapshots for a specific asset")
 	public List<SnapshotDTO> getSnapshots(
-		@ToolParam(description = "UUID of the asset") String assetId
+		@McpToolParam(description = "UUID of the asset") String assetId
 	) {
 		return snapshotFacade.getSnapshots(java.util.UUID.fromString(assetId), currentUser().getId());
 	}
 
-	@Tool(
+	@McpTool(
 		description = "Get financial KPIs: net worth, gross assets, liabilities, allocations, variations"
 	)
 	public AnalyticsSummaryDTO getKpis() {
 		return analyticsFacade.getSummary(currentUser().getId());
 	}
 
-	@Tool(description = "Get all financial targets/goals for the current user")
+	@McpTool(description = "Get all financial targets/goals for the current user")
 	public List<TargetDTO> getTargets() {
 		return targetFacade.getAllTargets(currentUser().getId());
 	}
 
-	@Tool(description = "Create a new financial asset")
+	@McpTool(description = "Create a new financial asset")
 	public AssetDTO addAsset(CreateAssetDTO dto) {
 		return assetFacade.createAsset(dto, currentUser().getId());
 	}
 
-	@Tool(
+	@McpTool(
 		description = "Create multiple financial assets at once. Use this when importing data in bulk (e.g. from a spreadsheet) to avoid making many separate addAsset calls."
 	)
 	public List<AssetDTO> bulkAddAssets(
-		@ToolParam(description = "List of assets to create") List<CreateAssetDTO> assets
+		@McpToolParam(description = "List of assets to create") List<CreateAssetDTO> assets
 	) {
 		validateBatch(assets, "bulkAddAssets");
 		return assets
@@ -88,16 +88,16 @@ public class AurumMcpTools {
 			.toList();
 	}
 
-	@Tool(description = "Update an existing financial asset")
+	@McpTool(description = "Update an existing financial asset")
 	public AssetDTO updateAsset(UpdateAssetDTO dto) {
 		return assetFacade.updateAsset(dto.getId(), dto, currentUser().getId());
 	}
 
-	@Tool(
+	@McpTool(
 		description = "Update multiple existing financial assets at once. Use this when updating data in bulk (e.g. from a spreadsheet) to avoid making many separate updateAsset calls."
 	)
 	public List<AssetDTO> bulkUpdateAssets(
-		@ToolParam(description = "List of assets to update, each must include the asset id") List<
+		@McpToolParam(description = "List of assets to update, each must include the asset id") List<
 			UpdateAssetDTO
 		> assets
 	) {
@@ -108,16 +108,16 @@ public class AurumMcpTools {
 			.toList();
 	}
 
-	@Tool(description = "Add a value snapshot to an existing asset")
+	@McpTool(description = "Add a value snapshot to an existing asset")
 	public SnapshotDTO addSnapshot(CreateSnapshotDTO dto) {
 		return snapshotFacade.createSnapshot(dto, currentUser().getId());
 	}
 
-	@Tool(
+	@McpTool(
 		description = "Add multiple value snapshots at once. Use this when importing historical data in bulk (e.g. from a spreadsheet) to avoid making many separate addSnapshot calls."
 	)
 	public List<SnapshotDTO> bulkAddSnapshots(
-		@ToolParam(description = "List of snapshots to create") List<CreateSnapshotDTO> snapshots
+		@McpToolParam(description = "List of snapshots to create") List<CreateSnapshotDTO> snapshots
 	) {
 		validateBatch(snapshots, "bulkAddSnapshots");
 		return snapshots
@@ -126,18 +126,18 @@ public class AurumMcpTools {
 			.toList();
 	}
 
-	@Tool(
+	@McpTool(
 		description = "Update an existing snapshot (upserts by asset + month: updates if one exists for that month, creates otherwise)"
 	)
 	public SnapshotDTO updateSnapshot(CreateSnapshotDTO dto) {
 		return snapshotFacade.createSnapshot(dto, currentUser().getId());
 	}
 
-	@Tool(
+	@McpTool(
 		description = "Update multiple existing snapshots at once (upserts by asset + month). Use this when updating historical data in bulk to avoid making many separate updateSnapshot calls."
 	)
 	public List<SnapshotDTO> bulkUpdateSnapshots(
-		@ToolParam(description = "List of snapshots to update") List<CreateSnapshotDTO> snapshots
+		@McpToolParam(description = "List of snapshots to update") List<CreateSnapshotDTO> snapshots
 	) {
 		validateBatch(snapshots, "bulkUpdateSnapshots");
 		return snapshots
@@ -146,31 +146,31 @@ public class AurumMcpTools {
 			.toList();
 	}
 
-	@Tool(description = "Create a new financial target/goal")
+	@McpTool(description = "Create a new financial target/goal")
 	public TargetDTO addTarget(CreateTargetDTO dto) {
 		return targetFacade.createTarget(dto, currentUser().getId());
 	}
 
-	@Tool(
+	@McpTool(
 		description = "Create multiple financial targets/goals at once. Use this when importing data in bulk (e.g. from a spreadsheet) to avoid making many separate addTarget calls."
 	)
 	public List<TargetDTO> bulkAddTargets(
-		@ToolParam(description = "List of targets to create") List<CreateTargetDTO> targets
+		@McpToolParam(description = "List of targets to create") List<CreateTargetDTO> targets
 	) {
 		validateBatch(targets, "bulkAddTargets");
 		return targetFacade.bulkCreateTargets(targets, currentUser().getId());
 	}
 
-	@Tool(description = "Update an existing financial target/goal")
+	@McpTool(description = "Update an existing financial target/goal")
 	public TargetDTO updateTarget(UpdateTargetDTO dto) {
 		return targetFacade.updateTarget(dto.getId(), dto, currentUser().getId());
 	}
 
-	@Tool(
+	@McpTool(
 		description = "Update multiple existing financial targets/goals at once. Use this when updating data in bulk to avoid making many separate updateTarget calls."
 	)
 	public List<TargetDTO> bulkUpdateTargets(
-		@ToolParam(description = "List of targets to update, each must include the target id") List<
+		@McpToolParam(description = "List of targets to update, each must include the target id") List<
 			UpdateTargetDTO
 		> targets
 	) {
@@ -178,21 +178,23 @@ public class AurumMcpTools {
 		return targetFacade.bulkUpdateTargets(targets, currentUser().getId());
 	}
 
-	@Tool(description = "Get all asset categories (system-wide and user-defined)")
+	@McpTool(description = "Get all asset categories (system-wide and user-defined)")
 	public List<AssetCategoryDTO> getCategories() {
 		return categoryFacade.getAllCategories(currentUser().getId());
 	}
 
-	@Tool(description = "Create a new user-defined asset category")
+	@McpTool(description = "Create a new user-defined asset category")
 	public AssetCategoryDTO addCategory(CreateAssetCategoryDTO dto) {
 		return categoryFacade.createCategory(dto, currentUser().getId());
 	}
 
-	@Tool(
+	@McpTool(
 		description = "Create multiple user-defined asset categories at once. Use this when importing data in bulk (e.g. from a spreadsheet) to avoid making many separate addCategory calls."
 	)
 	public List<AssetCategoryDTO> bulkAddCategories(
-		@ToolParam(description = "List of categories to create") List<CreateAssetCategoryDTO> categories
+		@McpToolParam(description = "List of categories to create") List<
+			CreateAssetCategoryDTO
+		> categories
 	) {
 		validateBatch(categories, "bulkAddCategories");
 		return categories
@@ -201,16 +203,16 @@ public class AurumMcpTools {
 			.toList();
 	}
 
-	@Tool(description = "Update an existing user-defined asset category")
+	@McpTool(description = "Update an existing user-defined asset category")
 	public AssetCategoryDTO updateCategory(UpdateAssetCategoryDTO dto) {
 		return categoryFacade.updateCategory(dto.getId(), dto, currentUser().getId());
 	}
 
-	@Tool(
+	@McpTool(
 		description = "Update multiple existing user-defined asset categories at once. Use this when updating data in bulk to avoid making many separate updateCategory calls."
 	)
 	public List<AssetCategoryDTO> bulkUpdateCategories(
-		@ToolParam(
+		@McpToolParam(
 			description = "List of categories to update, each must include the category id"
 		) List<UpdateAssetCategoryDTO> categories
 	) {
@@ -221,34 +223,36 @@ public class AurumMcpTools {
 			.toList();
 	}
 
-	@Tool(
+	@McpTool(
 		description = "Get monthly cash flow data (earned and spent) for a specific year, including previous year comparison and available years"
 	)
 	public CashFlowYearDTO getCashFlowYear(
-		@ToolParam(description = "The year to retrieve cash flow data for (e.g. 2025)") Integer year
+		@McpToolParam(description = "The year to retrieve cash flow data for (e.g. 2025)") Integer year
 	) {
 		return cashFlowFacade.getYear(currentUser().getId(), year);
 	}
 
-	@Tool(
+	@McpTool(
 		description = "Update the earned and/or spent amount for a specific month in a given year. Creates the entry if it does not exist yet."
 	)
 	public CashFlowEntryDTO updateCashFlowEntry(
-		@ToolParam(description = "The year of the entry (e.g. 2025)") Integer year,
-		@ToolParam(description = "The month of the entry (1 = January, 12 = December)") Integer month,
-		@ToolParam(
+		@McpToolParam(description = "The year of the entry (e.g. 2025)") Integer year,
+		@McpToolParam(
+			description = "The month of the entry (1 = January, 12 = December)"
+		) Integer month,
+		@McpToolParam(
 			description = "The DTO containing the earned and/or spent amounts to set"
 		) UpdateCashFlowEntryDTO dto
 	) {
 		return cashFlowFacade.updateEntry(currentUser().getId(), year, month, dto);
 	}
 
-	@Tool(
+	@McpTool(
 		description = "Update multiple monthly cash flow entries at once. Use this when importing or updating data in bulk (e.g. from a spreadsheet) to avoid making many separate updateCashFlowEntry calls."
 	)
 	public List<CashFlowEntryDTO> bulkUpdateCashFlowEntries(
-		@ToolParam(description = "Year all entries belong to (e.g. 2025)") Integer year,
-		@ToolParam(
+		@McpToolParam(description = "Year all entries belong to (e.g. 2025)") Integer year,
+		@McpToolParam(
 			description = "List of monthly entries to update; each item must have a month (1–12), earned, and spent"
 		) List<CashFlowEntryDTO> entries
 	) {

@@ -8,7 +8,7 @@ the user's own currency and locale for every formatted number.
 
 ```
 aurum/
-├── aurum-be/            Spring Boot 3.4 API (Java 25) + MCP tools
+├── aurum-be/            Spring Boot 4.1 API (Java 25) + MCP tools
 ├── aurum-fe/            Angular 21 single-page app
 ├── docker-compose.prod.yml   production stack (Postgres + backend)
 └── Makefile             starts both apps for local development
@@ -87,6 +87,9 @@ sequenceDiagram
   rejected at `/mcp`.
 - The transport is stateless (`spring.ai.mcp.server.protocol=STATELESS`), so
   every request is authenticated independently.
+- The server runs on Spring AI 2.0 with the MCP Java SDK 2.1 (protocol
+  2025-11-25); the stateless transport is the shape the session-less 2026-07-28
+  revision requires.
 - Read/write scopes are optional. When `MCP_READ_SCOPES` and `MCP_WRITE_SCOPES`
   are set, `get*` tools require the read scope and every other tool requires
   the write scope.
