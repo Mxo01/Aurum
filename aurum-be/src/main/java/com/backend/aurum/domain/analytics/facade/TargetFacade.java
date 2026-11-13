@@ -44,7 +44,7 @@ public class TargetFacade {
 		validationService.validate(dto);
 		Target targetDetails = mapper.toEntity(dto, userId);
 		BigDecimal netWorth = analyticsService.getNetWorth(userId);
-		Target updated = targetService.update(id, targetDetails, netWorth);
+		Target updated = targetService.update(id, targetDetails, userId, netWorth);
 		return mapper.toDto(updated, netWorth);
 	}
 
@@ -68,7 +68,7 @@ public class TargetFacade {
 			.map(dto -> {
 				validationService.validate(dto);
 				Target targetDetails = mapper.toEntity(dto, userId);
-				Target updated = targetService.update(dto.getId(), targetDetails, netWorth);
+				Target updated = targetService.update(dto.getId(), targetDetails, userId, netWorth);
 				return mapper.toDto(updated, netWorth);
 			})
 			.toList();
