@@ -5,18 +5,27 @@ import java.util.List;
 import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 /**
  * Scopes advertised by the MCP resource and enforced on tool calls.
  *
- * <p>Scopes are optional: when neither list is configured the server only enforces
- * audience binding. When they are configured they must be configured together, so a
- * half-configured deployment cannot leave the write surface open by accident.
+ * <p>Read and write scopes are configured together, so a half-configured deployment
+ * cannot leave a category unsupervised by accident. When both lists are empty the server
+ * still starts — local development and CI must not be bricked — but the guard denies every
+ * write: a missing configuration closes the write surface instead of opening it. The
+ * advertised scope list stays empty in that case, so discovery never promises a scope that
+ * would not be enforced.
  */
+@Slf4j
 @Component
 public class McpScopes {
+
+	/** Shared by the startup warning and the tool denial message. */
+	static final String READ_PROPERTY = "mcp.scopes.read";
+	static final String WRITE_PROPERTY = "mcp.scopes.write";
 
 	/** RFC 6749 scope-token: printable ASCII except space, quote and backslash. */
 	private static final Pattern SCOPE_TOKEN = Pattern.compile("[\\x21\\x23-\\x5B\\x5D-\\x7E]+");
@@ -28,14 +37,16 @@ public class McpScopes {
 		@Value("${mcp.scopes.read:}") String read,
 		@Value("${mcp.scopes.write:}") String write
 	) {
-		this.read = parse("mcp.scopes.read", read);
-		this.write = parse("mcp.scopes.write", write);
+		this.read = parse(READ_PROPERTY, read);
+		this.write = parse(WRITE_PROPERTY, write);
 
 		if (this.read.isEmpty() != this.write.isEmpty()) {
 			throw new IllegalStateException(
-				"mcp.scopes.read and mcp.scopes.write must be configured together"
+				READ_PROPERTY + " and " + WRITE_PROPERTY + " must be configured together"
 			);
 		}
+
+		warnIfUnconfigured();
 	}
 
 	private static Set<String> parse(String property, String raw) {
@@ -64,6 +75,18 @@ public class McpScopes {
 		return Set.copyOf(scopes);
 	}
 
+	private void warnIfUnconfigured() {
+		if (enforced()) {
+			return;
+		}
+
+		log.warn(
+			"{} and {} are not set: MCP write tools are denied until both are configured, read tools stay available",
+			READ_PROPERTY,
+			WRITE_PROPERTY
+		);
+	}
+
 	public Set<String> read() {
 		return read;
 	}
@@ -72,8 +95,14 @@ public class McpScopes {
 		return write;
 	}
 
+	/**
+	 * Whether both scope lists are configured.
+	 *
+	 * <p>This is never a licence to skip the tool check: writes are denied when it is
+	 * false, so callers must not use it to bypass authorization.
+	 */
 	public boolean enforced() {
-		return !read.isEmpty();
+		return !all().isEmpty();
 	}
 
 	public List<String> all() {

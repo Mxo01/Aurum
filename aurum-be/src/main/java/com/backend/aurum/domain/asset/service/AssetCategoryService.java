@@ -2,6 +2,7 @@ package com.backend.aurum.domain.asset.service;
 
 import com.backend.aurum.domain.asset.model.AssetCategory;
 import com.backend.aurum.domain.asset.repository.AssetCategoryRepository;
+import com.backend.aurum.domain.asset.repository.AssetRepository;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -18,6 +19,7 @@ import org.springframework.web.server.ResponseStatusException;
 public class AssetCategoryService {
 
 	private final AssetCategoryRepository categoryRepository;
+	private final AssetRepository assetRepository;
 
 	public List<AssetCategory> findAll(UUID userId) {
 		log.debug("AssetCategoryService#findAll - Fetching categories for userId={}", userId);
@@ -122,6 +124,18 @@ public class AssetCategoryService {
 			throw new ResponseStatusException(
 				HttpStatus.FORBIDDEN,
 				"Cannot delete another user's category"
+			);
+		}
+		long assetCount = assetRepository.countByCategoryId(id);
+		if (assetCount > 0) {
+			log.warn(
+				"AssetCategoryService#delete - Refusing to delete categoryId={}: still holds {} asset(s)",
+				id,
+				assetCount
+			);
+			throw new ResponseStatusException(
+				HttpStatus.CONFLICT,
+				"Category still holds " + assetCount + " asset(s); move or delete them first"
 			);
 		}
 		categoryRepository.deleteById(Objects.requireNonNull(id));

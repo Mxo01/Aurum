@@ -225,6 +225,31 @@ class SnapshotMapperTest {
 	}
 
 	@Test
+	void toDto_convertsInTheBookTarget_whenTheAssetHasNoCurrency() {
+		// GIVEN
+		Asset mockAsset = Instancio.of(Asset.class)
+			.set(Select.field(Asset::getOriginalCurrency), null)
+			.create();
+		Snapshot mockSnapshot = buildSnapshot(mockAsset);
+		RateBook mockBook = book(USER_CURRENCY, List.of(), List.of());
+		BigDecimal expectedAnalyticsBase = mockBook.convert(
+			ORIGINAL_AMOUNT,
+			mockBook.target(),
+			REFERENCE_DATE
+		);
+
+		// WHEN
+		SnapshotDTO result = testSubject.toDto(mockSnapshot, mockBook);
+
+		// THEN
+		assertThat(result.getExchangeRateToBase()).isEqualByComparingTo(BigDecimal.ONE);
+		assertThat(result.getAmountBaseCurrency()).isEqualByComparingTo(expectedAnalyticsBase);
+		assertThat(result.getAmountBaseCurrency()).isEqualByComparingTo(ORIGINAL_AMOUNT);
+		assertThat(result.getAssetId()).isEqualTo(mockAsset.getId());
+		assertThat(result.getAssetName()).isEqualTo(mockAsset.getName());
+	}
+
+	@Test
 	void toDto_omitsAssetDetails_whenTheSnapshotResolvesWithoutAnAsset() {
 		// GIVEN
 		Asset mockAsset = Instancio.of(Asset.class)

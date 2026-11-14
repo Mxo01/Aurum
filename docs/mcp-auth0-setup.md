@@ -23,9 +23,14 @@ What the backend enforces:
   no session id to steal or replay.
 - Browser origins are rejected unless listed in `MCP_ALLOWED_ORIGINS`; native
   MCP clients send no `Origin` and are unaffected.
-- If `MCP_READ_SCOPES` and `MCP_WRITE_SCOPES` are configured, tools whose name
-  starts with `get` require a read scope and every other tool requires a write
-  scope. Unknown tool names are treated as writes.
+- Tools whose name starts with `get` require a read scope and every other tool
+  requires a write scope. Unknown tool names are treated as writes.
+- The tool guard is **fail-closed**: with `MCP_READ_SCOPES` and `MCP_WRITE_SCOPES`
+  both empty every write tool is denied and read tools keep working, and the
+  startup log emits one WARN naming the two unset properties. Advertising no
+  scopes in the metadata while still denying writes is intended — discovery stays
+  truthful (it never promises a scope whose tools would reject the token), and
+  the denial is the safety net, not a bug.
 
 ## 1. Create the API
 
@@ -143,19 +148,37 @@ MCP_MAX_BATCH_SIZE=500
   identifier exactly.
 - `MCP_AUDIENCE` is optional and defaults to `MCP_RESOURCE_URL`. Set it only if
   the API identifier is different from the resource URI.
-- `MCP_READ_SCOPES` and `MCP_WRITE_SCOPES` must be set together or left both
-  empty. Leaving both empty enforces audience binding only.
+- `MCP_READ_SCOPES` and `MCP_WRITE_SCOPES` must be set together: the backend
+  refuses to start if only one of them is set, because a half-configured pair
+  would leave one category unsupervised. Leaving **both** empty is allowed — local
+  development and CI must not be bricked — but it is fail-closed: the audience is
+  still bound, read tools keep working, and every write tool is rejected with
+  `AccessDeniedException`. Set both properties before any MCP client is allowed
+  to write; leaving them out is a running-but-read-only deployment, not an open
+  one.
 - `MCP_ALLOWED_ORIGINS` is a comma-separated allowlist of browser origins. The
   default (empty) blocks every browser origin. Native clients do not send
   `Origin`.
 - Remove `MCP_AUTH0_CLIENT_ID`: the backend no longer registers clients or
   proxies tokens.
 
+When both scope lists are empty the startup log prints exactly one WARN, so the
+deployment is never silently fail-closed:
+
+```text
+mcp.scopes.read and mcp.scopes.write are not set: MCP write tools are denied until both are configured, read tools stay available
+```
+
 ## 5. Deploy order
 
 1. Apply the Auth0 changes above.
 2. Add the environment variables on the server.
 3. Merge and deploy the backend.
+
+Deploying step 3 before step 2 is safe but degraded: the backend starts, logs the
+WARN, keeps read tools working and denies every write tool until
+`MCP_READ_SCOPES` and `MCP_WRITE_SCOPES` are both set and the container is
+recreated.
 
 The deploy workflow refuses to start if `MCP_RESOURCE_URL` is not an
 `https://…/mcp` URL. It also removes the obsolete `MCP_AUTH0_CLIENT_ID` line. If you deploy before the Auth0 API exists, the backend still
@@ -185,6 +208,10 @@ The 401 must contain:
 ```http
 WWW-Authenticate: Bearer realm="aurum-mcp", resource_metadata="https://api.aurum-networth.com/.well-known/oauth-protected-resource/mcp", scope="mcp:read mcp:write"
 ```
+
+The `scope` parameter only appears when `MCP_READ_SCOPES` and `MCP_WRITE_SCOPES`
+are set; with both empty the challenge and the metadata omit it
+(`scopes_supported` is absent) and write tools are still denied.
 
 Then point the MCP client at `https://api.aurum-networth.com/mcp`. On first
 connection it discovers the metadata, registers (or uses its pre-registered

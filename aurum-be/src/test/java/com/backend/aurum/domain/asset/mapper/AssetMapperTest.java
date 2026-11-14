@@ -470,6 +470,34 @@ class AssetMapperTest {
 	}
 
 	@Test
+	void toDtoLight_convertsInTheBookTarget_whenTheAssetHasNoCurrency() {
+		// GIVEN
+		Asset mockAsset = Instancio.of(Asset.class)
+			.set(Select.field(Asset::getCategory), null)
+			.set(Select.field(Asset::getOriginalCurrency), null)
+			.create();
+		Snapshot mockLatestSnapshot = Instancio.of(Snapshot.class)
+			.set(Select.field(Snapshot::getAmountOriginalCurrency), LATEST_AMOUNT)
+			.create();
+		RateBook mockBook = emptyBook(USER_CURRENCY);
+		BigDecimal expectedAnalyticsBase = mockBook.convert(LATEST_AMOUNT, mockBook.target(), AS_OF);
+
+		// WHEN
+		AssetDTO result = testSubject.toDtoLight(
+			mockAsset,
+			List.of(mockLatestSnapshot),
+			mockBook,
+			AS_OF
+		);
+
+		// THEN
+		assertThat(result.getLatestValue()).isEqualByComparingTo(LATEST_AMOUNT);
+		assertThat(result.getLatestValueBase()).isEqualByComparingTo(expectedAnalyticsBase);
+		assertThat(result.getLatestValueBase()).isEqualByComparingTo(LATEST_AMOUNT);
+		assertThat(result.getPreviousValue()).isNull();
+	}
+
+	@Test
 	void toDtoLight_leavesLatestValueNull_whenSnapshotListIsEmpty() {
 		// GIVEN
 		Asset mockAsset = Instancio.of(Asset.class)

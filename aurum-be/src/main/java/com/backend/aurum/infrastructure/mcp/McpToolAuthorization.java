@@ -8,11 +8,13 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
 /**
- * Enforces the read/write split on MCP tools when scopes are configured.
+ * Enforces the read/write split on MCP tools.
  *
- * <p>Tools whose name starts with {@code get} are read-only; everything else is a
- * write. The default is deliberately fail-closed for future tools: a new tool is
- * treated as a write unless it is named as a read.
+ * <p>Tools whose name starts with {@code get} are read-only; everything else is a write,
+ * including tools that do not exist yet. A configured category requires one of its scopes
+ * on the token. An unconfigured write category denies every write, so losing the
+ * configuration can never open the write surface; an unconfigured read category leaves
+ * reads available, because they cannot mutate anything.
  */
 @Component
 public class McpToolAuthorization {
@@ -24,11 +26,18 @@ public class McpToolAuthorization {
 	}
 
 	public void check(String toolName) {
-		if (!scopes.enforced()) {
-			return;
+		boolean readTool = isReadTool(toolName);
+		Set<String> required = readTool ? scopes.read() : scopes.write();
+
+		if (required.isEmpty()) {
+			if (readTool) {
+				return;
+			}
+			throw new AccessDeniedException(
+				McpScopes.WRITE_PROPERTY + " is not configured, so tool " + toolName + " is denied"
+			);
 		}
 
-		Set<String> required = isReadTool(toolName) ? scopes.read() : scopes.write();
 		if (!hasAnyScope(required)) {
 			throw new AccessDeniedException(
 				"Missing MCP scope for tool " + toolName + ": " + String.join(", ", required)

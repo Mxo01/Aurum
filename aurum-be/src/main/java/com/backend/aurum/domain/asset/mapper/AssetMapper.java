@@ -130,7 +130,7 @@ public class AssetMapper {
 		LocalDate asOf
 	) {
 		return toDtoLight(entity, latestTwo, (asset, latest) ->
-			book.convert(latest.getAmountOriginalCurrency(), asset.getOriginalCurrency(), asOf)
+			book.convert(latest.getAmountOriginalCurrency(), currencyOf(asset, book), asOf)
 		);
 	}
 
@@ -173,5 +173,13 @@ public class AssetMapper {
 		dto.setPaymentAmount(entity.getPaymentAmount());
 
 		return dto;
+	}
+
+	/**
+	 * Legacy rows can carry no currency: they were written in the user's currency,
+	 * which is the book's target.
+	 */
+	private Currency currencyOf(Asset asset, RateBook book) {
+		return asset.getOriginalCurrency() != null ? asset.getOriginalCurrency() : book.target();
 	}
 }

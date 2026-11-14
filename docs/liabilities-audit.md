@@ -136,7 +136,19 @@ developer's local database was left untouched — restored to its previous conte
 
 **Which schema the probes ran on.** The probe database was built by replaying the changelog SQL files
 in master order — the same input production's Liquibase ran — because a plain boot creates nothing
-(see H15). The developer's local DB, by contrast, has no `databasechangelog` table at all: it was
-created by some other means and never migrated, so it is a second, untracked schema whose constraints
-are not guaranteed to match either production or the changelog. Any local reproduction of a
-constraint-dependent bug (C1, C3, H2) should run on a changelog-built database, not on dev.
+(see H15). An earlier version of this section said the developer's database has no `databasechangelog`
+table, was created by some other means and is therefore a second, untracked schema whose constraints
+are not guaranteed to match either production or the changelog. That was wrong, and the cause is now
+known: for the duration of the audit the database *named* `aurum` held a throwaway probe database
+while the real data was parked under another name, so a `databasechangelog` lookup against that name
+found nothing, and the absence was read as a property of the developer's database instead of a
+property of the probe. As it stands, the developer's database carries `databasechangelog` with its own
+execution history — the rows that predate this change keep their April 2026 `dateexecuted` values, and
+the two changesets added with this change were applied to that database during this change's
+verification — so it is a migrated schema, not a hand-built one. A metadata diff of it against a
+database built from nothing by replaying the changelog is empty on tables, columns, types, nullability,
+defaults, primary-key, unique, foreign-key and check constraints, and index definitions; the only
+residue is the auto-generated NOT NULL constraint names Postgres derives per database. The
+finding-level evidence is unaffected: C1, C3 and H2 were reproduced on the replay-built database, and
+that remains the right place to reproduce a constraint-dependent bug — because the developer's data
+must not be a test fixture, not because its schema differs.
