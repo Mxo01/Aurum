@@ -117,9 +117,6 @@ export function AssetList({
 								<CategoryIcon name={group.icon} />
 								<span className="text-sm font-semibold">{group.name}</span>
 								<Badge variant="outline">{group.assets.length}</Badge>
-								{group.type === ASSET_TYPE.LIABILITY ? (
-									<Badge variant="outline">Liability</Badge>
-								) : null}
 								<span className="num text-muted-foreground ml-auto text-xs">
 									{money(group.total)}
 								</span>

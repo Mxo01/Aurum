@@ -59,7 +59,14 @@ describe("AssetsPage", () => {
 		// THEN
 		expect(await screen.findByText("€558,450.00")).toBeInTheDocument();
 		expect(screen.getByText("Type")).toBeInTheDocument();
-		expect(screen.getAllByText("Liability").length).toBeGreaterThan(1);
+		expect(screen.getAllByText("Liability").length).toBeGreaterThan(0);
+		const mortgageHeader = screen
+			.getAllByRole("button")
+			.find(
+				button => button.hasAttribute("aria-expanded") && button.textContent?.includes("Mortgage")
+			);
+		expect(mortgageHeader).toBeDefined();
+		expect(within(mortgageHeader as HTMLElement).queryByText("Liability")).not.toBeInTheDocument();
 		expect(screen.getAllByRole("button", { name: /^Mark .+ as favorite$/ }).length).toBeGreaterThan(
 			0
 		);
