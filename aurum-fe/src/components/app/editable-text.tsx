@@ -1,4 +1,3 @@
-import { Pencil } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -66,16 +65,13 @@ export function EditableText({
 			onClick={start}
 			disabled={disabled}
 			className={cn(
-				"focus-ring group inline-flex max-w-full items-center gap-1.5 rounded-md px-1 py-0.5 text-left text-sm font-medium transition-colors",
+				"focus-ring group -mx-1 inline-flex max-w-full items-center gap-1.5 rounded-md px-1 py-0.5 text-left text-sm font-medium transition-colors",
 				!disabled && "hover:bg-accent",
 				className
 			)}
 			aria-label={`Edit ${label}, currently ${value}`}
 		>
 			<span className="truncate">{value}</span>
-			{!disabled ? (
-				<Pencil className="text-muted-foreground size-3 shrink-0 opacity-0 transition-opacity group-hover:opacity-100" />
-			) : null}
 		</button>
 	);
 }
