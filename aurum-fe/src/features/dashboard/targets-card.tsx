@@ -1,7 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { MoreHorizontal, Pencil, Plus, Target as TargetIcon, Trash2 } from "lucide-react";
-import { useEffect, useState } from "react";
-import { differenceInMonths } from "date-fns";
+import { useEffect, useRef, useState } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import { useSearchParams } from "react-router";
 import { z } from "zod";
@@ -44,7 +43,7 @@ import {
 	SheetTitle
 } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
-import { parseDateOnly } from "@/lib/format/date";
+import { cn } from "@/lib/utils";
 import { usePreferences } from "@/lib/format/use-preferences";
 import type { TargetDTO, TargetStatus } from "@/lib/api/types";
 import { useCreateTarget, useDeleteTarget, useUpdateTarget } from "@/features/targets/api";
@@ -86,6 +85,8 @@ export function TargetsCard({ targets, isLoading, currency }: TargetsCardProps) 
 	const [formOpen, setFormOpen] = useState(false);
 	const [listOpen, setListOpen] = useState(false);
 	const [editing, setEditing] = useState<TargetDTO | null>(null);
+	const listRef = useRef<HTMLDivElement>(null);
+	const [isClipped, setIsClipped] = useState(false);
 	const [searchParams, setSearchParams] = useSearchParams();
 	const createFromUrl = searchParams.get("target") === "new";
 	const isFormOpen = formOpen || createFromUrl;
@@ -101,6 +102,17 @@ export function TargetsCard({ targets, isLoading, currency }: TargetsCardProps) 
 	});
 
 	const active = targets?.[0];
+
+	useEffect(() => {
+		const element = listRef.current;
+		if (!element) return;
+		const update = () => setIsClipped(element.scrollHeight > element.clientHeight + 1);
+		update();
+		if (typeof ResizeObserver === "undefined") return;
+		const observer = new ResizeObserver(update);
+		observer.observe(element);
+		return () => observer.disconnect();
+	}, [targets]);
 
 	useEffect(() => {
 		form.reset(
@@ -165,15 +177,9 @@ export function TargetsCard({ targets, isLoading, currency }: TargetsCardProps) 
 
 	const type = useWatch({ control: form.control, name: "type" });
 	const isSaving = createTarget.isPending || updateTarget.isPending;
-	const completion = active?.completionPercentage ?? 0;
-	const remaining = active ? Math.max(active.targetAmount - (active.currentAmount ?? 0), 0) : 0;
-	const monthsLeft = active
-		? Math.max(1, differenceInMonths(parseDateOnly(active.deadline), new Date()))
-		: 0;
-	const monthlyPace = monthsLeft > 0 ? remaining / monthsLeft : 0;
 
 	return (
-		<section className="bg-card border-border flex h-full flex-col rounded-xl border p-4 sm:p-5">
+		<section className="bg-card border-border flex flex-col rounded-xl border p-4 sm:p-5">
 			<div className="flex items-center justify-between gap-2">
 				<span className="text-muted-foreground flex items-center gap-2 text-[11px] font-medium">
 					<TargetIcon className="size-3.5" /> Financial target
@@ -210,50 +216,70 @@ export function TargetsCard({ targets, isLoading, currency }: TargetsCardProps) 
 					<Skeleton className="h-2 w-full" />
 					<Skeleton className="h-4 w-40" />
 				</div>
-			) : active ? (
-				<div className="mt-5 flex flex-1 flex-col gap-3">
-					<div className="flex items-start justify-between gap-2">
-						<div className="min-w-0">
-							<p className="truncate text-sm font-semibold">{active.name}</p>
-							<p className="text-muted-foreground num mt-0.5 text-[11px]">
-								{money(active.currentAmount ?? 0, { digits: 0 })} /{" "}
-								{money(active.targetAmount, { digits: 0 })}
-							</p>
-						</div>
-						<Badge
-							variant={
-								active.status === "COMPLETED"
-									? "success"
-									: active.status === "NOT_REACHED"
-										? "danger"
-										: "outline"
-							}
-						>
-							{active.status ? STATUS_LABEL[active.status] : "In progress"}
-						</Badge>
+			) : targets?.length ? (
+				<div className="relative mt-4 flex min-h-0 flex-col">
+					<div
+						ref={listRef}
+						className="flex max-h-[22rem] flex-col gap-3 overflow-hidden"
+					>
+						{targets.map((target, index) => {
+							const completion = Math.max(0, Math.min(100, target.completionPercentage ?? 0));
+							const remaining = Math.max(target.targetAmount - (target.currentAmount ?? 0), 0);
+
+							return (
+								<div
+									key={target.id ?? target.name}
+									className={cn("flex flex-col gap-1.5", index > 0 && "border-t pt-3")}
+								>
+									<div className="flex items-start justify-between gap-2">
+										<div className="min-w-0">
+											<p className="truncate text-sm font-semibold">{target.name}</p>
+											<p className="text-muted-foreground num mt-0.5 text-[11px]">
+												{money(target.currentAmount ?? 0, { digits: 0 })} /{" "}
+												{money(target.targetAmount, { digits: 0 })}
+											</p>
+										</div>
+										<Badge
+											variant={
+												target.status === "COMPLETED"
+													? "success"
+													: target.status === "NOT_REACHED"
+														? "danger"
+														: "outline"
+											}
+										>
+											{target.status ? STATUS_LABEL[target.status] : "In progress"}
+										</Badge>
+									</div>
+
+									<Progress
+										value={completion}
+										label={`${target.name} progress`}
+									/>
+									<div className="text-muted-foreground flex justify-between text-[11px]">
+										<span className="num">{completion.toFixed(0)}%</span>
+										<span className="num">{money(remaining, { digits: 0 })} to go</span>
+									</div>
+								</div>
+							);
+						})}
 					</div>
 
-					<div className="flex flex-col gap-1.5">
-						<Progress
-							value={completion}
-							label={`${active.name} progress`}
-						/>
-						<div className="text-muted-foreground flex justify-between text-[11px]">
-							<span className="num">{completion.toFixed(0)}%</span>
-							<span className="num">{money(remaining, { digits: 0 })} to go</span>
-						</div>
-					</div>
-
-					<div className="text-muted-foreground mt-auto flex flex-col gap-1 border-t pt-3 text-[11px]">
-						<div className="flex items-center justify-between">
-							<span>Monthly pace needed</span>
-							<span className="num text-foreground">{money(monthlyPace, { digits: 0 })}</span>
-						</div>
-						<div className="flex items-center justify-between">
-							<span>Deadline</span>
-							<span>{date(active.deadline)}</span>
-						</div>
-					</div>
+					{isClipped ? (
+						<>
+							<div className="from-card pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t to-transparent" />
+							<div className="absolute inset-x-0 bottom-0 flex justify-center">
+								<Button
+									size="sm"
+									variant="outline"
+									className="bg-card"
+									onClick={() => setListOpen(true)}
+								>
+									View all
+								</Button>
+							</div>
+						</>
+					) : null}
 				</div>
 			) : (
 				<div className="mt-5 flex flex-1 flex-col items-center justify-center gap-3 py-6 text-center">
@@ -398,9 +424,7 @@ export function TargetsCard({ targets, isLoading, currency }: TargetsCardProps) 
 				<SheetContent>
 					<SheetHeader>
 						<SheetTitle>All targets</SheetTitle>
-						<SheetDescription>
-							Every target in one place. The first one is shown on the dashboard.
-						</SheetDescription>
+						<SheetDescription>Every target in one place.</SheetDescription>
 					</SheetHeader>
 
 					<div className="flex flex-1 flex-col gap-2 overflow-y-auto">
