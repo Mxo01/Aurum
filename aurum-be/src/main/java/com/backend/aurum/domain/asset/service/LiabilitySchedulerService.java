@@ -1,27 +1,26 @@
 package com.backend.aurum.domain.asset.service;
 
-import com.backend.aurum.domain.asset.model.Asset;
 import com.backend.aurum.domain.asset.model.LiabilityType;
-import com.backend.aurum.domain.asset.model.PaymentFrequency;
-import com.backend.aurum.domain.asset.model.Snapshot;
 import com.backend.aurum.domain.asset.repository.AssetRepository;
-import com.backend.aurum.domain.shared.port.ExchangeRateProvider;
 import jakarta.annotation.PostConstruct;
-import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.LocalDate;
-import java.util.Comparator;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 
+/**
+ * Runs the daily automatic liability payment batch.
+ *
+ * <p>The batch owns no transaction: it selects ids, hands each one to
+ * {@link LiabilityPaymentService}, which pays it in its own transaction. The per-asset log line is
+ * written only after that call returned, which is after its commit — a log line never reports a
+ * payment that was rolled back.
+ */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -32,10 +31,16 @@ public class LiabilitySchedulerService {
 	static final String JOB_ZONE = "UTC";
 
 	private final AssetRepository assetRepository;
-	private final SnapshotService snapshotService;
-	private final ExchangeRateProvider exchangeRateService;
+	private final LiabilityPaymentService paymentService;
 	private final SchedulerRunRecorder schedulerRunRecorder;
 	private final Clock clock;
+
+	/**
+	 * The effective cron of the job: the property override when present, the annotation default
+	 * otherwise, so the registration log never disagrees with what the scheduler actually runs.
+	 */
+	@Value("${aurum.liability.scheduler.cron:" + JOB_CRON + "}")
+	private String cron;
 
 	/**
 	 * Announces the registration of the job, so a job that is registered but never fires is
@@ -43,38 +48,53 @@ public class LiabilitySchedulerService {
 	 */
 	@PostConstruct
 	void logRegistration() {
-		log.info("Scheduled job {} registered: cron '{}' zone {}", JOB_NAME, JOB_CRON, JOB_ZONE);
+		log.info("Scheduled job {} registered: cron '{}' zone {}", JOB_NAME, cron, JOB_ZONE);
 	}
 
 	/**
 	 * Runs daily at midnight UTC to process automatic liability payments.
 	 */
-	@Scheduled(cron = JOB_CRON, zone = JOB_ZONE)
-	@Transactional
+	@Scheduled(cron = "${aurum.liability.scheduler.cron:" + JOB_CRON + "}", zone = JOB_ZONE)
 	public void processAutomaticLiabilityPayments() {
 		UUID runId = schedulerRunRecorder.start(JOB_NAME);
-		boolean outcomeDeferred = deferOutcomeToTransaction(runId);
 		try {
 			log.info("Running automatic liability payment processor...");
-			List<Asset> automaticLiabilities = assetRepository.findAllByLiabilityTypeWithSnapshots(
+			LocalDate today = LocalDate.now(clock);
+			List<UUID> assetIds = assetRepository.findIdsByLiabilityTypeAndSettledAtIsNull(
 				LiabilityType.AUTOMATIC
 			);
 
-			LocalDate today = LocalDate.now(clock);
-
-			int processed = 0;
+			int paid = 0;
+			int skipped = 0;
+			int notDue = 0;
 			int failed = 0;
 
-			for (Asset asset : automaticLiabilities) {
+			for (UUID assetId : assetIds) {
 				try {
-					processPaymentForAsset(asset, today);
-					processed++;
+					LiabilityPaymentResult result = paymentService.pay(assetId, today);
+					switch (result.status()) {
+						case PAID -> {
+							paid++;
+							logPayment(assetId, result);
+						}
+						case SKIPPED -> {
+							skipped++;
+							log.info("Skipped automatic liability {}: {}", assetId, result.reason());
+						}
+						case NOT_DUE -> {
+							notDue++;
+							log.debug(
+								"Automatic liability {} is not due before {}",
+								assetId,
+								result.nextDueDate()
+							);
+						}
+					}
 				} catch (Exception e) {
 					failed++;
 					log.error(
-						"Failed to process payment for liability asset {} ({}): {}",
-						asset.getId(),
-						asset.getName(),
+						"Failed to process payment for liability asset {}: {}",
+						assetId,
 						e.getMessage(),
 						e
 					);
@@ -82,115 +102,43 @@ public class LiabilitySchedulerService {
 			}
 
 			log.info(
-				"Automatic liability payment processor completed: {} processed, {} failed out of {} total",
-				processed,
+				"Automatic liability payment processor completed: {} paid, {} skipped, {} not due, {} failed out of {} total",
+				paid,
+				skipped,
+				notDue,
 				failed,
-				automaticLiabilities.size()
+				assetIds.size()
 			);
-			if (!outcomeDeferred) {
-				schedulerRunRecorder.complete(runId);
-			}
+			closeRun(runId, failed);
 		} catch (RuntimeException e) {
-			if (!outcomeDeferred) {
-				schedulerRunRecorder.fail(runId);
-			}
+			schedulerRunRecorder.fail(runId);
 			throw e;
 		}
 	}
 
-	/**
-	 * The terminal status must follow the transaction, not the method body: a batch that fails at
-	 * flush or commit returns from the body successfully and only rolls back afterwards, so
-	 * closing the run from inside the body would record a COMPLETED run for a lost payment batch.
-	 *
-	 * @return whether the terminal write was deferred to the transaction's afterCompletion, in
-	 *         which case the caller must not close the run itself
-	 */
-	private boolean deferOutcomeToTransaction(UUID runId) {
-		if (!TransactionSynchronizationManager.isSynchronizationActive()) {
-			return false;
-		}
-
-		TransactionSynchronizationManager.registerSynchronization(
-			new TransactionSynchronization() {
-				@Override
-				public void afterCompletion(int status) {
-					if (status == STATUS_COMMITTED) {
-						schedulerRunRecorder.complete(runId);
-					} else {
-						schedulerRunRecorder.fail(runId);
-					}
-				}
-			}
-		);
-		return true;
-	}
-
-	private void processPaymentForAsset(Asset asset, LocalDate today) {
-		if (asset.getPaymentFrequency() == null || asset.getPaymentAmount() == null) {
+	private void logPayment(UUID assetId, LiabilityPaymentResult result) {
+		if (result.outstandingBalance().signum() == 0) {
+			log.info(
+				"Automatic liability {} paid {} period(s) and is settled",
+				assetId,
+				result.paymentsApplied()
+			);
 			return;
 		}
-
-		List<Snapshot> snapshots = asset.getSnapshots();
-		if (snapshots == null || snapshots.isEmpty()) {
-			return;
-		}
-
-		Optional<Snapshot> latestSnapshotOpt = snapshots
-			.stream()
-			.max(Comparator.comparing(Snapshot::getReferenceDate));
-
-		if (latestSnapshotOpt.isEmpty()) {
-			return;
-		}
-
-		Snapshot latestSnapshot = latestSnapshotOpt.get();
-		LocalDate lastPaymentDate = latestSnapshot.getReferenceDate();
-
-		if (!isPaymentDue(lastPaymentDate, today, asset.getPaymentFrequency())) {
-			return;
-		}
-
-		BigDecimal currentValue = latestSnapshot.getAmountOriginalCurrency();
-
-		// Skip assets that are already fully paid off
-		if (currentValue.compareTo(BigDecimal.ZERO) <= 0) {
-			return;
-		}
-
-		BigDecimal newValue = currentValue.subtract(asset.getPaymentAmount());
-
-		// Do not go below zero
-		if (newValue.compareTo(BigDecimal.ZERO) < 0) {
-			newValue = BigDecimal.ZERO;
-		}
-
-		// Resolve exchange rate
-		BigDecimal exchangeRate = BigDecimal.ONE;
-		String assetCurrency = asset.getOriginalCurrency().getValue();
-		String userCurrency = asset.getUser().getCurrency().getValue();
-		if (!assetCurrency.equals(userCurrency)) {
-			exchangeRate = exchangeRateService.getRate(assetCurrency, userCurrency, today);
-		}
-
-		// Use saveOrUpdate for idempotency — if a snapshot already exists for this month, update it
-		snapshotService.saveOrUpdate(asset, newValue, today, exchangeRate);
 		log.info(
-			"Processed automatic payment snapshot for liability {} (new value: {})",
-			asset.getId(),
-			newValue
+			"Automatic liability {} paid {} period(s); balance {}, next due {}",
+			assetId,
+			result.paymentsApplied(),
+			result.outstandingBalance(),
+			result.nextDueDate()
 		);
-
-		if (newValue.compareTo(BigDecimal.ZERO) == 0) {
-			log.info("Liability {} has reached zero value", asset.getId());
-		}
 	}
 
-	private boolean isPaymentDue(LocalDate lastDate, LocalDate today, PaymentFrequency frequency) {
-		return switch (frequency) {
-			case WEEKLY -> !today.isBefore(lastDate.plusWeeks(1));
-			case MONTHLY -> !today.isBefore(lastDate.plusMonths(1));
-			case YEARLY -> !today.isBefore(lastDate.plusYears(1));
-		};
+	private void closeRun(UUID runId, int failed) {
+		if (failed > 0) {
+			schedulerRunRecorder.fail(runId);
+		} else {
+			schedulerRunRecorder.complete(runId);
+		}
 	}
 }

@@ -3,6 +3,8 @@ package com.backend.aurum.domain.asset.model;
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -44,6 +46,10 @@ public class Snapshot {
 
 	@Column(nullable = false, precision = 19, scale = 6)
 	private BigDecimal exchangeRateToBase = BigDecimal.ONE.setScale(6, RoundingMode.HALF_UP);
+
+	@Enumerated(EnumType.STRING)
+	@Column(nullable = false, length = 16)
+	private SnapshotSource source = SnapshotSource.USER;
 
 	public BigDecimal getAmountInBaseCurrency() {
 		if (amountOriginalCurrency == null || exchangeRateToBase == null) {

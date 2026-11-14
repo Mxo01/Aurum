@@ -4,6 +4,7 @@ import com.backend.aurum.domain.asset.dto.CreateSnapshotDTO;
 import com.backend.aurum.domain.asset.dto.SnapshotDTO;
 import com.backend.aurum.domain.asset.model.Asset;
 import com.backend.aurum.domain.asset.model.Snapshot;
+import com.backend.aurum.domain.asset.model.SnapshotSource;
 import com.backend.aurum.domain.asset.repository.AssetRepository;
 import com.backend.aurum.domain.shared.currency.RateBook;
 import com.backend.aurum.domain.shared.exception.AccessDeniedException;
@@ -30,6 +31,7 @@ public class SnapshotMapper {
 		snapshot.setExchangeRateToBase(
 			dto.getExchangeRateToBase() != null ? dto.getExchangeRateToBase() : BigDecimal.ONE
 		);
+		snapshot.setSource(SnapshotSource.USER);
 
 		if (dto.getAssetId() != null) {
 			Asset asset = assetRepository
@@ -67,6 +69,7 @@ public class SnapshotMapper {
 		dto.setAmountOriginalCurrency(entity.getAmountOriginalCurrency());
 		dto.setExchangeRateToBase(exchangeRateToBase);
 		dto.setAmountBaseCurrency(amountBaseCurrency);
+		dto.setSource(entity.getSource());
 
 		if (entity.getAsset() != null) {
 			dto.setAssetId(entity.getAsset().getId());

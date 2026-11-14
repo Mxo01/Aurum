@@ -8,6 +8,8 @@ import static org.mockito.Mockito.when;
 
 import com.backend.aurum.domain.asset.model.Asset;
 import com.backend.aurum.domain.asset.model.AssetCategory;
+import com.backend.aurum.domain.asset.model.LiabilityType;
+import com.backend.aurum.domain.asset.model.PaymentFrequency;
 import com.backend.aurum.domain.asset.model.Snapshot;
 import com.backend.aurum.domain.asset.repository.AssetRepository;
 import com.backend.aurum.domain.asset.repository.SnapshotRepository;
@@ -18,6 +20,7 @@ import com.backend.aurum.domain.user.enums.Currency;
 import com.backend.aurum.domain.user.model.User;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -48,6 +51,11 @@ class AssetServiceTest {
 
 	@InjectMocks
 	private AssetService testSubject;
+
+	private static final PaymentFrequency PERSISTED_PAYMENT_FREQUENCY = PaymentFrequency.MONTHLY;
+	private static final BigDecimal PERSISTED_PAYMENT_AMOUNT = new BigDecimal("200.00");
+	private static final BigDecimal DIFFERENT_PAYMENT_AMOUNT = new BigDecimal("250.00");
+	private static final BigDecimal PERSISTED_PAYMENT_AMOUNT_AT_OTHER_SCALE = new BigDecimal("200");
 
 	@Test
 	void findAll_returnsAssetsFromRepository() {
@@ -291,6 +299,179 @@ class AssetServiceTest {
 
 		// THEN
 		assertThat(expectedAsset.getCategory()).isEqualTo(mockExistingCategory);
+	}
+
+	@ParameterizedTest(name = "{0}")
+	@MethodSource("paymentScheduleUpdateInputs")
+	void update_appliesScheduleClearingRule_whenPaymentRuleChanges(
+		String scenario,
+		LiabilityType mockPersistedLiabilityType,
+		PaymentFrequency mockPersistedFrequency,
+		BigDecimal mockPersistedAmount,
+		LiabilityType mockUpdatedLiabilityType,
+		PaymentFrequency mockUpdatedFrequency,
+		BigDecimal mockUpdatedAmount,
+		boolean expectedScheduleCleared
+	) {
+		// GIVEN
+		UUID mockUserId = UUID.randomUUID();
+		User mockUser = Instancio.of(User.class).set(Select.field(User::getId), mockUserId).create();
+		LocalDate mockPersistedNextDueDate = LocalDate.of(2026, 1, 30);
+		Short mockPersistedAnchorDay = (short) 30;
+		Asset mockExistingAsset = Instancio.of(Asset.class)
+			.set(Select.field(Asset::getUser), mockUser)
+			.set(Select.field(Asset::getName), "Persisted name")
+			.set(Select.field(Asset::getLiabilityType), mockPersistedLiabilityType)
+			.set(Select.field(Asset::getPaymentFrequency), mockPersistedFrequency)
+			.set(Select.field(Asset::getPaymentAmount), mockPersistedAmount)
+			.set(Select.field(Asset::getNextDueDate), mockPersistedNextDueDate)
+			.set(Select.field(Asset::getPaymentAnchorDay), mockPersistedAnchorDay)
+			.create();
+		Asset mockDetails = Instancio.of(Asset.class)
+			.set(Select.field(Asset::getUser), mockUser)
+			.set(Select.field(Asset::getName), "Renamed asset")
+			.set(Select.field(Asset::getLiabilityType), mockUpdatedLiabilityType)
+			.set(Select.field(Asset::getPaymentFrequency), mockUpdatedFrequency)
+			.set(Select.field(Asset::getPaymentAmount), mockUpdatedAmount)
+			.create();
+		when(assetRepository.findById(mockExistingAsset.getId())).thenReturn(
+			Optional.of(mockExistingAsset)
+		);
+		when(assetRepository.save(mockExistingAsset)).thenReturn(mockExistingAsset);
+
+		// WHEN
+		Asset expectedAsset = testSubject.update(mockExistingAsset.getId(), mockDetails, mockUserId);
+
+		// THEN
+		assertThat(expectedAsset.getName()).isEqualTo("Renamed asset");
+		if (expectedScheduleCleared) {
+			assertThat(expectedAsset.getNextDueDate()).isNull();
+			assertThat(expectedAsset.getPaymentAnchorDay()).isNull();
+		} else {
+			assertThat(expectedAsset.getNextDueDate()).isEqualTo(mockPersistedNextDueDate);
+			assertThat(expectedAsset.getPaymentAnchorDay()).isEqualTo(mockPersistedAnchorDay);
+		}
+	}
+
+	static Stream<Arguments> paymentScheduleUpdateInputs() {
+		return Stream.of(
+			Arguments.of(
+				"payment frequency change clears the persisted schedule",
+				LiabilityType.AUTOMATIC,
+				PERSISTED_PAYMENT_FREQUENCY,
+				PERSISTED_PAYMENT_AMOUNT,
+				LiabilityType.AUTOMATIC,
+				PaymentFrequency.WEEKLY,
+				PERSISTED_PAYMENT_AMOUNT,
+				true
+			),
+			Arguments.of(
+				"payment amount change clears the persisted schedule",
+				LiabilityType.AUTOMATIC,
+				PERSISTED_PAYMENT_FREQUENCY,
+				PERSISTED_PAYMENT_AMOUNT,
+				LiabilityType.AUTOMATIC,
+				PERSISTED_PAYMENT_FREQUENCY,
+				DIFFERENT_PAYMENT_AMOUNT,
+				true
+			),
+			Arguments.of(
+				"liability type change clears the persisted schedule",
+				LiabilityType.AUTOMATIC,
+				PERSISTED_PAYMENT_FREQUENCY,
+				PERSISTED_PAYMENT_AMOUNT,
+				LiabilityType.MANUAL,
+				PERSISTED_PAYMENT_FREQUENCY,
+				PERSISTED_PAYMENT_AMOUNT,
+				true
+			),
+			Arguments.of(
+				"name only update keeps the persisted schedule",
+				LiabilityType.AUTOMATIC,
+				PERSISTED_PAYMENT_FREQUENCY,
+				PERSISTED_PAYMENT_AMOUNT,
+				LiabilityType.AUTOMATIC,
+				PERSISTED_PAYMENT_FREQUENCY,
+				PERSISTED_PAYMENT_AMOUNT,
+				false
+			),
+			Arguments.of(
+				"same payment amount at a different scale keeps the persisted schedule",
+				LiabilityType.AUTOMATIC,
+				PERSISTED_PAYMENT_FREQUENCY,
+				PERSISTED_PAYMENT_AMOUNT,
+				LiabilityType.AUTOMATIC,
+				PERSISTED_PAYMENT_FREQUENCY,
+				PERSISTED_PAYMENT_AMOUNT_AT_OTHER_SCALE,
+				false
+			),
+			Arguments.of(
+				"first payment amount set on a missing one clears the persisted schedule",
+				LiabilityType.AUTOMATIC,
+				PERSISTED_PAYMENT_FREQUENCY,
+				null,
+				LiabilityType.AUTOMATIC,
+				PERSISTED_PAYMENT_FREQUENCY,
+				PERSISTED_PAYMENT_AMOUNT,
+				true
+			),
+			Arguments.of(
+				"payment amount removed by the update clears the persisted schedule",
+				LiabilityType.AUTOMATIC,
+				PERSISTED_PAYMENT_FREQUENCY,
+				PERSISTED_PAYMENT_AMOUNT,
+				LiabilityType.AUTOMATIC,
+				PERSISTED_PAYMENT_FREQUENCY,
+				null,
+				true
+			),
+			Arguments.of(
+				"missing payment amount on both sides keeps the persisted schedule",
+				LiabilityType.AUTOMATIC,
+				PERSISTED_PAYMENT_FREQUENCY,
+				null,
+				LiabilityType.AUTOMATIC,
+				PERSISTED_PAYMENT_FREQUENCY,
+				null,
+				false
+			)
+		);
+	}
+
+	@Test
+	void update_keepsSettledAt_whenThePaymentAmountChanges() {
+		// GIVEN
+		UUID mockUserId = UUID.randomUUID();
+		User mockUser = Instancio.of(User.class).set(Select.field(User::getId), mockUserId).create();
+		LocalDateTime mockSettledAt = LocalDateTime.of(2026, 3, 1, 9, 30);
+		Asset mockExistingAsset = Instancio.of(Asset.class)
+			.set(Select.field(Asset::getUser), mockUser)
+			.set(Select.field(Asset::getLiabilityType), LiabilityType.AUTOMATIC)
+			.set(Select.field(Asset::getPaymentFrequency), PERSISTED_PAYMENT_FREQUENCY)
+			.set(Select.field(Asset::getPaymentAmount), PERSISTED_PAYMENT_AMOUNT)
+			.set(Select.field(Asset::getNextDueDate), LocalDate.of(2026, 2, 28))
+			.set(Select.field(Asset::getPaymentAnchorDay), (short) 28)
+			.set(Select.field(Asset::getSettledAt), mockSettledAt)
+			.create();
+		Asset mockDetails = Instancio.of(Asset.class)
+			.set(Select.field(Asset::getUser), mockUser)
+			.set(Select.field(Asset::getLiabilityType), LiabilityType.AUTOMATIC)
+			.set(Select.field(Asset::getPaymentFrequency), PERSISTED_PAYMENT_FREQUENCY)
+			.set(Select.field(Asset::getPaymentAmount), DIFFERENT_PAYMENT_AMOUNT)
+			.set(Select.field(Asset::getSettledAt), null)
+			.create();
+		when(assetRepository.findById(mockExistingAsset.getId())).thenReturn(
+			Optional.of(mockExistingAsset)
+		);
+		when(assetRepository.save(mockExistingAsset)).thenReturn(mockExistingAsset);
+
+		// WHEN
+		Asset expectedAsset = testSubject.update(mockExistingAsset.getId(), mockDetails, mockUserId);
+
+		// THEN
+		assertThat(expectedAsset.getSettledAt()).isEqualTo(mockSettledAt);
+		assertThat(expectedAsset.getNextDueDate()).isNull();
+		assertThat(expectedAsset.getPaymentAnchorDay()).isNull();
 	}
 
 	@Test

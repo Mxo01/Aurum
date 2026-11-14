@@ -2,6 +2,7 @@ package com.backend.aurum.domain.asset.service;
 
 import com.backend.aurum.domain.asset.model.Asset;
 import com.backend.aurum.domain.asset.model.Snapshot;
+import com.backend.aurum.domain.asset.model.SnapshotSource;
 import com.backend.aurum.domain.asset.repository.AssetRepository;
 import com.backend.aurum.domain.asset.repository.SnapshotRepository;
 import com.backend.aurum.domain.shared.exception.AccessDeniedException;
@@ -68,38 +69,6 @@ public class SnapshotService {
 	}
 
 	@Transactional(readOnly = true)
-	public Snapshot findById(UUID id, UUID userId) {
-		log.debug("SnapshotService#findById - Looking up snapshotId={} for userId={}", id, userId);
-		Snapshot snapshot = snapshotRepository
-			.findById(Objects.requireNonNull(id))
-			.orElseThrow(() -> {
-				log.warn("SnapshotService#findById - Snapshot not found: snapshotId={}", id);
-				return new NotFoundException("Snapshot not found");
-			});
-
-		if (!snapshot.getAsset().getUser().getId().equals(userId)) {
-			log.warn(
-				"SnapshotService#findById - Access denied: snapshotId={} does not belong to userId={}",
-				id,
-				userId
-			);
-			throw new AccessDeniedException("Access denied: Snapshot does not belong to user");
-		}
-		return snapshot;
-	}
-
-	@Transactional(readOnly = true)
-	public List<Snapshot> findByDateRange(UUID userId, LocalDate start, LocalDate end) {
-		log.debug(
-			"SnapshotService#findByDateRange - Fetching snapshots for userId={} between {} and {}",
-			userId,
-			start,
-			end
-		);
-		return snapshotRepository.findByAssetUserIdAndReferenceDateBetween(userId, start, end);
-	}
-
-	@Transactional(readOnly = true)
 	public Optional<Snapshot> findExistingForMonth(UUID assetId, LocalDate referenceDate) {
 		LocalDate startOfMonth = referenceDate.withDayOfMonth(1);
 		LocalDate endOfMonth = referenceDate.withDayOfMonth(referenceDate.lengthOfMonth());
@@ -109,26 +78,18 @@ public class SnapshotService {
 			referenceDate.getMonthValue(),
 			referenceDate.getYear()
 		);
-		return snapshotRepository.findFirstByAssetIdAndReferenceDateBetween(
+		return snapshotRepository.findFirstByAssetIdAndSourceAndReferenceDateBetween(
 			assetId,
+			SnapshotSource.USER,
 			startOfMonth,
 			endOfMonth
 		);
 	}
 
-	@Transactional
-	public Snapshot save(Snapshot snapshot) {
-		log.debug(
-			"SnapshotService#save - Saving snapshot for assetId={}, date={}, amount={}",
-			snapshot.getAsset() != null ? snapshot.getAsset().getId() : "unknown",
-			snapshot.getReferenceDate(),
-			snapshot.getAmountOriginalCurrency()
-		);
-		Snapshot saved = snapshotRepository.save(Objects.requireNonNull(snapshot));
-		log.info("SnapshotService#save - Snapshot saved: snapshotId={}", saved.getId());
-		return saved;
-	}
-
+	/**
+	 * The user's own valuation of an asset: it matches user rows only, so a month already paid by
+	 * the scheduler keeps its scheduled row untouched.
+	 */
 	@Transactional
 	public Snapshot saveOrUpdate(
 		Asset asset,
@@ -153,7 +114,7 @@ public class SnapshotService {
 				"SnapshotService#saveOrUpdate - No existing snapshot for this month, creating a new one"
 			);
 		}
-		Snapshot snapshot = existing.orElseGet(Snapshot::new);
+		Snapshot snapshot = existing.orElseGet(() -> newSnapshot(asset, SnapshotSource.USER));
 		snapshot.setAsset(asset);
 		snapshot.setAmountOriginalCurrency(amount);
 		snapshot.setReferenceDate(referenceDate);
@@ -163,12 +124,30 @@ public class SnapshotService {
 		return saved;
 	}
 
+	/**
+	 * Appends one scheduled payment. Insert-only on purpose: the row records what the scheduler paid
+	 * on that date, and idempotency is enforced by the source-scoped unique index, not by an upsert.
+	 */
 	@Transactional
-	public void delete(UUID id, UUID userId) {
-		log.debug("SnapshotService#delete - Deleting snapshotId={} for userId={}", id, userId);
-		Snapshot snapshot = findById(id, userId);
-		snapshotRepository.delete(Objects.requireNonNull(snapshot));
-		log.info("SnapshotService#delete - Snapshot deleted: snapshotId={}", id);
+	public Snapshot saveScheduledPayment(
+		Asset asset,
+		BigDecimal amount,
+		LocalDate referenceDate,
+		BigDecimal exchangeRate
+	) {
+		Snapshot snapshot = newSnapshot(asset, SnapshotSource.SCHEDULER);
+		snapshot.setAmountOriginalCurrency(amount);
+		snapshot.setReferenceDate(referenceDate);
+		snapshot.setExchangeRateToBase(exchangeRate);
+		Snapshot saved = snapshotRepository.save(Objects.requireNonNull(snapshot));
+		log.debug(
+			"SnapshotService#saveScheduledPayment - Scheduled payment persisted: snapshotId={}, assetId={}, date={}, amount={}",
+			saved.getId(),
+			asset.getId(),
+			referenceDate,
+			amount
+		);
+		return saved;
 	}
 
 	@Transactional
@@ -211,5 +190,12 @@ public class SnapshotService {
 			snapshots.size(),
 			assetId
 		);
+	}
+
+	private Snapshot newSnapshot(Asset asset, SnapshotSource source) {
+		Snapshot snapshot = new Snapshot();
+		snapshot.setAsset(asset);
+		snapshot.setSource(source);
+		return snapshot;
 	}
 }

@@ -9,14 +9,24 @@ import com.auth0.client.mgmt.ManagementAPI;
 import com.auth0.client.mgmt.UsersEntity;
 import com.auth0.exception.Auth0Exception;
 import com.auth0.net.Request;
+import com.backend.aurum.domain.analytics.model.Target;
 import com.backend.aurum.domain.analytics.repository.TargetRepository;
+import com.backend.aurum.domain.asset.model.Asset;
+import com.backend.aurum.domain.asset.model.AssetCategory;
+import com.backend.aurum.domain.asset.model.LiabilityType;
+import com.backend.aurum.domain.asset.model.PaymentFrequency;
+import com.backend.aurum.domain.asset.model.Snapshot;
+import com.backend.aurum.domain.asset.model.SnapshotSource;
 import com.backend.aurum.domain.asset.repository.AssetCategoryRepository;
 import com.backend.aurum.domain.asset.repository.AssetRepository;
 import com.backend.aurum.domain.auth.service.Auth0ManagementService;
+import com.backend.aurum.domain.cashflow.model.CashFlow;
 import com.backend.aurum.domain.cashflow.repository.CashFlowRepository;
+import com.backend.aurum.domain.shared.exception.NotFoundException;
 import com.backend.aurum.domain.user.dto.UpdateCurrencyDTO;
 import com.backend.aurum.domain.user.dto.UpdateLocaleDTO;
 import com.backend.aurum.domain.user.dto.UpdateNameDTO;
+import com.backend.aurum.domain.user.dto.UserExportDTO;
 import com.backend.aurum.domain.user.enums.Currency;
 import com.backend.aurum.domain.user.enums.Locale;
 import com.backend.aurum.domain.user.model.User;
@@ -233,6 +243,156 @@ class UserServiceTest {
 		assertThat(expectedExport).isNotNull();
 		assertThat(expectedExport.profile().id()).isEqualTo(mockUserId);
 		assertThat(expectedExport.profile().email()).isEqualTo(mockEmail);
+	}
+
+	@Test
+	void exportUserData_carriesTheSnapshotSource() {
+		// GIVEN
+		Snapshot mockUserSnapshot = Instancio.of(Snapshot.class)
+			.set(Select.field(Snapshot::getId), UUID.randomUUID())
+			.set(Select.field(Snapshot::getSource), SnapshotSource.USER)
+			.create();
+		Snapshot mockScheduledSnapshot = Instancio.of(Snapshot.class)
+			.set(Select.field(Snapshot::getId), UUID.randomUUID())
+			.set(Select.field(Snapshot::getSource), SnapshotSource.SCHEDULER)
+			.create();
+		Asset mockAsset = Instancio.of(Asset.class)
+			.set(Select.field(Asset::getSnapshots), List.of(mockUserSnapshot, mockScheduledSnapshot))
+			.create();
+		User mockUser = stubExportDataSources(List.of(), List.of(mockAsset), List.of(), List.of());
+
+		// WHEN
+		var expectedExport = testSubject.exportUserData(mockUser.getId(), "test@example.com");
+
+		// THEN
+		assertThat(expectedExport.assets())
+			.singleElement()
+			.satisfies(exportedAsset ->
+				assertThat(exportedAsset.snapshots())
+					.extracting(UserExportDTO.SnapshotExport::source)
+					.containsExactly(SnapshotSource.USER.name(), SnapshotSource.SCHEDULER.name())
+			);
+	}
+
+	@Test
+	void exportUserData_mapsAssetCategoryAndLiabilityFields() {
+		// GIVEN
+		AssetCategory mockCategory = Instancio.create(AssetCategory.class);
+		Asset mockAsset = Instancio.of(Asset.class)
+			.set(Select.field(Asset::getCategory), mockCategory)
+			.set(Select.field(Asset::getLiabilityType), LiabilityType.MANUAL)
+			.set(Select.field(Asset::getPaymentFrequency), PaymentFrequency.MONTHLY)
+			.create();
+		User mockUser = stubExportDataSources(List.of(), List.of(mockAsset), List.of(), List.of());
+
+		// WHEN
+		var expectedExport = testSubject.exportUserData(mockUser.getId(), "test@example.com");
+
+		// THEN
+		assertThat(expectedExport.assets())
+			.singleElement()
+			.satisfies(exportedAsset -> {
+				assertThat(exportedAsset.category()).isEqualTo(mockCategory.getName());
+				assertThat(exportedAsset.liabilityType()).isEqualTo(LiabilityType.MANUAL.name());
+				assertThat(exportedAsset.paymentFrequency()).isEqualTo(PaymentFrequency.MONTHLY.name());
+				assertThat(exportedAsset.paymentAmount()).isEqualByComparingTo(
+					mockAsset.getPaymentAmount()
+				);
+			});
+	}
+
+	@Test
+	void exportUserData_keepsAssetFieldsEmpty_whenTheAssetHasNone() {
+		// GIVEN
+		Asset mockAsset = Instancio.of(Asset.class)
+			.set(Select.field(Asset::getCategory), null)
+			.set(Select.field(Asset::getLiabilityType), null)
+			.set(Select.field(Asset::getPaymentFrequency), null)
+			.create();
+		User mockUser = stubExportDataSources(List.of(), List.of(mockAsset), List.of(), List.of());
+
+		// WHEN
+		var expectedExport = testSubject.exportUserData(mockUser.getId(), "test@example.com");
+
+		// THEN
+		assertThat(expectedExport.assets())
+			.singleElement()
+			.satisfies(exportedAsset -> {
+				assertThat(exportedAsset.category()).isNull();
+				assertThat(exportedAsset.liabilityType()).isNull();
+				assertThat(exportedAsset.paymentFrequency()).isNull();
+			});
+	}
+
+	@Test
+	void exportUserData_mapsCategoriesTargetsAndCashFlows() {
+		// GIVEN
+		AssetCategory mockCategory = Instancio.create(AssetCategory.class);
+		Target mockTarget = Instancio.create(Target.class);
+		CashFlow mockCashFlow = Instancio.create(CashFlow.class);
+		User mockUser = stubExportDataSources(
+			List.of(mockCategory),
+			List.of(),
+			List.of(mockTarget),
+			List.of(mockCashFlow)
+		);
+
+		// WHEN
+		var expectedExport = testSubject.exportUserData(mockUser.getId(), "test@example.com");
+
+		// THEN
+		assertThat(expectedExport.profile().currency()).isEqualTo(mockUser.getCurrency().name());
+		assertThat(expectedExport.profile().locale()).isEqualTo(mockUser.getLocale().name());
+		assertThat(expectedExport.categories())
+			.singleElement()
+			.satisfies(exportedCategory -> {
+				assertThat(exportedCategory.id()).isEqualTo(mockCategory.getId());
+				assertThat(exportedCategory.name()).isEqualTo(mockCategory.getName());
+				assertThat(exportedCategory.type()).isEqualTo(mockCategory.getType().name());
+			});
+		assertThat(expectedExport.targets())
+			.singleElement()
+			.satisfies(exportedTarget -> {
+				assertThat(exportedTarget.id()).isEqualTo(mockTarget.getId());
+				assertThat(exportedTarget.type()).isEqualTo(mockTarget.getType().name());
+				assertThat(exportedTarget.deadline()).isEqualTo(mockTarget.getDeadline());
+			});
+		assertThat(expectedExport.cashFlows())
+			.singleElement()
+			.satisfies(exportedCashFlow -> {
+				assertThat(exportedCashFlow.year()).isEqualTo(mockCashFlow.getYear());
+				assertThat(exportedCashFlow.month()).isEqualTo(mockCashFlow.getMonth());
+				assertThat(exportedCashFlow.earned()).isEqualByComparingTo(mockCashFlow.getEarned());
+				assertThat(exportedCashFlow.spent()).isEqualByComparingTo(mockCashFlow.getSpent());
+			});
+	}
+
+	@Test
+	void exportUserData_throwsNotFoundException_whenUserIsMissing() {
+		// GIVEN
+		UUID mockUserId = UUID.randomUUID();
+		when(userRepository.findById(mockUserId)).thenReturn(Optional.empty());
+
+		// WHEN / THEN
+		assertThatThrownBy(() ->
+			testSubject.exportUserData(mockUserId, "test@example.com")
+		).isInstanceOf(NotFoundException.class);
+	}
+
+	private User stubExportDataSources(
+		List<AssetCategory> categories,
+		List<Asset> assets,
+		List<Target> targets,
+		List<CashFlow> cashFlows
+	) {
+		User mockUser = Instancio.create(User.class);
+		UUID mockUserId = mockUser.getId();
+		when(userRepository.findById(mockUserId)).thenReturn(Optional.of(mockUser));
+		when(categoryRepository.findByUserId(mockUserId)).thenReturn(categories);
+		when(assetRepository.findByUserIdOrderByCreatedAtDesc(mockUserId)).thenReturn(assets);
+		when(targetRepository.findByUserId(mockUserId)).thenReturn(targets);
+		when(cashFlowRepository.findByUserIdOrderByYearDescMonthAsc(mockUserId)).thenReturn(cashFlows);
+		return mockUser;
 	}
 
 	@Test
