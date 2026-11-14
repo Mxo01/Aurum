@@ -37,7 +37,7 @@ export function TopAssetsCard({ summary, isLoading }: TopAssetsCardProps) {
 					<Wallet className="size-3.5" /> Top assets
 				</span>
 				<Button
-					variant="ghost"
+					variant="outline"
 					size="sm"
 					asChild
 				>
