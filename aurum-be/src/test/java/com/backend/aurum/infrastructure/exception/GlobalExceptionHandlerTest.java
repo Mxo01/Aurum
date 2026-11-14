@@ -3,9 +3,11 @@ package com.backend.aurum.infrastructure.exception;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.backend.aurum.domain.shared.exception.AccessDeniedException;
+import com.backend.aurum.domain.shared.exception.ExchangeRateUnavailableException;
 import com.backend.aurum.domain.shared.exception.NotFoundException;
 import com.backend.aurum.domain.shared.exception.ValidationException;
 import java.util.Map;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -16,8 +18,42 @@ import org.springframework.http.ResponseEntity;
 @ExtendWith(MockitoExtension.class)
 class GlobalExceptionHandlerTest {
 
+	private static final String EXCHANGE_RATE_UNAVAILABLE_MESSAGE =
+		"Exchange rates are temporarily unavailable, please retry later";
+	private static final Set<String> RESPONSE_FIELDS = Set.of(
+		"status",
+		"error",
+		"message",
+		"timestamp"
+	);
+
 	@InjectMocks
 	private GlobalExceptionHandler testSubject;
+
+	@Test
+	void handleExchangeRateUnavailable_returns503_withTheDocumentedMessage() {
+		// GIVEN
+		ExchangeRateUnavailableException mockException = new ExchangeRateUnavailableException(
+			"frankfurter refused the connection"
+		);
+
+		// WHEN
+		ResponseEntity<Map<String, Object>> expectedResponse =
+			testSubject.handleExchangeRateUnavailable(mockException);
+
+		// THEN
+		assertThat(expectedResponse.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+		assertThat(expectedResponse.getBody()).containsEntry("status", 503);
+		assertThat(expectedResponse.getBody()).containsEntry(
+			"error",
+			HttpStatus.SERVICE_UNAVAILABLE.getReasonPhrase()
+		);
+		assertThat(expectedResponse.getBody()).containsEntry(
+			"message",
+			EXCHANGE_RATE_UNAVAILABLE_MESSAGE
+		);
+		assertThat(expectedResponse.getBody()).containsOnlyKeys(RESPONSE_FIELDS);
+	}
 
 	@Test
 	void handleNotFound_returns404() {

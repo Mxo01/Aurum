@@ -1,4 +1,4 @@
-import { QueryClient } from "@tanstack/react-query";
+import { QueryClient, type QueryKey } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { http, HttpResponse } from "msw";
@@ -50,6 +50,15 @@ describe("useProfile", () => {
 	});
 });
 
+interface NamedQueryKey {
+	label: string;
+	key: QueryKey;
+}
+
+const CHART_YEARS = [2024, 2025] as const;
+const SNAPSHOT_ASSET_IDS = ["asset-a", "asset-b"] as const;
+const UNTOUCHED_CASHFLOW_YEAR = 2025;
+
 describe("profile mutations", () => {
 	function setup() {
 		const queryClient = new QueryClient({
@@ -64,7 +73,36 @@ describe("profile mutations", () => {
 		return { queryClient, wrapper };
 	}
 
-	it("should update the currency and invalidate the profile", async () => {
+	function seedCurrencyScopedQueries(queryClient: QueryClient) {
+		const seeded: NamedQueryKey[] = [
+			{ label: "profile", key: queryKeys.profile },
+			{ label: "summary", key: queryKeys.summary },
+			...CHART_YEARS.map(year => ({ label: `chart ${year}`, key: queryKeys.chart(year) })),
+			{ label: "projections", key: queryKeys.projections },
+			{ label: "assets", key: queryKeys.assets },
+			...SNAPSHOT_ASSET_IDS.map(assetId => ({
+				label: `snapshots ${assetId}`,
+				key: queryKeys.snapshots(assetId)
+			})),
+			{ label: "targets", key: queryKeys.targets }
+		];
+		seeded.forEach(({ key }) => queryClient.setQueryData(key, {}));
+		return seeded;
+	}
+
+	function seedUnscopedQueries(queryClient: QueryClient) {
+		const seeded: NamedQueryKey[] = [
+			{ label: "categories", key: queryKeys.categories },
+			{
+				label: `cashflow ${UNTOUCHED_CASHFLOW_YEAR}`,
+				key: queryKeys.cashflow(UNTOUCHED_CASHFLOW_YEAR)
+			}
+		];
+		seeded.forEach(({ key }) => queryClient.setQueryData(key, {}));
+		return seeded;
+	}
+
+	it("should re-convert every currency-scoped view on a successful update", async () => {
 		// GIVEN
 		let body: unknown;
 		server.use(
@@ -74,6 +112,8 @@ describe("profile mutations", () => {
 			})
 		);
 		const { queryClient, wrapper } = setup();
+		const scoped = seedCurrencyScopedQueries(queryClient);
+		const unscoped = seedUnscopedQueries(queryClient);
 		const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
 		const testSubject = () => useUpdateCurrency();
 		const { result } = renderHook(testSubject, { wrapper });
@@ -85,15 +125,23 @@ describe("profile mutations", () => {
 		await waitFor(() => expect(result.current.isSuccess).toBe(true));
 		expect(body).toEqual({ currency: "USD" });
 		expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: queryKeys.profile });
+		scoped.forEach(({ label, key }) =>
+			expect(queryClient.getQueryState(key)?.isInvalidated, `${label} is refetched`).toBe(true)
+		);
+		unscoped.forEach(({ label, key }) =>
+			expect(queryClient.getQueryState(key)?.isInvalidated, `${label} stays fresh`).toBe(false)
+		);
 	});
 
-	it("should report a failed currency update", async () => {
+	it("should report a failed currency update and invalidate nothing", async () => {
 		// GIVEN
 		const errorSpy = vi.spyOn(toast, "error");
 		server.use(
 			http.put(`${env.apiUrl}/users/currency`, () => HttpResponse.json({}, { status: 500 }))
 		);
-		const { wrapper } = setup();
+		const { queryClient, wrapper } = setup();
+		const scoped = seedCurrencyScopedQueries(queryClient);
+		const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
 		const testSubject = () => useUpdateCurrency();
 		const { result } = renderHook(testSubject, { wrapper });
 
@@ -103,6 +151,10 @@ describe("profile mutations", () => {
 		// THEN
 		await waitFor(() => expect(result.current.isError).toBe(true));
 		expect(errorSpy).toHaveBeenCalledWith("Could not update the currency");
+		expect(invalidateSpy).not.toHaveBeenCalled();
+		scoped.forEach(({ label, key }) =>
+			expect(queryClient.getQueryState(key)?.isInvalidated, `${label} stays fresh`).toBe(false)
+		);
 	});
 
 	it("should update the locale and invalidate the profile", async () => {

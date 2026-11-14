@@ -5,9 +5,12 @@ import com.backend.aurum.domain.asset.dto.SnapshotDTO;
 import com.backend.aurum.domain.asset.model.Asset;
 import com.backend.aurum.domain.asset.model.Snapshot;
 import com.backend.aurum.domain.asset.repository.AssetRepository;
+import com.backend.aurum.domain.shared.currency.RateBook;
 import com.backend.aurum.domain.shared.exception.AccessDeniedException;
 import com.backend.aurum.domain.shared.exception.NotFoundException;
+import com.backend.aurum.domain.user.enums.Currency;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.Objects;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -42,37 +45,28 @@ public class SnapshotMapper {
 		return snapshot;
 	}
 
-	public Snapshot toEntity(SnapshotDTO dto, UUID userId) {
-		if (dto == null) return null;
-		Snapshot snapshot = new Snapshot();
-		snapshot.setReferenceDate(dto.getReferenceDate());
-		snapshot.setAmountOriginalCurrency(dto.getAmountOriginalCurrency());
-		snapshot.setExchangeRateToBase(
-			dto.getExchangeRateToBase() != null ? dto.getExchangeRateToBase() : BigDecimal.ONE
+	public SnapshotDTO toDto(Snapshot entity, RateBook book) {
+		if (entity == null) return null;
+		Currency currency = entity.getAsset().getOriginalCurrency();
+		LocalDate referenceDate = entity.getReferenceDate();
+		return buildDto(
+			entity,
+			book.rate(currency, referenceDate),
+			book.convert(entity.getAmountOriginalCurrency(), currency, referenceDate)
 		);
-
-		if (dto.getAssetId() != null) {
-			Asset asset = assetRepository
-				.findById(Objects.requireNonNull(dto.getAssetId()))
-				.orElseThrow(() -> new NotFoundException("Asset not found"));
-
-			if (userId != null && !asset.getUser().getId().equals(userId)) {
-				throw new AccessDeniedException("Asset does not belong to the user");
-			}
-			snapshot.setAsset(asset);
-		}
-
-		return snapshot;
 	}
 
-	public SnapshotDTO toDto(Snapshot entity) {
-		if (entity == null) return null;
+	private SnapshotDTO buildDto(
+		Snapshot entity,
+		BigDecimal exchangeRateToBase,
+		BigDecimal amountBaseCurrency
+	) {
 		SnapshotDTO dto = new SnapshotDTO();
 		dto.setId(entity.getId());
 		dto.setReferenceDate(entity.getReferenceDate());
 		dto.setAmountOriginalCurrency(entity.getAmountOriginalCurrency());
-		dto.setExchangeRateToBase(entity.getExchangeRateToBase());
-		dto.setAmountBaseCurrency(entity.getAmountInBaseCurrency());
+		dto.setExchangeRateToBase(exchangeRateToBase);
+		dto.setAmountBaseCurrency(amountBaseCurrency);
 
 		if (entity.getAsset() != null) {
 			dto.setAssetId(entity.getAsset().getId());

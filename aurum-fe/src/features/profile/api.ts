@@ -1,3 +1,4 @@
+import type { QueryKey } from "@tanstack/react-query";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useApi } from "@/lib/api/api-context";
@@ -6,6 +7,21 @@ import { queryKeys } from "@/lib/api/keys";
 import type { Currency, Locale, UserDTO } from "@/lib/api/types";
 
 export const PROFILE_STALE_TIME = 5 * 60 * 1000;
+
+const CHART_KEY_DEPTH = 2;
+const SNAPSHOT_KEY_DEPTH = 1;
+
+// A currency switch re-converts every stored amount, so the whole family of
+// parameterised analytics and snapshot queries goes stale, not just one entry.
+const CURRENCY_SCOPED_KEYS: QueryKey[] = [
+	queryKeys.profile,
+	queryKeys.summary,
+	queryKeys.chart().slice(0, CHART_KEY_DEPTH),
+	queryKeys.projections,
+	queryKeys.assets,
+	queryKeys.snapshots("").slice(0, SNAPSHOT_KEY_DEPTH),
+	queryKeys.targets
+];
 
 export function useProfile() {
 	const api = useApi();
@@ -24,7 +40,10 @@ export function useUpdateCurrency() {
 	return useMutation({
 		mutationFn: async (currency: Currency) =>
 			unwrap(await api.PUT("/users/currency", { body: { currency } })),
-		onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.profile }),
+		onSuccess: () =>
+			Promise.all(
+				CURRENCY_SCOPED_KEYS.map(queryKey => queryClient.invalidateQueries({ queryKey }))
+			),
 		onError: () => toast.error("Could not update the currency")
 	});
 }
