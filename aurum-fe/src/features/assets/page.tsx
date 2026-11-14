@@ -153,26 +153,39 @@ export function AssetsPage() {
 				}
 			/>
 
-			<div className="bg-card border-border grid grid-cols-3 divide-x rounded-xl border">
-				<div className="flex flex-col gap-0.5 p-4">
-					<span className="text-muted-foreground flex items-center gap-1 text-[11px]">
+			<div className="bg-card border-border grid grid-cols-1 divide-y rounded-xl border sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+				<div className="flex items-center justify-between gap-3 p-3 sm:flex-col sm:items-stretch sm:justify-start sm:gap-0.5 sm:p-4">
+					<span className="text-muted-foreground flex shrink-0 items-center gap-1 text-[11px]">
 						<TrendingUp className="size-3" /> Assets
 					</span>
-					<span className="num text-base font-semibold sm:text-lg">{money(totals.assetTotal)}</span>
+					<span
+						className="num min-w-0 truncate text-sm font-semibold sm:text-lg"
+						title={money(totals.assetTotal)}
+					>
+						{money(totals.assetTotal)}
+					</span>
 				</div>
-				<div className="flex flex-col gap-0.5 p-4">
-					<span className="text-muted-foreground flex items-center gap-1 text-[11px]">
+				<div className="flex items-center justify-between gap-3 p-3 sm:flex-col sm:items-stretch sm:justify-start sm:gap-0.5 sm:p-4">
+					<span className="text-muted-foreground flex shrink-0 items-center gap-1 text-[11px]">
 						<TrendingDown className="size-3" /> Liabilities
 					</span>
-					<span className="num text-base font-semibold sm:text-lg">
+					<span
+						className="num min-w-0 truncate text-sm font-semibold sm:text-lg"
+						title={money(totals.liabilityTotal)}
+					>
 						{money(totals.liabilityTotal)}
 					</span>
 				</div>
-				<div className="flex flex-col gap-0.5 p-4">
-					<span className="text-muted-foreground flex items-center gap-1 text-[11px]">
+				<div className="flex items-center justify-between gap-3 p-3 sm:flex-col sm:items-stretch sm:justify-start sm:gap-0.5 sm:p-4">
+					<span className="text-muted-foreground flex shrink-0 items-center gap-1 text-[11px]">
 						<Wallet className="size-3" /> Net
 					</span>
-					<span className="num text-base font-semibold sm:text-lg">{money(totals.netTotal)}</span>
+					<span
+						className="num min-w-0 truncate text-sm font-semibold sm:text-lg"
+						title={money(totals.netTotal)}
+					>
+						{money(totals.netTotal)}
+					</span>
 				</div>
 			</div>
 
