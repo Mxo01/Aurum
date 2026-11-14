@@ -96,7 +96,7 @@ export function DashboardPage() {
 						/>
 					</div>
 
-					<div className="md:order-1 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+					<div className="md:order-1 grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-3 xl:grid-cols-4">
 						<StatTile
 							label="Projected net worth"
 							value={
