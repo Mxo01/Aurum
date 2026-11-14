@@ -194,7 +194,7 @@ export function AssetFormSheet({ open, onOpenChange, asset, categories }: AssetF
 
 				<form
 					onSubmit={submit}
-					className="flex flex-1 flex-col gap-4 overflow-y-auto"
+					className="flex flex-1 flex-col gap-4 overflow-y-auto overscroll-contain px-1.5 pt-1 pb-1.5"
 				>
 					<div className="flex flex-col gap-2">
 						<Label htmlFor="asset-name">Name</Label>

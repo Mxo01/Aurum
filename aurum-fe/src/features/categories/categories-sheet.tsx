@@ -96,7 +96,7 @@ function CategoriesBody() {
 				</Button>
 			</div>
 
-			<div className="flex flex-1 flex-col gap-5 overflow-y-auto">
+			<div className="flex flex-1 flex-col gap-5 overflow-y-auto overscroll-contain px-1.5 pt-1 pb-1.5">
 				<section className="flex flex-col gap-2">
 					<span className="text-muted-foreground text-[11px] font-medium">Default</span>
 					{categories.isLoading ? (
@@ -274,7 +274,7 @@ function CategoryForm({
 			<div className="flex flex-col gap-2">
 				<span className="text-sm font-medium">Icon</span>
 				<div
-					className="grid max-h-44 grid-cols-7 gap-1 overflow-y-auto p-0.5"
+					className="grid max-h-44 grid-cols-7 gap-1 overflow-y-auto overscroll-contain p-1.5"
 					role="group"
 					aria-label="Category icon"
 				>

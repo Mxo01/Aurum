@@ -313,7 +313,7 @@ export function TargetsCard({ targets, isLoading, currency }: TargetsCardProps) 
 
 					<form
 						onSubmit={submit}
-						className="flex flex-1 flex-col gap-4 overflow-y-auto"
+						className="flex flex-1 flex-col gap-4 overflow-y-auto overscroll-contain px-1.5 pt-1 pb-1.5"
 					>
 						<div className="flex flex-col gap-2">
 							<Label htmlFor="target-type">Type</Label>
@@ -429,7 +429,7 @@ export function TargetsCard({ targets, isLoading, currency }: TargetsCardProps) 
 						<SheetDescription>Every target in one place.</SheetDescription>
 					</SheetHeader>
 
-					<div className="flex flex-1 flex-col gap-2 overflow-y-auto">
+					<div className="flex flex-1 flex-col gap-2 overflow-y-auto overscroll-contain px-1.5 pt-1 pb-1.5">
 						{targets?.length ? (
 							targets.map(target => (
 								<div
