@@ -180,7 +180,7 @@ export function TargetsCard({ targets, isLoading, currency }: TargetsCardProps) 
 	const isSaving = createTarget.isPending || updateTarget.isPending;
 
 	return (
-		<section className="bg-card border-border relative flex h-full max-h-[32rem] flex-col overflow-hidden rounded-xl border p-4 sm:p-5">
+		<section className="bg-card border-border relative flex h-full max-h-[32rem] flex-col overflow-hidden rounded-xl border p-4 sm:p-5 lg:max-h-none">
 			<div className="flex items-center justify-between gap-2">
 				<span className="text-muted-foreground flex items-center gap-2 text-[11px] font-medium">
 					<TargetIcon className="size-3.5" /> Financial target
@@ -218,10 +218,10 @@ export function TargetsCard({ targets, isLoading, currency }: TargetsCardProps) 
 					<Skeleton className="h-4 w-40" />
 				</div>
 			) : targets?.length ? (
-				<div className="mt-4 flex min-h-0 flex-1 flex-col">
+				<div className="relative mt-4 flex min-h-0 flex-1 flex-col">
 					<div
 						ref={listRef}
-						className="flex min-h-0 flex-1 flex-col gap-3"
+						className="flex min-h-0 flex-1 flex-col gap-3 lg:absolute lg:inset-0 lg:overflow-hidden"
 					>
 						{targets.map((target, index) => {
 							const completion = Math.max(0, Math.min(100, target.completionPercentage ?? 0));
