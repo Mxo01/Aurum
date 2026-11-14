@@ -180,7 +180,7 @@ export function TargetsCard({ targets, isLoading, currency }: TargetsCardProps) 
 	const isSaving = createTarget.isPending || updateTarget.isPending;
 
 	return (
-		<section className="bg-card border-border relative flex h-full max-h-[32rem] flex-col rounded-xl border p-4 sm:p-5">
+		<section className="bg-card border-border relative flex max-h-[26rem] flex-col overflow-hidden rounded-xl border p-4 sm:p-5">
 			<div className="flex items-center justify-between gap-2">
 				<span className="text-muted-foreground flex items-center gap-2 text-[11px] font-medium">
 					<TargetIcon className="size-3.5" /> Financial target
@@ -218,10 +218,10 @@ export function TargetsCard({ targets, isLoading, currency }: TargetsCardProps) 
 					<Skeleton className="h-4 w-40" />
 				</div>
 			) : targets?.length ? (
-				<div className="relative mt-4 flex min-h-0 flex-1 flex-col">
+				<div className="mt-4 flex min-h-0 flex-1 flex-col">
 					<div
 						ref={listRef}
-						className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden"
+						className="flex min-h-0 flex-1 flex-col gap-3"
 					>
 						{targets.map((target, index) => {
 							const completion = Math.max(0, Math.min(100, target.completionPercentage ?? 0));
@@ -265,22 +265,6 @@ export function TargetsCard({ targets, isLoading, currency }: TargetsCardProps) 
 							);
 						})}
 					</div>
-
-					{isClipped ? (
-						<>
-							<div className="pointer-events-none absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-black/40 via-black/15 to-transparent dark:from-black/85 dark:via-black/40" />
-							<div className="absolute inset-x-0 bottom-0 flex justify-center pb-1">
-								<Button
-									size="sm"
-									variant="secondary"
-									className="shadow-lg"
-									onClick={() => setListOpen(true)}
-								>
-									View all
-								</Button>
-							</div>
-						</>
-					) : null}
 				</div>
 			) : (
 				<div className="mt-5 flex flex-1 flex-col items-center justify-center gap-3 py-6 text-center">
@@ -298,6 +282,22 @@ export function TargetsCard({ targets, isLoading, currency }: TargetsCardProps) 
 					</Button>
 				</div>
 			)}
+
+			{isClipped ? (
+				<>
+					<div className="pointer-events-none absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-black/25 via-black/10 to-transparent dark:from-black/70 dark:via-black/30" />
+					<div className="absolute inset-x-0 bottom-0 flex justify-center pb-4">
+						<Button
+							size="sm"
+							variant="secondary"
+							className="shadow-lg"
+							onClick={() => setListOpen(true)}
+						>
+							View all
+						</Button>
+					</div>
+				</>
+			) : null}
 
 			<Sheet
 				open={isFormOpen}
