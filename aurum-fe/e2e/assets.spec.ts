@@ -59,3 +59,23 @@ test("filters the list with the search", async ({ page }) => {
 	await expect(page.getByText("Apartment Berlin")).toHaveCount(0);
 	await expect(page.getByText("Mortgage").filter({ visible: true }).first()).toBeVisible();
 });
+
+test("moves the date picker across months and years", async ({ page }) => {
+	await page.goto("/assets");
+	await page.getByRole("button", { name: "Add asset" }).click();
+	await page.getByRole("button", { name: "Value date" }).click();
+
+	const calendar = page.locator("[data-radix-popper-content-wrapper]");
+	const month = calendar.locator("select").first();
+	const year = calendar.locator("select").nth(1);
+
+	const currentMonth = await month.inputValue();
+	await page.getByRole("button", { name: "Go to the Next Month" }).click();
+	await expect(month).not.toHaveValue(currentMonth);
+
+	await month.selectOption({ label: "March" });
+	await expect(month).toHaveValue("2");
+
+	await year.selectOption("2001");
+	await expect(year).toHaveValue("2001");
+});

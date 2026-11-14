@@ -1,14 +1,19 @@
 import "react-day-picker/style.css";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp } from "lucide-react";
 import type { ComponentProps } from "react";
 import { DayPicker } from "react-day-picker";
 import { cn } from "@/lib/utils";
 
-export function Calendar({ className, classNames, ...props }: ComponentProps<typeof DayPicker>) {
+export function Calendar({
+	className,
+	classNames,
+	captionLayout = "label",
+	...props
+}: ComponentProps<typeof DayPicker>) {
 	return (
 		<DayPicker
 			showOutsideDays
-			captionLayout="label"
+			captionLayout={captionLayout}
 			className={cn(
 				"rdp-root w-fit",
 				"[--rdp-accent-color:var(--primary)]",
@@ -25,8 +30,14 @@ export function Calendar({ className, classNames, ...props }: ComponentProps<typ
 				root: "w-fit",
 				months: "relative flex flex-col",
 				month: "flex flex-col gap-2",
-				month_caption: "relative flex h-8 w-full items-center justify-center px-8",
-				caption_label: "text-sm font-medium",
+				month_caption: "flex h-8 w-full items-center justify-center px-8",
+				caption_label:
+					captionLayout === "label"
+						? "text-sm font-medium"
+						: "flex items-center gap-1 text-sm font-medium [&>svg]:size-3.5 [&>svg]:text-muted-foreground",
+				dropdowns: "flex h-8 w-full items-center justify-center gap-1.5 text-sm font-medium",
+				dropdown_root: "relative rounded-md",
+				dropdown: "bg-popover absolute inset-0 opacity-0",
 				nav: "absolute inset-x-0 top-0 flex w-full items-center justify-between",
 				button_previous:
 					"hover:bg-accent focus-visible:ring-ring inline-flex size-8 items-center justify-center rounded-md opacity-60 transition-colors hover:opacity-100 focus-visible:ring-2 focus-visible:outline-none",
@@ -48,18 +59,23 @@ export function Calendar({ className, classNames, ...props }: ComponentProps<typ
 				...classNames
 			}}
 			components={{
-				Chevron: ({ orientation, ...chevronProps }) =>
-					orientation === "left" ? (
-						<ChevronLeft
+				Chevron: ({ orientation, ...chevronProps }) => {
+					const Icon =
+						orientation === "left"
+							? ChevronLeft
+							: orientation === "right"
+								? ChevronRight
+								: orientation === "up"
+									? ChevronUp
+									: ChevronDown;
+
+					return (
+						<Icon
 							className="size-4"
 							{...chevronProps}
 						/>
-					) : (
-						<ChevronRight
-							className="size-4"
-							{...chevronProps}
-						/>
-					)
+					);
+				}
 			}}
 			{...props}
 		/>

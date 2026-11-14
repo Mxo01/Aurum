@@ -56,6 +56,7 @@ export function DatePicker({
 			>
 				<Calendar
 					key={value}
+					captionLayout="dropdown"
 					mode="single"
 					selected={selected}
 					defaultMonth={selected}
