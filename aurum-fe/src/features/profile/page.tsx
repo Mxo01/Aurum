@@ -59,13 +59,13 @@ export function ProfilePage() {
 			<Tabs defaultValue="preferences">
 				<TabsList className="w-full sm:w-fit">
 					<TabsTrigger value="preferences">
-						<User className="hidden size-4 sm:block" /> Preferences
+						<User className="size-4" /> Preferences
 					</TabsTrigger>
 					<TabsTrigger value="integrations">
-						<Plug className="hidden size-4 sm:block" /> Integrations
+						<Plug className="size-4" /> Integrations
 					</TabsTrigger>
 					<TabsTrigger value="data">
-						<Shield className="hidden size-4 sm:block" /> Data
+						<Shield className="size-4" /> Data
 						<span className="hidden sm:inline">&nbsp;& privacy</span>
 					</TabsTrigger>
 				</TabsList>
