@@ -61,7 +61,7 @@ export function CommandPalette() {
 
 	const handleOpenChange = (next: boolean) => {
 		setOpen(next);
-		if (!next) setSearch("");
+		setSearch("");
 	};
 
 	const run = (action: () => void) => {
@@ -85,22 +85,22 @@ export function CommandPalette() {
 					<CommandItem onSelect={() => run(() => navigate("/dashboard"))}>
 						<LayoutDashboard className="size-4" />
 						Dashboard
-						<CommandHint keys={[optionLabel, "1"]} />
+						<CommandHint keys={[optionLabel, "D"]} />
 					</CommandItem>
 					<CommandItem onSelect={() => run(() => navigate("/assets"))}>
 						<Wallet className="size-4" />
 						Assets
-						<CommandHint keys={[optionLabel, "2"]} />
+						<CommandHint keys={[optionLabel, "A"]} />
 					</CommandItem>
 					<CommandItem onSelect={() => run(() => navigate("/cashflow"))}>
 						<ArrowLeftRight className="size-4" />
 						Cash flow
-						<CommandHint keys={[optionLabel, "3"]} />
+						<CommandHint keys={[optionLabel, "C"]} />
 					</CommandItem>
 					<CommandItem onSelect={() => run(() => navigate("/profile"))}>
 						<User className="size-4" />
 						Profile
-						<CommandHint keys={[optionLabel, "4"]} />
+						<CommandHint keys={[optionLabel, "P"]} />
 					</CommandItem>
 				</CommandGroup>
 
@@ -110,22 +110,22 @@ export function CommandPalette() {
 					<CommandItem onSelect={() => run(() => navigate("/assets?new=1"))}>
 						<Plus className="size-4" />
 						New asset
-						<CommandHint keys={[optionLabel, "N"]} />
+						<CommandHint keys={[`${optionLabel}N`, "A"]} />
 					</CommandItem>
 					<CommandItem onSelect={() => run(() => navigate("/dashboard?target=new"))}>
 						<Target className="size-4" />
 						New target
-						<CommandHint keys={[optionLabel, "T"]} />
+						<CommandHint keys={[`${optionLabel}N`, "T"]} />
 					</CommandItem>
 					<CommandItem onSelect={() => run(togglePrivacy)}>
 						{isPrivacy ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
 						{isPrivacy ? "Show amounts" : "Hide amounts"}
-						<CommandHint keys={[optionLabel, "P"]} />
+						<CommandHint keys={[optionLabel, "H"]} />
 					</CommandItem>
 					<CommandItem onSelect={() => run(toggleTheme)}>
 						{theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
 						{theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
-						<CommandHint keys={[optionLabel, "M"]} />
+						<CommandHint keys={[optionLabel, "T"]} />
 					</CommandItem>
 				</CommandGroup>
 

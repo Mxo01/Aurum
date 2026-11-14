@@ -264,30 +264,28 @@ export function AssetsPage() {
 
 			<AssetFormSheet
 				open={isFormOpen}
-				onOpenChange={open => (open ? setFormOpen(true) : closeForm())}
+				onOpenChange={() => closeForm()}
 				asset={editing}
 				categories={categories.data ?? []}
 			/>
 
 			<SnapshotsSheet
 				open={historyOpen}
-				onOpenChange={open => {
-					setHistoryOpen(open);
-					if (!open) setHistoryAsset(null);
+				onOpenChange={() => {
+					setHistoryOpen(false);
+					setHistoryAsset(null);
 				}}
 				asset={historyAsset}
 			/>
 
 			<CategoriesSheet
 				open={isCategoriesOpen}
-				onOpenChange={open => (open ? setCategoriesOpen(true) : closeCategories())}
+				onOpenChange={() => closeCategories()}
 			/>
 
 			<AlertDialog
 				open={Boolean(deleteTarget)}
-				onOpenChange={open => {
-					if (!open) setDeleteTarget(null);
-				}}
+				onOpenChange={() => setDeleteTarget(null)}
 			>
 				<AlertDialogContent>
 					<AlertDialogHeader>

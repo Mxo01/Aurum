@@ -1,16 +1,8 @@
-import { FileJson } from "lucide-react";
+import { Check, Copy } from "lucide-react";
 import { useState } from "react";
-import {
-	CodeBlock,
-	CodeBlockActions,
-	CodeBlockContent,
-	CodeBlockCopyButton,
-	CodeBlockHeader,
-	CodeBlockLine,
-	CodeBlockTitle
-} from "@/components/ui/code-block";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useHighlightedCode } from "@/hooks/use-highlighted-code";
 import { env } from "@/lib/env";
 
 type Platform = "desktop" | "mobile";
@@ -22,13 +14,23 @@ const PLATFORMS: { value: Platform; label: string }[] = [
 
 export function McpSetup() {
 	const [platform, setPlatform] = useState<Platform>("desktop");
+	const [copied, setCopied] = useState(false);
 
 	const mcpUrl = `${env.apiUrl}/mcp`;
 	const config =
 		platform === "desktop"
 			? JSON.stringify({ mcpServers: { aurum: { type: "http", url: mcpUrl } } }, null, 2)
 			: mcpUrl;
-	const lines = useHighlightedCode(config, "json");
+
+	const copy = async () => {
+		try {
+			await navigator.clipboard.writeText(config);
+			setCopied(true);
+			window.setTimeout(() => setCopied(false), 1500);
+		} catch {
+			toast.error("Could not copy the config");
+		}
+	};
 
 	return (
 		<div className="flex flex-col gap-3">
@@ -56,28 +58,20 @@ export function McpSetup() {
 				</TabsList>
 			</Tabs>
 
-			<CodeBlock>
-				{platform === "desktop" ? (
-					<CodeBlockHeader>
-						<CodeBlockTitle>
-							<FileJson className="size-3.5" />
-							mcp.json
-						</CodeBlockTitle>
-						<CodeBlockActions>
-							<CodeBlockCopyButton value={config} />
-						</CodeBlockActions>
-					</CodeBlockHeader>
-				) : (
-					<CodeBlockActions>
-						<CodeBlockCopyButton value={config} />
-					</CodeBlockActions>
-				)}
-				<CodeBlockContent wrap>
-					{lines.map((line, index) => (
-						<CodeBlockLine key={index}>{line}</CodeBlockLine>
-					))}
-				</CodeBlockContent>
-			</CodeBlock>
+			<div className="relative">
+				<pre className="border-border bg-muted/40 overflow-x-auto overscroll-contain rounded-lg border p-3 text-xs leading-relaxed">
+					<code>{config}</code>
+				</pre>
+				<Button
+					variant="ghost"
+					size="icon-sm"
+					className="absolute top-2 right-2"
+					onClick={() => void copy()}
+					aria-label={copied ? "Copied" : "Copy"}
+				>
+					{copied ? <Check className="size-4" /> : <Copy className="size-4" />}
+				</Button>
+			</div>
 
 			<p className="text-muted-foreground text-xs italic">
 				On first connection your MCP client will open a browser window for login.

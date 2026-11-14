@@ -210,12 +210,10 @@ export function CashFlowPage() {
 										{previousYear ? (
 											<>
 												<td className="num px-3 py-2 text-right">
-													{prevYearEarned === undefined
-														? "—"
-														: money(prevYearEarned, { digits: 0 })}
+													{money(prevYearEarned!, { digits: 0 })}
 												</td>
 												<td className="num px-3 py-2 text-right">
-													{prevYearSpent === undefined ? "—" : money(prevYearSpent, { digits: 0 })}
+													{money(prevYearSpent!, { digits: 0 })}
 												</td>
 											</>
 										) : null}

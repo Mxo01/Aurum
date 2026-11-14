@@ -115,7 +115,7 @@ function PreferencesTab() {
 		.split(" ")
 		.filter(Boolean)
 		.slice(0, 2)
-		.map(part => part[0]?.toUpperCase() ?? "")
+		.map(part => part.charAt(0).toUpperCase())
 		.join("");
 
 	const onFileSelected = (file: File | undefined) => {
@@ -126,7 +126,7 @@ function PreferencesTab() {
 		}
 		uploadPicture.mutate(file, {
 			onSuccess: () => {
-				if (fileRef.current) fileRef.current.value = "";
+				fileRef.current!.value = "";
 			}
 		});
 	};

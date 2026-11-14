@@ -49,6 +49,11 @@ export function DashboardPage() {
 	};
 
 	const projected = projections.data?.[1];
+	const liabilityValues = liabilitiesSparkline(chart.data);
+	const liabilityTrend =
+		liabilityValues.length > 1
+			? (liabilityValues.at(-1) as number) - (liabilityValues[0] as number)
+			: 0;
 	const growth = projectedGrowth(projected, summary.data?.totalGrossAssets);
 	const assetVariation = summary.data?.assetVariations.oneYear;
 	const isLoadingSummary = summary.isLoading;
@@ -149,7 +154,12 @@ export function DashboardPage() {
 									? `Debt ratio: ${percent(summary.data.debtToAssetRatio, GROWTH_DIGITS)}`
 									: undefined
 							}
-							right={<Sparkline values={liabilitiesSparkline(chart.data)} />}
+							right={
+								<Sparkline
+									values={liabilityValues}
+									tone={liabilityTrend > 0 ? "danger" : "success"}
+								/>
+							}
 						/>
 						<StatTile
 							label="FX impact"

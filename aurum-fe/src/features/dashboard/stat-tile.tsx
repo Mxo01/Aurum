@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useId, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 interface StatTileProps {
@@ -29,7 +29,15 @@ export function StatTile({ label, value, hint, right, className }: StatTileProps
 	);
 }
 
-export function Sparkline({ values, className }: { values: number[]; className?: string }) {
+interface SparklineProps {
+	values: number[];
+	tone?: "success" | "danger";
+	className?: string;
+}
+
+export function Sparkline({ values, tone, className }: SparklineProps) {
+	const gradientId = useId().replace(/:/g, "");
+
 	if (values.length < 2) return null;
 
 	const min = Math.min(...values);
@@ -46,10 +54,45 @@ export function Sparkline({ values, className }: { values: number[]; className?:
 	return (
 		<svg
 			viewBox="0 0 100 32"
-			className={cn("text-muted-foreground/60 h-8 w-20", className)}
+			className={cn(
+				"h-8 w-20",
+				tone === "success" && "text-success",
+				tone === "danger" && "text-danger",
+				!tone && "text-muted-foreground/60",
+				className
+			)}
 			preserveAspectRatio="none"
 			aria-hidden
 		>
+			<defs>
+				<linearGradient
+					id={gradientId}
+					x1="0"
+					y1="0"
+					x2="0"
+					y2="1"
+				>
+					<stop
+						offset="0%"
+						stopColor="currentColor"
+						stopOpacity={0.35}
+					/>
+					<stop
+						offset="55%"
+						stopColor="currentColor"
+						stopOpacity={0.12}
+					/>
+					<stop
+						offset="100%"
+						stopColor="currentColor"
+						stopOpacity={0}
+					/>
+				</linearGradient>
+			</defs>
+			<polygon
+				points={`0,32 ${points} 100,32`}
+				fill={`url(#${gradientId})`}
+			/>
 			<polyline
 				points={points}
 				fill="none"

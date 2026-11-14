@@ -143,10 +143,7 @@ export function TargetsCard({ targets, isLoading, currency }: TargetsCardProps) 
 		clearCreateParam();
 	};
 
-	const onFormOpenChange = (open: boolean) => {
-		if (open) setFormOpen(true);
-		else closeForm();
-	};
+	const onFormOpenChange = () => closeForm();
 
 	const openCreate = () => {
 		setEditing(null);
@@ -402,9 +399,6 @@ export function TargetsCard({ targets, isLoading, currency }: TargetsCardProps) 
 									/>
 								)}
 							/>
-							{form.formState.errors.deadline ? (
-								<p className="text-danger text-xs">{form.formState.errors.deadline.message}</p>
-							) : null}
 						</div>
 
 						<SheetFooter>

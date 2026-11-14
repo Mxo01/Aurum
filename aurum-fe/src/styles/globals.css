@@ -95,6 +95,7 @@
 	--color-chart-text: var(--chart-text);
 
 	--font-sans: "Plus Jakarta Sans Variable", ui-sans-serif, system-ui, sans-serif;
+	--font-display: "Instrument Serif", Georgia, serif;
 	--font-mono: "Geist Mono Variable", ui-monospace, SFMono-Regular, monospace;
 
 	--radius-sm: calc(var(--radius) - 4px);
@@ -174,5 +175,58 @@
 		animation-iteration-count: 1 !important;
 		transition-duration: 0.01ms !important;
 		scroll-behavior: auto !important;
+	}
+}
+
+/* Landing page atmosphere: a warm wash and a barely-there paper grain. */
+.landing-surface {
+	background-image:
+		linear-gradient(180deg, oklch(0.62 0.03 82 / 0.035), transparent 900px),
+		linear-gradient(0deg, oklch(0.62 0.03 82 / 0.12), transparent 800px),
+		linear-gradient(115deg, oklch(0.62 0.03 82 / 0.08), transparent 32%),
+		url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)' opacity='0.09'/%3E%3C/svg%3E");
+	background-size:
+		100% 900px,
+		100% 800px,
+		100% 100%,
+		180px 180px;
+	background-position:
+		top,
+		bottom,
+		center,
+		top left;
+	background-repeat: no-repeat, no-repeat, no-repeat, repeat;
+}
+
+.dark .landing-surface {
+	background-image:
+		linear-gradient(180deg, oklch(0.4 0.015 82 / 0.06), transparent 900px),
+		linear-gradient(0deg, oklch(0.4 0.015 82 / 0.26), transparent 800px),
+		linear-gradient(115deg, oklch(0.42 0.015 82 / 0.18), transparent 34%),
+		url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)' fill='white' opacity='0.08'/%3E%3C/svg%3E");
+}
+
+.reveal {
+	opacity: 0;
+	transform: translateY(22px);
+	filter: blur(6px);
+	transition:
+		opacity 700ms cubic-bezier(0.22, 1, 0.36, 1),
+		transform 700ms cubic-bezier(0.22, 1, 0.36, 1),
+		filter 700ms cubic-bezier(0.22, 1, 0.36, 1);
+	transition-delay: var(--reveal-delay, 0ms);
+}
+
+.reveal[data-visible="true"] {
+	opacity: 1;
+	transform: none;
+	filter: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.reveal {
+		opacity: 1;
+		transform: none;
+		filter: none;
 	}
 }

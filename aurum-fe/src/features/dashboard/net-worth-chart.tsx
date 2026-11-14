@@ -5,7 +5,6 @@ import {
 	Bar,
 	CartesianGrid,
 	ComposedChart,
-	Line,
 	ResponsiveContainer,
 	Tooltip,
 	XAxis,
@@ -118,29 +117,6 @@ export function NetWorthChart({
 					</div>
 
 					<div className="flex flex-wrap items-center gap-2">
-						<Select
-							value={year ? String(year) : "all"}
-							onValueChange={value => onYearChange(value === "all" ? undefined : Number(value))}
-						>
-							<SelectTrigger
-								className="h-8 w-32 text-xs"
-								aria-label="Select year"
-							>
-								<SelectValue />
-							</SelectTrigger>
-							<SelectContent>
-								<SelectItem value="all">All time</SelectItem>
-								{years.map(item => (
-									<SelectItem
-										key={item}
-										value={String(item)}
-									>
-										{item}
-									</SelectItem>
-								))}
-							</SelectContent>
-						</Select>
-
 						{!year ? (
 							<Tabs
 								value={period}
@@ -178,6 +154,29 @@ export function NetWorthChart({
 								))}
 							</TabsList>
 						</Tabs>
+
+						<Select
+							value={year ? String(year) : "all"}
+							onValueChange={value => onYearChange(value === "all" ? undefined : Number(value))}
+						>
+							<SelectTrigger
+								className="h-8 w-32 text-xs"
+								aria-label="Select year"
+							>
+								<SelectValue />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="all">All time</SelectItem>
+								{years.map(item => (
+									<SelectItem
+										key={item}
+										value={String(item)}
+									>
+										{item}
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
 					</div>
 				</div>
 
@@ -227,6 +226,57 @@ export function NetWorthChart({
 										fontSize: 12
 									}}
 								/>
+								<defs>
+									<linearGradient
+										id="net-worth-fill"
+										x1="0"
+										y1="0"
+										x2="0"
+										y2="1"
+									>
+										<stop
+											offset="0%"
+											stopColor="var(--chart-1)"
+											stopOpacity={0.35}
+										/>
+										<stop
+											offset="55%"
+											stopColor="var(--chart-1)"
+											stopOpacity={0.12}
+										/>
+										<stop
+											offset="100%"
+											stopColor="var(--chart-1)"
+											stopOpacity={0.02}
+										/>
+									</linearGradient>
+									{favorites.map((favorite, index) => (
+										<linearGradient
+											key={favorite.key}
+											id={`favorite-fill-${index}`}
+											x1="0"
+											y1="0"
+											x2="0"
+											y2="1"
+										>
+											<stop
+												offset="0%"
+												stopColor={FAVORITE_COLORS[index % FAVORITE_COLORS.length]}
+												stopOpacity={0.22}
+											/>
+											<stop
+												offset="55%"
+												stopColor={FAVORITE_COLORS[index % FAVORITE_COLORS.length]}
+												stopOpacity={0.07}
+											/>
+											<stop
+												offset="100%"
+												stopColor={FAVORITE_COLORS[index % FAVORITE_COLORS.length]}
+												stopOpacity={0.01}
+											/>
+										</linearGradient>
+									))}
+								</defs>
 								{chartType === "mixed" ? (
 									<Bar
 										dataKey="netWorth"
@@ -239,48 +289,27 @@ export function NetWorthChart({
 										animationDuration={700}
 									/>
 								) : (
-									<>
-										<defs>
-											<linearGradient
-												id="net-worth-fill"
-												x1="0"
-												y1="0"
-												x2="0"
-												y2="1"
-											>
-												<stop
-													offset="0%"
-													stopColor="var(--chart-1)"
-													stopOpacity={0.35}
-												/>
-												<stop
-													offset="100%"
-													stopColor="var(--chart-1)"
-													stopOpacity={0.02}
-												/>
-											</linearGradient>
-										</defs>
-										<Area
-											type="monotone"
-											dataKey="netWorth"
-											name="Net worth"
-											stroke="var(--chart-1)"
-											strokeWidth={2}
-											fill="url(#net-worth-fill)"
-											dot={false}
-											isAnimationActive={!reduceMotion}
-											animationDuration={700}
-										/>
-									</>
+									<Area
+										type="monotone"
+										dataKey="netWorth"
+										name="Net worth"
+										stroke="var(--chart-1)"
+										strokeWidth={2}
+										fill="url(#net-worth-fill)"
+										dot={false}
+										isAnimationActive={!reduceMotion}
+										animationDuration={700}
+									/>
 								)}
 								{favorites.map((favorite, index) => (
-									<Line
+									<Area
 										key={favorite.key}
 										type="monotone"
 										dataKey={favorite.key}
 										name={favorite.name}
 										stroke={FAVORITE_COLORS[index % FAVORITE_COLORS.length]}
 										strokeWidth={1.6}
+										fill={`url(#favorite-fill-${index})`}
 										dot={false}
 										isAnimationActive={!reduceMotion}
 										animationDuration={700}

@@ -173,6 +173,11 @@ export function CashflowChart({ rows, isLoading }: CashflowChartProps) {
 												stopOpacity={0.35}
 											/>
 											<stop
+												offset="55%"
+												stopColor="var(--chart-1)"
+												stopOpacity={0.12}
+											/>
+											<stop
 												offset="100%"
 												stopColor="var(--chart-1)"
 												stopOpacity={0.02}
@@ -189,6 +194,11 @@ export function CashflowChart({ rows, isLoading }: CashflowChartProps) {
 												offset="0%"
 												stopColor="var(--chart-2)"
 												stopOpacity={0.3}
+											/>
+											<stop
+												offset="55%"
+												stopColor="var(--chart-2)"
+												stopOpacity={0.1}
 											/>
 											<stop
 												offset="100%"

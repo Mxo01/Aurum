@@ -93,7 +93,7 @@ export function CashflowSummary({
 						value={
 							isLoading ? null : money(totals.balance, { digits: 0, signDisplay: "exceptZero" })
 						}
-						tone={totals.balance >= 0 ? "success" : "danger"}
+						indicator={totals.balance >= 0 ? "success" : "danger"}
 					/>
 					<Metric
 						className="pl-4"
@@ -138,24 +138,27 @@ interface MetricProps {
 	value: string | null;
 	delta?: number;
 	invertDelta?: boolean;
-	tone?: "success" | "danger";
+	indicator?: "success" | "danger";
 }
 
-function Metric({ label, className, value, delta, invertDelta, tone }: MetricProps) {
+function Metric({ label, className, value, delta, invertDelta, indicator }: MetricProps) {
 	return (
 		<div className={cn("flex min-w-0 flex-col gap-1", className)}>
 			<span className="text-muted-foreground text-[11px]">{label}</span>
 			{value === null ? (
 				<Skeleton className="h-6 w-20" />
 			) : (
-				<span
-					className={cn(
-						"num text-lg font-semibold tracking-tight",
-						tone === "success" && "text-success",
-						tone === "danger" && "text-danger"
-					)}
-				>
-					{value}
+				<span className="flex items-center gap-1.5">
+					{indicator ? (
+						<span
+							className={cn(
+								"size-1.5 shrink-0 rounded-full",
+								indicator === "success" ? "bg-success" : "bg-danger"
+							)}
+							aria-hidden
+						/>
+					) : null}
+					<span className="num text-lg font-semibold tracking-tight">{value}</span>
 				</span>
 			)}
 			{delta === undefined ? null : (

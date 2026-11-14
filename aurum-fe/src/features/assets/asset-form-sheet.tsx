@@ -149,11 +149,11 @@ export function AssetFormSheet({ open, onOpenChange, asset, categories }: AssetF
 			liabilityType: isLiability ? (values.liabilityType ?? LIABILITY_TYPE.MANUAL) : undefined,
 			paymentFrequency:
 				isLiability && values.liabilityType === LIABILITY_TYPE.AUTOMATIC
-					? (values.paymentFrequency ?? undefined)
+					? values.paymentFrequency!
 					: undefined,
 			paymentAmount:
 				isLiability && values.liabilityType === LIABILITY_TYPE.AUTOMATIC
-					? (values.paymentAmount ?? undefined)
+					? values.paymentAmount!
 					: undefined
 		};
 
@@ -319,7 +319,7 @@ export function AssetFormSheet({ open, onOpenChange, asset, categories }: AssetF
 									render={({ field }) => (
 										<Select
 											value={field.value ?? undefined}
-											onValueChange={value => field.onChange(value === "" ? null : value)}
+											onValueChange={value => field.onChange(value)}
 										>
 											<SelectTrigger
 												id="asset-liability-type"
@@ -336,11 +336,6 @@ export function AssetFormSheet({ open, onOpenChange, asset, categories }: AssetF
 										</Select>
 									)}
 								/>
-								{form.formState.errors.liabilityType ? (
-									<p className="text-danger text-xs">
-										{form.formState.errors.liabilityType.message}
-									</p>
-								) : null}
 							</div>
 
 							{liabilityType === LIABILITY_TYPE.AUTOMATIC ? (
@@ -353,7 +348,7 @@ export function AssetFormSheet({ open, onOpenChange, asset, categories }: AssetF
 											render={({ field }) => (
 												<Select
 													value={field.value ?? undefined}
-													onValueChange={value => field.onChange(value === "" ? null : value)}
+													onValueChange={value => field.onChange(value)}
 												>
 													<SelectTrigger
 														id="asset-frequency"

@@ -305,6 +305,11 @@ function SnapshotsBody({ asset }: { asset: AssetDTO }) {
 												stopOpacity={0.32}
 											/>
 											<stop
+												offset="55%"
+												stopColor="var(--chart-1)"
+												stopOpacity={0.1}
+											/>
+											<stop
 												offset="100%"
 												stopColor="var(--chart-1)"
 												stopOpacity={0}

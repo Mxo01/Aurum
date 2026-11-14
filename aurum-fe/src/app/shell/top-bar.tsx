@@ -26,7 +26,7 @@ function initials(name?: string) {
 		.split(" ")
 		.filter(Boolean)
 		.slice(0, 2)
-		.map(part => part[0]?.toUpperCase() ?? "")
+		.map(part => part.charAt(0).toUpperCase())
 		.join("");
 }
 

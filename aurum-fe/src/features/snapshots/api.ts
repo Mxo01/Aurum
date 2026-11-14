@@ -11,7 +11,7 @@ export function useSnapshots(assetId: string | null) {
 	return useQuery({
 		queryKey: queryKeys.snapshots(assetId ?? ""),
 		queryFn: async () =>
-			unwrap(await api.GET("/snapshots", { params: { query: { assetId: assetId ?? undefined } } })),
+			unwrap(await api.GET("/snapshots", { params: { query: { assetId: assetId! } } })),
 		enabled: Boolean(assetId)
 	});
 }

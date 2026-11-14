@@ -1,7 +1,10 @@
 import { ArrowDownRight, ArrowUpRight, Moon, Sun } from "lucide-react";
+import { CountUp } from "@/components/app/count-up";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useThemeStore, type Theme } from "@/stores/theme";
 import { cn } from "@/lib/utils";
+
+const euro = new Intl.NumberFormat("en-US", { style: "currency", currency: "EUR" });
 
 const SAMPLE_ASSETS = [
 	{ name: "Apartment Berlin", value: "€430,000.00", change: "+4.37%", positive: true },
@@ -52,7 +55,12 @@ export function LandingPreview() {
 						<div className="flex flex-col gap-1">
 							<span className="text-muted-foreground text-[11px] font-medium">Net worth</span>
 							<div className="flex items-baseline gap-2">
-								<span className="num text-2xl font-semibold sm:text-3xl">€570,000.00</span>
+								<span className="num text-2xl font-semibold sm:text-3xl">
+									<CountUp
+										value={570000}
+										format={value => euro.format(value)}
+									/>
+								</span>
 								<span className="text-success bg-success/10 inline-flex items-center gap-0.5 rounded-md px-1.5 py-0.5 text-[11px] font-medium">
 									<ArrowUpRight className="size-3" /> 0.61%
 								</span>
@@ -105,9 +113,34 @@ export function LandingPreview() {
 									y2="135"
 								/>
 							</g>
+							<defs>
+								<linearGradient
+									id="preview-area"
+									x1="0"
+									y1="0"
+									x2="0"
+									y2="1"
+								>
+									<stop
+										offset="0%"
+										stopColor="var(--primary)"
+										stopOpacity={0.35}
+									/>
+									<stop
+										offset="55%"
+										stopColor="var(--primary)"
+										stopOpacity={0.12}
+									/>
+									<stop
+										offset="100%"
+										stopColor="var(--primary)"
+										stopOpacity={0}
+									/>
+								</linearGradient>
+							</defs>
 							<path
 								d="M0,148 C40,145 70,140 110,132 C150,124 180,122 220,112 C260,102 290,98 330,86 C370,74 400,68 440,56 C480,44 510,40 560,28 L560,180 L0,180 Z"
-								className="fill-primary/10"
+								fill="url(#preview-area)"
 							/>
 							<path
 								d="M0,148 C40,145 70,140 110,132 C150,124 180,122 220,112 C260,102 290,98 330,86 C370,74 400,68 440,56 C480,44 510,40 560,28"
