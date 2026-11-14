@@ -439,7 +439,8 @@ public class UserService {
 							s.getId(),
 							s.getReferenceDate(),
 							s.getAmountOriginalCurrency(),
-							s.getExchangeRateToBase()
+							s.getExchangeRateToBase(),
+							s.getSource().name()
 						)
 					)
 					.toList();

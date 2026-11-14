@@ -99,6 +99,7 @@ public class AssetService {
 	public Asset update(UUID id, Asset assetDetails, UUID userId) {
 		log.debug("AssetService#update - Updating assetId={} for userId={}", id, userId);
 		Asset asset = findById(id, userId);
+		boolean paymentScheduleChanged = paymentScheduleChanged(asset, assetDetails);
 
 		asset.setName(assetDetails.getName());
 		if (assetDetails.getCategory() != null) {
@@ -110,6 +111,13 @@ public class AssetService {
 		asset.setPaymentFrequency(assetDetails.getPaymentFrequency());
 		asset.setPaymentAmount(assetDetails.getPaymentAmount());
 		asset.setIsFavorite(Boolean.TRUE.equals(assetDetails.getIsFavorite()));
+
+		// A changed payment rule invalidates the persisted schedule: the next run derives it again
+		// instead of paying the old one. A settled liability stays settled.
+		if (paymentScheduleChanged) {
+			asset.setNextDueDate(null);
+			asset.setPaymentAnchorDay(null);
+		}
 
 		Asset updated = assetRepository.save(Objects.requireNonNull(asset));
 		log.info(
@@ -131,5 +139,24 @@ public class AssetService {
 	private Currency targetCurrencyOf(Asset asset) {
 		User user = asset.getUser();
 		return user != null ? user.getCurrency() : asset.getOriginalCurrency();
+	}
+
+	private boolean paymentScheduleChanged(Asset asset, Asset assetDetails) {
+		return (
+			!Objects.equals(asset.getLiabilityType(), assetDetails.getLiabilityType()) ||
+			!Objects.equals(asset.getPaymentFrequency(), assetDetails.getPaymentFrequency()) ||
+			paymentAmountChanged(asset.getPaymentAmount(), assetDetails.getPaymentAmount())
+		);
+	}
+
+	/**
+	 * Compared by value, not by scale: 200 and 200.00 are the same payment and must not re-derive a
+	 * schedule that is still valid.
+	 */
+	private boolean paymentAmountChanged(BigDecimal current, BigDecimal updated) {
+		if (current == null || updated == null) {
+			return current != updated;
+		}
+		return current.compareTo(updated) != 0;
 	}
 }

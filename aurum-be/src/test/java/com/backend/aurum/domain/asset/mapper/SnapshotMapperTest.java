@@ -9,6 +9,7 @@ import com.backend.aurum.domain.asset.dto.CreateSnapshotDTO;
 import com.backend.aurum.domain.asset.dto.SnapshotDTO;
 import com.backend.aurum.domain.asset.model.Asset;
 import com.backend.aurum.domain.asset.model.Snapshot;
+import com.backend.aurum.domain.asset.model.SnapshotSource;
 import com.backend.aurum.domain.asset.repository.AssetRepository;
 import com.backend.aurum.domain.shared.currency.CurrencyConversionService;
 import com.backend.aurum.domain.shared.currency.RateBook;
@@ -17,6 +18,8 @@ import com.backend.aurum.domain.shared.exception.NotFoundException;
 import com.backend.aurum.domain.shared.port.ExchangeRateProvider;
 import com.backend.aurum.domain.user.enums.Currency;
 import com.backend.aurum.domain.user.model.User;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
@@ -27,6 +30,8 @@ import org.instancio.Instancio;
 import org.instancio.Select;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -82,6 +87,7 @@ class SnapshotMapperTest {
 		assertThat(result.getAmountOriginalCurrency()).isEqualTo(mockDto.getAmountOriginalCurrency());
 		assertThat(result.getExchangeRateToBase()).isEqualTo(mockDto.getExchangeRateToBase());
 		assertThat(result.getAsset()).isEqualTo(mockAsset);
+		assertThat(result.getSource()).isEqualTo(SnapshotSource.USER);
 	}
 
 	@Test
@@ -205,6 +211,32 @@ class SnapshotMapperTest {
 		assertThat(result.getAmountBaseCurrency()).isEqualByComparingTo(CONVERTED_AMOUNT);
 		assertThat(result.getAssetId()).isEqualTo(mockAsset.getId());
 		assertThat(result.getAssetName()).isEqualTo(mockAsset.getName());
+	}
+
+	@ParameterizedTest(name = "toDto of a {0} row")
+	@EnumSource(SnapshotSource.class)
+	void toDto_carriesTheSourceInTheDtoAndItsJson(SnapshotSource source)
+		throws JsonProcessingException {
+		// GIVEN
+		Asset mockAsset = Instancio.of(Asset.class)
+			.set(Select.field(Asset::getOriginalCurrency), USER_CURRENCY)
+			.create();
+		Snapshot mockSnapshot = Instancio.of(Snapshot.class)
+			.set(Select.field(Snapshot::getAsset), mockAsset)
+			.set(Select.field(Snapshot::getSource), source)
+			.set(Select.field(Snapshot::getReferenceDate), REFERENCE_DATE)
+			.set(Select.field(Snapshot::getAmountOriginalCurrency), ORIGINAL_AMOUNT)
+			.create();
+		RateBook mockBook = book(USER_CURRENCY, List.of(USER_CURRENCY), List.of(REFERENCE_DATE));
+
+		// WHEN
+		SnapshotDTO result = testSubject.toDto(mockSnapshot, mockBook);
+
+		// THEN
+		assertThat(result.getSource()).isEqualTo(source);
+		assertThat(new ObjectMapper().findAndRegisterModules().writeValueAsString(result)).contains(
+			"\"source\":\"" + source.name() + "\""
+		);
 	}
 
 	@Test

@@ -19,6 +19,7 @@ import jakarta.persistence.OrderBy;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -71,6 +72,15 @@ public class Asset {
 
 	@Column(name = "payment_amount", precision = 19, scale = 4)
 	private BigDecimal paymentAmount;
+
+	@Column(name = "next_due_date")
+	private LocalDate nextDueDate;
+
+	@Column(name = "payment_anchor_day")
+	private Short paymentAnchorDay;
+
+	@Column(name = "settled_at")
+	private LocalDateTime settledAt;
 
 	@Column(nullable = false, updatable = false)
 	private LocalDateTime createdAt;

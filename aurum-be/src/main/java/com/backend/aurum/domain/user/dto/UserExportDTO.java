@@ -21,7 +21,8 @@ public record UserExportDTO(
 		UUID id,
 		LocalDate referenceDate,
 		BigDecimal amountOriginalCurrency,
-		BigDecimal exchangeRateToBase
+		BigDecimal exchangeRateToBase,
+		String source
 	) {}
 
 	public record AssetExport(
