@@ -46,6 +46,7 @@ paths = [
   # Stesso client ID pubblico nel nuovo frontend React (default di build e template).
   # aurum-fe-react/ e' la vecchia cartella prima della rinomina in aurum-fe/.
   '''aurum-fe/\.env\.example$''',
+  '''aurum-fe/\.env\.production$''',
   '''aurum-fe-react/\.env\.example$''',
   '''aurum-fe/src/lib/env\.ts$''',
   # Template senza valori reali
