@@ -180,7 +180,7 @@ export function TargetsCard({ targets, isLoading, currency }: TargetsCardProps) 
 	const isSaving = createTarget.isPending || updateTarget.isPending;
 
 	return (
-		<section className="bg-card border-border flex flex-col rounded-xl border p-4 sm:p-5">
+		<section className="bg-card border-border relative flex h-full max-h-[32rem] flex-col rounded-xl border p-4 sm:p-5">
 			<div className="flex items-center justify-between gap-2">
 				<span className="text-muted-foreground flex items-center gap-2 text-[11px] font-medium">
 					<TargetIcon className="size-3.5" /> Financial target
@@ -218,10 +218,10 @@ export function TargetsCard({ targets, isLoading, currency }: TargetsCardProps) 
 					<Skeleton className="h-4 w-40" />
 				</div>
 			) : targets?.length ? (
-				<div className="relative mt-4 flex min-h-0 flex-col">
+				<div className="relative mt-4 flex min-h-0 flex-1 flex-col">
 					<div
 						ref={listRef}
-						className="flex max-h-[22rem] flex-col gap-3 overflow-hidden"
+						className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden"
 					>
 						{targets.map((target, index) => {
 							const completion = Math.max(0, Math.min(100, target.completionPercentage ?? 0));
@@ -230,7 +230,7 @@ export function TargetsCard({ targets, isLoading, currency }: TargetsCardProps) 
 							return (
 								<div
 									key={target.id ?? target.name}
-									className={cn("flex flex-col gap-1.5", index > 0 && "border-t pt-3")}
+									className={cn("flex shrink-0 flex-col gap-1.5", index > 0 && "border-t pt-3")}
 								>
 									<div className="flex items-start justify-between gap-2">
 										<div className="min-w-0">
@@ -268,12 +268,12 @@ export function TargetsCard({ targets, isLoading, currency }: TargetsCardProps) 
 
 					{isClipped ? (
 						<>
-							<div className="from-card pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t to-transparent" />
-							<div className="absolute inset-x-0 bottom-0 flex justify-center">
+							<div className="pointer-events-none absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-black/40 via-black/15 to-transparent dark:from-black/85 dark:via-black/40" />
+							<div className="absolute inset-x-0 bottom-0 flex justify-center pb-1">
 								<Button
 									size="sm"
-									variant="outline"
-									className="bg-card"
+									variant="secondary"
+									className="shadow-lg"
 									onClick={() => setListOpen(true)}
 								>
 									View all

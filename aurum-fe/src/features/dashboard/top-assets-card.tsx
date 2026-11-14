@@ -31,7 +31,7 @@ export function TopAssetsCard({ summary, isLoading }: TopAssetsCardProps) {
 	const allocation = Object.entries(summary?.assetAllocation ?? {});
 
 	return (
-		<section className="bg-card border-border flex flex-col rounded-xl border p-4 sm:p-5">
+		<section className="bg-card border-border flex h-full flex-col rounded-xl border p-4 sm:p-5">
 			<div className="flex items-center justify-between gap-2">
 				<span className="text-muted-foreground flex items-center gap-2 text-[11px] font-medium">
 					<Wallet className="size-3.5" /> Top assets
