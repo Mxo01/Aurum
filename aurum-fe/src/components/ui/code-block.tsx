@@ -54,7 +54,7 @@ export function CodeBlockTitle({ className, ...props }: ComponentProps<"div">) {
 		<div
 			data-slot="code-block-title"
 			className={cn(
-				"text-foreground min-w-0 truncate font-sans text-sm font-medium [&_svg]:pointer-events-none [&_svg]:inline-block [&_svg]:align-middle [&_svg:not([class*='size-'])]:size-4 group-data-[size=sm]/code-block:text-xs group-data-[size=sm]/code-block:[&_svg:not([class*='size-'])]:size-3.5",
+				"text-foreground min-w-0 truncate font-sans text-sm font-medium [&_svg]:pointer-events-none [&_svg]:me-1.5 [&_svg]:inline-block [&_svg]:align-middle [&_svg:not([class*='size-'])]:size-4 group-data-[size=sm]/code-block:text-xs group-data-[size=sm]/code-block:[&_svg:not([class*='size-'])]:size-3.5",
 				className
 			)}
 			{...props}

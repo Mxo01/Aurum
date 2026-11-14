@@ -1,4 +1,4 @@
-import { Terminal } from "lucide-react";
+import { FileJson } from "lucide-react";
 import { useState } from "react";
 import {
 	CodeBlock,
@@ -54,9 +54,10 @@ export function McpSetup() {
 			</Tabs>
 
 			<CodeBlock>
-				<CodeBlockHeader>
-					<CodeBlockTitle>
-						<Terminal className="size-3.5" /> MCP config
+				<CodeBlockHeader className="max-sm:pt-2">
+					<CodeBlockTitle className="hidden sm:block">
+						<FileJson className="size-3.5" />
+						{platform === "desktop" ? "claude_desktop_config.json" : "mcp.json"}
 					</CodeBlockTitle>
 					<CodeBlockActions>
 						<CodeBlockCopyButton value={config} />
