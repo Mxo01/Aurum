@@ -1,9 +1,10 @@
-import { LineChart as LineChartIcon } from "lucide-react";
+import { ChartLine, ChartNoAxesCombined, LineChart as LineChartIcon } from "lucide-react";
 import { useState } from "react";
 import {
 	Area,
-	AreaChart,
+	Bar,
 	CartesianGrid,
+	ComposedChart,
 	Line,
 	ResponsiveContainer,
 	Tooltip,
@@ -23,6 +24,7 @@ import {
 } from "@/components/ui/select";
 import { usePreferences } from "@/lib/format/use-preferences";
 import { usePrefersReducedMotion } from "@/lib/use-prefers-reduced-motion";
+import { useChartTypeStore, type NetWorthChartType } from "@/stores/chart-type";
 import type { AnalyticsSummaryDTO, ChartDataDTO, VariationDTO } from "@/lib/api/types";
 import { cn } from "@/lib/utils";
 import {
@@ -40,6 +42,11 @@ const PERIODS: { label: string; value: keyof VariationDTO }[] = [
 ];
 
 const FAVORITE_COLORS = ["var(--chart-2)", "var(--chart-3)", "var(--chart-4)", "var(--chart-5)"];
+
+const CHART_TYPES = [
+	{ label: "Area", value: "area", icon: ChartLine },
+	{ label: "Mixed", value: "mixed", icon: ChartNoAxesCombined }
+] as const;
 
 interface NetWorthChartProps {
 	summary: AnalyticsSummaryDTO | undefined;
@@ -59,6 +66,8 @@ export function NetWorthChart({
 	const { money } = usePreferences();
 	const reduceMotion = usePrefersReducedMotion();
 	const [period, setPeriod] = useState<keyof VariationDTO>("oneYear");
+	const chartType = useChartTypeStore(state => state.netWorth);
+	const setChartType = useChartTypeStore(state => state.setNetWorth);
 
 	const variation = summary?.assetVariations?.[period];
 	const averageAbsolute = monthlyAverage(summary?.assetVariations?.oneYear.absolute);
@@ -150,6 +159,25 @@ export function NetWorthChart({
 								</TabsList>
 							</Tabs>
 						) : null}
+
+						<Tabs
+							value={chartType}
+							onValueChange={value => setChartType(value as NetWorthChartType)}
+						>
+							<TabsList aria-label="Chart type">
+								{CHART_TYPES.map(item => (
+									<TabsTrigger
+										key={item.value}
+										value={item.value}
+										aria-controls={undefined}
+										aria-label={`${item.label} chart`}
+									>
+										<item.icon className="size-3.5" />
+										<span className="hidden sm:inline">{item.label}</span>
+									</TabsTrigger>
+								))}
+							</TabsList>
+						</Tabs>
 					</div>
 				</div>
 
@@ -161,7 +189,7 @@ export function NetWorthChart({
 							width="100%"
 							height="100%"
 						>
-							<AreaChart
+							<ComposedChart
 								data={rows}
 								margin={{ top: 8, right: 4, left: 0, bottom: 0 }}
 							>
@@ -185,7 +213,11 @@ export function NetWorthChart({
 									tickFormatter={(value: number) => money(value, { compact: true, digits: 0 })}
 								/>
 								<Tooltip
-									cursor={{ stroke: "var(--border)" }}
+									cursor={
+										chartType === "mixed"
+											? { fill: "var(--muted)", opacity: 0.5 }
+											: { stroke: "var(--border)" }
+									}
 									formatter={(value, name) => [money(Number(value), { digits: 0 }), name]}
 									labelStyle={{ color: "var(--muted-foreground)", fontSize: 11 }}
 									contentStyle={{
@@ -195,37 +227,52 @@ export function NetWorthChart({
 										fontSize: 12
 									}}
 								/>
-								<defs>
-									<linearGradient
-										id="net-worth-fill"
-										x1="0"
-										y1="0"
-										x2="0"
-										y2="1"
-									>
-										<stop
-											offset="0%"
-											stopColor="var(--chart-1)"
-											stopOpacity={0.35}
+								{chartType === "mixed" ? (
+									<Bar
+										dataKey="netWorth"
+										name="Net worth"
+										fill="var(--chart-1)"
+										opacity={0.8}
+										radius={[4, 4, 0, 0]}
+										maxBarSize={28}
+										isAnimationActive={!reduceMotion}
+										animationDuration={700}
+									/>
+								) : (
+									<>
+										<defs>
+											<linearGradient
+												id="net-worth-fill"
+												x1="0"
+												y1="0"
+												x2="0"
+												y2="1"
+											>
+												<stop
+													offset="0%"
+													stopColor="var(--chart-1)"
+													stopOpacity={0.35}
+												/>
+												<stop
+													offset="100%"
+													stopColor="var(--chart-1)"
+													stopOpacity={0.02}
+												/>
+											</linearGradient>
+										</defs>
+										<Area
+											type="monotone"
+											dataKey="netWorth"
+											name="Net worth"
+											stroke="var(--chart-1)"
+											strokeWidth={2}
+											fill="url(#net-worth-fill)"
+											dot={false}
+											isAnimationActive={!reduceMotion}
+											animationDuration={700}
 										/>
-										<stop
-											offset="100%"
-											stopColor="var(--chart-1)"
-											stopOpacity={0.02}
-										/>
-									</linearGradient>
-								</defs>
-								<Area
-									type="monotone"
-									dataKey="netWorth"
-									name="Net worth"
-									stroke="var(--chart-1)"
-									strokeWidth={2}
-									fill="url(#net-worth-fill)"
-									dot={false}
-									isAnimationActive={!reduceMotion}
-									animationDuration={700}
-								/>
+									</>
+								)}
 								{favorites.map((favorite, index) => (
 									<Line
 										key={favorite.key}
@@ -239,7 +286,7 @@ export function NetWorthChart({
 										animationDuration={700}
 									/>
 								))}
-							</AreaChart>
+							</ComposedChart>
 						</ResponsiveContainer>
 					</div>
 				) : (
