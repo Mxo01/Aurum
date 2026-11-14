@@ -57,15 +57,21 @@ export function McpSetup() {
 			</Tabs>
 
 			<CodeBlock>
-				<CodeBlockHeader>
-					<CodeBlockTitle className={platform === "desktop" ? undefined : "hidden"}>
-						<FileJson className="size-3.5" />
-						mcp.json
-					</CodeBlockTitle>
+				{platform === "desktop" ? (
+					<CodeBlockHeader>
+						<CodeBlockTitle>
+							<FileJson className="size-3.5" />
+							mcp.json
+						</CodeBlockTitle>
+						<CodeBlockActions>
+							<CodeBlockCopyButton value={config} />
+						</CodeBlockActions>
+					</CodeBlockHeader>
+				) : (
 					<CodeBlockActions>
 						<CodeBlockCopyButton value={config} />
 					</CodeBlockActions>
-				</CodeBlockHeader>
+				)}
 				<CodeBlockContent wrap>
 					{lines.map((line, index) => (
 						<CodeBlockLine key={index}>{line}</CodeBlockLine>
