@@ -1,4 +1,5 @@
 import { fireEvent, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { createElement } from "react";
 import { http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
@@ -67,4 +68,26 @@ describe("DashboardPage", () => {
 		fireEvent.click(screen.getByRole("button", { name: "Try again" }));
 		await waitFor(() => expect(calls).toBeGreaterThan(callsBeforeRetry));
 	});
+});
+
+it("should clear the target form when the sheet closes", async () => {
+	// GIVEN
+	const user = userEvent.setup();
+	const testSubject = DashboardPage;
+	renderWithProviders(createElement(testSubject), { route: "/dashboard" });
+	await screen.findByText("Financial target");
+
+	await user.click(screen.getByRole("button", { name: "Target actions" }));
+	await user.click(await screen.findByRole("menuitem", { name: "Add target" }));
+	const nameInput = await screen.findByLabelText("Name");
+	await user.type(nameInput, "Leftover target");
+	await user.click(screen.getByRole("button", { name: "Close" }));
+	await waitFor(() => expect(screen.queryByLabelText("Name")).not.toBeInTheDocument());
+
+	// WHEN
+	await user.click(screen.getByRole("button", { name: "Target actions" }));
+	await user.click(await screen.findByRole("menuitem", { name: "Add target" }));
+
+	// THEN
+	expect(await screen.findByLabelText("Name")).toHaveValue("");
 });

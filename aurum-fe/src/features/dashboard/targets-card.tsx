@@ -125,6 +125,8 @@ export function TargetsCard({ targets, isLoading, currency }: TargetsCardProps) 
 
 	const closeForm = () => {
 		setFormOpen(false);
+		setEditing(null);
+		form.reset(emptyValues());
 		clearCreateParam();
 	};
 
