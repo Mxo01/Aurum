@@ -54,6 +54,11 @@ describe("CashflowSummary", () => {
 		expect(screen.getAllByText(money(totals.balance, { digits: 0 })).length).toBeGreaterThan(0);
 		expect(screen.getAllByText(percent(totals.savingsRate ?? 0, 1)).length).toBeGreaterThan(0);
 		expect(screen.getAllByText(percent(25))).toHaveLength(2);
+		expect(screen.getByText("2 months with recorded data")).toBeInTheDocument();
+		expect(screen.getByRole("progressbar", { name: "Savings rate" })).toHaveAttribute(
+			"aria-valuenow",
+			"50"
+		);
 	});
 
 	it("should show a dash when the savings rate is undefined", () => {
@@ -71,7 +76,12 @@ describe("CashflowSummary", () => {
 		renderWithProviders(createElement(testSubject, mockProps));
 
 		// THEN
-		expect(screen.getByText("—")).toBeInTheDocument();
+		expect(screen.getAllByText("—").length).toBeGreaterThan(0);
+		expect(screen.getByText("1 month with recorded data")).toBeInTheDocument();
+		expect(screen.getByRole("progressbar", { name: "Savings rate" })).toHaveAttribute(
+			"aria-valuenow",
+			"0"
+		);
 		expect(
 			screen.getAllByText(money(totals.balance, { digits: 0, signDisplay: "exceptZero" })).length
 		).toBeGreaterThan(0);
@@ -92,7 +102,11 @@ describe("CashflowSummary", () => {
 		renderWithProviders(createElement(testSubject, mockProps));
 
 		// THEN
-		expect(screen.getByText(percent(0, 1))).toBeInTheDocument();
+		expect(screen.getAllByText(percent(0, 1)).length).toBeGreaterThan(0);
+		expect(screen.getByRole("progressbar", { name: "Savings rate" })).toHaveAttribute(
+			"aria-valuenow",
+			"0"
+		);
 		expect(
 			screen.getByText(money(totals.balance, { digits: 0, signDisplay: "exceptZero" }))
 		).toBeInTheDocument();
@@ -115,6 +129,8 @@ describe("CashflowSummary", () => {
 		// THEN
 		expect(container.querySelectorAll(".animate-pulse").length).toBeGreaterThan(0);
 		expect(screen.queryByText(money(totals.earned, { digits: 0 }))).not.toBeInTheDocument();
+		expect(screen.queryByText(/with recorded data/)).not.toBeInTheDocument();
+		expect(screen.queryByRole("progressbar", { name: "Savings rate" })).not.toBeInTheDocument();
 	});
 
 	it("should render zero averages without active months", () => {
@@ -133,5 +149,6 @@ describe("CashflowSummary", () => {
 
 		// THEN
 		expect(screen.getAllByText(money(0, { digits: 0 })).length).toBeGreaterThan(0);
+		expect(screen.getByText("0 months with recorded data")).toBeInTheDocument();
 	});
 });

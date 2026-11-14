@@ -1,6 +1,7 @@
 import { Activity, ArrowLeftRight, Shield, type LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { Delta } from "@/components/app/delta";
+import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePreferences } from "@/lib/format/use-preferences";
 import { cn } from "@/lib/utils";
@@ -68,17 +69,26 @@ export function CashflowSummary({
 				icon={Activity}
 				title="Monthly average"
 			>
-				<div className="grid grid-cols-2 divide-x divide-border">
-					<Metric
-						className="pr-4"
-						label="Earned"
-						value={isLoading ? null : money(averageEarned, { digits: 0 })}
-					/>
-					<Metric
-						className="pl-4"
-						label="Spent"
-						value={isLoading ? null : money(averageSpent, { digits: 0 })}
-					/>
+				<div className="flex h-full flex-col justify-between gap-4">
+					<div className="grid grid-cols-2 divide-x divide-border">
+						<Metric
+							className="pr-4"
+							label="Earned"
+							value={isLoading ? null : money(averageEarned, { digits: 0 })}
+						/>
+						<Metric
+							className="pl-4"
+							label="Spent"
+							value={isLoading ? null : money(averageSpent, { digits: 0 })}
+						/>
+					</div>
+					{isLoading ? (
+						<Skeleton className="h-3 w-44" />
+					) : (
+						<p className="text-muted-foreground text-[11px]">
+							{activeMonths} {activeMonths === 1 ? "month" : "months"} with recorded data
+						</p>
+					)}
 				</div>
 			</SummaryCard>
 
@@ -86,20 +96,30 @@ export function CashflowSummary({
 				icon={Shield}
 				title="Balance & rate"
 			>
-				<div className="grid grid-cols-2 divide-x divide-border">
-					<Metric
-						className="pr-4"
-						label="Net balance"
-						value={
-							isLoading ? null : money(totals.balance, { digits: 0, signDisplay: "exceptZero" })
-						}
-						indicator={totals.balance >= 0 ? "success" : "danger"}
-					/>
-					<Metric
-						className="pl-4"
-						label="Savings rate"
-						value={isLoading ? null : savingsRate === null ? "—" : percent(savingsRate, 1)}
-					/>
+				<div className="flex h-full flex-col justify-between gap-4">
+					<div className="grid grid-cols-2 divide-x divide-border">
+						<Metric
+							className="pr-4"
+							label="Net balance"
+							value={
+								isLoading ? null : money(totals.balance, { digits: 0, signDisplay: "exceptZero" })
+							}
+							indicator={totals.balance >= 0 ? "success" : "danger"}
+						/>
+						<Metric
+							className="pl-4"
+							label="Savings rate"
+							value={isLoading ? null : savingsRate === null ? "—" : percent(savingsRate, 1)}
+						/>
+					</div>
+					{isLoading ? (
+						<Skeleton className="h-1.5 w-full" />
+					) : (
+						<Progress
+							value={savingsRate ?? 0}
+							label="Savings rate"
+						/>
+					)}
 				</div>
 			</SummaryCard>
 		</section>
