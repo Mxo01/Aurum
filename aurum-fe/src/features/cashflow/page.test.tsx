@@ -27,6 +27,8 @@ describe("CashFlowPage", () => {
 		expect(screen.getByText("+€15,930")).toBeInTheDocument();
 		expect(screen.getByText("24.1%")).toBeInTheDocument();
 		expect(screen.getAllByText("JAN").length).toBeGreaterThan(0);
+		expect(screen.queryAllByRole("progressbar")).toHaveLength(0);
+		expect(screen.queryByText(/with recorded data/)).not.toBeInTheDocument();
 	});
 
 	it("should edit a month with an optimistic save", async () => {

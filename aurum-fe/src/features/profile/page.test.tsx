@@ -122,6 +122,20 @@ describe("ProfilePage", () => {
 		expect(await screen.findByRole("button", { name: "Copied" })).toBeInTheDocument();
 	});
 
+	it("should show the mcp config file and hide it on the mobile tab", async () => {
+		// GIVEN
+		useProfileFixture();
+		renderWithProviders(createElement(ProfilePage));
+		fireEvent.mouseDown(screen.getByRole("tab", { name: "Integrations" }));
+
+		// WHEN
+		fireEvent.mouseDown(screen.getByRole("tab", { name: "Mobile / Web" }));
+
+		// THEN
+		expect(screen.getByText("Read and write Aurum data from any MCP client.")).toBeInTheDocument();
+		await waitFor(() => expect(screen.queryByText("mcp.json")).not.toBeInTheDocument());
+	});
+
 	it("should export the data", async () => {
 		// GIVEN
 		useProfileFixture();

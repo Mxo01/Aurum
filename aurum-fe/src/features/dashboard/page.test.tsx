@@ -4,7 +4,7 @@ import { createElement } from "react";
 import { http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
 import { env } from "@/lib/env";
-import { buildChart } from "@/test/fixtures/portfolio";
+import { buildChart, buildTarget } from "@/test/fixtures/portfolio";
 import { server } from "@/test/msw/server";
 import { renderWithProviders } from "@/test/render";
 import { DashboardPage } from "./page";
@@ -90,4 +90,26 @@ it("should clear the target form when the sheet closes", async () => {
 
 	// THEN
 	expect(await screen.findByLabelText("Name")).toHaveValue("");
+});
+
+it("should list every target", async () => {
+	// GIVEN
+	server.use(
+		http.get(`${env.apiUrl}/targets`, () =>
+			HttpResponse.json([
+				buildTarget({ id: "t1", name: "House" }),
+				buildTarget({ id: "t2", name: "Car" }),
+				buildTarget({ id: "t3", name: "Trip" })
+			])
+		)
+	);
+	const testSubject = DashboardPage;
+
+	// WHEN
+	renderWithProviders(createElement(testSubject), { route: "/dashboard" });
+
+	// THEN
+	expect(await screen.findByText("House")).toBeInTheDocument();
+	expect(screen.getByText("Car")).toBeInTheDocument();
+	expect(screen.getByText("Trip")).toBeInTheDocument();
 });

@@ -45,3 +45,15 @@ test("shows the net worth chart before the stat tiles on mobile", async ({ page 
 	expect(firstTile).not.toBeNull();
 	expect(chart!.y).toBeLessThan(firstTile!.y);
 });
+
+test("does not allow a past target deadline", async ({ page }) => {
+	await page.goto("/dashboard");
+	await page.getByRole("button", { name: "Target actions" }).click();
+	await page.getByRole("menuitem", { name: "Add target" }).click();
+	await page.getByRole("button", { name: "Deadline" }).click();
+
+	await expect(page.getByRole("button", { name: "Go to the Previous Month" })).toHaveAttribute(
+		"aria-disabled",
+		"true"
+	);
+});

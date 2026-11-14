@@ -32,6 +32,10 @@ describe("AssetFormSheet", () => {
 		// THEN
 		expect(screen.getByRole("heading", { name: "New asset" })).toBeInTheDocument();
 		expect(screen.getByLabelText("Initial value")).toBeInTheDocument();
+		expect(screen.getByText("Mark as favorite")).toBeInTheDocument();
+		expect(
+			screen.getByText("Favorite assets are plotted on the dashboard's net worth chart.")
+		).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: "Add asset" })).toBeDisabled();
 	});
 

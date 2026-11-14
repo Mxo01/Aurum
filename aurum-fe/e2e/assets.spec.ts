@@ -60,7 +60,7 @@ test("filters the list with the search", async ({ page }) => {
 	await expect(page.getByText("Mortgage").filter({ visible: true }).first()).toBeVisible();
 });
 
-test("moves the date picker across months and years", async ({ page }) => {
+test("bounds the asset value date at today", async ({ page }) => {
 	await page.goto("/assets");
 	await page.getByRole("button", { name: "Add asset" }).click();
 	await page.getByRole("button", { name: "Value date" }).click();
@@ -69,9 +69,10 @@ test("moves the date picker across months and years", async ({ page }) => {
 	const month = calendar.locator("select").first();
 	const year = calendar.locator("select").nth(1);
 
-	const currentMonth = await month.inputValue();
-	await page.getByRole("button", { name: "Go to the Next Month" }).click();
-	await expect(month).not.toHaveValue(currentMonth);
+	await expect(page.getByRole("button", { name: "Go to the Next Month" })).toHaveAttribute(
+		"aria-disabled",
+		"true"
+	);
 
 	await month.selectOption({ label: "March" });
 	await expect(month).toHaveValue("2");
