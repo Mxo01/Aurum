@@ -8,13 +8,17 @@ import java.time.Instant;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.server.ResponseStatusException;
 
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+	private static final String UNRECOGNIZED_STATUS_REASON = "Request failed";
 
 	@ExceptionHandler(NotFoundException.class)
 	public ResponseEntity<Map<String, Object>> handleNotFound(NotFoundException ex) {
@@ -51,19 +55,41 @@ public class GlobalExceptionHandler {
 		return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
 	}
 
+	@ExceptionHandler(ResponseStatusException.class)
+	public ResponseEntity<Map<String, Object>> handleResponseStatus(ResponseStatusException ex) {
+		HttpStatusCode statusCode = ex.getStatusCode();
+		String reasonPhrase = resolveReasonPhrase(statusCode);
+		String message = ex.getReason() != null ? ex.getReason() : reasonPhrase;
+		log.warn("Request rejected with status {}: {}", statusCode.value(), message);
+		return buildResponse(statusCode.value(), reasonPhrase, message);
+	}
+
 	@ExceptionHandler(Exception.class)
 	public ResponseEntity<Map<String, Object>> handleGeneric(Exception ex) {
 		log.error("Unhandled exception", ex);
 		return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred");
 	}
 
+	private static String resolveReasonPhrase(HttpStatusCode statusCode) {
+		HttpStatus status = HttpStatus.resolve(statusCode.value());
+		return status != null ? status.getReasonPhrase() : UNRECOGNIZED_STATUS_REASON;
+	}
+
 	private ResponseEntity<Map<String, Object>> buildResponse(HttpStatus status, String message) {
-		return ResponseEntity.status(status).body(
+		return buildResponse(status.value(), status.getReasonPhrase(), message);
+	}
+
+	private ResponseEntity<Map<String, Object>> buildResponse(
+		int statusValue,
+		String reasonPhrase,
+		String message
+	) {
+		return ResponseEntity.status(statusValue).body(
 			Map.of(
 				"status",
-				status.value(),
+				statusValue,
 				"error",
-				status.getReasonPhrase(),
+				reasonPhrase,
 				"message",
 				message,
 				"timestamp",

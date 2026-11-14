@@ -13,13 +13,21 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.server.ResponseStatusException;
 
 @ExtendWith(MockitoExtension.class)
 class GlobalExceptionHandlerTest {
 
 	private static final String EXCHANGE_RATE_UNAVAILABLE_MESSAGE =
 		"Exchange rates are temporarily unavailable, please retry later";
+	private static final String CONFLICT_REASON =
+		"Category still holds 2 asset(s); move or delete them first";
+	private static final String DEFAULT_CATEGORY_FORBIDDEN_REASON =
+		"Default categories cannot be deleted";
+	private static final String UNRECOGNIZED_STATUS_REASON = "Request failed";
+	private static final int UNRECOGNIZED_STATUS_CODE = 599;
 	private static final Set<String> RESPONSE_FIELDS = Set.of(
 		"status",
 		"error",
@@ -29,6 +37,100 @@ class GlobalExceptionHandlerTest {
 
 	@InjectMocks
 	private GlobalExceptionHandler testSubject;
+
+	@Test
+	void handleResponseStatus_returns409_withTheConflictReason() {
+		// GIVEN
+		ResponseStatusException mockException = new ResponseStatusException(
+			HttpStatus.CONFLICT,
+			CONFLICT_REASON
+		);
+
+		// WHEN
+		ResponseEntity<Map<String, Object>> expectedResponse = testSubject.handleResponseStatus(
+			mockException
+		);
+
+		// THEN
+		assertThat(expectedResponse.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+		assertThat(expectedResponse.getBody()).containsOnlyKeys(RESPONSE_FIELDS);
+		assertThat(expectedResponse.getBody()).containsEntry("status", HttpStatus.CONFLICT.value());
+		assertThat(expectedResponse.getBody()).containsEntry(
+			"error",
+			HttpStatus.CONFLICT.getReasonPhrase()
+		);
+		assertThat(expectedResponse.getBody()).containsEntry("message", CONFLICT_REASON);
+		assertThat(expectedResponse.getBody()).doesNotContainValue(null);
+	}
+
+	@Test
+	void handleResponseStatus_returns403_withTheForbiddenReason() {
+		// GIVEN
+		ResponseStatusException mockException = new ResponseStatusException(
+			HttpStatus.FORBIDDEN,
+			DEFAULT_CATEGORY_FORBIDDEN_REASON
+		);
+
+		// WHEN
+		ResponseEntity<Map<String, Object>> expectedResponse = testSubject.handleResponseStatus(
+			mockException
+		);
+
+		// THEN
+		assertThat(expectedResponse.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+		assertThat(expectedResponse.getBody()).containsEntry("status", HttpStatus.FORBIDDEN.value());
+		assertThat(expectedResponse.getBody()).containsEntry(
+			"error",
+			HttpStatus.FORBIDDEN.getReasonPhrase()
+		);
+		assertThat(expectedResponse.getBody()).containsEntry(
+			"message",
+			DEFAULT_CATEGORY_FORBIDDEN_REASON
+		);
+	}
+
+	@Test
+	void handleResponseStatus_fallsBackToTheReasonPhrase_whenTheExceptionHasNoReason() {
+		// GIVEN
+		ResponseStatusException mockException = new ResponseStatusException(HttpStatus.NOT_FOUND);
+
+		// WHEN
+		ResponseEntity<Map<String, Object>> expectedResponse = testSubject.handleResponseStatus(
+			mockException
+		);
+
+		// THEN
+		assertThat(expectedResponse.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+		assertThat(expectedResponse.getBody()).containsEntry(
+			"message",
+			HttpStatus.NOT_FOUND.getReasonPhrase()
+		);
+		assertThat(expectedResponse.getBody()).containsEntry(
+			"error",
+			HttpStatus.NOT_FOUND.getReasonPhrase()
+		);
+		assertThat(expectedResponse.getBody()).doesNotContainValue(null);
+	}
+
+	@Test
+	void handleResponseStatus_fallsBackToTheGenericReason_whenTheStatusCodeIsUnrecognized() {
+		// GIVEN
+		ResponseStatusException mockException = new ResponseStatusException(
+			HttpStatusCode.valueOf(UNRECOGNIZED_STATUS_CODE)
+		);
+
+		// WHEN
+		ResponseEntity<Map<String, Object>> expectedResponse = testSubject.handleResponseStatus(
+			mockException
+		);
+
+		// THEN
+		assertThat(expectedResponse.getStatusCode().value()).isEqualTo(UNRECOGNIZED_STATUS_CODE);
+		assertThat(expectedResponse.getBody()).containsEntry("status", UNRECOGNIZED_STATUS_CODE);
+		assertThat(expectedResponse.getBody()).containsEntry("error", UNRECOGNIZED_STATUS_REASON);
+		assertThat(expectedResponse.getBody()).containsEntry("message", UNRECOGNIZED_STATUS_REASON);
+		assertThat(expectedResponse.getBody()).doesNotContainValue(null);
+	}
 
 	@Test
 	void handleExchangeRateUnavailable_returns503_withTheDocumentedMessage() {

@@ -2,11 +2,14 @@ package com.backend.aurum.domain.asset.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.backend.aurum.domain.asset.model.AssetCategory;
 import com.backend.aurum.domain.asset.repository.AssetCategoryRepository;
+import com.backend.aurum.domain.asset.repository.AssetRepository;
 import com.backend.aurum.domain.user.model.User;
 import java.util.List;
 import java.util.Optional;
@@ -18,13 +21,22 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
 @ExtendWith(MockitoExtension.class)
 class AssetCategoryServiceTest {
 
+	private static final long NO_ASSETS = 0L;
+	private static final long ASSET_COUNT_IN_CATEGORY = 2L;
+	private static final String EXPECTED_CONFLICT_REASON =
+		"Category still holds " + ASSET_COUNT_IN_CATEGORY + " asset(s); move or delete them first";
+
 	@Mock
 	private AssetCategoryRepository categoryRepository;
+
+	@Mock
+	private AssetRepository assetRepository;
 
 	@InjectMocks
 	private AssetCategoryService testSubject;
@@ -141,7 +153,7 @@ class AssetCategoryServiceTest {
 	}
 
 	@Test
-	void delete_delegatesToRepository_whenAuthorized() {
+	void delete_delegatesToRepository_whenOwnCategoryHoldsNoAssets() {
 		// GIVEN
 		UUID mockUserId = UUID.randomUUID();
 		User mockUser = Instancio.of(User.class).set(Select.field(User::getId), mockUserId).create();
@@ -149,12 +161,36 @@ class AssetCategoryServiceTest {
 			.set(Select.field(AssetCategory::getUser), mockUser)
 			.create();
 		when(categoryRepository.findById(mockCategory.getId())).thenReturn(Optional.of(mockCategory));
+		when(assetRepository.countByCategoryId(mockCategory.getId())).thenReturn(NO_ASSETS);
 
 		// WHEN
 		testSubject.delete(mockCategory.getId(), mockUserId);
 
 		// THEN
 		verify(categoryRepository).deleteById(mockCategory.getId());
+	}
+
+	@Test
+	void delete_throwsConflict_whenCategoryStillHoldsAssets() {
+		// GIVEN
+		UUID mockUserId = UUID.randomUUID();
+		User mockUser = Instancio.of(User.class).set(Select.field(User::getId), mockUserId).create();
+		AssetCategory mockCategory = Instancio.of(AssetCategory.class)
+			.set(Select.field(AssetCategory::getUser), mockUser)
+			.create();
+		when(categoryRepository.findById(mockCategory.getId())).thenReturn(Optional.of(mockCategory));
+		when(assetRepository.countByCategoryId(mockCategory.getId())).thenReturn(
+			ASSET_COUNT_IN_CATEGORY
+		);
+
+		// WHEN / THEN
+		assertThatThrownBy(() ->
+			testSubject.delete(mockCategory.getId(), mockUserId)
+		).isInstanceOfSatisfying(ResponseStatusException.class, expectedException -> {
+			assertThat(expectedException.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+			assertThat(expectedException.getReason()).isEqualTo(EXPECTED_CONFLICT_REASON);
+		});
+		verify(categoryRepository, never()).deleteById(mockCategory.getId());
 	}
 
 	@Test
@@ -167,9 +203,12 @@ class AssetCategoryServiceTest {
 		when(categoryRepository.findById(mockCategory.getId())).thenReturn(Optional.of(mockCategory));
 
 		// WHEN / THEN
-		assertThatThrownBy(() -> testSubject.delete(mockCategory.getId(), mockUserId)).isInstanceOf(
-			ResponseStatusException.class
+		assertThatThrownBy(() ->
+			testSubject.delete(mockCategory.getId(), mockUserId)
+		).isInstanceOfSatisfying(ResponseStatusException.class, expectedException ->
+			assertThat(expectedException.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN)
 		);
+		verifyNoInteractions(assetRepository);
 	}
 
 	@Test
@@ -186,8 +225,11 @@ class AssetCategoryServiceTest {
 		when(categoryRepository.findById(mockCategory.getId())).thenReturn(Optional.of(mockCategory));
 
 		// WHEN / THEN
-		assertThatThrownBy(() -> testSubject.delete(mockCategory.getId(), mockUserId)).isInstanceOf(
-			ResponseStatusException.class
+		assertThatThrownBy(() ->
+			testSubject.delete(mockCategory.getId(), mockUserId)
+		).isInstanceOfSatisfying(ResponseStatusException.class, expectedException ->
+			assertThat(expectedException.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN)
 		);
+		verifyNoInteractions(assetRepository);
 	}
 }

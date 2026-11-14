@@ -95,6 +95,59 @@ After rotating an Auth0 secret, update this file and recreate the backend:
 docker compose -f /opt/aurum/docker-compose.prod.yml up -d --force-recreate backend
 ```
 
+## Schema migrations
+
+Liquibase runs at startup: `spring.liquibase.change-log` points at
+`classpath:db/changelog/db.changelog-master.yaml`. Since Boot 4 the
+autoconfiguration lives in its own module, so `spring-boot-liquibase` is a
+declared dependency; without it no changeset runs and `spring.liquibase.*` stays
+inert.
+
+Applied changesets are recorded in `databasechangelog`. Production holds 23
+rows, one per changeset that predates this one, so it needs nothing: the next
+deploy applies only the newer changesets.
+
+### One-time baseline for a database that predates the module
+
+A database built by other means has no `databasechangelog` table, so Liquibase
+would replay every changeset from the first one and fail on objects that already
+exist. Mark what is already in place as applied, once:
+
+```bash
+cd aurum-be
+./mvnw org.liquibase:liquibase-maven-plugin:5.0.4:changelogSync \
+  -Dliquibase.changeLogFile=db/changelog/db.changelog-master.yaml \
+  -Dliquibase.searchPath=src/main/resources \
+  -Dliquibase.url="$DATASOURCE_URL" \
+  -Dliquibase.username="$DATASOURCE_USERNAME" \
+  -Dliquibase.password="$DATASOURCE_PASSWORD"
+```
+
+- Run it from the checkout whose changelog matches the schema the database
+  already has (the last deployed `main`). A changeset added after that point
+  must still run for real, so never `changelogSync` a changelog over a database
+  that is behind it.
+- `$DATASOURCE_*` are shell variables in the operator's own environment; never
+  paste the real URL or credentials into the repository.
+- The plugin is not declared in `pom.xml`: the coordinate carries the version
+  (5.0.4, the one the Boot BOM manages), and the JDBC driver comes from the
+  project's own dependencies, which the plugin puts on its classpath.
+- `changelogSyncSQL` prints the same decision without writing to the database,
+  which makes a safe dry run.
+
+### Pointing a boot away from the developer's database
+
+`spring-boot-docker-compose` is a declared dependency, and it supplies a `JdbcConnectionDetails`
+bean from `aurum-be/compose.yaml` (service `postgres`, `POSTGRES_DB=aurum`). That bean outranks
+`spring.datasource.url`, so a command-line datasource override is silently ignored and the boot still
+lands on the developer's database. Any run that must not touch it — a changelog replay, a migration
+probe, a destructive experiment — needs both of the following flags:
+
+```bash
+--spring.docker.compose.enabled=false
+--spring.datasource.url=<throwaway-database-url>
+```
+
 ## Database backup and restore
 
 A daily `pg_dump` runs at 03:15 via `/etc/cron.d/aurum-backup`, writes to

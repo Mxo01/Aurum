@@ -86,12 +86,14 @@ allowlist blocks all browser origins.
 pruned every five minutes; an attacker could grow it without bound. The map no
 longer exists.
 
-### 8. No read/write separation — fixed (optional)
+### 8. No read/write separation — fixed
 
 Every MCP tool was available to any valid token, including the destructive bulk
 tools. When `MCP_READ_SCOPES`/`MCP_WRITE_SCOPES` are configured, `get*` tools
 require the read scope and every other tool requires the write scope; unknown
-tool names are treated as writes.
+tool names are treated as writes. Enforcement was optional when this audit was
+written; it is now fail-closed, so empty lists deny writes and leave reads
+available.
 
 ### 9. Unbounded MCP bulk operations — fixed
 

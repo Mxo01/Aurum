@@ -106,9 +106,9 @@ sequenceDiagram
 - The server runs on Spring AI 2.0 with the MCP Java SDK 2.1 (protocol
   2025-11-25); the stateless transport is the shape the session-less 2026-07-28
   revision requires.
-- Read/write scopes are optional. When `MCP_READ_SCOPES` and `MCP_WRITE_SCOPES`
-  are set, `get*` tools require the read scope and every other tool requires
-  the write scope.
+- Read/write scopes are fail-closed: `get*` tools need the read scope, every
+  other tool needs the write scope, and with both lists empty writes are denied
+  while reads stay available — set both variables to keep writes enabled.
 - `MCP_ALLOWED_ORIGINS` is the browser-origin allowlist for `/mcp`; native MCP
   clients send no `Origin` and are unaffected.
 - The full tenant setup is in

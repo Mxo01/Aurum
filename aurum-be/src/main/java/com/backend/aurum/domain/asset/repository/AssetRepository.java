@@ -17,4 +17,7 @@ public interface AssetRepository extends JpaRepository<Asset, UUID> {
 
 	@Query("SELECT a FROM Asset a LEFT JOIN FETCH a.snapshots WHERE a.liabilityType = :type")
 	List<Asset> findAllByLiabilityTypeWithSnapshots(@Param("type") LiabilityType type);
+
+	@Query("SELECT COUNT(a) FROM Asset a WHERE a.category.id = :categoryId")
+	long countByCategoryId(@Param("categoryId") UUID categoryId);
 }

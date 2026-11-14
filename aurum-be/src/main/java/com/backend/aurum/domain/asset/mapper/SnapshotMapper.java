@@ -47,7 +47,7 @@ public class SnapshotMapper {
 
 	public SnapshotDTO toDto(Snapshot entity, RateBook book) {
 		if (entity == null) return null;
-		Currency currency = entity.getAsset().getOriginalCurrency();
+		Currency currency = currencyOf(entity.getAsset(), book);
 		LocalDate referenceDate = entity.getReferenceDate();
 		return buildDto(
 			entity,
@@ -74,5 +74,13 @@ public class SnapshotMapper {
 		}
 
 		return dto;
+	}
+
+	/**
+	 * Legacy rows can carry no currency: they were written in the user's currency,
+	 * which is the book's target.
+	 */
+	private Currency currencyOf(Asset asset, RateBook book) {
+		return asset.getOriginalCurrency() != null ? asset.getOriginalCurrency() : book.target();
 	}
 }

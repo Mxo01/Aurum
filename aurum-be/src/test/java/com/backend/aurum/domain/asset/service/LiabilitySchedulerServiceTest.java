@@ -1,6 +1,11 @@
 package com.backend.aurum.domain.asset.service;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -20,16 +25,23 @@ import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
-@ExtendWith(MockitoExtension.class)
+@ExtendWith({ MockitoExtension.class, OutputCaptureExtension.class })
 class LiabilitySchedulerServiceTest {
 
 	private static final LocalDate FIXED_TODAY = LocalDate.of(2026, 4, 1);
+
+	private static final String STUBBED_FAILURE_MESSAGE = "Rate fetch failed";
 
 	@Mock
 	private AssetRepository assetRepository;
@@ -40,17 +52,34 @@ class LiabilitySchedulerServiceTest {
 	@Mock
 	private ExchangeRateProvider exchangeRateService;
 
+	@Mock
+	private SchedulerRunRecorder schedulerRunRecorder;
+
+	private UUID stubbedRunId;
+
 	private LiabilitySchedulerService testSubject;
 
 	@BeforeEach
 	void setUp() {
 		Clock clock = Clock.fixed(FIXED_TODAY.atStartOfDay(ZoneOffset.UTC).toInstant(), ZoneOffset.UTC);
+		stubbedRunId = UUID.randomUUID();
+		lenient()
+			.when(schedulerRunRecorder.start(LiabilitySchedulerService.JOB_NAME))
+			.thenReturn(stubbedRunId);
 		testSubject = new LiabilitySchedulerService(
 			assetRepository,
 			snapshotService,
 			exchangeRateService,
+			schedulerRunRecorder,
 			clock
 		);
+	}
+
+	@AfterEach
+	void tearDown() {
+		if (TransactionSynchronizationManager.isSynchronizationActive()) {
+			TransactionSynchronizationManager.clearSynchronization();
+		}
 	}
 
 	private User buildUser(Currency currency) {
@@ -254,7 +283,7 @@ class LiabilitySchedulerServiceTest {
 			List.of(failingAsset, successAsset)
 		);
 		when(exchangeRateService.getRate("USD", "EUR", FIXED_TODAY)).thenThrow(
-			new RuntimeException("Rate fetch failed")
+			new RuntimeException(STUBBED_FAILURE_MESSAGE)
 		);
 
 		// WHEN
@@ -289,5 +318,109 @@ class LiabilitySchedulerServiceTest {
 
 		// THEN
 		verifyNoInteractions(snapshotService);
+	}
+
+	@Test
+	void logRegistration_announcesScheduledJob(CapturedOutput output) {
+		// WHEN
+		testSubject.logRegistration();
+
+		// THEN
+		assertThat(output).contains(
+			LiabilitySchedulerService.JOB_NAME,
+			LiabilitySchedulerService.JOB_CRON,
+			LiabilitySchedulerService.JOB_ZONE
+		);
+	}
+
+	@Test
+	void processAutomaticLiabilityPayments_doesNotCompleteRun_whenBatchCommits() {
+		// GIVEN
+		when(assetRepository.findAllByLiabilityTypeWithSnapshots(LiabilityType.AUTOMATIC)).thenReturn(
+			List.of()
+		);
+		TransactionSynchronizationManager.initSynchronization();
+
+		// WHEN
+		testSubject.processAutomaticLiabilityPayments();
+
+		// THEN
+		List<TransactionSynchronization> stubbedSynchronizations =
+			TransactionSynchronizationManager.getSynchronizations();
+		verify(schedulerRunRecorder, never()).complete(stubbedRunId);
+
+		stubbedSynchronizations.forEach(synchronization ->
+			synchronization.afterCompletion(TransactionSynchronization.STATUS_COMMITTED)
+		);
+
+		verify(schedulerRunRecorder, times(1)).complete(stubbedRunId);
+		verify(schedulerRunRecorder, never()).fail(stubbedRunId);
+	}
+
+	@Test
+	void processAutomaticLiabilityPayments_failsRunOnce_whenBatchRollsBack() {
+		// GIVEN
+		when(assetRepository.findAllByLiabilityTypeWithSnapshots(LiabilityType.AUTOMATIC)).thenReturn(
+			List.of()
+		);
+		TransactionSynchronizationManager.initSynchronization();
+
+		// WHEN
+		testSubject.processAutomaticLiabilityPayments();
+
+		// THEN
+		List<TransactionSynchronization> stubbedSynchronizations =
+			TransactionSynchronizationManager.getSynchronizations();
+		verify(schedulerRunRecorder, never()).fail(stubbedRunId);
+
+		stubbedSynchronizations.forEach(synchronization ->
+			synchronization.afterCompletion(TransactionSynchronization.STATUS_ROLLED_BACK)
+		);
+
+		verify(schedulerRunRecorder, times(1)).fail(stubbedRunId);
+		verify(schedulerRunRecorder, never()).complete(stubbedRunId);
+	}
+
+	@Test
+	void processAutomaticLiabilityPayments_failsRunOnce_whenBatchThrows() {
+		// GIVEN
+		RuntimeException mockFailure = new RuntimeException("Asset lookup failed");
+		when(assetRepository.findAllByLiabilityTypeWithSnapshots(LiabilityType.AUTOMATIC)).thenThrow(
+			mockFailure
+		);
+
+		// WHEN
+		Throwable expectedFailure = catchThrowable(testSubject::processAutomaticLiabilityPayments);
+
+		// THEN
+		assertThat(expectedFailure).isSameAs(mockFailure);
+		verify(schedulerRunRecorder, times(1)).fail(stubbedRunId);
+		verify(schedulerRunRecorder, never()).complete(stubbedRunId);
+	}
+
+	@Test
+	void processAutomaticLiabilityPayments_defersFailedOutcome_whenBatchThrowsInsideTransaction() {
+		// GIVEN
+		RuntimeException mockFailure = new RuntimeException("Asset lookup failed");
+		when(assetRepository.findAllByLiabilityTypeWithSnapshots(LiabilityType.AUTOMATIC)).thenThrow(
+			mockFailure
+		);
+		TransactionSynchronizationManager.initSynchronization();
+
+		// WHEN
+		Throwable expectedFailure = catchThrowable(testSubject::processAutomaticLiabilityPayments);
+
+		// THEN
+		assertThat(expectedFailure).isSameAs(mockFailure);
+		verify(schedulerRunRecorder, never()).fail(stubbedRunId);
+
+		List<TransactionSynchronization> stubbedSynchronizations =
+			TransactionSynchronizationManager.getSynchronizations();
+		stubbedSynchronizations.forEach(synchronization ->
+			synchronization.afterCompletion(TransactionSynchronization.STATUS_ROLLED_BACK)
+		);
+
+		verify(schedulerRunRecorder, times(1)).fail(stubbedRunId);
+		verify(schedulerRunRecorder, never()).complete(stubbedRunId);
 	}
 }
