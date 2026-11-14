@@ -204,6 +204,7 @@ function SnapshotsBody({ asset }: { asset: AssetDTO }) {
 										value={newDate}
 										onChange={setNewDate}
 										label="Snapshot date"
+										max={todayISO()}
 										toYear={new Date().getFullYear()}
 									/>
 								</div>

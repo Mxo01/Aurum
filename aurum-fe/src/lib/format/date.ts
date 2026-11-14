@@ -25,3 +25,9 @@ export function toDateOnly(value: Date) {
 export function todayISO() {
 	return toDateOnly(new Date());
 }
+
+export function tomorrowISO() {
+	const date = new Date();
+	date.setDate(date.getDate() + 1);
+	return toDateOnly(date);
+}

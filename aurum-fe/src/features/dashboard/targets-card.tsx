@@ -44,6 +44,7 @@ import {
 } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { tomorrowISO } from "@/lib/format/date";
 import { usePreferences } from "@/lib/format/use-preferences";
 import type { TargetDTO, TargetStatus } from "@/lib/api/types";
 import { useCreateTarget, useDeleteTarget, useUpdateTarget } from "@/features/targets/api";
@@ -70,7 +71,7 @@ function emptyValues(): TargetFormValues {
 		type: "MANUAL",
 		targetAmount: 0,
 		currentAmount: 0,
-		deadline: new Date().toISOString().slice(0, 10)
+		deadline: tomorrowISO()
 	};
 }
 
@@ -396,6 +397,7 @@ export function TargetsCard({ targets, isLoading, currency }: TargetsCardProps) 
 										value={field.value}
 										onChange={field.onChange}
 										label="Deadline"
+										min={tomorrowISO()}
 										toYear={new Date().getFullYear() + 30}
 									/>
 								)}

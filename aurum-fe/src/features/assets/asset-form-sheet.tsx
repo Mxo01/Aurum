@@ -424,6 +424,7 @@ export function AssetFormSheet({ open, onOpenChange, asset, categories }: AssetF
 											value={field.value}
 											onChange={field.onChange}
 											label="Value date"
+											max={todayISO()}
 											toYear={new Date().getFullYear()}
 										/>
 									)}

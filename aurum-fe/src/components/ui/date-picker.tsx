@@ -12,6 +12,8 @@ interface DatePickerProps {
 	value: string;
 	onChange: (value: string) => void;
 	label: string;
+	min?: string;
+	max?: string;
 	fromYear?: number;
 	toYear?: number;
 	className?: string;
@@ -22,6 +24,8 @@ export function DatePicker({
 	value,
 	onChange,
 	label,
+	min,
+	max,
 	fromYear = 2000,
 	toYear = new Date().getFullYear() + 10,
 	className
@@ -29,6 +33,12 @@ export function DatePicker({
 	const { date } = usePreferences();
 	const [open, setOpen] = useState(false);
 	const selected = value ? parseDateOnly(value) : undefined;
+	const minDate = min ? parseDateOnly(min) : undefined;
+	const maxDate = max ? parseDateOnly(max) : undefined;
+	const disabled = [
+		...(minDate ? [{ before: minDate }] : []),
+		...(maxDate ? [{ after: maxDate }] : [])
+	];
 
 	return (
 		<Popover
@@ -60,8 +70,9 @@ export function DatePicker({
 					mode="single"
 					selected={selected}
 					defaultMonth={selected}
-					startMonth={new Date(fromYear, 0, 1)}
-					endMonth={new Date(toYear, 11, 31)}
+					disabled={disabled.length > 0 ? disabled : undefined}
+					startMonth={minDate ?? new Date(fromYear, 0, 1)}
+					endMonth={maxDate ?? new Date(toYear, 11, 31)}
 					onSelect={next => {
 						if (!next) return;
 						onChange(toDateOnly(next));
