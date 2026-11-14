@@ -1,6 +1,7 @@
 import { Outlet } from "react-router";
 import { BottomTabs } from "./bottom-tabs";
 import { CommandPalette } from "./command-palette";
+import { ShortcutHintCard } from "./shortcut-hint";
 import { TopBar } from "./top-bar";
 import { useShortcuts } from "./use-shortcuts";
 
@@ -15,6 +16,7 @@ export function AppShell() {
 			</main>
 			<BottomTabs />
 			<CommandPalette />
+			<ShortcutHintCard />
 		</div>
 	);
 }

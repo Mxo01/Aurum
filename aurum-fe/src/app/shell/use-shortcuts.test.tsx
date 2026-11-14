@@ -1,7 +1,9 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter, useLocation } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { commandLabel, optionLabel } from "@/lib/platform";
 import { usePrivacyStore } from "@/stores/privacy";
+import { useShortcutHintStore } from "@/stores/shortcut-hint";
 import { useThemeStore } from "@/stores/theme";
 import { useUiStore } from "@/stores/ui";
 import { useShortcuts } from "./use-shortcuts";
@@ -26,11 +28,16 @@ function press(target: Element | Window, init: KeyboardEventInit) {
 	fireEvent.keyDown(target, init);
 }
 
+function currentHint() {
+	return useShortcutHintStore.getState().hint;
+}
+
 describe("useShortcuts", () => {
 	beforeEach(() => {
 		useUiStore.setState({ commandOpen: false });
 		usePrivacyStore.setState({ isPrivacy: false });
 		useThemeStore.setState({ theme: "light" });
+		useShortcutHintStore.setState({ hint: null });
 		vi.spyOn(window, "scrollTo").mockImplementation(() => undefined);
 	});
 
@@ -39,11 +46,11 @@ describe("useShortcuts", () => {
 	});
 
 	it.each([
-		["KeyD", "/dashboard"],
-		["KeyA", "/assets"],
-		["KeyC", "/cashflow"],
-		["KeyP", "/profile"]
-	])("should navigate to %s with the alt key", (code, path) => {
+		["KeyD", "/dashboard", "Dashboard"],
+		["KeyA", "/assets", "Assets"],
+		["KeyC", "/cashflow", "Cash flow"],
+		["KeyP", "/profile", "Profile"]
+	])("should navigate to %s with the alt key", (code, path, label) => {
 		// GIVEN
 		renderHarness();
 
@@ -52,6 +59,10 @@ describe("useShortcuts", () => {
 
 		// THEN
 		expect(screen.getByTestId("location")).toHaveTextContent(path);
+		expect(currentHint()).toMatchObject({
+			keys: [optionLabel, code.replace("Key", "")],
+			label
+		});
 	});
 
 	it("should ignore an alt key that maps to nothing", () => {
@@ -63,6 +74,7 @@ describe("useShortcuts", () => {
 
 		// THEN
 		expect(screen.getByTestId("location")).toHaveTextContent("/dashboard");
+		expect(currentHint()).toBeNull();
 	});
 
 	it("should open the new asset route from the new chord", () => {
@@ -75,6 +87,10 @@ describe("useShortcuts", () => {
 
 		// THEN
 		expect(screen.getByTestId("location")).toHaveTextContent("/assets?new=1");
+		expect(currentHint()).toMatchObject({
+			keys: [`${optionLabel}N`, "A"],
+			label: "New asset"
+		});
 	});
 
 	it("should open the new target route from the new chord", () => {
@@ -87,6 +103,10 @@ describe("useShortcuts", () => {
 
 		// THEN
 		expect(screen.getByTestId("location")).toHaveTextContent("/dashboard?target=new");
+		expect(currentHint()).toMatchObject({
+			keys: [`${optionLabel}N`, "T"],
+			label: "New target"
+		});
 	});
 
 	it("should drop the chord when the second key is unrelated", () => {
@@ -125,12 +145,20 @@ describe("useShortcuts", () => {
 
 		// THEN
 		expect(usePrivacyStore.getState().isPrivacy).toBe(true);
+		expect(currentHint()).toMatchObject({
+			keys: [optionLabel, "H"],
+			label: "Toggle amounts"
+		});
 
 		// WHEN
 		press(window, { altKey: true, code: "KeyT" });
 
 		// THEN
 		expect(useThemeStore.getState().theme).toBe("dark");
+		expect(currentHint()).toMatchObject({
+			keys: [optionLabel, "T"],
+			label: "Toggle theme"
+		});
 	});
 
 	it("should toggle the command palette with the meta key", () => {
@@ -142,6 +170,10 @@ describe("useShortcuts", () => {
 
 		// THEN
 		expect(useUiStore.getState().commandOpen).toBe(true);
+		expect(currentHint()).toMatchObject({
+			keys: [`${commandLabel}K`],
+			label: "Command palette"
+		});
 	});
 
 	it("should toggle the command palette with the control key", () => {
@@ -153,6 +185,7 @@ describe("useShortcuts", () => {
 
 		// THEN
 		expect(useUiStore.getState().commandOpen).toBe(true);
+		expect(currentHint()).toMatchObject({ keys: [`${commandLabel}K`] });
 	});
 
 	it("should ignore other modifier combinations", () => {
@@ -164,6 +197,7 @@ describe("useShortcuts", () => {
 
 		// THEN
 		expect(useUiStore.getState().commandOpen).toBe(false);
+		expect(currentHint()).toBeNull();
 		expect(screen.getByTestId("location")).toHaveTextContent("/dashboard");
 	});
 
@@ -176,6 +210,7 @@ describe("useShortcuts", () => {
 
 		// THEN
 		expect(useUiStore.getState().commandOpen).toBe(true);
+		expect(currentHint()).toMatchObject({ keys: ["/"], label: "Command palette" });
 	});
 
 	it.each(["input", "textarea", "select", "button"])(
@@ -191,6 +226,7 @@ describe("useShortcuts", () => {
 
 			// THEN
 			expect(screen.getByTestId("location")).toHaveTextContent("/dashboard");
+			expect(currentHint()).toBeNull();
 			field.remove();
 		}
 	);
@@ -208,6 +244,7 @@ describe("useShortcuts", () => {
 
 		// THEN
 		expect(screen.getByTestId("location")).toHaveTextContent("/dashboard");
+		expect(currentHint()).toBeNull();
 		region.remove();
 	});
 
