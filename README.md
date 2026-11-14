@@ -232,3 +232,6 @@ public repository.
 - gitleaks runs on staged changes (pre-commit) and in CI.
 - The full audit and the open follow-ups are in
   [`docs/security-audit.md`](docs/security-audit.md).
+- The liabilities audit is delivered in
+  [`docs/liabilities-audit.md`](docs/liabilities-audit.md); its fixes are tracked
+  as issues #66–#70.
