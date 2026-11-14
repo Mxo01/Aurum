@@ -30,8 +30,11 @@ flowchart LR
     F --> S[Domain service]
     S --> R[Repository]
     R --> DB[(PostgreSQL)]
-    F --> P[Ports<br/>exchange rates]
-    P -.implemented by.-> I[Infrastructure adapter]
+    F --> CC[CurrencyConversionService<br/>domain/shared/currency]
+    S --> CC
+    CC --> RB[RateBook<br/>rates resolved once per request]
+    CC --> P[Ports<br/>ExchangeRateProvider]
+    P -.implemented by.-> I[infrastructure/exchange]
     C -.errors.-> H[GlobalExceptionHandler]
 ```
 
@@ -48,10 +51,23 @@ flowchart LR
   world, declared in domain language. `ExchangeRateProvider` is the current one;
   `infrastructure/exchange/` implements it. Domain code never imports
   `infrastructure`.
+- **Currency conversion is read-time and lives in the domain** —
+  `domain/shared/currency/CurrencyConversionService` resolves the rates a request
+  needs into one immutable `RateBook`; every amount is converted through that
+  book *before* it is summed, so a total in the user's currency never mixes
+  unconverted values. `RateBook` fails on a missing rate instead of returning a
+  number in the wrong currency.
+- **Where to change what** — asset and snapshot read projections convert in
+  `AssetFacade` / `SnapshotFacade`; aggregates convert in `AnalyticsService`; a
+  new rate source or provider behaviour changes only behind
+  `ExchangeRateProvider` / `infrastructure/exchange/`.
+- **Provider outage** — `ExchangeRateUnavailableException` is the domain error;
+  `GlobalExceptionHandler` maps it to `503 Service Unavailable` with a retry
+  message, never a zero or a stale total.
 - **Errors** (`domain/shared/exception/`) — `NotFoundException`,
   `AccessDeniedException`, `ValidationException` are domain errors. The
   `GlobalExceptionHandler` in `infrastructure` is the only place that maps them
-  to HTTP status codes.
+  to HTTP status codes, including the provider outage above.
 
 Migrations are Liquibase YAML/SQL under
 `aurum-be/src/main/resources/db/changelog/changes/`, applied automatically at
@@ -151,8 +167,12 @@ User ──1:N── Target
 AssetCategory ──1:N── Asset
 ```
 
-A `Snapshot` stores `amountOriginalCurrency` plus `exchangeRateToBase`;
-`amountBaseCurrency` is the converted value the analytics read.
+A `Snapshot` stores `amountOriginalCurrency` and `exchangeRateToBase`. The stored
+rate is the historical record of the rate used when the snapshot was written —
+it is not what the totals use. Every read converts `amountOriginalCurrency` at
+read time through the `RateBook` in the user's current currency, and that is what
+`amountBaseCurrency` on `SnapshotDTO` carries. Changing the user's currency
+therefore needs no migration and no re-rating.
 
 ## Local development
 

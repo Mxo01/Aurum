@@ -8,7 +8,11 @@ import com.backend.aurum.domain.asset.model.Snapshot;
 import com.backend.aurum.domain.asset.service.AssetService;
 import com.backend.aurum.domain.asset.service.SnapshotService;
 import com.backend.aurum.domain.asset.validation.SnapshotValidationService;
+import com.backend.aurum.domain.shared.currency.CurrencyConversionService;
+import com.backend.aurum.domain.shared.currency.RateBook;
+import com.backend.aurum.domain.shared.exception.NotFoundException;
 import com.backend.aurum.domain.shared.port.ExchangeRateProvider;
+import com.backend.aurum.domain.user.enums.Currency;
 import com.backend.aurum.domain.user.model.User;
 import com.backend.aurum.domain.user.repository.UserRepository;
 import java.math.BigDecimal;
@@ -28,23 +32,32 @@ public class SnapshotFacade {
 	private final SnapshotValidationService validationService;
 	private final AssetService assetService;
 	private final ExchangeRateProvider exchangeRateService;
+	private final CurrencyConversionService conversionService;
 	private final UserRepository userRepository;
 
 	public List<SnapshotDTO> getSnapshots(UUID assetId, UUID userId) {
-		return snapshotService.findByAssetId(assetId, userId).stream().map(mapper::toDto).toList();
+		List<Snapshot> snapshots = snapshotService.findByAssetId(assetId, userId);
+		RateBook book = bookFor(requireUser(userId).getCurrency(), snapshots);
+		return snapshots
+			.stream()
+			.map(snapshot -> mapper.toDto(snapshot, book))
+			.toList();
 	}
 
 	public List<SnapshotDTO> getAllSnapshots(UUID userId) {
-		return snapshotService.findAll(userId).stream().map(mapper::toDto).toList();
+		List<Snapshot> snapshots = snapshotService.findAll(userId);
+		RateBook book = bookFor(requireUser(userId).getCurrency(), snapshots);
+		return snapshots
+			.stream()
+			.map(snapshot -> mapper.toDto(snapshot, book))
+			.toList();
 	}
 
 	public SnapshotDTO createSnapshot(CreateSnapshotDTO dto, UUID userId) {
 		validationService.validate(dto, userId);
 
 		Asset asset = assetService.findById(dto.getAssetId(), userId);
-		User user = userRepository
-			.findById(Objects.requireNonNull(userId))
-			.orElseThrow(() -> new RuntimeException("User not found"));
+		User user = requireUser(userId);
 
 		BigDecimal exchangeRate = resolveExchangeRate(
 			asset,
@@ -60,7 +73,9 @@ public class SnapshotFacade {
 			exchangeRate
 		);
 
-		return mapper.toDto(saved);
+		RateBook book = bookFor(user.getCurrency(), List.of(saved));
+
+		return mapper.toDto(saved, book);
 	}
 
 	public void deleteBulk(UUID assetId, List<UUID> ids, UUID userId) {
@@ -79,5 +94,23 @@ public class SnapshotFacade {
 		return assetCurrency.equals(userCurrency)
 			? BigDecimal.ONE
 			: exchangeRateService.getRate(assetCurrency, userCurrency, referenceDate);
+	}
+
+	private RateBook bookFor(Currency target, List<Snapshot> snapshots) {
+		return conversionService.book(
+			target,
+			snapshots
+				.stream()
+				.map(snapshot -> snapshot.getAsset().getOriginalCurrency())
+				.distinct()
+				.toList(),
+			snapshots.stream().map(Snapshot::getReferenceDate).toList()
+		);
+	}
+
+	private User requireUser(UUID userId) {
+		return userRepository
+			.findById(Objects.requireNonNull(userId))
+			.orElseThrow(() -> new NotFoundException("User not found"));
 	}
 }

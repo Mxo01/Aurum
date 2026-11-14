@@ -7,15 +7,18 @@ import com.backend.aurum.domain.asset.model.Asset;
 import com.backend.aurum.domain.asset.model.AssetCategory;
 import com.backend.aurum.domain.asset.model.Snapshot;
 import com.backend.aurum.domain.asset.repository.AssetCategoryRepository;
+import com.backend.aurum.domain.shared.currency.RateBook;
 import com.backend.aurum.domain.shared.exception.AccessDeniedException;
 import com.backend.aurum.domain.shared.exception.NotFoundException;
 import com.backend.aurum.domain.user.enums.Currency;
 import com.backend.aurum.domain.user.model.User;
 import com.backend.aurum.domain.user.repository.UserRepository;
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.function.BiFunction;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -99,48 +102,18 @@ public class AssetMapper {
 		return asset;
 	}
 
-	public Asset toEntity(AssetDTO dto, UUID userId) {
-		if (dto == null) return null;
-		Asset asset = new Asset();
-		asset.setName(dto.getName());
-		asset.setIsFavorite(dto.getIsFavorite() != null ? dto.getIsFavorite() : false);
-		asset.setOriginalCurrency(
-			dto.getOriginalCurrency() != null ? dto.getOriginalCurrency() : Currency.EUR
-		);
-		asset.setLiabilityType(dto.getLiabilityType());
-		asset.setPaymentFrequency(dto.getPaymentFrequency());
-		asset.setPaymentAmount(dto.getPaymentAmount());
-
-		if (userId != null) {
-			User user = userRepository
-				.findById(userId)
-				.orElseThrow(() -> new NotFoundException("User not found"));
-			asset.setUser(user);
-		}
-
-		if (dto.getCategoryId() != null) {
-			AssetCategory category = categoryRepository
-				.findById(Objects.requireNonNull(dto.getCategoryId()))
-				.orElseThrow(() -> new NotFoundException("Category not found"));
-
-			if (
-				category.getUser() != null && (userId == null || !category.getUser().getId().equals(userId))
-			) {
-				throw new AccessDeniedException("Category does not belong to the user");
-			}
-
-			asset.setCategory(category);
-		}
-
-		return asset;
-	}
-
-	public AssetDTO toDto(Asset entity) {
+	public AssetDTO toDto(Asset entity, RateBook book) {
 		if (entity == null) return null;
-		AssetDTO dto = toDtoLight(entity, List.of());
+		AssetDTO dto = buildDto(entity);
 
 		if (entity.getSnapshots() != null) {
-			dto.setSnapshots(entity.getSnapshots().stream().map(snapshotMapper::toDto).toList());
+			dto.setSnapshots(
+				entity
+					.getSnapshots()
+					.stream()
+					.map(snapshot -> snapshotMapper.toDto(snapshot, book))
+					.toList()
+			);
 		}
 
 		return dto;
@@ -150,8 +123,38 @@ public class AssetMapper {
 	 * Light DTO for list responses — no snapshots array. Accepts the latest 2 snapshots
 	 * (ordered desc by referenceDate) to compute latestValue, latestValueBase, previousValue.
 	 */
-	public AssetDTO toDtoLight(Asset entity, List<Snapshot> latestTwo) {
+	public AssetDTO toDtoLight(
+		Asset entity,
+		List<Snapshot> latestTwo,
+		RateBook book,
+		LocalDate asOf
+	) {
+		return toDtoLight(entity, latestTwo, (asset, latest) ->
+			book.convert(latest.getAmountOriginalCurrency(), asset.getOriginalCurrency(), asOf)
+		);
+	}
+
+	private AssetDTO toDtoLight(
+		Asset entity,
+		List<Snapshot> latestTwo,
+		BiFunction<Asset, Snapshot, BigDecimal> latestValueBase
+	) {
 		if (entity == null) return null;
+		AssetDTO dto = buildDto(entity);
+
+		if (!latestTwo.isEmpty()) {
+			Snapshot latest = latestTwo.get(0);
+			dto.setLatestValue(latest.getAmountOriginalCurrency());
+			dto.setLatestValueBase(latestValueBase.apply(entity, latest));
+			if (latestTwo.size() > 1) {
+				dto.setPreviousValue(latestTwo.get(1).getAmountOriginalCurrency());
+			}
+		}
+
+		return dto;
+	}
+
+	private AssetDTO buildDto(Asset entity) {
 		AssetDTO dto = new AssetDTO();
 		dto.setId(entity.getId());
 		dto.setName(entity.getName());
@@ -165,23 +168,10 @@ public class AssetMapper {
 			dto.setType(entity.getCategory().getType());
 		}
 
-		if (!latestTwo.isEmpty()) {
-			Snapshot latest = latestTwo.get(0);
-			dto.setLatestValue(latest.getAmountOriginalCurrency());
-			dto.setLatestValueBase(latest.getAmountInBaseCurrency());
-			if (latestTwo.size() > 1) {
-				dto.setPreviousValue(latestTwo.get(1).getAmountOriginalCurrency());
-			}
-		}
-
 		dto.setLiabilityType(entity.getLiabilityType());
 		dto.setPaymentFrequency(entity.getPaymentFrequency());
 		dto.setPaymentAmount(entity.getPaymentAmount());
 
 		return dto;
-	}
-
-	public AssetDTO toDtoLight(Asset entity, Map<UUID, List<Snapshot>> latestTwoByAssetId) {
-		return toDtoLight(entity, latestTwoByAssetId.getOrDefault(entity.getId(), List.of()));
 	}
 }

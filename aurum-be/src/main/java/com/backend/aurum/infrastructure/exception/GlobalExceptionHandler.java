@@ -1,6 +1,7 @@
 package com.backend.aurum.infrastructure.exception;
 
 import com.backend.aurum.domain.shared.exception.AccessDeniedException;
+import com.backend.aurum.domain.shared.exception.ExchangeRateUnavailableException;
 import com.backend.aurum.domain.shared.exception.NotFoundException;
 import com.backend.aurum.domain.shared.exception.ValidationException;
 import java.time.Instant;
@@ -31,6 +32,17 @@ public class GlobalExceptionHandler {
 	public ResponseEntity<Map<String, Object>> handleValidation(ValidationException ex) {
 		log.warn("Validation failed: {}", ex.getMessage());
 		return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
+	}
+
+	@ExceptionHandler(ExchangeRateUnavailableException.class)
+	public ResponseEntity<Map<String, Object>> handleExchangeRateUnavailable(
+		ExchangeRateUnavailableException ex
+	) {
+		log.error("Exchange rate provider unavailable: {}", ex.getMessage());
+		return buildResponse(
+			HttpStatus.SERVICE_UNAVAILABLE,
+			"Exchange rates are temporarily unavailable, please retry later"
+		);
 	}
 
 	@ExceptionHandler(IllegalArgumentException.class)

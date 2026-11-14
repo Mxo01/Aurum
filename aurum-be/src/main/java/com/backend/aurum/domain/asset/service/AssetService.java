@@ -4,8 +4,11 @@ import com.backend.aurum.domain.asset.model.Asset;
 import com.backend.aurum.domain.asset.model.Snapshot;
 import com.backend.aurum.domain.asset.repository.AssetRepository;
 import com.backend.aurum.domain.asset.repository.SnapshotRepository;
+import com.backend.aurum.domain.shared.currency.CurrencyConversionService;
 import com.backend.aurum.domain.shared.exception.AccessDeniedException;
 import com.backend.aurum.domain.shared.exception.NotFoundException;
+import com.backend.aurum.domain.user.enums.Currency;
+import com.backend.aurum.domain.user.model.User;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
@@ -23,6 +26,7 @@ public class AssetService {
 
 	private final AssetRepository assetRepository;
 	private final SnapshotRepository snapshotRepository;
+	private final CurrencyConversionService conversionService;
 
 	@Transactional(readOnly = true)
 	public List<Asset> findAll(UUID userId) {
@@ -76,6 +80,13 @@ public class AssetService {
 			snapshot.setAsset(savedAsset);
 			snapshot.setAmountOriginalCurrency(initialValue);
 			snapshot.setReferenceDate(referenceDate);
+			snapshot.setExchangeRateToBase(
+				conversionService.rate(
+					savedAsset.getOriginalCurrency(),
+					targetCurrencyOf(savedAsset),
+					referenceDate
+				)
+			);
 			snapshotRepository.save(Objects.requireNonNull(snapshot));
 			savedAsset.getSnapshots().add(snapshot);
 			log.debug("AssetService#save - Initial snapshot saved for assetId={}", savedAsset.getId());
@@ -115,5 +126,10 @@ public class AssetService {
 		Asset asset = findById(id, userId);
 		assetRepository.delete(Objects.requireNonNull(asset));
 		log.info("AssetService#delete - Asset deleted: assetId={}", id);
+	}
+
+	private Currency targetCurrencyOf(Asset asset) {
+		User user = asset.getUser();
+		return user != null ? user.getCurrency() : asset.getOriginalCurrency();
 	}
 }
