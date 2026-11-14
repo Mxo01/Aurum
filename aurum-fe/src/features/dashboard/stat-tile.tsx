@@ -6,25 +6,29 @@ interface StatTileProps {
 	value: ReactNode;
 	hint?: ReactNode;
 	right?: ReactNode;
+	chart?: ReactNode;
 	className?: string;
 }
 
-export function StatTile({ label, value, hint, right, className }: StatTileProps) {
+export function StatTile({ label, value, hint, right, chart, className }: StatTileProps) {
 	return (
 		<div
 			className={cn(
-				"bg-card border-border flex min-h-[104px] flex-col justify-between gap-2 rounded-xl border p-4",
+				"bg-card border-border flex min-h-[104px] items-stretch gap-3 rounded-xl border p-4",
 				className
 			)}
 		>
-			<div className="flex items-start justify-between gap-2">
-				<span className="text-muted-foreground text-[11px] font-medium">{label}</span>
-				{right}
+			<div className="flex min-w-0 flex-1 flex-col justify-between gap-2">
+				<div className="flex items-start justify-between gap-2">
+					<span className="text-muted-foreground text-[11px] font-medium">{label}</span>
+					{right}
+				</div>
+				<div className="flex flex-col gap-0.5">
+					<div className="num truncate text-xl font-semibold tracking-tight">{value}</div>
+					{hint ? <span className="text-muted-foreground text-[11px]">{hint}</span> : null}
+				</div>
 			</div>
-			<div className="flex flex-col gap-0.5">
-				<div className="num text-xl font-semibold tracking-tight">{value}</div>
-				{hint ? <span className="text-muted-foreground text-[11px]">{hint}</span> : null}
-			</div>
+			{chart ? <div className="flex w-1/2 shrink-0 items-stretch">{chart}</div> : null}
 		</div>
 	);
 }

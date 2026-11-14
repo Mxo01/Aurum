@@ -154,10 +154,11 @@ export function DashboardPage() {
 									? `Debt ratio: ${percent(summary.data.debtToAssetRatio, GROWTH_DIGITS)}`
 									: undefined
 							}
-							right={
+							chart={
 								<Sparkline
 									values={liabilityValues}
 									tone={liabilityTrend > 0 ? "danger" : "success"}
+									className="h-full w-full"
 								/>
 							}
 						/>

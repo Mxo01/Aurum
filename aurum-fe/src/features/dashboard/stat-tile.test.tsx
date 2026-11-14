@@ -97,6 +97,26 @@ describe("StatTile", () => {
 		expect(screen.getByText("right")).toBeInTheDocument();
 	});
 
+	it("should render a full-height chart in half of the card", () => {
+		// GIVEN
+		const testSubject = StatTile;
+		const Subject = testSubject;
+
+		// WHEN
+		render(
+			<Subject
+				label="Total liabilities"
+				value="€15"
+				chart={<span data-testid="chart">chart</span>}
+			/>
+		);
+
+		// THEN
+		const chart = screen.getByTestId("chart");
+		expect(chart).toBeInTheDocument();
+		expect(chart.parentElement).toHaveClass("w-1/2", "items-stretch");
+	});
+
 	it("should render without the hint and the right slot", () => {
 		// GIVEN
 		const testSubject = StatTile;
