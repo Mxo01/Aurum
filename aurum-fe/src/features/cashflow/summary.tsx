@@ -39,7 +39,6 @@ export function CashflowSummary({
 	const averageSpent = activeMonths > 0 ? totals.spent / activeMonths : 0;
 	const savingsRate =
 		totals.savingsRate === null ? null : Math.max(0, Math.min(100, totals.savingsRate));
-	const spendRatio = totals.earned > 0 ? (totals.spent / totals.earned) * 100 : null;
 
 	return (
 		<section className="grid grid-cols-1 gap-3 lg:grid-cols-3">
@@ -47,14 +46,6 @@ export function CashflowSummary({
 				icon={ArrowLeftRight}
 				title="Total cashflow"
 				hint={hasPreviousYear ? `vs ${year - 1}` : undefined}
-				footer={
-					<div className="text-muted-foreground flex items-center justify-between text-[11px]">
-						<span>Spent / earned</span>
-						<span className="num text-foreground">
-							{spendRatio === null ? "—" : percent(spendRatio, 1)}
-						</span>
-					</div>
-				}
 			>
 				<div className="grid grid-cols-2 divide-x divide-border">
 					<Metric
@@ -119,11 +110,10 @@ interface SummaryCardProps {
 	icon: LucideIcon;
 	title: string;
 	hint?: string;
-	footer?: ReactNode;
 	children: ReactNode;
 }
 
-function SummaryCard({ icon: Icon, title, hint, footer, children }: SummaryCardProps) {
+function SummaryCard({ icon: Icon, title, hint, children }: SummaryCardProps) {
 	return (
 		<div className="bg-card border-border flex h-full flex-col rounded-xl border p-4">
 			<div className="flex items-center gap-2">
@@ -138,7 +128,6 @@ function SummaryCard({ icon: Icon, title, hint, footer, children }: SummaryCardP
 			</div>
 
 			<div className="mt-4 flex-1">{children}</div>
-			{footer ? <div className="mt-3">{footer}</div> : null}
 		</div>
 	);
 }
