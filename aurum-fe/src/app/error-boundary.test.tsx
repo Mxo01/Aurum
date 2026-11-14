@@ -30,3 +30,21 @@ describe("ErrorBoundary", () => {
 		consoleSpy.mockRestore();
 	});
 });
+
+describe("ErrorBoundary fallback message", () => {
+	it("should show the generic message for an empty error", () => {
+		// GIVEN
+		const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+		function EmptyBoom(): never {
+			throw new Error("");
+		}
+		const testSubject = ErrorBoundary;
+
+		// WHEN
+		render(createElement(testSubject, null, <EmptyBoom />));
+
+		// THEN
+		expect(screen.getByText("An unexpected error interrupted the page.")).toBeInTheDocument();
+		consoleSpy.mockRestore();
+	});
+});

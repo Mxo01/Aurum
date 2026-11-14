@@ -31,6 +31,7 @@ describe("CategoriesSheet", () => {
 		expect(screen.getByText("Loans")).toBeInTheDocument();
 		expect(screen.queryByRole("button", { name: "Edit Real Estate" })).not.toBeInTheDocument();
 		expect(screen.getByRole("button", { name: "Edit Loans" })).toBeInTheDocument();
+		expect(screen.getByText("Liability")).toBeInTheDocument();
 	});
 
 	it("should create a category", async () => {
@@ -104,4 +105,68 @@ describe("CategoriesSheet", () => {
 		// THEN
 		await waitFor(() => expect(deleteCalls).toBe(1));
 	});
+});
+
+it("should require a name", async () => {
+	// GIVEN
+	useCategoriesFixture();
+	const testSubject = CategoriesSheet;
+	renderWithProviders(createElement(testSubject, { open: true, onOpenChange: () => undefined }));
+	await screen.findByText("Real Estate");
+
+	// WHEN
+	fireEvent.click(screen.getByRole("button", { name: "Add category" }));
+	fireEvent.click(screen.getByRole("button", { name: "Create category" }));
+
+	// THEN
+	expect(await screen.findByText("Name is required")).toBeInTheDocument();
+});
+
+it("should create a liability with a custom icon", async () => {
+	// GIVEN
+	useCategoriesFixture();
+	let postedBody: unknown;
+	server.use(
+		http.post(`${env.apiUrl}/categories`, async ({ request }) => {
+			postedBody = await request.json();
+			return HttpResponse.json(mockCategories[1]);
+		})
+	);
+	const testSubject = CategoriesSheet;
+	renderWithProviders(createElement(testSubject, { open: true, onOpenChange: () => undefined }));
+	await screen.findByText("Real Estate");
+
+	// WHEN
+	fireEvent.click(screen.getByRole("button", { name: "Add category" }));
+	fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Borrowing" } });
+	fireEvent.click(screen.getByLabelText("Type"));
+	fireEvent.click(await screen.findByRole("option", { name: "Liability" }));
+	fireEvent.click(screen.getByRole("button", { name: "Home" }));
+	fireEvent.click(screen.getByRole("button", { name: "Create category" }));
+
+	// THEN
+	await waitFor(() => expect(postedBody).toBeDefined());
+	expect(postedBody).toMatchObject({ name: "Borrowing", type: "LIABILITY", icon: "pi-home" });
+});
+
+it("should toggle the selected icon off", async () => {
+	// GIVEN
+	useCategoriesFixture();
+	const testSubject = CategoriesSheet;
+	renderWithProviders(createElement(testSubject, { open: true, onOpenChange: () => undefined }));
+	await screen.findByText("Real Estate");
+	fireEvent.click(screen.getByRole("button", { name: "Add category" }));
+	const home = screen.getByRole("button", { name: "Home" });
+
+	// WHEN
+	fireEvent.click(home);
+
+	// THEN
+	expect(home).toHaveAttribute("aria-pressed", "true");
+
+	// WHEN
+	fireEvent.click(home);
+
+	// THEN
+	expect(home).toHaveAttribute("aria-pressed", "false");
 });

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useThemeStore } from "./theme";
 
 describe("theme store", () => {
@@ -6,6 +6,49 @@ describe("theme store", () => {
 		document.documentElement.className = "";
 		window.localStorage.clear();
 		useThemeStore.setState({ theme: "light" });
+	});
+
+	describe("initial theme", () => {
+		afterEach(() => {
+			vi.unstubAllGlobals();
+			vi.resetModules();
+			document.documentElement.className = "";
+		});
+
+		it("should default to dark without a document", async () => {
+			// GIVEN
+			vi.resetModules();
+			vi.stubGlobal("document", undefined);
+
+			// WHEN
+			const { useThemeStore: testSubject } = await import("./theme");
+
+			// THEN
+			expect(testSubject.getState().theme).toBe("dark");
+		});
+
+		it("should read the dark class from the document", async () => {
+			// GIVEN
+			document.documentElement.classList.add("dark");
+			vi.resetModules();
+
+			// WHEN
+			const { useThemeStore: testSubject } = await import("./theme");
+
+			// THEN
+			expect(testSubject.getState().theme).toBe("dark");
+		});
+
+		it("should read a light document", async () => {
+			// GIVEN
+			vi.resetModules();
+
+			// WHEN
+			const { useThemeStore: testSubject } = await import("./theme");
+
+			// THEN
+			expect(testSubject.getState().theme).toBe("light");
+		});
 	});
 
 	describe("setTheme", () => {

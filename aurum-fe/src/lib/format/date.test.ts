@@ -1,5 +1,14 @@
-import { describe, expect, it } from "vitest";
-import { formatDate, formatDatePattern, parseDateOnly, toDateOnly, todayISO } from "./date";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+	formatDate,
+	formatDatePattern,
+	parseDateOnly,
+	toDateOnly,
+	todayISO,
+	tomorrowISO
+} from "./date";
+
+const FIXED_NOW = new Date(2026, 10, 13, 23, 30);
 
 describe("date formatting", () => {
 	describe("parseDateOnly", () => {
@@ -69,6 +78,25 @@ describe("date formatting", () => {
 		});
 	});
 
+	describe("tomorrowISO", () => {
+		afterEach(() => {
+			vi.useRealTimers();
+		});
+
+		it("should return the local date of the next day", () => {
+			// GIVEN
+			vi.useFakeTimers();
+			vi.setSystemTime(FIXED_NOW);
+			const testSubject = tomorrowISO;
+
+			// WHEN
+			const expected = testSubject();
+
+			// THEN
+			expect(expected).toBe("2026-11-14");
+		});
+	});
+
 	describe("formatDatePattern", () => {
 		it("should format with the requested pattern", () => {
 			// GIVEN
@@ -79,6 +107,17 @@ describe("date formatting", () => {
 
 			// THEN
 			expect(expected).toBe("13/11/2026");
+		});
+
+		it("should accept a Date instance", () => {
+			// GIVEN
+			const testSubject = formatDatePattern;
+
+			// WHEN
+			const expected = testSubject(new Date(2026, 0, 2), "dd/MM/yyyy");
+
+			// THEN
+			expect(expected).toBe("02/01/2026");
 		});
 	});
 });

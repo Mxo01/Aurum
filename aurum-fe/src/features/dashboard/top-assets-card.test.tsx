@@ -116,3 +116,48 @@ describe("TopAssetsCard", () => {
 		expect(container.querySelectorAll(".animate-pulse")).toHaveLength(4);
 	});
 });
+
+it("should label a liability and fall back to the original value", () => {
+	// GIVEN
+	const testSubject = TopAssetsCard;
+	const mockLiability = buildAsset({
+		id: "asset-3",
+		name: "Car loan",
+		type: "LIABILITY",
+		latestValue: 90,
+		latestValueBase: null,
+		previousValue: 100
+	});
+	const mockSummary = buildSummary({ topAssets: [mockLiability], assetAllocation: {} });
+
+	// WHEN
+	renderWithProviders(createElement(testSubject, { summary: mockSummary, isLoading: false }));
+
+	// THEN
+	const row = screen.getByText("Car loan").closest("tr");
+	expect(row).not.toBeNull();
+	expect(within(row as HTMLElement).getByText("Liability")).toBeInTheDocument();
+	expect(within(row as HTMLElement).getByText("€90")).toBeInTheDocument();
+	expect(screen.queryByLabelText("Asset allocation")).not.toBeInTheDocument();
+});
+
+it("should fall back to the name and zero", () => {
+	// GIVEN
+	const testSubject = TopAssetsCard;
+	const nameless = buildAsset({
+		id: undefined,
+		name: "No id",
+		latestValue: null,
+		latestValueBase: null,
+		previousValue: null
+	});
+	const mockSummary = buildSummary({ topAssets: [nameless] });
+
+	// WHEN
+	renderWithProviders(createElement(testSubject, { summary: mockSummary, isLoading: false }));
+
+	// THEN
+	expect(screen.getByText("No id")).toBeInTheDocument();
+	expect(screen.getByText("€0")).toBeInTheDocument();
+	expect(screen.getByText("No data")).toBeInTheDocument();
+});

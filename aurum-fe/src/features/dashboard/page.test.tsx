@@ -1,10 +1,10 @@
-import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createElement } from "react";
 import { http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
 import { env } from "@/lib/env";
-import { buildChart, buildTarget } from "@/test/fixtures/portfolio";
+import { buildChart, buildSummary, buildTarget } from "@/test/fixtures/portfolio";
 import { server } from "@/test/msw/server";
 import { renderWithProviders } from "@/test/render";
 import { DashboardPage } from "./page";
@@ -112,4 +112,125 @@ it("should list every target", async () => {
 	expect(await screen.findByText("House")).toBeInTheDocument();
 	expect(screen.getByText("Car")).toBeInTheDocument();
 	expect(screen.getByText("Trip")).toBeInTheDocument();
+});
+
+it("should retry the dashboard after a failure", async () => {
+	// GIVEN
+	let summaryCalls = 0;
+	server.use(
+		http.get(`${env.apiUrl}/analytics/summary`, () => {
+			summaryCalls += 1;
+			return summaryCalls === 1
+				? HttpResponse.json({ message: "boom" }, { status: 500 })
+				: HttpResponse.json(buildSummary());
+		})
+	);
+	const testSubject = DashboardPage;
+	renderWithProviders(createElement(testSubject), { route: "/dashboard" });
+
+	// WHEN
+	fireEvent.click(await screen.findByRole("button", { name: "Try again" }));
+
+	// THEN
+	await waitFor(() => expect(summaryCalls).toBeGreaterThan(1));
+});
+
+it("should ignore an invalid year in the URL", async () => {
+	// GIVEN
+	let requestedYear: string | null = null;
+	server.use(
+		http.get(`${env.apiUrl}/analytics/chart`, ({ request }) => {
+			requestedYear = new URL(request.url).searchParams.get("year");
+			return HttpResponse.json(buildChart());
+		})
+	);
+	const testSubject = DashboardPage;
+
+	// WHEN
+	renderWithProviders(createElement(testSubject), { route: "/dashboard?year=abc" });
+
+	// THEN
+	await waitFor(() => expect(requestedYear).toBeNull());
+});
+
+it("should put the selected year in the URL", async () => {
+	// GIVEN
+	let requestedYear: string | null = null;
+	server.use(
+		http.get(`${env.apiUrl}/analytics/chart`, ({ request }) => {
+			requestedYear = new URL(request.url).searchParams.get("year");
+			return HttpResponse.json(buildChart());
+		})
+	);
+	const user = userEvent.setup();
+	renderWithProviders(createElement(DashboardPage), { route: "/dashboard" });
+
+	// WHEN
+	await user.click(screen.getByRole("combobox", { name: "Select year" }));
+	await user.click(await screen.findByRole("option", { name: "2025" }));
+
+	// THEN
+	await waitFor(() => expect(requestedYear).toBe("2025"));
+});
+
+it("should clear the year from the URL", async () => {
+	// GIVEN
+	let requestedYear: string | null | undefined;
+	server.use(
+		http.get(`${env.apiUrl}/analytics/chart`, ({ request }) => {
+			requestedYear = new URL(request.url).searchParams.get("year");
+			return HttpResponse.json(buildChart());
+		})
+	);
+	const user = userEvent.setup();
+	renderWithProviders(createElement(DashboardPage), { route: "/dashboard?year=2025" });
+	await waitFor(() => expect(requestedYear).toBe("2025"));
+
+	// WHEN
+	await user.click(screen.getByRole("combobox", { name: "Select year" }));
+	await user.click(await screen.findByRole("option", { name: "All time" }));
+
+	// THEN
+	await waitFor(() => expect(requestedYear).toBeNull());
+});
+
+it("should tolerate an empty chart and empty projections", async () => {
+	// GIVEN
+	server.use(
+		http.get(`${env.apiUrl}/analytics/chart`, () =>
+			HttpResponse.json({
+				labels: [],
+				totalNetWorth: [],
+				totalAssetsOnly: [],
+				favoriteAssetsValues: {},
+				favoriteAssetsTypes: {}
+			})
+		),
+		http.get(`${env.apiUrl}/analytics/projections`, () => HttpResponse.json({}))
+	);
+
+	// WHEN
+	renderWithProviders(createElement(DashboardPage), { route: "/dashboard" });
+
+	// THEN
+	expect(await screen.findByText("Not enough data yet")).toBeInTheDocument();
+	const projected = screen.getByText("Projected net worth").closest(".bg-card");
+	expect(within(projected as HTMLElement).getByText("€0")).toBeInTheDocument();
+});
+
+it("should tolerate a null summary", async () => {
+	// GIVEN
+	server.use(http.get(`${env.apiUrl}/analytics/summary`, () => HttpResponse.json(null)));
+
+	// WHEN
+	renderWithProviders(createElement(DashboardPage), { route: "/dashboard" });
+
+	// THEN
+	expect(await screen.findByText("Total liabilities")).toBeInTheDocument();
+	const liabilities = screen.getByText("Total liabilities").closest(".bg-card");
+	const fx = screen.getByText("FX impact").closest(".bg-card");
+	await waitFor(() =>
+		expect(within(liabilities as HTMLElement).getByText("€0")).toBeInTheDocument()
+	);
+	expect(within(fx as HTMLElement).getByText("€0")).toBeInTheDocument();
 });

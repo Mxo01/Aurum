@@ -4,6 +4,7 @@ import { createElement } from "react";
 import { http, HttpResponse } from "msw";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { env } from "@/lib/env";
+import { toast } from "sonner";
 import { buildProfile } from "@/test/fixtures/portfolio";
 import { server } from "@/test/msw/server";
 import { renderWithProviders } from "@/test/render";
@@ -13,10 +14,10 @@ import { ProfilePage } from "./page";
 const { mockLogout, mockUser } = vi.hoisted(() => ({
 	mockLogout: vi.fn(),
 	mockUser: {
-		sub: "auth0|123",
-		name: "Mario Di Modica",
-		email: "mario@example.com",
-		picture: "https://example.com/avatar.jpg"
+		sub: "auth0|123" as string | undefined,
+		name: "Mario Di Modica" as string | undefined,
+		email: "mario@example.com" as string | undefined,
+		picture: "https://example.com/avatar.jpg" as string | undefined
 	}
 }));
 
@@ -120,6 +121,59 @@ describe("ProfilePage", () => {
 			expect(navigator.clipboard.writeText).toHaveBeenCalledWith(expect.stringContaining("/mcp"))
 		);
 		expect(await screen.findByRole("button", { name: "Copied" })).toBeInTheDocument();
+
+		// WHEN
+		await waitFor(() => expect(screen.getByRole("button", { name: "Copy" })).toBeInTheDocument(), {
+			timeout: 2500
+		});
+	});
+
+	it("should open the picture picker", async () => {
+		// GIVEN
+		useProfileFixture();
+		renderWithProviders(createElement(ProfilePage));
+		const input = await screen.findByLabelText("Upload profile picture");
+		const clickSpy = vi.spyOn(input as HTMLInputElement, "click");
+
+		// WHEN
+		fireEvent.click(screen.getByRole("button", { name: /Upload picture/ }));
+
+		// THEN
+		expect(clickSpy).toHaveBeenCalled();
+	});
+
+	it("should fall back when the auth user has no profile fields", async () => {
+		// GIVEN
+		mockUser.sub = undefined;
+		mockUser.name = undefined;
+		mockUser.picture = undefined;
+		mockUser.email = undefined;
+		useProfileFixture();
+
+		// WHEN
+		renderWithProviders(createElement(ProfilePage));
+
+		// THEN
+		expect(await screen.findByLabelText("Name")).toHaveValue("");
+		expect(screen.getByRole("button", { name: /Upload picture/ })).toBeInTheDocument();
+	});
+
+	it("should report a copy failure", async () => {
+		// GIVEN
+		useProfileFixture();
+		Object.defineProperty(navigator, "clipboard", {
+			value: { writeText: vi.fn().mockRejectedValue(new Error("nope")) },
+			configurable: true
+		});
+		const errorSpy = vi.spyOn(toast, "error");
+		renderWithProviders(createElement(ProfilePage));
+		fireEvent.mouseDown(screen.getByRole("tab", { name: "Integrations" }));
+
+		// WHEN
+		fireEvent.click(screen.getByRole("button", { name: "Copy" }));
+
+		// THEN
+		await waitFor(() => expect(errorSpy).toHaveBeenCalledWith("Could not copy the config"));
 	});
 
 	it("should show the mcp config file and hide it on the mobile tab", async () => {
@@ -187,6 +241,137 @@ describe("ProfilePage", () => {
 		// THEN
 		await waitFor(() => expect(deleteCalls).toBe(1));
 		expect(mockLogout).toHaveBeenCalledOnce();
+	});
+
+	it("should upload a picture", async () => {
+		// GIVEN
+		useProfileFixture();
+		let uploads = 0;
+		server.use(
+			http.post(`${env.apiUrl}/users/picture`, () => {
+				uploads += 1;
+				return new HttpResponse(null, { status: 200 });
+			})
+		);
+		renderWithProviders(createElement(ProfilePage));
+		const input = await screen.findByLabelText("Upload profile picture");
+		const file = new File(["avatar"], "avatar.png", { type: "image/png" });
+
+		// WHEN
+		fireEvent.change(input, { target: { files: [file] } });
+
+		// THEN
+		await waitFor(() => expect(uploads).toBe(1));
+	});
+
+	it("should reject a picture over five megabytes", async () => {
+		// GIVEN
+		useProfileFixture();
+		let uploads = 0;
+		server.use(
+			http.post(`${env.apiUrl}/users/picture`, () => {
+				uploads += 1;
+				return new HttpResponse(null, { status: 200 });
+			})
+		);
+		const errorSpy = vi.spyOn(toast, "error");
+		renderWithProviders(createElement(ProfilePage));
+		const input = await screen.findByLabelText("Upload profile picture");
+		const file = new File(["avatar"], "big.png", { type: "image/png" });
+		Object.defineProperty(file, "size", { value: 6 * 1024 * 1024 });
+
+		// WHEN
+		fireEvent.change(input, { target: { files: [file] } });
+
+		// THEN
+		expect(errorSpy).toHaveBeenCalledWith("The picture must be 5 MB or smaller");
+		expect(uploads).toBe(0);
+	});
+
+	it("should ignore an empty picture selection", async () => {
+		// GIVEN
+		useProfileFixture();
+		let uploads = 0;
+		server.use(
+			http.post(`${env.apiUrl}/users/picture`, () => {
+				uploads += 1;
+				return new HttpResponse(null, { status: 200 });
+			})
+		);
+		renderWithProviders(createElement(ProfilePage));
+		const input = await screen.findByLabelText("Upload profile picture");
+
+		// WHEN
+		fireEvent.change(input, { target: { files: [] } });
+
+		// THEN
+		expect(uploads).toBe(0);
+	});
+
+	it("should show and remove a custom picture", async () => {
+		// GIVEN
+		server.use(
+			http.get(`${env.apiUrl}/users`, () =>
+				HttpResponse.json(buildProfile({ picture: "ZmFrZQ==" }))
+			)
+		);
+		let removals = 0;
+		server.use(
+			http.delete(`${env.apiUrl}/users/picture`, () => {
+				removals += 1;
+				return new HttpResponse(null, { status: 200 });
+			})
+		);
+		renderWithProviders(createElement(ProfilePage));
+
+		// WHEN
+		fireEvent.click(await screen.findByRole("button", { name: /Remove/ }));
+
+		// THEN
+		await waitFor(() => expect(removals).toBe(1));
+	});
+
+	it("should save a changed name on blur", async () => {
+		// GIVEN
+		useProfileFixture();
+		let body: unknown;
+		server.use(
+			http.put(`${env.apiUrl}/users`, async ({ request }) => {
+				body = await request.json();
+				return new HttpResponse(null, { status: 200 });
+			})
+		);
+		renderWithProviders(createElement(ProfilePage));
+		const name = await screen.findByDisplayValue("Mario Di Modica");
+
+		// WHEN
+		fireEvent.change(name, { target: { value: "  Mario Rossi  " } });
+		fireEvent.blur(name);
+
+		// THEN
+		await waitFor(() => expect(body).toEqual({ name: "Mario Rossi" }));
+	});
+
+	it("should not save an unchanged or empty name", async () => {
+		// GIVEN
+		useProfileFixture();
+		let calls = 0;
+		server.use(
+			http.put(`${env.apiUrl}/users`, () => {
+				calls += 1;
+				return new HttpResponse(null, { status: 200 });
+			})
+		);
+		renderWithProviders(createElement(ProfilePage));
+		const name = await screen.findByDisplayValue("Mario Di Modica");
+
+		// WHEN
+		fireEvent.blur(name);
+		fireEvent.change(name, { target: { value: "   " } });
+		fireEvent.blur(name);
+
+		// THEN
+		expect(calls).toBe(0);
 	});
 
 	it("should lock the name and picture for a Google profile", async () => {

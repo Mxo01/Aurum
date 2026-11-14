@@ -1,10 +1,53 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { usePrivacyStore } from "./privacy";
 
 describe("privacy store", () => {
 	beforeEach(() => {
 		window.localStorage.clear();
 		usePrivacyStore.setState({ isPrivacy: false });
+	});
+
+	describe("initial state", () => {
+		afterEach(() => {
+			vi.unstubAllGlobals();
+			vi.resetModules();
+		});
+
+		it("should start disabled without a window", async () => {
+			// GIVEN
+			vi.resetModules();
+			vi.stubGlobal("window", undefined);
+
+			// WHEN
+			const { usePrivacyStore: testSubject } = await import("./privacy");
+
+			// THEN
+			expect(testSubject.getState().isPrivacy).toBe(false);
+		});
+
+		it("should restore a persisted preference", async () => {
+			// GIVEN
+			window.localStorage.setItem("privacy", "true");
+			vi.resetModules();
+
+			// WHEN
+			const { usePrivacyStore: testSubject } = await import("./privacy");
+
+			// THEN
+			expect(testSubject.getState().isPrivacy).toBe(true);
+		});
+
+		it("should ignore a cleared preference", async () => {
+			// GIVEN
+			window.localStorage.setItem("privacy", "false");
+			vi.resetModules();
+
+			// WHEN
+			const { usePrivacyStore: testSubject } = await import("./privacy");
+
+			// THEN
+			expect(testSubject.getState().isPrivacy).toBe(false);
+		});
 	});
 
 	describe("togglePrivacy", () => {

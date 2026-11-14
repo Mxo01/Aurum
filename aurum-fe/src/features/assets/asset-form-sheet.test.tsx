@@ -176,3 +176,117 @@ describe("AssetFormSheet", () => {
 		expect(updatedBody).toMatchObject({ name: "Apartment Berlin", categoryId: "c1" });
 	});
 });
+
+describe("AssetFormSheet details", () => {
+	it("should show the selected category and close with cancel", async () => {
+		// GIVEN
+		const onOpenChange = vi.fn();
+		const testSubject = AssetFormSheet;
+		const Subject = testSubject;
+		renderWithProviders(
+			<Subject
+				open
+				onOpenChange={onOpenChange}
+				asset={null}
+				categories={mockCategories}
+			/>
+		);
+
+		// WHEN
+		await userEvent.click(screen.getByLabelText("Category"));
+		await userEvent.click(screen.getByRole("option", { name: "Investments" }));
+
+		// THEN
+		expect(screen.getByLabelText("Category")).toHaveTextContent("Investments");
+
+		// WHEN
+		await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+		// THEN
+		expect(onOpenChange).toHaveBeenCalledWith(false);
+	});
+});
+
+it("should change the currency and the favorite flag", async () => {
+	// GIVEN
+	const testSubject = AssetFormSheet;
+	const Subject = testSubject;
+	renderWithProviders(
+		<Subject
+			open
+			onOpenChange={() => undefined}
+			asset={null}
+			categories={mockCategories}
+		/>
+	);
+
+	// WHEN
+	await userEvent.click(screen.getByLabelText("Currency"));
+	await userEvent.click(screen.getByRole("option", { name: "USD" }));
+	await userEvent.click(screen.getByRole("button", { name: "Mark as favorite" }));
+
+	// THEN
+	expect(screen.getByLabelText("Currency")).toHaveTextContent("USD");
+	expect(screen.getByRole("button", { name: "Mark as favorite" })).toHaveAttribute(
+		"aria-pressed",
+		"true"
+	);
+});
+
+it("should default a new liability to manual", async () => {
+	// GIVEN
+	let postedBody: unknown;
+	server.use(
+		http.post(`${env.apiUrl}/assets`, async ({ request }) => {
+			postedBody = await request.json();
+			return HttpResponse.json(buildAsset());
+		})
+	);
+	const testSubject = AssetFormSheet;
+	const Subject = testSubject;
+	renderWithProviders(
+		<Subject
+			open
+			onOpenChange={() => undefined}
+			asset={null}
+			categories={mockCategories}
+		/>
+	);
+
+	// WHEN
+	const user = userEvent.setup();
+	fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Mortgage" } });
+	await user.click(screen.getByLabelText("Category"));
+	await user.click(await screen.findByRole("option", { name: "Mortgage" }));
+	expect(await screen.findByLabelText("Liability type")).toBeInTheDocument();
+	fireEvent.submit(
+		screen.getByRole("button", { name: "Add asset" }).closest("form") as HTMLFormElement
+	);
+
+	// THEN
+	await waitFor(() => expect(postedBody).toBeDefined());
+	expect(postedBody).toMatchObject({ liabilityType: "MANUAL" });
+});
+
+it("should show the required field errors", async () => {
+	// GIVEN
+	const testSubject = AssetFormSheet;
+	const Subject = testSubject;
+	renderWithProviders(
+		<Subject
+			open
+			onOpenChange={() => undefined}
+			asset={null}
+			categories={mockCategories}
+		/>
+	);
+
+	// WHEN
+	fireEvent.submit(
+		screen.getByRole("button", { name: "Add asset" }).closest("form") as HTMLFormElement
+	);
+
+	// THEN
+	expect(await screen.findByText("Name is required")).toBeInTheDocument();
+	expect(screen.getByText("Category is required")).toBeInTheDocument();
+});

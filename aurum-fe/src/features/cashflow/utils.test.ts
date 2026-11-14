@@ -46,6 +46,24 @@ describe("buildCashflowRows", () => {
 		expect(expected).toEqual([]);
 	});
 
+	it.each([
+		["a month past December", 13, "13"],
+		["a month below January", 0, "0"]
+	])("should fall back to the raw month for %s", (_description, month, expectedLabel) => {
+		// GIVEN
+		const testSubject = buildCashflowRows;
+		const mockYear = buildCashflowYear({
+			entries: [{ id: "1", month, earned: 100, spent: 50 }],
+			previousYearEntries: null
+		});
+
+		// WHEN
+		const expected = testSubject(mockYear);
+
+		// THEN
+		expect(expected[0]?.label).toBe(expectedLabel);
+	});
+
 	it("should leave previous-year values empty when the year has none", () => {
 		// GIVEN
 		const testSubject = buildCashflowRows;

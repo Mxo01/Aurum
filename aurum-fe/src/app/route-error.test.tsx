@@ -48,3 +48,29 @@ describe("RouteError", () => {
 		consoleSpy.mockRestore();
 	});
 });
+
+describe("RouteError fallback", () => {
+	it("should show the generic message for a non-Error value", async () => {
+		// GIVEN
+		const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+		const router = createMemoryRouter([
+			{
+				path: "/",
+				element: <p>ok</p>,
+				loader: () => {
+					throw "kaboom";
+				},
+				errorElement: <RouteError />
+			}
+		]);
+
+		// WHEN
+		render(<RouterProvider router={router} />);
+
+		// THEN
+		expect(
+			await screen.findByText("An unexpected error interrupted the page.")
+		).toBeInTheDocument();
+		consoleSpy.mockRestore();
+	});
+});
