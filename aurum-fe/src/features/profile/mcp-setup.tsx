@@ -57,8 +57,8 @@ export function McpSetup() {
 			</Tabs>
 
 			<CodeBlock>
-				<CodeBlockHeader className="max-sm:pt-2">
-					<CodeBlockTitle className={platform === "desktop" ? "hidden sm:block" : "hidden"}>
+				<CodeBlockHeader>
+					<CodeBlockTitle className={platform === "desktop" ? undefined : "hidden"}>
 						<FileJson className="size-3.5" />
 						mcp.json
 					</CodeBlockTitle>
