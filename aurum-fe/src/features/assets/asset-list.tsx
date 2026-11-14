@@ -1,18 +1,8 @@
-import {
-	ChevronDown,
-	ChevronRight,
-	History,
-	LineChart,
-	MoreHorizontal,
-	Pencil,
-	Trash2
-} from "lucide-react";
+import { ChevronDown, ChevronRight, History, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { Delta } from "@/components/app/delta";
 import { EditableText } from "@/components/app/editable-text";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Toggle } from "@/components/ui/toggle";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -27,6 +17,7 @@ import { assetTrend } from "@/lib/format/asset";
 import { usePreferences } from "@/lib/format/use-preferences";
 import { cn } from "@/lib/utils";
 import { groupAssets } from "./assets.utils";
+import { TrackToggle } from "./track-toggle";
 import { EditableValue } from "@/components/app/editable-value";
 
 interface AssetListProps {
@@ -96,7 +87,8 @@ export function AssetList({
 	return (
 		<>
 			<div className="border-border hidden overflow-hidden rounded-xl border md:block">
-				<div className="bg-muted/40 text-muted-foreground grid grid-cols-[minmax(0,1fr)_92px_160px_120px_100px] gap-2 px-3 py-2 text-[11px] font-medium">
+				<div className="bg-muted/40 text-muted-foreground grid grid-cols-[124px_minmax(0,1fr)_92px_160px_120px_100px] gap-2 px-3 py-2 text-[11px] font-medium">
+					<span className="text-center">Tracked in Dashboard</span>
 					<span>Asset</span>
 					<span>Type</span>
 					<span className="text-right">Value</span>
@@ -143,31 +135,18 @@ export function AssetList({
 										return (
 											<div
 												key={asset.id}
-												className="border-border/60 hover:bg-muted/30 grid grid-cols-[minmax(0,1fr)_92px_160px_120px_100px] items-center gap-2 border-t px-3 py-2 transition-colors"
+												className="border-border/60 hover:bg-muted/30 grid grid-cols-[124px_minmax(0,1fr)_92px_160px_120px_100px] items-center gap-2 border-t px-3 py-2 transition-colors"
 											>
-												<div className="flex min-w-0 items-center gap-2 pl-6">
+												<div className="flex justify-center">
 													{asset.type === ASSET_TYPE.ASSET ? (
-														<Tooltip>
-															<TooltipTrigger asChild>
-																<Toggle
-																	pressed={asset.isFavorite}
-																	onPressedChange={() => onToggleFavorite(asset)}
-																	variant="outline"
-																	size="sm"
-																	aria-label={`Dashboard chart for ${asset.name}`}
-																	className="aria-pressed:border-primary aria-pressed:bg-primary aria-pressed:text-primary-foreground shrink-0 gap-1 px-2 text-xs"
-																>
-																	<LineChart className="size-3.5" />
-																	Chart
-																</Toggle>
-															</TooltipTrigger>
-															<TooltipContent>
-																{asset.isFavorite
-																	? "Shown in the dashboard chart"
-																	: "Not shown in the dashboard chart"}
-															</TooltipContent>
-														</Tooltip>
+														<TrackToggle
+															pressed={asset.isFavorite}
+															onPressedChange={() => onToggleFavorite(asset)}
+															label={`Tracked in Dashboard: ${asset.name}`}
+														/>
 													) : null}
+												</div>
+												<div className="flex min-w-0 items-center gap-2 pl-6">
 													<EditableText
 														value={asset.name}
 														label={asset.name}
@@ -258,17 +237,11 @@ export function AssetList({
 												<div className="flex items-start justify-between gap-2">
 													<div className="flex min-w-0 items-center gap-1.5">
 														{asset.type === ASSET_TYPE.ASSET ? (
-															<Toggle
+															<TrackToggle
 																pressed={asset.isFavorite}
 																onPressedChange={() => onToggleFavorite(asset)}
-																variant="outline"
-																size="sm"
-																aria-label={`Dashboard chart for ${asset.name}`}
-																className="aria-pressed:border-primary aria-pressed:bg-primary aria-pressed:text-primary-foreground gap-1 px-2 text-[11px]"
-															>
-																<LineChart className="size-3.5" />
-																Chart
-															</Toggle>
+																label={`Tracked in Dashboard: ${asset.name}`}
+															/>
 														) : null}
 														<EditableText
 															value={asset.name}

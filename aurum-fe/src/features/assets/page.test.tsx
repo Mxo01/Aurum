@@ -207,7 +207,7 @@ describe("AssetsPage", () => {
 
 		// WHEN
 		const [dashboardToggle] = screen.getAllByRole("button", {
-			name: "Dashboard chart for Apartment Berlin"
+			name: "Tracked in Dashboard: Apartment Berlin"
 		});
 		fireEvent.click(dashboardToggle!);
 

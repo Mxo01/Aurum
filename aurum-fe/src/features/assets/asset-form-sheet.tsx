@@ -5,6 +5,7 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
 import { CategoryIcon } from "@/features/categories/icon-map";
+import { TrackToggle } from "./track-toggle";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -24,7 +25,6 @@ import {
 	SheetHeader,
 	SheetTitle
 } from "@/components/ui/sheet";
-import { Switch } from "@/components/ui/switch";
 import { todayISO } from "@/lib/format/date";
 import {
 	ASSET_TYPE,
@@ -388,15 +388,15 @@ export function AssetFormSheet({ open, onOpenChange, asset, categories }: AssetF
 					) : (
 						<div className="flex items-center justify-between gap-3 rounded-lg border p-3">
 							<div className="flex flex-col">
-								<Label htmlFor="asset-favorite">Track in dashboard</Label>
+								<Label>Track in dashboard</Label>
 								<span className="text-muted-foreground text-[11px]">
 									Show this asset as a line on the net worth chart.
 								</span>
 							</div>
-							<Switch
-								id="asset-favorite"
-								checked={isFavorite}
-								onCheckedChange={checked => form.setValue("isFavorite", checked)}
+							<TrackToggle
+								pressed={isFavorite}
+								onPressedChange={checked => form.setValue("isFavorite", checked)}
+								label="Track in dashboard"
 							/>
 						</div>
 					)}
