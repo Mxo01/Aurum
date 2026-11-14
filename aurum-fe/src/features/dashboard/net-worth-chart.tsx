@@ -22,6 +22,7 @@ import {
 	SelectValue
 } from "@/components/ui/select";
 import { usePreferences } from "@/lib/format/use-preferences";
+import { usePrefersReducedMotion } from "@/lib/use-prefers-reduced-motion";
 import type { AnalyticsSummaryDTO, ChartDataDTO, VariationDTO } from "@/lib/api/types";
 import { cn } from "@/lib/utils";
 import {
@@ -56,6 +57,7 @@ export function NetWorthChart({
 	isLoading
 }: NetWorthChartProps) {
 	const { money } = usePreferences();
+	const reduceMotion = usePrefersReducedMotion();
 	const [period, setPeriod] = useState<keyof VariationDTO>("oneYear");
 
 	const variation = summary?.assetVariations?.[period];
@@ -221,7 +223,8 @@ export function NetWorthChart({
 									strokeWidth={2}
 									fill="url(#net-worth-fill)"
 									dot={false}
-									isAnimationActive={false}
+									isAnimationActive={!reduceMotion}
+									animationDuration={700}
 								/>
 								{favorites.map((favorite, index) => (
 									<Line
@@ -232,7 +235,8 @@ export function NetWorthChart({
 										stroke={FAVORITE_COLORS[index % FAVORITE_COLORS.length]}
 										strokeWidth={1.6}
 										dot={false}
-										isAnimationActive={false}
+										isAnimationActive={!reduceMotion}
+										animationDuration={700}
 									/>
 								))}
 							</AreaChart>

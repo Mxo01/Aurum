@@ -3,6 +3,7 @@ import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxi
 import { EmptyState } from "@/components/app/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePreferences } from "@/lib/format/use-preferences";
+import { usePrefersReducedMotion } from "@/lib/use-prefers-reduced-motion";
 import type { CashFlowRow } from "./utils";
 
 const CHART_HEIGHT = 280;
@@ -14,6 +15,7 @@ interface CashflowChartProps {
 
 export function CashflowChart({ rows, isLoading }: CashflowChartProps) {
 	const { money } = usePreferences();
+	const reduceMotion = usePrefersReducedMotion();
 	const data = rows.map(row => ({ label: row.label, earned: row.earned, spent: row.spent }));
 	const isEmpty = rows.every(row => row.earned === 0 && row.spent === 0);
 
@@ -98,7 +100,8 @@ export function CashflowChart({ rows, isLoading }: CashflowChartProps) {
 								fill="var(--chart-1)"
 								radius={[4, 4, 0, 0]}
 								maxBarSize={18}
-								isAnimationActive={false}
+								isAnimationActive={!reduceMotion}
+								animationDuration={700}
 							/>
 							<Bar
 								dataKey="spent"
@@ -106,7 +109,8 @@ export function CashflowChart({ rows, isLoading }: CashflowChartProps) {
 								fill="var(--chart-2)"
 								radius={[4, 4, 0, 0]}
 								maxBarSize={18}
-								isAnimationActive={false}
+								isAnimationActive={!reduceMotion}
+								animationDuration={700}
 							/>
 						</BarChart>
 					</ResponsiveContainer>

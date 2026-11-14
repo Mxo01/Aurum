@@ -38,6 +38,7 @@ import type { AssetDTO } from "@/lib/api/types";
 import { todayISO } from "@/lib/format/date";
 import { formatCurrency } from "@/lib/format/money";
 import { usePreferences } from "@/lib/format/use-preferences";
+import { usePrefersReducedMotion } from "@/lib/use-prefers-reduced-motion";
 import { useCreateSnapshot, useDeleteSnapshots, useSnapshots } from "./api";
 
 const CHART_HEIGHT = 240;
@@ -63,6 +64,7 @@ export function SnapshotsSheet({ open, onOpenChange, asset }: SnapshotsSheetProp
 
 function SnapshotsBody({ asset }: { asset: AssetDTO }) {
 	const { money, date, currency, locale, isPrivacy } = usePreferences();
+	const reduceMotion = usePrefersReducedMotion();
 	const snapshots = useSnapshots(asset.id);
 	const createSnapshot = useCreateSnapshot();
 	const deleteSnapshots = useDeleteSnapshots();
@@ -349,7 +351,8 @@ function SnapshotsBody({ asset }: { asset: AssetDTO }) {
 										strokeWidth={2}
 										fill="url(#snapshot-area)"
 										dot={false}
-										isAnimationActive={false}
+										isAnimationActive={!reduceMotion}
+										animationDuration={700}
 									/>
 								</AreaChart>
 							</ResponsiveContainer>
