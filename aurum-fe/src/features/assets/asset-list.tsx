@@ -17,7 +17,7 @@ import { assetTrend } from "@/lib/format/asset";
 import { usePreferences } from "@/lib/format/use-preferences";
 import { cn } from "@/lib/utils";
 import { groupAssets } from "./assets.utils";
-import { TrackToggle } from "./track-toggle";
+import { FavoriteToggle } from "./favorite-toggle";
 import { EditableValue } from "@/components/app/editable-value";
 
 interface AssetListProps {
@@ -87,8 +87,7 @@ export function AssetList({
 	return (
 		<>
 			<div className="border-border hidden overflow-hidden rounded-xl border md:block">
-				<div className="bg-muted/40 text-muted-foreground grid grid-cols-[124px_minmax(0,1fr)_92px_160px_120px_100px] gap-2 px-3 py-2 text-[11px] font-medium">
-					<span className="text-center">Tracked in Dashboard</span>
+				<div className="bg-muted/40 text-muted-foreground grid grid-cols-[minmax(0,1fr)_92px_160px_120px_100px] gap-2 px-3 py-2 text-[11px] font-medium">
 					<span>Asset</span>
 					<span>Type</span>
 					<span className="text-right">Value</span>
@@ -135,17 +134,8 @@ export function AssetList({
 										return (
 											<div
 												key={asset.id}
-												className="border-border/60 hover:bg-muted/30 grid grid-cols-[124px_minmax(0,1fr)_92px_160px_120px_100px] items-center gap-2 border-t px-3 py-2 transition-colors"
+												className="border-border/60 hover:bg-muted/30 grid grid-cols-[minmax(0,1fr)_92px_160px_120px_100px] items-center gap-2 border-t px-3 py-2 transition-colors"
 											>
-												<div className="flex justify-center">
-													{asset.type === ASSET_TYPE.ASSET ? (
-														<TrackToggle
-															pressed={asset.isFavorite}
-															onPressedChange={() => onToggleFavorite(asset)}
-															label={`Tracked in Dashboard: ${asset.name}`}
-														/>
-													) : null}
-												</div>
 												<div className="flex min-w-0 items-center gap-2 pl-6">
 													<EditableText
 														value={asset.name}
@@ -153,6 +143,13 @@ export function AssetList({
 														onSave={name => onRename(asset, name)}
 														className="min-w-0"
 													/>
+													{asset.type === ASSET_TYPE.ASSET ? (
+														<FavoriteToggle
+															pressed={asset.isFavorite}
+															onPressedChange={() => onToggleFavorite(asset)}
+															label={`Mark ${asset.name} as favorite`}
+														/>
+													) : null}
 												</div>
 												<div>
 													<Badge
@@ -236,19 +233,19 @@ export function AssetList({
 											>
 												<div className="flex items-start justify-between gap-2">
 													<div className="flex min-w-0 items-center gap-1.5">
-														{asset.type === ASSET_TYPE.ASSET ? (
-															<TrackToggle
-																pressed={asset.isFavorite}
-																onPressedChange={() => onToggleFavorite(asset)}
-																label={`Tracked in Dashboard: ${asset.name}`}
-															/>
-														) : null}
 														<EditableText
 															value={asset.name}
 															label={asset.name}
 															onSave={name => onRename(asset, name)}
 															className="min-w-0"
 														/>
+														{asset.type === ASSET_TYPE.ASSET ? (
+															<FavoriteToggle
+																pressed={asset.isFavorite}
+																onPressedChange={() => onToggleFavorite(asset)}
+																label={`Mark ${asset.name} as favorite`}
+															/>
+														) : null}
 													</div>
 													{trend === null ? (
 														<span className="text-muted-foreground text-[11px]">No data</span>

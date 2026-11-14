@@ -207,7 +207,7 @@ describe("AssetsPage", () => {
 
 		// WHEN
 		const [dashboardToggle] = screen.getAllByRole("button", {
-			name: "Tracked in Dashboard: Apartment Berlin"
+			name: "Mark Apartment Berlin as favorite"
 		});
 		fireEvent.click(dashboardToggle!);
 

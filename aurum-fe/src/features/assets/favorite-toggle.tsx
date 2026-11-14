@@ -1,28 +1,35 @@
-import { LineChart } from "lucide-react";
+import { Star } from "lucide-react";
 import { Toggle } from "@/components/ui/toggle";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
-interface TrackToggleProps {
+interface FavoriteToggleProps {
 	pressed: boolean;
 	onPressedChange: (pressed: boolean) => void;
 	label: string;
 	className?: string;
 }
 
-export function TrackToggle({ pressed, onPressedChange, label, className }: TrackToggleProps) {
+export function FavoriteToggle({
+	pressed,
+	onPressedChange,
+	label,
+	className
+}: FavoriteToggleProps) {
 	return (
 		<Tooltip>
 			<TooltipTrigger asChild>
 				<Toggle
 					pressed={pressed}
 					onPressedChange={onPressedChange}
-					variant="outline"
 					size="sm"
 					aria-label={label}
-					className={cn("aria-pressed:border-primary/40 aria-pressed:text-primary", className)}
+					className={cn(
+						"text-muted-foreground hover:text-foreground shrink-0 px-1.5 aria-pressed:bg-transparent aria-pressed:text-primary",
+						className
+					)}
 				>
-					<LineChart className="size-3.5" />
+					<Star className={cn("size-3.5", pressed && "fill-primary")} />
 				</Toggle>
 			</TooltipTrigger>
 			<TooltipContent>

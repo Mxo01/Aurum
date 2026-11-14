@@ -65,7 +65,7 @@ export function EditableText({
 			onClick={start}
 			disabled={disabled}
 			className={cn(
-				"focus-ring group -mx-1 inline-flex max-w-full items-center gap-1.5 rounded-md px-1 py-0.5 text-left text-sm font-medium transition-colors",
+				"focus-ring group -mx-1 inline-flex items-center gap-1.5 rounded-md px-1 py-0.5 text-left text-sm font-medium transition-colors",
 				!disabled && "hover:bg-accent",
 				className
 			)}

@@ -5,7 +5,7 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
 import { CategoryIcon } from "@/features/categories/icon-map";
-import { TrackToggle } from "./track-toggle";
+import { FavoriteToggle } from "./favorite-toggle";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -388,15 +388,15 @@ export function AssetFormSheet({ open, onOpenChange, asset, categories }: AssetF
 					) : (
 						<div className="flex items-center justify-between gap-3 rounded-lg border p-3">
 							<div className="flex flex-col">
-								<Label>Track in dashboard</Label>
+								<Label>Mark as favorite</Label>
 								<span className="text-muted-foreground text-[11px]">
-									Show this asset as a line on the net worth chart.
+									Favorite assets are plotted on the dashboard&apos;s net worth chart.
 								</span>
 							</div>
-							<TrackToggle
+							<FavoriteToggle
 								pressed={isFavorite}
 								onPressedChange={checked => form.setValue("isFavorite", checked)}
-								label="Track in dashboard"
+								label="Mark as favorite"
 							/>
 						</div>
 					)}
