@@ -9,7 +9,7 @@ the user's own currency and locale for every formatted number.
 ```
 aurum/
 ├── aurum-be/            Spring Boot 4.1 API (Java 25) + MCP tools
-├── aurum-fe/            Angular 21 single-page app
+├── aurum-fe/            React 19 + Vite single-page app
 ├── docker-compose.prod.yml   production stack (Postgres + backend)
 └── Makefile             starts both apps for local development
 ```
@@ -103,20 +103,22 @@ sequenceDiagram
 ```mermaid
 flowchart TB
     subgraph App
-      R[app.routes.ts] --> P[domain/<domain>/ pages]
-      P --> C[components]
-      P --> SV[services]
+      R[app/router.tsx] --> P[features/<domain>/ page]
+      P --> Q[TanStack Query hooks]
     end
-    SV --> API[shared/services/api.ts<br/>the only fetch wrapper]
+    Q --> API[lib/api client<br/>openapi-fetch]
     API -->|HTTPS| BE[aurum-be]
-    SV --> MODEL[domain models<br/>derived from the generated contract]
-    MODEL --> GEN[shared/api/schema.d.ts<br/>generated from OpenAPI]
+    Q --> GEN[lib/api/schema.d.ts<br/>generated from OpenAPI]
 ```
 
-- One folder per domain (`asset`, `snapshot`, `target`, `dashboard`, `cashflow`,
-  `profile`), each with its own `model/`, `components/`, and services.
-- `shared/` holds what more than one domain needs.
-- Components render; services fetch and hold state; utilities are pure.
+- Feature-sliced: `src/app/` (providers, router, shell), `src/features/<domain>/`
+  (page, components, query hooks), `src/lib/` (API, formatting, stores),
+  `src/components/ui/` (shadcn primitives).
+- Server state lives in TanStack Query; client state lives in Zustand (theme,
+  privacy, command palette) or the URL (year, filters).
+- Pages never call `fetch`; they use the hooks, and hooks use the typed client.
+- A feature never imports from another feature; shared code goes to `lib/` or
+  `components/`.
 
 ### The API contract is generated, not duplicated
 
@@ -126,20 +128,19 @@ The backend is the single source of truth for every request and response shape:
    (`GET /v3/api-docs`). DTOs carry `@Schema(requiredProperties = …)` and
    `@Schema(nullable = true)`, so the document states which fields are always
    present and which can be null.
-2. `npm run api:types` regenerates `aurum-fe/src/app/shared/api/schema.d.ts`
+2. `npm run api:types` regenerates `aurum-fe/src/lib/api/schema.d.ts`
    from that document.
-3. `aurum-fe/src/app/shared/api/contract.ts` re-exports the generated schemas
-   under the names the app uses. Domain models derive from them and add only
-   frontend concerns (a `Date` in a form, a view-only row type).
+3. `aurum-fe/src/lib/api/types.ts` re-exports the generated schemas under the
+   names the app uses. View models derive from them and add only frontend
+   concerns (a table row, a form value).
 
 After changing a DTO: restart the backend, re-export `openapi.json`, run
 `npm run api:types`, and let the compiler point at every call site that needs
 attention. Never hand-edit `schema.d.ts`.
 
-Frontend-only models are deliberate and named as such: `CashFlowRow` (table
-row), `Projections` (chart), the form value types, and `UserProfile` (the
-`/users` account plus the email read from the Auth0 token — the backend stores
-no email).
+Frontend-only models are deliberate and live next to their feature: table rows
+(`CashFlowRow`), chart series, form values. The email shown in the UI is read
+from the Auth0 token, not stored by the backend.
 
 ### Data model
 
@@ -168,10 +169,11 @@ by the `local` profile). Copy
 Useful commands:
 
 ```bash
-cd aurum-fe && npm start          # ng serve with HMR
-cd aurum-fe && npm test           # Vitest
-cd aurum-fe && npm run api:types  # regenerate types from openapi.json
-cd aurum-be && ./mvnw test        # JUnit 5
+cd aurum-fe && npm start           # Vite dev server with HMR on :4200
+cd aurum-fe && npm run test:run    # Vitest once
+cd aurum-fe && npm run test:e2e    # Playwright + axe
+cd aurum-fe && npm run api:types   # regenerate types from openapi.json
+cd aurum-be && ./mvnw test         # JUnit 5
 cd aurum-be && ./mvnw clean package
 ```
 

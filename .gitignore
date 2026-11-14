@@ -15,3 +15,6 @@ aurum-fe/public/screenshots/
 aurum-fe/public/screenshot-cashflow.jpg
 aurum-fe/public/screenshot-dashboard.jpg
 
+
+# Agent task workspace
+.opencode/
