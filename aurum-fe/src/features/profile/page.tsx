@@ -79,9 +79,7 @@ export function ProfilePage() {
 							<CardTitle className="flex items-center gap-2">
 								<Plug className="size-4" /> MCP integration
 							</CardTitle>
-							<CardDescription>
-								Read and write Aurum data from an MCP client such as Claude.
-							</CardDescription>
+							<CardDescription>Read and write Aurum data from any MCP client.</CardDescription>
 						</CardHeader>
 						<CardContent>
 							<McpSetup />

@@ -6,9 +6,11 @@ import {
 	CodeBlockContent,
 	CodeBlockCopyButton,
 	CodeBlockHeader,
+	CodeBlockLine,
 	CodeBlockTitle
 } from "@/components/ui/code-block";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useHighlightedCode } from "@/hooks/use-highlighted-code";
 import { env } from "@/lib/env";
 
 type Platform = "desktop" | "mobile";
@@ -26,6 +28,7 @@ export function McpSetup() {
 		platform === "desktop"
 			? JSON.stringify({ mcpServers: { aurum: { type: "http", url: mcpUrl } } }, null, 2)
 			: mcpUrl;
+	const lines = useHighlightedCode(config, "json");
 
 	return (
 		<div className="flex flex-col gap-3">
@@ -55,15 +58,19 @@ export function McpSetup() {
 
 			<CodeBlock>
 				<CodeBlockHeader className="max-sm:pt-2">
-					<CodeBlockTitle className="hidden sm:block">
+					<CodeBlockTitle className={platform === "desktop" ? "hidden sm:block" : "hidden"}>
 						<FileJson className="size-3.5" />
-						{platform === "desktop" ? "claude_desktop_config.json" : "mcp.json"}
+						mcp.json
 					</CodeBlockTitle>
 					<CodeBlockActions>
 						<CodeBlockCopyButton value={config} />
 					</CodeBlockActions>
 				</CodeBlockHeader>
-				<CodeBlockContent wrap>{config}</CodeBlockContent>
+				<CodeBlockContent wrap>
+					{lines.map((line, index) => (
+						<CodeBlockLine key={index}>{line}</CodeBlockLine>
+					))}
+				</CodeBlockContent>
 			</CodeBlock>
 
 			<p className="text-muted-foreground text-xs italic">
