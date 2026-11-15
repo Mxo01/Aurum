@@ -25,6 +25,7 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.support.MissingServletRequestPartException;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 import tools.jackson.core.JacksonException;
 import tools.jackson.core.JacksonException.Reference;
 import tools.jackson.core.exc.StreamReadException;
@@ -47,6 +48,7 @@ public class GlobalExceptionHandler {
 		"The picture is too large, choose a smaller one";
 	private static final String UNSUPPORTED_FORMAT_REASON = "This format is not supported";
 	private static final String UNSUPPORTED_ACTION_REASON = "This action is not supported here";
+	private static final String NOT_FOUND_REASON = "The requested resource does not exist";
 	private static final String CURRENCY_FIELD = "currency";
 	private static final String LOCALE_FIELD = "locale";
 	private static final String PICTURE_PART_NAME = "file";
@@ -189,6 +191,14 @@ public class GlobalExceptionHandler {
 		String reasonPhrase = resolveReasonPhrase(statusCode);
 		log.warn("Request rejected with status {}: {}", statusCode.value(), ex.getReason());
 		return buildResponse(statusCode.value(), reasonPhrase, List.of(noField(reasonPhrase)));
+	}
+
+	// An unknown URL — including a Swagger path while the flag is off — is a client mistake, so it
+	// answers 404 here instead of falling into the catch-all below and coming back as a 500.
+	@ExceptionHandler(NoResourceFoundException.class)
+	public ResponseEntity<ApiErrorResponse> handleNoResource(NoResourceFoundException ex) {
+		log.warn("No resource for request: {}", exceptionTypes(ex));
+		return buildResponse(HttpStatus.NOT_FOUND, NOT_FOUND_REASON);
 	}
 
 	@ExceptionHandler(Exception.class)

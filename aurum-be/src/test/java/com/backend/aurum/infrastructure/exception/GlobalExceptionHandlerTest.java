@@ -32,6 +32,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.core.MethodParameter;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpInputMessage;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
@@ -48,6 +49,7 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.support.MissingServletRequestPartException;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 import tools.jackson.core.exc.StreamReadException;
 import tools.jackson.databind.exc.MismatchedInputException;
 
@@ -110,6 +112,13 @@ class GlobalExceptionHandlerTest {
 	private static final String PINNED_FIELDLESS_JSON =
 		"{\"status\":503,\"error\":\"Service Unavailable\",\"errors\":[{" +
 		"\"message\":\"Exchange rates are temporarily unavailable, please retry later\"}]}";
+	private static final String NOT_FOUND_REASON = "The requested resource does not exist";
+	private static final String PINNED_NOT_FOUND_JSON =
+		"{\"status\":404,\"error\":\"Not Found\",\"errors\":[{" +
+		"\"message\":\"The requested resource does not exist\"}]}";
+	private static final String UNKNOWN_REQUEST_URI = "http://localhost/unknown-resource";
+	private static final String UNKNOWN_RESOURCE_PATH = "/unknown-resource";
+	private static final String RUNTIME_FAILURE_DETAIL = "Asset repository refused the connection";
 
 	private static final String UNREADABLE_BODY_LOG_PREFIX = "Unreadable request body: ";
 	private static final String REJECTED_PARAMETER_LOG_PREFIX = "Parameter 'id' rejected: ";
@@ -223,6 +232,7 @@ class GlobalExceptionHandlerTest {
 			HttpStatusCode.valueOf(UNRECOGNIZED_STATUS_CODE)
 		);
 		Exception mockUnexpectedException = new Exception("Internal details");
+		RuntimeException mockUnexpectedRuntimeException = new RuntimeException(RUNTIME_FAILURE_DETAIL);
 
 		return Stream.of(
 			new FailureCase(
@@ -357,6 +367,13 @@ class GlobalExceptionHandlerTest {
 				HttpStatus.INTERNAL_SERVER_ERROR.value(),
 				HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase(),
 				new ErrorDetail(null, GENERIC_MESSAGE)
+			),
+			new FailureCase(
+				"500 unexpected runtime failure keeps the catch-all contract",
+				handler -> handler.handleGeneric(mockUnexpectedRuntimeException),
+				HttpStatus.INTERNAL_SERVER_ERROR.value(),
+				HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase(),
+				new ErrorDetail(null, GENERIC_MESSAGE)
 			)
 		);
 	}
@@ -393,6 +410,29 @@ class GlobalExceptionHandlerTest {
 
 		// THEN
 		assertThat(JSON_SERIALIZER.writeValueAsString(expectedBody)).isEqualTo(PINNED_FIELDLESS_JSON);
+	}
+
+	@Test
+	void handleNoResource_answers404_withTheFixedSentence_andNotTheGenericEnvelope()
+		throws JsonProcessingException {
+		// GIVEN
+		NoResourceFoundException mockException = new NoResourceFoundException(
+			HttpMethod.GET,
+			UNKNOWN_REQUEST_URI,
+			UNKNOWN_RESOURCE_PATH
+		);
+
+		// WHEN
+		ResponseEntity<ApiErrorResponse> expectedResponse = testSubject.handleNoResource(mockException);
+
+		// THEN
+		assertThat(expectedResponse.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+		ApiErrorResponse expectedBody = expectedResponse.getBody();
+		assertThat(expectedBody).isNotNull();
+		assertThat(expectedBody.status()).isEqualTo(HttpStatus.NOT_FOUND.value());
+		assertThat(expectedBody.error()).isEqualTo(HttpStatus.NOT_FOUND.getReasonPhrase());
+		assertThat(expectedBody.errors()).containsExactly(new ErrorDetail(null, NOT_FOUND_REASON));
+		assertThat(JSON_SERIALIZER.writeValueAsString(expectedBody)).isEqualTo(PINNED_NOT_FOUND_JSON);
 	}
 
 	@ParameterizedTest(name = "{0}")
