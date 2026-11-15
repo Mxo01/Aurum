@@ -3,15 +3,15 @@ package com.backend.aurum.domain.asset.service;
 import com.backend.aurum.domain.asset.model.AssetCategory;
 import com.backend.aurum.domain.asset.repository.AssetCategoryRepository;
 import com.backend.aurum.domain.asset.repository.AssetRepository;
+import com.backend.aurum.domain.shared.exception.AccessDeniedException;
+import com.backend.aurum.domain.shared.exception.ConflictException;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 @Slf4j
 @Service
@@ -67,10 +67,7 @@ public class AssetCategoryService {
 				"AssetCategoryService#update - Attempt to modify a default category: categoryId={}",
 				id
 			);
-			throw new ResponseStatusException(
-				HttpStatus.FORBIDDEN,
-				"A default category cannot be changed"
-			);
+			throw new AccessDeniedException("A default category cannot be changed");
 		}
 		if (!category.getUser().getId().equals(requestingUserId)) {
 			log.warn(
@@ -79,10 +76,7 @@ public class AssetCategoryService {
 				category.getUser().getId(),
 				requestingUserId
 			);
-			throw new ResponseStatusException(
-				HttpStatus.FORBIDDEN,
-				"You can only change your own categories"
-			);
+			throw new AccessDeniedException("You can only change your own categories");
 		}
 		category.setName(categoryDetails.getName());
 		category.setType(categoryDetails.getType());
@@ -109,10 +103,7 @@ public class AssetCategoryService {
 				"AssetCategoryService#delete - Attempt to delete a default category: categoryId={}",
 				id
 			);
-			throw new ResponseStatusException(
-				HttpStatus.FORBIDDEN,
-				"A default category cannot be deleted"
-			);
+			throw new AccessDeniedException("A default category cannot be deleted");
 		}
 		if (!category.getUser().getId().equals(requestingUserId)) {
 			log.warn(
@@ -121,10 +112,7 @@ public class AssetCategoryService {
 				category.getUser().getId(),
 				requestingUserId
 			);
-			throw new ResponseStatusException(
-				HttpStatus.FORBIDDEN,
-				"You can only delete your own categories"
-			);
+			throw new AccessDeniedException("You can only delete your own categories");
 		}
 		long assetCount = assetRepository.countByCategoryId(id);
 		if (assetCount > 0) {
@@ -133,10 +121,7 @@ public class AssetCategoryService {
 				id,
 				assetCount
 			);
-			throw new ResponseStatusException(
-				HttpStatus.CONFLICT,
-				"This category still has assets, move or delete them first"
-			);
+			throw new ConflictException("This category still has assets, move or delete them first");
 		}
 		categoryRepository.deleteById(Objects.requireNonNull(id));
 		log.info("AssetCategoryService#delete - Category deleted: categoryId={}", id);
