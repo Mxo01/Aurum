@@ -1,12 +1,15 @@
 import { expect, test } from "./fixtures/aurum";
 
+test.use({ signedIn: false });
+
 test("shows the product and the primary call to action", async ({ page }) => {
 	await page.goto("/");
 
 	await expect(page.getByRole("heading", { name: /Your net worth/ })).toBeVisible();
 	await expect(page.getByText("finally legible.")).toBeVisible();
-	await expect(page.getByRole("link", { name: "Open dashboard" })).toBeVisible();
+	await expect(page.getByRole("button", { name: "Get started", exact: true })).toBeVisible();
 	await expect(page.getByText("31 currencies").first()).toBeVisible();
+	await expect(page.getByRole("link", { name: "Open dashboard" })).toHaveCount(0);
 });
 
 test("toggles the theme", async ({ page }) => {
