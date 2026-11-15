@@ -16,7 +16,7 @@ import {
 	Wallet,
 	Zap
 } from "lucide-react";
-import { Link } from "react-router";
+import { Link, Navigate } from "react-router";
 import { CountUp } from "@/components/app/count-up";
 import { Reveal } from "@/components/app/reveal";
 import { Button } from "@/components/ui/button";
@@ -70,10 +70,20 @@ const PRIVACY = [
 const euro = (value: number) => `€${Math.round(value).toLocaleString("en-US")}`;
 
 export function LandingPage() {
-	const { isAuthenticated, loginWithRedirect } = useAuth0();
+	const { isAuthenticated, isLoading, loginWithRedirect } = useAuth0();
 	const { theme, toggleTheme } = useThemeStore();
 
 	const start = () => loginWithRedirect({ appState: { returnTo: "/dashboard" } });
+
+	if (isLoading) return null;
+
+	if (isAuthenticated)
+		return (
+			<Navigate
+				to="/dashboard"
+				replace
+			/>
+		);
 
 	return (
 		<div className="landing-surface flex min-h-dvh flex-col">
@@ -124,30 +134,19 @@ export function LandingPage() {
 						>
 							{theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
 						</Button>
-						{isAuthenticated ? (
-							<Button
-								size="sm"
-								asChild
-							>
-								<Link to="/dashboard">Open dashboard</Link>
-							</Button>
-						) : (
-							<>
-								<Button
-									variant="ghost"
-									size="sm"
-									onClick={() => void start()}
-								>
-									Sign in
-								</Button>
-								<Button
-									size="sm"
-									onClick={() => void start()}
-								>
-									Get started
-								</Button>
-							</>
-						)}
+						<Button
+							variant="ghost"
+							size="sm"
+							onClick={() => void start()}
+						>
+							Sign in
+						</Button>
+						<Button
+							size="sm"
+							onClick={() => void start()}
+						>
+							Get started
+						</Button>
 					</div>
 				</div>
 			</header>
