@@ -4,8 +4,9 @@ import com.backend.aurum.domain.shared.exception.AccessDeniedException;
 import com.backend.aurum.domain.shared.exception.ExchangeRateUnavailableException;
 import com.backend.aurum.domain.shared.exception.NotFoundException;
 import com.backend.aurum.domain.shared.exception.ValidationException;
-import java.time.Instant;
-import java.util.Map;
+import com.backend.aurum.infrastructure.exception.ApiErrorResponse.ErrorDetail;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.OptimisticLockingFailureException;
@@ -25,25 +26,25 @@ public class GlobalExceptionHandler {
 	private static final String INVALID_BODY_REASON = "Request body is invalid";
 
 	@ExceptionHandler(NotFoundException.class)
-	public ResponseEntity<Map<String, Object>> handleNotFound(NotFoundException ex) {
+	public ResponseEntity<ApiErrorResponse> handleNotFound(NotFoundException ex) {
 		log.warn("Resource not found: {}", ex.getMessage());
 		return buildResponse(HttpStatus.NOT_FOUND, ex.getMessage());
 	}
 
 	@ExceptionHandler(AccessDeniedException.class)
-	public ResponseEntity<Map<String, Object>> handleAccessDenied(AccessDeniedException ex) {
+	public ResponseEntity<ApiErrorResponse> handleAccessDenied(AccessDeniedException ex) {
 		log.warn("Access denied: {}", ex.getMessage());
 		return buildResponse(HttpStatus.FORBIDDEN, ex.getMessage());
 	}
 
 	@ExceptionHandler(ValidationException.class)
-	public ResponseEntity<Map<String, Object>> handleValidation(ValidationException ex) {
+	public ResponseEntity<ApiErrorResponse> handleValidation(ValidationException ex) {
 		log.warn("Validation failed: {}", ex.getMessage());
-		return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
+		return buildResponse(HttpStatus.BAD_REQUEST, ex.getField(), ex.getMessage());
 	}
 
 	@ExceptionHandler(ExchangeRateUnavailableException.class)
-	public ResponseEntity<Map<String, Object>> handleExchangeRateUnavailable(
+	public ResponseEntity<ApiErrorResponse> handleExchangeRateUnavailable(
 		ExchangeRateUnavailableException ex
 	) {
 		log.error("Exchange rate provider unavailable: {}", ex.getMessage());
@@ -54,7 +55,7 @@ public class GlobalExceptionHandler {
 	}
 
 	@ExceptionHandler(OptimisticLockingFailureException.class)
-	public ResponseEntity<Map<String, Object>> handleOptimisticLock(
+	public ResponseEntity<ApiErrorResponse> handleOptimisticLock(
 		OptimisticLockingFailureException ex
 	) {
 		log.warn("Concurrent modification rejected: {}", ex.getMessage());
@@ -65,35 +66,43 @@ public class GlobalExceptionHandler {
 	}
 
 	@ExceptionHandler(MethodArgumentNotValidException.class)
-	public ResponseEntity<Map<String, Object>> handleInvalidBody(MethodArgumentNotValidException ex) {
-		String message = ex
+	public ResponseEntity<ApiErrorResponse> handleInvalidBody(MethodArgumentNotValidException ex) {
+		List<ErrorDetail> details = new ArrayList<>();
+		ex
 			.getBindingResult()
 			.getFieldErrors()
-			.stream()
-			.map(error -> error.getField() + " " + error.getDefaultMessage())
-			.collect(Collectors.joining("; "));
-		String reason = message.isBlank() ? INVALID_BODY_REASON : message;
-		log.warn("Invalid request body: {}", reason);
-		return buildResponse(HttpStatus.BAD_REQUEST, reason);
+			.forEach(error -> details.add(new ErrorDetail(error.getField(), error.getDefaultMessage())));
+		ex
+			.getBindingResult()
+			.getGlobalErrors()
+			.forEach(error -> details.add(new ErrorDetail(null, error.getDefaultMessage())));
+		if (details.isEmpty()) {
+			details.add(new ErrorDetail(null, INVALID_BODY_REASON));
+		}
+		log.warn(
+			"Invalid request body: {}",
+			details.stream().map(ErrorDetail::message).collect(Collectors.joining("; "))
+		);
+		return buildResponse(HttpStatus.BAD_REQUEST, details);
 	}
 
 	@ExceptionHandler(IllegalArgumentException.class)
-	public ResponseEntity<Map<String, Object>> handleIllegalArgument(IllegalArgumentException ex) {
+	public ResponseEntity<ApiErrorResponse> handleIllegalArgument(IllegalArgumentException ex) {
 		log.warn("Bad request: {}", ex.getMessage());
 		return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
 	}
 
 	@ExceptionHandler(ResponseStatusException.class)
-	public ResponseEntity<Map<String, Object>> handleResponseStatus(ResponseStatusException ex) {
+	public ResponseEntity<ApiErrorResponse> handleResponseStatus(ResponseStatusException ex) {
 		HttpStatusCode statusCode = ex.getStatusCode();
 		String reasonPhrase = resolveReasonPhrase(statusCode);
 		String message = ex.getReason() != null ? ex.getReason() : reasonPhrase;
 		log.warn("Request rejected with status {}: {}", statusCode.value(), message);
-		return buildResponse(statusCode.value(), reasonPhrase, message);
+		return buildResponse(statusCode.value(), reasonPhrase, List.of(noField(message)));
 	}
 
 	@ExceptionHandler(Exception.class)
-	public ResponseEntity<Map<String, Object>> handleGeneric(Exception ex) {
+	public ResponseEntity<ApiErrorResponse> handleGeneric(Exception ex) {
 		log.error("Unhandled exception", ex);
 		return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred");
 	}
@@ -103,26 +112,43 @@ public class GlobalExceptionHandler {
 		return status != null ? status.getReasonPhrase() : UNRECOGNIZED_STATUS_REASON;
 	}
 
-	private ResponseEntity<Map<String, Object>> buildResponse(HttpStatus status, String message) {
-		return buildResponse(status.value(), status.getReasonPhrase(), message);
+	private static ErrorDetail noField(String message) {
+		return new ErrorDetail(null, message);
 	}
 
-	private ResponseEntity<Map<String, Object>> buildResponse(
-		int statusValue,
-		String reasonPhrase,
+	private static ResponseEntity<ApiErrorResponse> buildResponse(HttpStatus status, String message) {
+		return buildResponse(status, noField(message));
+	}
+
+	private static ResponseEntity<ApiErrorResponse> buildResponse(
+		HttpStatus status,
+		String field,
 		String message
 	) {
+		return buildResponse(status, new ErrorDetail(field, message));
+	}
+
+	private static ResponseEntity<ApiErrorResponse> buildResponse(
+		HttpStatus status,
+		ErrorDetail detail
+	) {
+		return buildResponse(status, List.of(detail));
+	}
+
+	private static ResponseEntity<ApiErrorResponse> buildResponse(
+		HttpStatus status,
+		List<ErrorDetail> details
+	) {
+		return buildResponse(status.value(), status.getReasonPhrase(), details);
+	}
+
+	private static ResponseEntity<ApiErrorResponse> buildResponse(
+		int statusValue,
+		String reasonPhrase,
+		List<ErrorDetail> details
+	) {
 		return ResponseEntity.status(statusValue).body(
-			Map.of(
-				"status",
-				statusValue,
-				"error",
-				reasonPhrase,
-				"message",
-				message,
-				"timestamp",
-				Instant.now().toString()
-			)
+			ApiErrorResponse.of(statusValue, reasonPhrase, details)
 		);
 	}
 }

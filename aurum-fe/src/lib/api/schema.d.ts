@@ -948,6 +948,16 @@ export interface components {
 				[key: string]: string;
 			};
 		};
+		ApiErrorResponse: {
+			/** Format: int32 */
+			status?: number;
+			error?: string;
+			errors?: components["schemas"]["ErrorDetail"][];
+		};
+		ErrorDetail: {
+			field?: string;
+			message?: string;
+		};
 	};
 	responses: never;
 	parameters: never;

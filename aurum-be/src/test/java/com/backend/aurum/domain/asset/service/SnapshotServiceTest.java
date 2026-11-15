@@ -51,6 +51,10 @@ class SnapshotServiceTest {
 	private static final Currency CHANGED_CURRENCY = Currency.GBP;
 	private static final Currency SCHEDULER_CURRENCY = Currency.USD;
 	private static final String VERSION_FIELD = "version";
+	private static final String ASSET_NOT_OWNED_MESSAGE = "This asset does not belong to you";
+	private static final String SNAPSHOT_NOT_OWNED_MESSAGE = "This snapshot does not belong to you";
+	private static final String SNAPSHOT_OUTSIDE_ASSET_MESSAGE =
+		"This snapshot does not belong to the asset";
 
 	@Mock
 	private SnapshotRepository snapshotRepository;
@@ -121,9 +125,9 @@ class SnapshotServiceTest {
 		when(assetRepository.findById(mockAsset.getId())).thenReturn(Optional.of(mockAsset));
 
 		// WHEN / THEN
-		assertThatThrownBy(() -> testSubject.findByAssetId(mockAsset.getId(), mockUserId)).isInstanceOf(
-			AccessDeniedException.class
-		);
+		assertThatThrownBy(() -> testSubject.findByAssetId(mockAsset.getId(), mockUserId))
+			.isInstanceOf(AccessDeniedException.class)
+			.hasMessage(ASSET_NOT_OWNED_MESSAGE);
 	}
 
 	@ParameterizedTest(name = "saveOrUpdate with {0}")
@@ -357,9 +361,9 @@ class SnapshotServiceTest {
 		when(snapshotRepository.findAllById(mockIds)).thenReturn(List.of(mockSnapshot));
 
 		// WHEN / THEN
-		assertThatThrownBy(() -> testSubject.deleteBulk(mockIds, mockAssetId, mockUserId)).isInstanceOf(
-			AccessDeniedException.class
-		);
+		assertThatThrownBy(() -> testSubject.deleteBulk(mockIds, mockAssetId, mockUserId))
+			.isInstanceOf(AccessDeniedException.class)
+			.hasMessage(SNAPSHOT_OUTSIDE_ASSET_MESSAGE);
 	}
 
 	@Test
@@ -382,9 +386,9 @@ class SnapshotServiceTest {
 		when(snapshotRepository.findAllById(mockIds)).thenReturn(List.of(mockSnapshot));
 
 		// WHEN / THEN
-		assertThatThrownBy(() -> testSubject.deleteBulk(mockIds, mockAssetId, mockUserId)).isInstanceOf(
-			AccessDeniedException.class
-		);
+		assertThatThrownBy(() -> testSubject.deleteBulk(mockIds, mockAssetId, mockUserId))
+			.isInstanceOf(AccessDeniedException.class)
+			.hasMessage(SNAPSHOT_NOT_OWNED_MESSAGE);
 	}
 
 	@Test

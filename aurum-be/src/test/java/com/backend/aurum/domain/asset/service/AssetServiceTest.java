@@ -76,7 +76,14 @@ class AssetServiceTest {
 	private static final AssetType LIABILITY_CATEGORY_TYPE = AssetType.LIABILITY;
 	private static final LocalDate REFERENCE_DATE = LocalDate.of(2025, 6, 15);
 	private static final String LIABILITY_OUTSIDE_LIABILITY_CATEGORY_MESSAGE =
-		"liabilityType is only allowed when the asset category is a liability";
+		"Liability type is only allowed on a liability category";
+	private static final String MISSING_LIABILITY_TYPE_MESSAGE =
+		"Liability type is required when a payment frequency or amount is set";
+	private static final String NON_POSITIVE_AUTOMATIC_AMOUNT_MESSAGE =
+		"Payment amount must be greater than zero for an automatic liability";
+	private static final String ASSET_NOT_OWNED_MESSAGE = "This asset does not belong to you";
+	private static final String MISSING_SNAPSHOT_MESSAGE =
+		"An automatic liability needs a snapshot before it can be updated";
 
 	@Test
 	void findAll_returnsAssetsFromRepository() {
@@ -136,9 +143,9 @@ class AssetServiceTest {
 		when(assetRepository.findById(mockAsset.getId())).thenReturn(Optional.of(mockAsset));
 
 		// WHEN / THEN
-		assertThatThrownBy(() -> testSubject.findById(mockAsset.getId(), mockUserId)).isInstanceOf(
-			AccessDeniedException.class
-		);
+		assertThatThrownBy(() -> testSubject.findById(mockAsset.getId(), mockUserId))
+			.isInstanceOf(AccessDeniedException.class)
+			.hasMessage(ASSET_NOT_OWNED_MESSAGE);
 	}
 
 	@ParameterizedTest(name = "no initial snapshot when {0}")
@@ -616,7 +623,7 @@ class AssetServiceTest {
 		// WHEN / THEN
 		assertThatThrownBy(() -> testSubject.update(mockStoredAsset.getId(), mockUpdate, mockUserId))
 			.isInstanceOf(ValidationException.class)
-			.hasMessageContaining("liabilityType is required");
+			.hasMessage(MISSING_LIABILITY_TYPE_MESSAGE);
 		assertThat(mockStoredAsset.getLiabilityType()).isEqualTo(LiabilityType.AUTOMATIC);
 		assertThat(mockStoredAsset.getPaymentFrequency()).isEqualTo(STORED_PAYMENT_FREQUENCY);
 	}
@@ -638,7 +645,7 @@ class AssetServiceTest {
 			testSubject.update(mockStoredAsset.getId(), renameOnlyUpdate(), mockUserId)
 		)
 			.isInstanceOf(ValidationException.class)
-			.hasMessageContaining("paymentAmount must be greater than 0");
+			.hasMessage(NON_POSITIVE_AUTOMATIC_AMOUNT_MESSAGE);
 		assertThat(mockStoredAsset.getName()).isEqualTo(STORED_NAME);
 	}
 
@@ -662,7 +669,7 @@ class AssetServiceTest {
 		// WHEN / THEN
 		assertThatThrownBy(() -> testSubject.update(mockStoredAsset.getId(), mockUpdate, mockUserId))
 			.isInstanceOf(ValidationException.class)
-			.hasMessageContaining("requires at least one snapshot");
+			.hasMessage(MISSING_SNAPSHOT_MESSAGE);
 		assertThat(mockStoredAsset.getLiabilityType()).isNull();
 	}
 

@@ -68,6 +68,16 @@ flowchart LR
   `AccessDeniedException`, `ValidationException` are domain errors. The
   `GlobalExceptionHandler` in `infrastructure` is the only place that maps them
   to HTTP status codes, including the provider outage above.
+- **Error body** — every rejection, from any layer, answers the same envelope:
+  `{ "status", "error", "errors": [ { "field"?, "message" } ] }`, where `status`
+  and `error` carry the HTTP code and its reason phrase. `field` names the input
+  the violation concerns and is absent when the rejection concerns none;
+  `message` is the sentence shown to the user, written by the backend, so the
+  frontend never composes its own error text. `MethodArgumentNotValidException`
+  contributes one entry per invalid field, so two wrong inputs stay attributable
+  instead of collapsing into one sentence. The shape is published in
+  `aurum-be/openapi.json` as `ApiErrorResponse` / `ErrorDetail`; the frontend
+  reads the generated types from it instead of parsing prose.
 
 Migrations are Liquibase YAML/SQL under
 `aurum-be/src/main/resources/db/changelog/changes/`, applied automatically at

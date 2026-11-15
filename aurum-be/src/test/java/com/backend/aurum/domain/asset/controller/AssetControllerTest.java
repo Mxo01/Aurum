@@ -1,7 +1,6 @@
 package com.backend.aurum.domain.asset.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.hamcrest.Matchers.startsWith;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -48,7 +47,8 @@ class AssetControllerTest {
 
 	private static final String ASSET_PATH = "/assets/{id}";
 	private static final String PAYMENT_AMOUNT_FIELD = "paymentAmount";
-	private static final String FIELD_MESSAGE_SEPARATOR = " ";
+	private static final String PAYMENT_AMOUNT_MESSAGE = "Payment amount cannot be negative";
+	private static final int SINGLE_ERROR_COUNT = 1;
 	private static final String NEGATIVE_PAYMENT_AMOUNT_BODY =
 		"{\"name\":\"Renamed asset\",\"paymentAmount\":-1}";
 	private static final String NULL_LIABILITY_TYPE_BODY =
@@ -168,7 +168,12 @@ class AssetControllerTest {
 		expectedResult
 			.andExpect(status().isBadRequest())
 			.andExpect(jsonPath("$.status").value(HttpStatus.BAD_REQUEST.value()))
-			.andExpect(jsonPath("$.message", startsWith(PAYMENT_AMOUNT_FIELD + FIELD_MESSAGE_SEPARATOR)));
+			.andExpect(jsonPath("$.error").value(HttpStatus.BAD_REQUEST.getReasonPhrase()))
+			.andExpect(jsonPath("$.errors.length()").value(SINGLE_ERROR_COUNT))
+			.andExpect(jsonPath("$.errors[0].field").value(PAYMENT_AMOUNT_FIELD))
+			.andExpect(jsonPath("$.errors[0].message").value(PAYMENT_AMOUNT_MESSAGE))
+			.andExpect(jsonPath("$.message").doesNotExist())
+			.andExpect(jsonPath("$.timestamp").doesNotExist());
 		verifyNoInteractions(assetFacade);
 	}
 

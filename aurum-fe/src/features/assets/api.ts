@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useApi } from "@/lib/api/api-context";
 import { unwrap } from "@/lib/api/client";
+import { getApiErrorMessage } from "@/lib/api/errors";
 import { queryKeys } from "@/lib/api/keys";
 import type { AssetDTO, CreateAssetDTO, UpdateAssetDTO } from "@/lib/api/types";
 import { todayISO } from "@/lib/format/date";
@@ -39,6 +40,8 @@ function updateBody(asset: AssetDTO, overrides: Partial<UpdateAssetDTO> = {}): U
 	};
 }
 
+// The create sheet renders the rejection itself, so an error toast here would say the same sentence
+// a second time; the sheet is this hook's only caller.
 export function useCreateAsset() {
 	const api = useApi();
 	const invalidate = useInvalidatePortfolio();
@@ -48,8 +51,7 @@ export function useCreateAsset() {
 		onSuccess: () => {
 			invalidate();
 			toast.success("Asset created");
-		},
-		onError: () => toast.error("Could not create the asset")
+		}
 	});
 }
 
@@ -63,8 +65,7 @@ export function useUpdateAsset() {
 		onSuccess: () => {
 			invalidate();
 			toast.success("Asset updated");
-		},
-		onError: () => toast.error("Could not update the asset")
+		}
 	});
 }
 
@@ -92,9 +93,9 @@ export function useToggleFavorite() {
 
 			return { previous };
 		},
-		onError: (_error, _variables, context) => {
+		onError: (error, _variables, context) => {
 			if (context?.previous) queryClient.setQueryData(queryKeys.assets, context.previous);
-			toast.error("Could not update the dashboard tracking");
+			toast.error(getApiErrorMessage(error, "Could not update the dashboard tracking"));
 		},
 		onSettled: () => {
 			void queryClient.invalidateQueries({ queryKey: queryKeys.assets });
@@ -125,9 +126,9 @@ export function useRenameAsset() {
 
 			return { previous };
 		},
-		onError: (_error, _variables, context) => {
+		onError: (error, _variables, context) => {
 			if (context?.previous) queryClient.setQueryData(queryKeys.assets, context.previous);
-			toast.error("Could not rename the asset");
+			toast.error(getApiErrorMessage(error, "Could not rename the asset"));
 		},
 		onSettled: () => queryClient.invalidateQueries({ queryKey: queryKeys.assets })
 	});
@@ -146,7 +147,7 @@ export function useDeleteAsset() {
 			void queryClient.invalidateQueries({ queryKey: queryKeys.categories });
 			toast.success("Asset deleted");
 		},
-		onError: () => toast.error("Could not delete the asset")
+		onError: error => toast.error(getApiErrorMessage(error, "Could not delete the asset"))
 	});
 }
 
@@ -183,11 +184,11 @@ export function useUpdateCurrentValue() {
 
 			return { previous };
 		},
-		onError: (_error, _variables, context) => {
+		onError: (error, _variables, context) => {
 			if (context?.previous !== undefined) {
 				queryClient.setQueryData(queryKeys.assets, context.previous);
 			}
-			toast.error("Could not save the new value");
+			toast.error(getApiErrorMessage(error, "Could not save the new value"));
 		},
 		onSettled: (_data, _error, { assetId }) => {
 			void queryClient.invalidateQueries({ queryKey: queryKeys.assets });

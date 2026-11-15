@@ -1,7 +1,8 @@
 package com.backend.aurum.domain.asset.validation;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.catchThrowableOfType;
 import static org.mockito.Mockito.when;
 
 import com.backend.aurum.domain.asset.dto.CreateAssetDTO;
@@ -18,6 +19,7 @@ import java.time.ZoneOffset;
 import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
+import org.assertj.core.api.ThrowableAssert.ThrowingCallable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -56,28 +58,49 @@ class AssetValidationServiceTest {
 
 	private static final BigDecimal NEGATIVE_PAYMENT = new BigDecimal("-50");
 
-	private static final String MISSING_TYPE_MESSAGE =
-		"liabilityType is required when paymentFrequency or paymentAmount is provided";
+	private static final String NAME_FIELD = "name";
 
-	private static final String NEGATIVE_AMOUNT_MESSAGE = "paymentAmount cannot be negative";
+	private static final String CATEGORY_ID_FIELD = "categoryId";
+
+	private static final String PAYMENT_AMOUNT_FIELD = "paymentAmount";
+
+	private static final String PAYMENT_FREQUENCY_FIELD = "paymentFrequency";
+
+	private static final String LIABILITY_TYPE_FIELD = "liabilityType";
+
+	private static final String INITIAL_VALUE_FIELD = "initialValue";
+
+	private static final String REFERENCE_DATE_FIELD = "referenceDate";
+
+	private static final String ASSET_DATA_REQUIRED_MESSAGE = "Asset data is required";
+
+	private static final String NAME_REQUIRED_MESSAGE = "Asset name is required";
+
+	private static final String NAME_TOO_LONG_MESSAGE = "Asset name cannot exceed 100 characters";
+
+	private static final String CATEGORY_REQUIRED_MESSAGE = "Asset category is required";
+
+	private static final String MISSING_TYPE_MESSAGE =
+		"Liability type is required when a payment frequency or amount is set";
+
+	private static final String NEGATIVE_AMOUNT_MESSAGE = "Payment amount cannot be negative";
 
 	private static final String MISSING_FREQUENCY_MESSAGE =
-		"paymentFrequency is required for an AUTOMATIC liability";
+		"Payment frequency is required for an automatic liability";
 
 	private static final String NON_POSITIVE_AUTOMATIC_AMOUNT_MESSAGE =
-		"paymentAmount must be greater than 0 for an AUTOMATIC liability";
+		"Payment amount must be greater than zero for an automatic liability";
 
 	private static final String POSITIVE_MANUAL_AMOUNT_MESSAGE =
-		"A MANUAL liability cannot carry a positive paymentAmount";
+		"A manual liability cannot have a payment amount";
 
 	private static final String MISSING_OPENING_VALUE_MESSAGE =
-		"An AUTOMATIC liability requires an initialValue greater than 0";
+		"An automatic liability needs an initial value greater than zero";
 
 	private static final String MISSING_REFERENCE_DATE_MESSAGE =
-		"An AUTOMATIC liability requires a referenceDate";
+		"An automatic liability needs a value date";
 
-	private static final String FUTURE_REFERENCE_DATE_MESSAGE =
-		"referenceDate cannot be in the future";
+	private static final String FUTURE_REFERENCE_DATE_MESSAGE = "Value date cannot be in the future";
 
 	@Mock
 	private Clock clock;
@@ -90,68 +113,70 @@ class AssetValidationServiceTest {
 		// GIVEN
 		CreateAssetDTO mockDto = null;
 
-		// WHEN / THEN
-		assertThatThrownBy(() -> testSubject.validate(mockDto)).isInstanceOf(
-			IllegalArgumentException.class
+		// WHEN
+		ValidationException expectedViolation = catchThrowableOfType(
+			() -> testSubject.validate(mockDto),
+			ValidationException.class
 		);
+
+		// THEN
+		assertThat(expectedViolation).hasMessage(ASSET_DATA_REQUIRED_MESSAGE);
+		assertThat(expectedViolation.getField()).isNull();
 	}
 
 	@ParameterizedTest(name = "create: {0}")
 	@MethodSource("rejectedCreatePayloads")
 	void validate_createDto_rejectsInvalidPayload(
 		String scenario,
-		Consumer<CreateAssetDTO> mutation
+		Consumer<CreateAssetDTO> mutation,
+		String expectedMessage,
+		String expectedField
 	) {
 		// GIVEN
 		CreateAssetDTO mockDto = buildCreateDto();
 		mutation.accept(mockDto);
 
 		// WHEN / THEN
-		assertThatThrownBy(() -> testSubject.validate(mockDto)).isInstanceOf(
-			IllegalArgumentException.class
-		);
+		assertValidationViolation(() -> testSubject.validate(mockDto), expectedMessage, expectedField);
 	}
 
 	static Stream<Arguments> rejectedCreatePayloads() {
 		return Stream.of(
-			Arguments.of("blank name", (Consumer<CreateAssetDTO>) dto -> dto.setName("")),
-			Arguments.of("null name", (Consumer<CreateAssetDTO>) dto -> dto.setName(null)),
 			Arguments.of(
-				"name over max length",
-				(Consumer<CreateAssetDTO>) dto -> dto.setName(NAME_OVER_MAX_LENGTH)
+				"a blank name",
+				(Consumer<CreateAssetDTO>) dto -> dto.setName(""),
+				NAME_REQUIRED_MESSAGE,
+				NAME_FIELD
 			),
-			Arguments.of("null category", (Consumer<CreateAssetDTO>) dto -> dto.setCategoryId(null))
-		);
-	}
-
-	@ParameterizedTest(name = "create: {0}")
-	@MethodSource("rejectedCreateLiabilityPayloads")
-	void validate_createDto_rejectsInvalidLiabilityConfiguration(
-		String scenario,
-		Consumer<CreateAssetDTO> mutation,
-		String expectedMessage
-	) {
-		// GIVEN
-		CreateAssetDTO mockDto = buildCreateDto();
-		mutation.accept(mockDto);
-
-		// WHEN / THEN
-		assertThatThrownBy(() -> testSubject.validate(mockDto))
-			.isInstanceOf(ValidationException.class)
-			.hasMessage(expectedMessage);
-	}
-
-	static Stream<Arguments> rejectedCreateLiabilityPayloads() {
-		return Stream.of(
+			Arguments.of(
+				"a null name",
+				(Consumer<CreateAssetDTO>) dto -> dto.setName(null),
+				NAME_REQUIRED_MESSAGE,
+				NAME_FIELD
+			),
+			Arguments.of(
+				"a name over the max length",
+				(Consumer<CreateAssetDTO>) dto -> dto.setName(NAME_OVER_MAX_LENGTH),
+				NAME_TOO_LONG_MESSAGE,
+				NAME_FIELD
+			),
+			Arguments.of(
+				"a null category",
+				(Consumer<CreateAssetDTO>) dto -> dto.setCategoryId(null),
+				CATEGORY_REQUIRED_MESSAGE,
+				CATEGORY_ID_FIELD
+			),
 			Arguments.of(
 				"a payment frequency without a liability type",
 				(Consumer<CreateAssetDTO>) dto -> dto.setPaymentFrequency(PaymentFrequency.MONTHLY),
-				MISSING_TYPE_MESSAGE
+				MISSING_TYPE_MESSAGE,
+				LIABILITY_TYPE_FIELD
 			),
 			Arguments.of(
 				"a payment amount without a liability type",
 				(Consumer<CreateAssetDTO>) dto -> dto.setPaymentAmount(NO_PAYMENT),
-				MISSING_TYPE_MESSAGE
+				MISSING_TYPE_MESSAGE,
+				LIABILITY_TYPE_FIELD
 			),
 			Arguments.of(
 				"a negative payment amount",
@@ -159,7 +184,8 @@ class AssetValidationServiceTest {
 					dto.setLiabilityType(LiabilityType.MANUAL);
 					dto.setPaymentAmount(NEGATIVE_PAYMENT);
 				},
-				NEGATIVE_AMOUNT_MESSAGE
+				NEGATIVE_AMOUNT_MESSAGE,
+				PAYMENT_AMOUNT_FIELD
 			),
 			Arguments.of(
 				"an automatic liability without a payment frequency",
@@ -167,7 +193,8 @@ class AssetValidationServiceTest {
 					dto.setLiabilityType(LiabilityType.AUTOMATIC);
 					dto.setPaymentAmount(MONTHLY_PAYMENT);
 				},
-				MISSING_FREQUENCY_MESSAGE
+				MISSING_FREQUENCY_MESSAGE,
+				PAYMENT_FREQUENCY_FIELD
 			),
 			Arguments.of(
 				"an automatic liability with a zero payment amount",
@@ -176,7 +203,8 @@ class AssetValidationServiceTest {
 					dto.setPaymentFrequency(PaymentFrequency.MONTHLY);
 					dto.setPaymentAmount(NO_PAYMENT);
 				},
-				NON_POSITIVE_AUTOMATIC_AMOUNT_MESSAGE
+				NON_POSITIVE_AUTOMATIC_AMOUNT_MESSAGE,
+				PAYMENT_AMOUNT_FIELD
 			),
 			Arguments.of(
 				"a manual liability with a positive payment amount",
@@ -185,7 +213,8 @@ class AssetValidationServiceTest {
 					dto.setPaymentFrequency(PaymentFrequency.MONTHLY);
 					dto.setPaymentAmount(MONTHLY_PAYMENT);
 				},
-				POSITIVE_MANUAL_AMOUNT_MESSAGE
+				POSITIVE_MANUAL_AMOUNT_MESSAGE,
+				PAYMENT_AMOUNT_FIELD
 			),
 			Arguments.of(
 				"an automatic liability without an opening value",
@@ -195,33 +224,62 @@ class AssetValidationServiceTest {
 					dto.setPaymentAmount(MONTHLY_PAYMENT);
 					dto.setReferenceDate(FIXED_TODAY);
 				},
-				MISSING_OPENING_VALUE_MESSAGE
+				MISSING_OPENING_VALUE_MESSAGE,
+				INITIAL_VALUE_FIELD
+			),
+			Arguments.of(
+				"an automatic liability with a zero opening value",
+				(Consumer<CreateAssetDTO>) dto -> {
+					dto.setLiabilityType(LiabilityType.AUTOMATIC);
+					dto.setPaymentFrequency(PaymentFrequency.MONTHLY);
+					dto.setPaymentAmount(MONTHLY_PAYMENT);
+					dto.setInitialValue(NO_PAYMENT);
+					dto.setReferenceDate(FIXED_TODAY);
+				},
+				MISSING_OPENING_VALUE_MESSAGE,
+				INITIAL_VALUE_FIELD
+			),
+			Arguments.of(
+				"an automatic liability without a value date",
+				(Consumer<CreateAssetDTO>) dto -> {
+					dto.setLiabilityType(LiabilityType.AUTOMATIC);
+					dto.setPaymentFrequency(PaymentFrequency.MONTHLY);
+					dto.setPaymentAmount(MONTHLY_PAYMENT);
+					dto.setInitialValue(OPENING_VALUE);
+				},
+				MISSING_REFERENCE_DATE_MESSAGE,
+				REFERENCE_DATE_FIELD
 			)
 		);
 	}
 
 	@Test
-	void validate_createDto_rejectsAnAutomaticLiabilityWithAZeroOpeningValue() {
+	void validate_createDto_attributesANegativeAmountAndAMissingOpeningValueToDifferentFields() {
 		// GIVEN
-		CreateAssetDTO mockDto = buildAutomaticCreateDto();
-		mockDto.setInitialValue(NO_PAYMENT);
+		CreateAssetDTO mockNegativeAmountDto = buildCreateDto();
+		mockNegativeAmountDto.setLiabilityType(LiabilityType.MANUAL);
+		mockNegativeAmountDto.setPaymentAmount(NEGATIVE_PAYMENT);
+		CreateAssetDTO mockMissingOpeningValueDto = buildAutomaticCreateDto();
+		mockMissingOpeningValueDto.setReferenceDate(FIXED_TODAY);
 
-		// WHEN / THEN
-		assertThatThrownBy(() -> testSubject.validate(mockDto))
-			.isInstanceOf(ValidationException.class)
-			.hasMessage(MISSING_OPENING_VALUE_MESSAGE);
-	}
+		// WHEN
+		ValidationException expectedAmountViolation = catchThrowableOfType(
+			() -> testSubject.validate(mockNegativeAmountDto),
+			ValidationException.class
+		);
+		ValidationException expectedOpeningValueViolation = catchThrowableOfType(
+			() -> testSubject.validate(mockMissingOpeningValueDto),
+			ValidationException.class
+		);
 
-	@Test
-	void validate_createDto_rejectsAnAutomaticLiabilityWithoutAReferenceDate() {
-		// GIVEN
-		CreateAssetDTO mockDto = buildAutomaticCreateDto();
-		mockDto.setInitialValue(OPENING_VALUE);
-
-		// WHEN / THEN
-		assertThatThrownBy(() -> testSubject.validate(mockDto))
-			.isInstanceOf(ValidationException.class)
-			.hasMessage(MISSING_REFERENCE_DATE_MESSAGE);
+		// THEN
+		assertThat(expectedAmountViolation.getField()).isEqualTo(PAYMENT_AMOUNT_FIELD);
+		assertThat(expectedAmountViolation).hasMessage(NEGATIVE_AMOUNT_MESSAGE);
+		assertThat(expectedOpeningValueViolation.getField()).isEqualTo(INITIAL_VALUE_FIELD);
+		assertThat(expectedOpeningValueViolation).hasMessage(MISSING_OPENING_VALUE_MESSAGE);
+		assertThat(expectedAmountViolation.getField()).isNotEqualTo(
+			expectedOpeningValueViolation.getField()
+		);
 	}
 
 	@ParameterizedTest(name = "create: an opening snapshot dated {0} is accepted")
@@ -246,9 +304,11 @@ class AssetValidationServiceTest {
 		mockDto.setReferenceDate(BEYOND_TIMEZONE_SKEW);
 
 		// WHEN / THEN
-		assertThatThrownBy(() -> testSubject.validate(mockDto))
-			.isInstanceOf(ValidationException.class)
-			.hasMessage(FUTURE_REFERENCE_DATE_MESSAGE);
+		assertValidationViolation(
+			() -> testSubject.validate(mockDto),
+			FUTURE_REFERENCE_DATE_MESSAGE,
+			REFERENCE_DATE_FIELD
+		);
 	}
 
 	@Test
@@ -279,62 +339,58 @@ class AssetValidationServiceTest {
 		// GIVEN
 		UpdateAssetDTO mockDto = null;
 
-		// WHEN / THEN
-		assertThatThrownBy(() -> testSubject.validate(mockDto)).isInstanceOf(
-			IllegalArgumentException.class
+		// WHEN
+		ValidationException expectedViolation = catchThrowableOfType(
+			() -> testSubject.validate(mockDto),
+			ValidationException.class
 		);
+
+		// THEN
+		assertThat(expectedViolation).hasMessage(ASSET_DATA_REQUIRED_MESSAGE);
+		assertThat(expectedViolation.getField()).isNull();
 	}
 
 	@ParameterizedTest(name = "update: {0}")
 	@MethodSource("rejectedUpdatePayloads")
 	void validate_updateDto_rejectsInvalidPayload(
 		String scenario,
-		Consumer<UpdateAssetDTO> mutation
+		Consumer<UpdateAssetDTO> mutation,
+		String expectedMessage,
+		String expectedField
 	) {
 		// GIVEN
 		UpdateAssetDTO mockDto = buildUpdateDto();
 		mutation.accept(mockDto);
 
 		// WHEN / THEN
-		assertThatThrownBy(() -> testSubject.validate(mockDto)).isInstanceOf(
-			IllegalArgumentException.class
-		);
+		assertValidationViolation(() -> testSubject.validate(mockDto), expectedMessage, expectedField);
 	}
 
 	static Stream<Arguments> rejectedUpdatePayloads() {
 		return Stream.of(
-			Arguments.of("blank name", (Consumer<UpdateAssetDTO>) dto -> dto.setName("")),
-			Arguments.of("null name", (Consumer<UpdateAssetDTO>) dto -> dto.setName(null)),
 			Arguments.of(
-				"name over max length",
-				(Consumer<UpdateAssetDTO>) dto -> dto.setName(NAME_OVER_MAX_LENGTH)
-			)
-		);
-	}
-
-	@ParameterizedTest(name = "update: {0}")
-	@MethodSource("rejectedUpdateLiabilityPayloads")
-	void validate_updateDto_rejectsInvalidLiabilityConfiguration(
-		String scenario,
-		Consumer<UpdateAssetDTO> mutation,
-		String expectedMessage
-	) {
-		// GIVEN
-		UpdateAssetDTO mockDto = buildUpdateDto();
-		mutation.accept(mockDto);
-
-		// WHEN / THEN
-		assertThatThrownBy(() -> testSubject.validate(mockDto))
-			.isInstanceOf(ValidationException.class)
-			.hasMessage(expectedMessage);
-	}
-
-	static Stream<Arguments> rejectedUpdateLiabilityPayloads() {
-		return Stream.of(
+				"a blank name",
+				(Consumer<UpdateAssetDTO>) dto -> dto.setName(""),
+				NAME_REQUIRED_MESSAGE,
+				NAME_FIELD
+			),
+			Arguments.of(
+				"a null name",
+				(Consumer<UpdateAssetDTO>) dto -> dto.setName(null),
+				NAME_REQUIRED_MESSAGE,
+				NAME_FIELD
+			),
+			Arguments.of(
+				"a name over the max length",
+				(Consumer<UpdateAssetDTO>) dto -> dto.setName(NAME_OVER_MAX_LENGTH),
+				NAME_TOO_LONG_MESSAGE,
+				NAME_FIELD
+			),
 			Arguments.of(
 				"a payment frequency without a liability type",
 				(Consumer<UpdateAssetDTO>) dto -> dto.setPaymentFrequency(PaymentFrequency.MONTHLY),
-				MISSING_TYPE_MESSAGE
+				MISSING_TYPE_MESSAGE,
+				LIABILITY_TYPE_FIELD
 			),
 			Arguments.of(
 				"an automatic liability without a payment amount",
@@ -342,7 +398,8 @@ class AssetValidationServiceTest {
 					dto.setLiabilityType(LiabilityType.AUTOMATIC);
 					dto.setPaymentFrequency(PaymentFrequency.MONTHLY);
 				},
-				NON_POSITIVE_AUTOMATIC_AMOUNT_MESSAGE
+				NON_POSITIVE_AUTOMATIC_AMOUNT_MESSAGE,
+				PAYMENT_AMOUNT_FIELD
 			)
 		);
 	}
@@ -358,6 +415,19 @@ class AssetValidationServiceTest {
 
 	static Stream<LocalDate> toleratedReferenceDates() {
 		return Stream.of(FIXED_TODAY, TOMORROW);
+	}
+
+	private static void assertValidationViolation(
+		ThrowingCallable callable,
+		String expectedMessage,
+		String expectedField
+	) {
+		ValidationException expectedViolation = catchThrowableOfType(
+			callable,
+			ValidationException.class
+		);
+		assertThat(expectedViolation).hasMessage(expectedMessage);
+		assertThat(expectedViolation.getField()).isEqualTo(expectedField);
 	}
 
 	private void stubFixedToday() {

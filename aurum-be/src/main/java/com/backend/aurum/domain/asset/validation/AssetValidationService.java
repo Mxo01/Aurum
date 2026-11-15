@@ -17,16 +17,16 @@ public class AssetValidationService {
 
 	public void validate(CreateAssetDTO dto) {
 		if (dto == null) {
-			throw new IllegalArgumentException("Asset data cannot be null");
+			throw new ValidationException(null, "Asset data is required");
 		}
 		if (!StringUtils.hasText(dto.getName())) {
-			throw new IllegalArgumentException("Asset name is required");
+			throw new ValidationException("name", "Asset name is required");
 		}
 		if (dto.getName().length() > 100) {
-			throw new IllegalArgumentException("Asset name must not exceed 100 characters");
+			throw new ValidationException("name", "Asset name cannot exceed 100 characters");
 		}
 		if (dto.getCategoryId() == null) {
-			throw new IllegalArgumentException("Asset category is required");
+			throw new ValidationException("categoryId", "Asset category is required");
 		}
 
 		LiabilityConfiguration liability = new LiabilityConfiguration(
@@ -40,13 +40,13 @@ public class AssetValidationService {
 
 	public void validate(UpdateAssetDTO dto) {
 		if (dto == null) {
-			throw new IllegalArgumentException("Asset data cannot be null");
+			throw new ValidationException(null, "Asset data is required");
 		}
 		if (!StringUtils.hasText(dto.getName())) {
-			throw new IllegalArgumentException("Asset name is required");
+			throw new ValidationException("name", "Asset name is required");
 		}
 		if (dto.getName().length() > 100) {
-			throw new IllegalArgumentException("Asset name must not exceed 100 characters");
+			throw new ValidationException("name", "Asset name cannot exceed 100 characters");
 		}
 
 		new LiabilityConfiguration(
@@ -67,16 +67,17 @@ public class AssetValidationService {
 
 		if (dto.getInitialValue() == null || dto.getInitialValue().signum() <= 0) {
 			throw new ValidationException(
-				"An AUTOMATIC liability requires an initialValue greater than 0"
+				"initialValue",
+				"An automatic liability needs an initial value greater than zero"
 			);
 		}
 
 		if (dto.getReferenceDate() == null) {
-			throw new ValidationException("An AUTOMATIC liability requires a referenceDate");
+			throw new ValidationException("referenceDate", "An automatic liability needs a value date");
 		}
 
 		if (ReferenceDatePolicy.isTooFarInTheFuture(dto.getReferenceDate(), clock)) {
-			throw new ValidationException("referenceDate cannot be in the future");
+			throw new ValidationException("referenceDate", "Value date cannot be in the future");
 		}
 	}
 }

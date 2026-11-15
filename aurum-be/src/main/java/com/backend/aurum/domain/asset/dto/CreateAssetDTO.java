@@ -21,6 +21,6 @@ public class CreateAssetDTO {
 	private LiabilityType liabilityType;
 	private PaymentFrequency paymentFrequency;
 
-	@PositiveOrZero
+	@PositiveOrZero(message = "Payment amount cannot be negative")
 	private BigDecimal paymentAmount;
 }

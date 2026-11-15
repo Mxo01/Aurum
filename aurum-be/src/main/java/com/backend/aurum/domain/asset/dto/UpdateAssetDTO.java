@@ -28,7 +28,7 @@ public class UpdateAssetDTO {
 	@Schema(nullable = true, description = "Only read when liabilityType is provided")
 	private PaymentFrequency paymentFrequency;
 
-	@PositiveOrZero
+	@PositiveOrZero(message = "Payment amount cannot be negative")
 	@Schema(nullable = true, description = "Only read when liabilityType is provided")
 	private BigDecimal paymentAmount;
 

@@ -1,8 +1,9 @@
-import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { describe, expect, it, vi } from "vitest";
 import { env } from "@/lib/env";
+import type { ApiErrorBody, ApiErrorDetail, AssetDTO } from "@/lib/api/types";
 import { buildAsset, buildCategory } from "@/test/fixtures/portfolio";
 import { server } from "@/test/msw/server";
 import { renderWithProviders } from "@/test/render";
@@ -439,4 +440,361 @@ it("should show the required field errors", async () => {
 	// THEN
 	expect(await screen.findByText("Name is required")).toBeInTheDocument();
 	expect(screen.getByText("Category is required")).toBeInTheDocument();
+});
+
+// The envelope the backend answers a rejected write with: the sheet reads `errors` and places each
+// detail on the input it names, keeping the rest for the alert.
+const REJECTION_STATUS = 400;
+const REJECTION_ERROR = "Bad Request";
+const ASSET_CATEGORY_NAME = "Investments";
+const LIABILITY_CATEGORY_NAME = "Mortgage";
+const SUBMITTED_NAME = "Apartment Berlin";
+const SUBMITTED_PAYMENT_AMOUNT = "500";
+const AUTOMATIC = "Automatic";
+const MONTHLY = "Monthly";
+
+interface ServerDetail {
+	field?: string;
+	message: string;
+}
+
+const rejectionDetails = {
+	name: { field: "name", message: "Name is already taken" },
+	categoryId: { field: "categoryId", message: "Category is no longer available" },
+	liabilityType: { field: "liabilityType", message: "Liability type is not allowed here" },
+	paymentFrequency: { field: "paymentFrequency", message: "Frequency is not supported" },
+	paymentAmount: { field: "paymentAmount", message: "Payment exceeds the outstanding balance" },
+	initialValue: { field: "initialValue", message: "Initial value is not allowed" },
+	referenceDate: { field: "referenceDate", message: "The value date cannot be in the future" },
+	unfielded: { message: "The request was rejected" }
+} satisfies Record<string, ServerDetail>;
+
+const CREATE_FALLBACK = "Could not create the asset";
+const UPDATE_FALLBACK = "Could not update the asset";
+
+function rejectionBody(details: readonly ServerDetail[]): ApiErrorBody {
+	return {
+		status: REJECTION_STATUS,
+		error: REJECTION_ERROR,
+		errors: details.map(({ field, message }): ApiErrorDetail =>
+			field ? { field, message } : { message }
+		)
+	};
+}
+
+function rejectCreate(details: readonly ServerDetail[]) {
+	server.use(
+		http.post(`${env.apiUrl}/assets`, () =>
+			HttpResponse.json(rejectionBody(details), { status: REJECTION_STATUS })
+		)
+	);
+}
+
+function rejectUpdate(details: readonly ServerDetail[]) {
+	server.use(
+		http.put(`${env.apiUrl}/assets/:id`, () =>
+			HttpResponse.json(rejectionBody(details), { status: REJECTION_STATUS })
+		)
+	);
+}
+
+function failCreateWithoutEnvelope() {
+	server.use(http.post(`${env.apiUrl}/assets`, () => HttpResponse.error()));
+}
+
+function failUpdateWithoutEnvelope() {
+	server.use(http.put(`${env.apiUrl}/assets/:id`, () => HttpResponse.error()));
+}
+
+const noopOpenChange = () => undefined;
+
+function sheet(open: boolean, asset: AssetDTO | null) {
+	const testSubject = AssetFormSheet;
+	const Subject = testSubject;
+
+	return (
+		<Subject
+			open={open}
+			onOpenChange={noopOpenChange}
+			asset={asset}
+			categories={mockCategories}
+		/>
+	);
+}
+
+async function selectOption(label: string, optionName: string) {
+	const user = userEvent.setup();
+	await user.click(screen.getByLabelText(label));
+	await user.click(await screen.findByRole("option", { name: optionName }));
+}
+
+interface CreateFormFill {
+	categoryName: string;
+	automatic?: boolean;
+}
+
+async function fillCreateForm({ categoryName, automatic = false }: CreateFormFill) {
+	fireEvent.change(screen.getByLabelText("Name"), { target: { value: SUBMITTED_NAME } });
+	await selectOption("Category", categoryName);
+	if (!automatic) return;
+
+	await selectOption("Liability type", AUTOMATIC);
+	await selectOption("Payment frequency", MONTHLY);
+	fireEvent.change(screen.getByLabelText("Payment amount"), {
+		target: { value: SUBMITTED_PAYMENT_AMOUNT }
+	});
+}
+
+function submitButton(name: string) {
+	const button = screen.getByRole("button", { name });
+	const form = button.closest("form");
+	if (!form) throw new Error(`No form around the ${name} button`);
+	return { button, form };
+}
+
+async function submit(buttonName: string) {
+	const { button, form } = submitButton(buttonName);
+	await waitFor(() => expect(button).toBeEnabled());
+	fireEvent.submit(form);
+}
+
+function fieldGroup(label: string): HTMLElement {
+	const labelElement = screen.getByText(label);
+	const group = labelElement.closest<HTMLElement>("div");
+	if (!group) throw new Error(`No field group around the ${label} label`);
+	return group;
+}
+
+function isBefore(first: Node, second: Node) {
+	return Boolean(first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING);
+}
+
+const mockEditableAsset = buildAsset({
+	id: "a1",
+	name: "Apartment",
+	categoryId: "c1",
+	categoryName: ASSET_CATEGORY_NAME,
+	categoryIcon: null,
+	type: "ASSET",
+	originalCurrency: "EUR"
+});
+
+describe("AssetFormSheet rejection", () => {
+	const placedCases: {
+		description: string;
+		detail: ServerDetail;
+		fieldLabel: string;
+		categoryName: string;
+		automatic?: boolean;
+	}[] = [
+		{
+			description: "the name",
+			detail: rejectionDetails.name,
+			fieldLabel: "Name",
+			categoryName: ASSET_CATEGORY_NAME
+		},
+		{
+			description: "the category",
+			detail: rejectionDetails.categoryId,
+			fieldLabel: "Category",
+			categoryName: ASSET_CATEGORY_NAME
+		},
+		{
+			description: "the liability type",
+			detail: rejectionDetails.liabilityType,
+			fieldLabel: "Liability type",
+			categoryName: LIABILITY_CATEGORY_NAME
+		},
+		{
+			description: "the payment frequency",
+			detail: rejectionDetails.paymentFrequency,
+			fieldLabel: "Payment frequency",
+			categoryName: LIABILITY_CATEGORY_NAME,
+			automatic: true
+		},
+		{
+			description: "the payment amount",
+			detail: rejectionDetails.paymentAmount,
+			fieldLabel: "Payment amount",
+			categoryName: LIABILITY_CATEGORY_NAME,
+			automatic: true
+		},
+		{
+			description: "the initial value",
+			detail: rejectionDetails.initialValue,
+			fieldLabel: "Initial value",
+			categoryName: ASSET_CATEGORY_NAME
+		},
+		{
+			description: "the value date",
+			detail: rejectionDetails.referenceDate,
+			fieldLabel: "Value date",
+			categoryName: ASSET_CATEGORY_NAME
+		}
+	];
+
+	it.each(placedCases)(
+		"should place the rejection on $description and nowhere else",
+		async ({ detail, fieldLabel, categoryName, automatic }) => {
+			// GIVEN
+			rejectCreate([detail]);
+			renderWithProviders(sheet(true, null));
+			await fillCreateForm({ categoryName, automatic });
+
+			// WHEN
+			await submit("Add asset");
+
+			// THEN
+			await waitFor(() =>
+				expect(within(fieldGroup(fieldLabel)).getByText(detail.message)).toBeInTheDocument()
+			);
+			expect(screen.getAllByText(detail.message)).toHaveLength(1);
+			expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+			expect(screen.getByRole("button", { name: "Add asset" })).toBeEnabled();
+		}
+	);
+
+	it("should replace the client message of the same field with the server one", async () => {
+		// GIVEN
+		rejectCreate([rejectionDetails.name]);
+		renderWithProviders(sheet(true, null));
+		await fillCreateForm({ categoryName: ASSET_CATEGORY_NAME });
+
+		// WHEN
+		await submit("Add asset");
+
+		// THEN
+		await waitFor(() =>
+			expect(
+				within(fieldGroup("Name")).getByText(rejectionDetails.name.message)
+			).toBeInTheDocument()
+		);
+		expect(within(fieldGroup("Name")).queryByText("Name is required")).not.toBeInTheDocument();
+	});
+
+	it("should collect every detail the sheet cannot place in one alert above the footer", async () => {
+		// GIVEN
+		rejectUpdate([rejectionDetails.unfielded, rejectionDetails.referenceDate]);
+		renderWithProviders(sheet(true, mockEditableAsset));
+
+		// WHEN
+		fireEvent.change(screen.getByLabelText("Name"), { target: { value: SUBMITTED_NAME } });
+		await submit("Save changes");
+
+		// THEN
+		await waitFor(() => expect(screen.getByRole("alert")).toBeInTheDocument());
+		const alert = screen.getByRole("alert");
+		expect(screen.getAllByRole("alert")).toHaveLength(1);
+		const lines = within(alert)
+			.getAllByRole("paragraph")
+			.map(line => line.textContent);
+		expect(lines).toEqual([
+			rejectionDetails.unfielded.message,
+			rejectionDetails.referenceDate.message
+		]);
+		expect(screen.getAllByText(rejectionDetails.unfielded.message)).toHaveLength(1);
+		expect(screen.getAllByText(rejectionDetails.referenceDate.message)).toHaveLength(1);
+		expect(isBefore(alert, submitButton("Save changes").button)).toBe(true);
+	});
+
+	it("should show the create fallback when the failure carries no envelope", async () => {
+		// GIVEN
+		failCreateWithoutEnvelope();
+		renderWithProviders(sheet(true, null));
+		await fillCreateForm({ categoryName: ASSET_CATEGORY_NAME });
+
+		// WHEN
+		await submit("Add asset");
+
+		// THEN
+		await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent(CREATE_FALLBACK));
+		expect(screen.getAllByRole("alert")).toHaveLength(1);
+		expect(isBefore(screen.getByRole("alert"), submitButton("Add asset").button)).toBe(true);
+	});
+
+	it("should show the update fallback when the failure carries no envelope", async () => {
+		// GIVEN
+		failUpdateWithoutEnvelope();
+		renderWithProviders(sheet(true, mockEditableAsset));
+
+		// WHEN
+		fireEvent.change(screen.getByLabelText("Name"), { target: { value: SUBMITTED_NAME } });
+		await submit("Save changes");
+
+		// THEN
+		await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent(UPDATE_FALLBACK));
+		expect(screen.getAllByRole("alert")).toHaveLength(1);
+	});
+
+	it("should leave the submit button enabled and accept a second submit without an edit", async () => {
+		// GIVEN
+		const requests: string[] = [];
+		server.use(
+			http.post(`${env.apiUrl}/assets`, ({ request }) => {
+				requests.push(request.method);
+				return HttpResponse.json(rejectionBody([rejectionDetails.name]), {
+					status: REJECTION_STATUS
+				});
+			})
+		);
+		renderWithProviders(sheet(true, null));
+		await fillCreateForm({ categoryName: ASSET_CATEGORY_NAME });
+		await submit("Add asset");
+		await waitFor(() =>
+			expect(
+				within(fieldGroup("Name")).getByText(rejectionDetails.name.message)
+			).toBeInTheDocument()
+		);
+
+		// WHEN
+		await submit("Add asset");
+
+		// THEN
+		await waitFor(() => expect(requests).toHaveLength(2));
+		expect(submitButton("Add asset").button).toBeEnabled();
+	});
+
+	it("should clear every rejection line when a value is edited", async () => {
+		// GIVEN
+		rejectCreate([rejectionDetails.name, rejectionDetails.unfielded]);
+		renderWithProviders(sheet(true, null));
+		await fillCreateForm({ categoryName: ASSET_CATEGORY_NAME });
+		await submit("Add asset");
+		await waitFor(() =>
+			expect(screen.getByRole("alert")).toHaveTextContent(rejectionDetails.unfielded.message)
+		);
+		expect(within(fieldGroup("Name")).getByText(rejectionDetails.name.message)).toBeInTheDocument();
+
+		// WHEN
+		fireEvent.change(screen.getByLabelText("Name"), { target: { value: `${SUBMITTED_NAME} 2` } });
+
+		// THEN
+		await waitFor(() => expect(screen.queryByRole("alert")).not.toBeInTheDocument());
+		expect(screen.queryByText(rejectionDetails.name.message)).not.toBeInTheDocument();
+		expect(screen.queryByText(rejectionDetails.unfielded.message)).not.toBeInTheDocument();
+	});
+
+	it("should clear every rejection line when the sheet is reopened", async () => {
+		// GIVEN
+		rejectCreate([rejectionDetails.name, rejectionDetails.unfielded]);
+		const view = renderWithProviders(sheet(true, null));
+		await fillCreateForm({ categoryName: ASSET_CATEGORY_NAME });
+		await submit("Add asset");
+		await waitFor(() =>
+			expect(screen.getByRole("alert")).toHaveTextContent(rejectionDetails.unfielded.message)
+		);
+		expect(within(fieldGroup("Name")).getByText(rejectionDetails.name.message)).toBeInTheDocument();
+
+		// WHEN
+		view.rerender(sheet(false, null));
+		view.rerender(sheet(true, null));
+
+		// THEN
+		await waitFor(() =>
+			expect(screen.getByRole("heading", { name: "New asset" })).toBeInTheDocument()
+		);
+		expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+		expect(screen.queryByText(rejectionDetails.name.message)).not.toBeInTheDocument();
+		expect(screen.queryByText(rejectionDetails.unfielded.message)).not.toBeInTheDocument();
+	});
 });

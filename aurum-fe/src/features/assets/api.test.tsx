@@ -1,9 +1,9 @@
 import { renderHook, waitFor } from "@testing-library/react";
-import type { ReactNode } from "react";
+import type { ComponentType, ReactNode } from "react";
 import { toast } from "sonner";
 import type { AssetDTO } from "@/lib/api/types";
 import { http, HttpResponse } from "msw";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/lib/api/client";
 import { buildAsset } from "@/test/fixtures/portfolio";
 import { queryKeys } from "@/lib/api/keys";
@@ -20,6 +20,50 @@ import {
 	useUpdateAsset,
 	useUpdateCurrentValue
 } from "./api";
+
+const ASSET_ID = "a1";
+const ASSET_NAME = "Apartment";
+const RENAMED_ASSET_NAME = "Rental";
+const NEXT_CURRENT_VALUE = 500;
+const VALIDATION_STATUS = 400;
+const SERVER_ERROR_STATUS = 500;
+const REJECTED_FIELD = "name";
+
+function buildValidationEnvelope(message: string) {
+	return {
+		status: VALIDATION_STATUS,
+		error: "Bad Request",
+		errors: [{ field: REJECTED_FIELD, message }]
+	};
+}
+
+function serverAnswer(body?: unknown) {
+	return body === undefined
+		? new HttpResponse(null, { status: SERVER_ERROR_STATUS })
+		: HttpResponse.json(body, { status: VALIDATION_STATUS });
+}
+
+type TestWrapper = ComponentType<{ children: ReactNode }>;
+
+const mockAsset = buildAsset({ id: ASSET_ID, name: ASSET_NAME, isFavorite: false });
+
+function setup() {
+	const queryClient = new QueryClient({
+		defaultOptions: {
+			queries: { retry: false, gcTime: Infinity },
+			mutations: { retry: false }
+		}
+	});
+	queryClient.setQueryData(queryKeys.assets, [mockAsset]);
+	const wrapper = ({ children }: { children: ReactNode }) => (
+		<TestProviders queryClient={queryClient}>{children}</TestProviders>
+	);
+	return { queryClient, wrapper };
+}
+
+afterEach(() => {
+	vi.restoreAllMocks();
+});
 
 describe("useAssets", () => {
 	it("should expose the assets on success", async () => {
@@ -73,52 +117,44 @@ describe("useCreateAsset", () => {
 });
 
 describe("asset mutations", () => {
-	const mockAsset = buildAsset({ id: "a1", name: "Apartment", isFavorite: false });
-
-	function setup() {
-		const queryClient = new QueryClient({
-			defaultOptions: {
-				queries: { retry: false, gcTime: Infinity },
-				mutations: { retry: false }
-			}
-		});
-		queryClient.setQueryData(queryKeys.assets, [mockAsset]);
-		const wrapper = ({ children }: { children: ReactNode }) => (
-			<TestProviders queryClient={queryClient}>{children}</TestProviders>
-		);
-		return { queryClient, wrapper };
-	}
-
-	it("should report a failed create", async () => {
+	it("should leave a failed create to the sheet without a toast", async () => {
 		// GIVEN
 		const errorSpy = vi.spyOn(toast, "error");
-		server.use(http.post(`${env.apiUrl}/assets`, () => HttpResponse.json({}, { status: 500 })));
+		server.use(
+			http.post(`${env.apiUrl}/assets`, () =>
+				serverAnswer(buildValidationEnvelope("Payment amount is required"))
+			)
+		);
 		const { wrapper } = setup();
 		const testSubject = () => useCreateAsset();
 		const { result } = renderHook(testSubject, { wrapper });
 
 		// WHEN
-		result.current.mutate({ name: "Apartment" });
+		result.current.mutate({ name: ASSET_NAME });
 
 		// THEN
 		await waitFor(() => expect(result.current.isError).toBe(true));
-		expect(errorSpy).toHaveBeenCalledWith("Could not create the asset");
+		expect(errorSpy).not.toHaveBeenCalled();
 	});
 
-	it("should report a failed update", async () => {
+	it("should leave a failed update to the sheet without a toast", async () => {
 		// GIVEN
 		const errorSpy = vi.spyOn(toast, "error");
-		server.use(http.put(`${env.apiUrl}/assets/:id`, () => HttpResponse.json({}, { status: 500 })));
+		server.use(
+			http.put(`${env.apiUrl}/assets/:id`, () =>
+				serverAnswer(buildValidationEnvelope("Payment amount is required"))
+			)
+		);
 		const { wrapper } = setup();
 		const testSubject = () => useUpdateAsset();
 		const { result } = renderHook(testSubject, { wrapper });
 
 		// WHEN
-		result.current.mutate({ id: "a1", body: { name: "Apartment" } });
+		result.current.mutate({ id: ASSET_ID, body: { name: ASSET_NAME } });
 
 		// THEN
 		await waitFor(() => expect(result.current.isError).toBe(true));
-		expect(errorSpy).toHaveBeenCalledWith("Could not update the asset");
+		expect(errorSpy).not.toHaveBeenCalled();
 	});
 
 	it("should restore the previous assets when the favorite fails", async () => {
@@ -261,6 +297,112 @@ describe("asset mutations", () => {
 		await waitFor(() => expect(result.current.isError).toBe(true));
 		expect(queryClient.getQueryData(queryKeys.assets)).toEqual({ not: "an array" });
 	});
+});
+
+interface MutationTrigger {
+	readonly trigger: () => void;
+	readonly isError: () => boolean;
+}
+
+interface ToastCase {
+	readonly label: string;
+	readonly serverMessage: string;
+	readonly fallback: string;
+	readonly respond: (body?: unknown) => void;
+	readonly mount: (wrapper: TestWrapper) => MutationTrigger;
+}
+
+const TOAST_CASES: ToastCase[] = [
+	{
+		label: "dashboard tracking",
+		serverMessage: "The dashboard tracks at most five assets",
+		fallback: "Could not update the dashboard tracking",
+		respond: body => server.use(http.put(`${env.apiUrl}/assets/:id`, () => serverAnswer(body))),
+		mount: wrapper => {
+			const { result } = renderHook(() => useToggleFavorite(), { wrapper });
+			return {
+				trigger: () => result.current.mutate({ asset: mockAsset }),
+				isError: () => result.current.isError
+			};
+		}
+	},
+	{
+		label: "rename",
+		serverMessage: "An asset named Rental already exists",
+		fallback: "Could not rename the asset",
+		respond: body => server.use(http.put(`${env.apiUrl}/assets/:id`, () => serverAnswer(body))),
+		mount: wrapper => {
+			const { result } = renderHook(() => useRenameAsset(), { wrapper });
+			return {
+				trigger: () => result.current.mutate({ asset: mockAsset, name: RENAMED_ASSET_NAME }),
+				isError: () => result.current.isError
+			};
+		}
+	},
+	{
+		label: "delete",
+		serverMessage: "Delete the snapshots of this asset first",
+		fallback: "Could not delete the asset",
+		respond: body => server.use(http.delete(`${env.apiUrl}/assets/:id`, () => serverAnswer(body))),
+		mount: wrapper => {
+			const { result } = renderHook(() => useDeleteAsset(), { wrapper });
+			return {
+				trigger: () => result.current.mutate(ASSET_ID),
+				isError: () => result.current.isError
+			};
+		}
+	},
+	{
+		label: "current value",
+		serverMessage: "The value must be greater than zero",
+		fallback: "Could not save the new value",
+		respond: body => server.use(http.post(`${env.apiUrl}/snapshots`, () => serverAnswer(body))),
+		mount: wrapper => {
+			const { result } = renderHook(() => useUpdateCurrentValue(), { wrapper });
+			return {
+				trigger: () => result.current.mutate({ assetId: ASSET_ID, value: NEXT_CURRENT_VALUE }),
+				isError: () => result.current.isError
+			};
+		}
+	}
+];
+
+describe("asset mutation toasts", () => {
+	it.each(TOAST_CASES)(
+		"should show the server message in the $label toast",
+		async ({ serverMessage, respond, mount }) => {
+			// GIVEN
+			const errorSpy = vi.spyOn(toast, "error");
+			respond(buildValidationEnvelope(serverMessage));
+			const { wrapper } = setup();
+			const mutation = mount(wrapper);
+
+			// WHEN
+			mutation.trigger();
+
+			// THEN
+			await waitFor(() => expect(mutation.isError()).toBe(true));
+			expect(errorSpy).toHaveBeenCalledWith(serverMessage);
+		}
+	);
+
+	it.each(TOAST_CASES)(
+		"should keep the $label fallback when the server sends no body",
+		async ({ fallback, respond, mount }) => {
+			// GIVEN
+			const errorSpy = vi.spyOn(toast, "error");
+			respond();
+			const { wrapper } = setup();
+			const mutation = mount(wrapper);
+
+			// WHEN
+			mutation.trigger();
+
+			// THEN
+			await waitFor(() => expect(mutation.isError()).toBe(true));
+			expect(errorSpy).toHaveBeenCalledWith(fallback);
+		}
+	);
 });
 
 it("should report a failed favorite without a cached list", async () => {

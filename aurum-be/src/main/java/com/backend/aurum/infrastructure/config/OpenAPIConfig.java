@@ -1,12 +1,15 @@
 package com.backend.aurum.infrastructure.config;
 
+import com.backend.aurum.infrastructure.exception.ApiErrorResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import io.swagger.v3.core.converter.ModelConverters;
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
+import org.springdoc.core.customizers.GlobalOpenApiCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
@@ -44,5 +47,22 @@ public class OpenAPIConfig {
 					.version("1.0")
 					.description("Backend API for the Aurum wealth tracking application.")
 			);
+	}
+
+	/**
+	 * No operation declares the error envelope as a response, so springdoc never reaches it, and the
+	 * schemas set on the {@link OpenAPI} bean are replaced while the document is generated. Adding
+	 * them from a customizer is what keeps the documented shape and the served one the same.
+	 */
+	@Bean
+	public GlobalOpenApiCustomizer errorSchemasCustomizer() {
+		return openApi -> {
+			if (openApi.getComponents() == null) {
+				openApi.setComponents(new Components());
+			}
+			ModelConverters.getInstance()
+				.readAll(ApiErrorResponse.class)
+				.forEach(openApi.getComponents()::addSchemas);
+		};
 	}
 }
