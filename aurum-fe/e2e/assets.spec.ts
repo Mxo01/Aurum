@@ -1,4 +1,48 @@
+import type { Page } from "@playwright/test";
 import { expect, test } from "./fixtures/aurum";
+
+const BASE_CURRENCY = "EUR";
+const GROUP_TOTAL_TITLE = /^Group total in EUR, your base currency/;
+const SCHEDULE_DESCRIPTION = "Follows the automatic payment schedule";
+const SCHEDULE_TITLE = /^Value follows the automatic payment schedule/;
+const GROUP_NAMES = ["Investments", "Mortgage", "Real Estate"];
+
+const AUTOMATIC_LIABILITY = {
+	name: "Car Loan",
+	category: "Mortgage",
+	liabilityType: "Automatic",
+	paymentFrequency: "Monthly",
+	paymentAmount: "500",
+	initialValue: "12000",
+	displayValue: "€12,000.00",
+	groupTotal: "€280,000.00"
+};
+
+const MANUAL_LIABILITY = { name: "Mortgage", displayValue: "€268,000.00" };
+
+async function addAutomaticLiability(page: Page) {
+	await page.getByRole("button", { name: "Add asset" }).click();
+
+	const sheet = page.getByRole("dialog");
+	await sheet.getByLabel("Name").fill(AUTOMATIC_LIABILITY.name);
+	await sheet.getByLabel("Category").click();
+	await page.getByRole("option", { name: AUTOMATIC_LIABILITY.category }).click();
+	await sheet.getByLabel("Liability type").click();
+	await page.getByRole("option", { name: AUTOMATIC_LIABILITY.liabilityType }).click();
+	await sheet.getByLabel("Payment frequency").click();
+	await page.getByRole("option", { name: AUTOMATIC_LIABILITY.paymentFrequency }).click();
+	await sheet.getByLabel("Payment amount").fill(AUTOMATIC_LIABILITY.paymentAmount);
+	await sheet.getByLabel("Initial value").fill(AUTOMATIC_LIABILITY.initialValue);
+	await sheet.getByRole("button", { name: "Add asset" }).click();
+
+	await expect(
+		page.getByText(AUTOMATIC_LIABILITY.name).filter({ visible: true }).first()
+	).toBeVisible();
+}
+
+function groupHeader(page: Page, name: string) {
+	return page.locator("button[aria-expanded]").filter({ hasText: name }).filter({ visible: true });
+}
 
 test("keeps the header actions at the same height", async ({ page }) => {
 	await page.goto("/assets");
@@ -79,4 +123,48 @@ test("bounds the asset value date at today", async ({ page }) => {
 
 	await year.selectOption("2001");
 	await expect(year).toHaveValue("2001");
+});
+
+test("keeps the automatic liability value read-only", async ({ page }) => {
+	await page.goto("/assets");
+	await addAutomaticLiability(page);
+
+	const editControl = page.getByRole("button", {
+		name: new RegExp(
+			`Edit ${AUTOMATIC_LIABILITY.name}, currently ${AUTOMATIC_LIABILITY.displayValue}`
+		)
+	});
+	await expect(editControl).toHaveCount(0);
+
+	await expect(
+		page
+			.getByRole("button", {
+				name: new RegExp(
+					`Edit ${MANUAL_LIABILITY.name}, currently ${MANUAL_LIABILITY.displayValue}`
+				)
+			})
+			.filter({ visible: true })
+	).toHaveCount(1);
+
+	await expect(
+		page.getByText(AUTOMATIC_LIABILITY.displayValue, { exact: true }).filter({ visible: true })
+	).toHaveCount(1);
+	await expect(page.getByText(SCHEDULE_DESCRIPTION).filter({ visible: true })).toHaveCount(1);
+	await expect(page.getByTitle(SCHEDULE_TITLE).filter({ visible: true })).toHaveCount(1);
+});
+
+test("shows the base currency on the group totals", async ({ page }) => {
+	await page.goto("/assets");
+	await addAutomaticLiability(page);
+
+	const mortgage = groupHeader(page, AUTOMATIC_LIABILITY.category);
+	await expect(mortgage).toContainText(AUTOMATIC_LIABILITY.groupTotal);
+	await expect(mortgage.getByText(BASE_CURRENCY, { exact: true })).toBeVisible();
+
+	for (const name of GROUP_NAMES) {
+		const header = groupHeader(page, name);
+		await expect(header).toHaveCount(1);
+		await expect(header.getByText(BASE_CURRENCY, { exact: true })).toBeVisible();
+		await expect(header.getByTitle(GROUP_TOTAL_TITLE)).toBeVisible();
+	}
 });

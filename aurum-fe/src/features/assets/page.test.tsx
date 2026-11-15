@@ -43,8 +43,36 @@ const mockAssets = [
 	})
 ];
 
+const mockAutomaticLoan = buildAsset({
+	id: "a4",
+	name: "Car Loan",
+	categoryName: "Loans",
+	categoryIcon: "pi-car",
+	type: "LIABILITY",
+	liabilityType: "AUTOMATIC",
+	paymentFrequency: "MONTHLY",
+	paymentAmount: 320,
+	latestValue: 18400,
+	latestValueBase: 18400,
+	previousValue: 19000
+});
+
+const RENDERS_PER_LAYOUT = 2;
+const BASE_CURRENCY = "EUR";
+const GROUP_TOTAL_TITLE = `Group total in ${BASE_CURRENCY}, your base currency. Row values are shown in each asset's own currency.`;
+const AUTOMATIC_VALUE_TITLE =
+	"Value follows the automatic payment schedule and cannot be edited here.";
+const SCHEDULE_HINT = "Follows the automatic payment schedule";
+const NEXT_MORTGAGE_VALUE = 260_000;
+
 function useAssetsFixture() {
 	server.use(http.get(`${env.apiUrl}/assets`, () => HttpResponse.json(mockAssets)));
+}
+
+function useAssetsWithAutomaticLoanFixture() {
+	server.use(
+		http.get(`${env.apiUrl}/assets`, () => HttpResponse.json([...mockAssets, mockAutomaticLoan]))
+	);
 }
 
 describe("AssetsPage", () => {
@@ -614,4 +642,80 @@ it("should ignore a delete without an id", async () => {
 
 	// THEN
 	expect(screen.getAllByText("No id").length).toBeGreaterThan(0);
+});
+
+describe("AssetsPage automatic liabilities", () => {
+	it("should render the payment schedule instead of a value editor", async () => {
+		// GIVEN
+		useAssetsWithAutomaticLoanFixture();
+		const testSubject = AssetsPage;
+		renderWithProviders(createElement(testSubject), { route: "/assets" });
+		await screen.findAllByText("Car Loan");
+		const scheduledValues = screen.getAllByTitle(AUTOMATIC_VALUE_TITLE);
+
+		// WHEN
+		fireEvent.click(scheduledValues[0] as HTMLElement);
+
+		// THEN
+		expect(scheduledValues).toHaveLength(RENDERS_PER_LAYOUT);
+		expect(screen.getAllByText(SCHEDULE_HINT)).toHaveLength(RENDERS_PER_LAYOUT);
+		expect(screen.queryByLabelText("Edit Car Loan in USD")).not.toBeInTheDocument();
+		expect(
+			screen.queryAllByRole("button", { name: "Edit Car Loan, currently €18,400.00" })
+		).toHaveLength(0);
+		expect(
+			screen.getAllByRole("button", { name: "Edit Mortgage, currently €268,000.00" })
+		).toHaveLength(RENDERS_PER_LAYOUT);
+	});
+
+	it("should post a snapshot when a manual liability value changes", async () => {
+		// GIVEN
+		useAssetsWithAutomaticLoanFixture();
+		let snapshotBody: unknown;
+		server.use(
+			http.post(`${env.apiUrl}/snapshots`, async ({ request }) => {
+				snapshotBody = await request.json();
+				return HttpResponse.json({});
+			})
+		);
+		const testSubject = AssetsPage;
+		renderWithProviders(createElement(testSubject), { route: "/assets" });
+		await screen.findAllByText("Mortgage");
+
+		// WHEN
+		fireEvent.click(
+			screen.getAllByRole("button", {
+				name: "Edit Mortgage, currently €268,000.00"
+			})[0] as HTMLElement
+		);
+		const input = screen.getByLabelText("Edit Mortgage in EUR");
+		fireEvent.change(input, { target: { value: String(NEXT_MORTGAGE_VALUE) } });
+		fireEvent.blur(input);
+
+		// THEN
+		await waitFor(() => expect(snapshotBody).toBeDefined());
+		expect(snapshotBody).toMatchObject({ amountOriginalCurrency: NEXT_MORTGAGE_VALUE });
+	});
+
+	it("should show the base currency next to each group total", async () => {
+		// GIVEN
+		useAssetsFixture();
+		const testSubject = AssetsPage;
+
+		// WHEN
+		renderWithProviders(createElement(testSubject), { route: "/assets" });
+		await screen.findAllByText("Apartment Berlin");
+		const groupTotals = screen.getAllByTitle(GROUP_TOTAL_TITLE);
+
+		// THEN
+		expect(groupTotals).toHaveLength(3 * RENDERS_PER_LAYOUT);
+		expect(groupTotals.map(total => total.textContent)).toEqual([
+			`€128,450.00${BASE_CURRENCY}`,
+			`€268,000.00${BASE_CURRENCY}`,
+			`€430,000.00${BASE_CURRENCY}`,
+			`€128,450.00${BASE_CURRENCY}`,
+			`€268,000.00${BASE_CURRENCY}`,
+			`€430,000.00${BASE_CURRENCY}`
+		]);
+	});
 });
