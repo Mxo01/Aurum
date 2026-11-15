@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
@@ -26,6 +26,7 @@ import {
 	SheetTitle
 } from "@/components/ui/sheet";
 import { todayISO } from "@/lib/format/date";
+import { getApiErrorDetails, type ApiErrorViolation } from "@/lib/api/errors";
 import {
 	ASSET_TYPE,
 	CURRENCIES,
@@ -38,6 +39,82 @@ import {
 import { useCreateAsset, useUpdateAsset } from "./api";
 
 const NAME_MAX_LENGTH = 100;
+const CREATE_FALLBACK = "Could not create the asset";
+const UPDATE_FALLBACK = "Could not update the asset";
+
+// A rejection is the envelope of one failed attempt: the details the sheet can place, plus the
+// sentence to show when the body carried none.
+interface AssetRejection {
+	details: ApiErrorViolation[];
+	fallback: string;
+}
+
+// Only the inputs the sheet renders can carry a message; every other detail belongs to the alert.
+function renderedServerErrorFields(
+	categoryType: AssetCategoryDTO["type"],
+	liabilityType: AssetFormValues["liabilityType"],
+	isCreating: boolean
+): string[] {
+	const fields: string[] = ["name", "categoryId"];
+
+	if (categoryType === ASSET_TYPE.LIABILITY) {
+		fields.push("liabilityType");
+		if (liabilityType === LIABILITY_TYPE.AUTOMATIC) {
+			fields.push("paymentFrequency", "paymentAmount");
+		}
+	}
+
+	if (isCreating) fields.push("initialValue", "referenceDate");
+
+	return fields;
+}
+
+// Every collected line is renderable: the reader only hands back details that carry text.
+function detailMessages(details: readonly ApiErrorViolation[]): string[] {
+	return details.map(detail => detail.message);
+}
+
+// The alert owns what the sheet cannot pin to an input, plus the per-action sentence when the
+// rejection carried no detail at all.
+function alertLines(rejection: AssetRejection | null, renderedFields: readonly string[]): string[] {
+	if (!rejection) return [];
+
+	const unplaced = rejection.details.filter(
+		detail => !detail.field || !renderedFields.includes(detail.field)
+	);
+	if (unplaced.length > 0) return detailMessages(unplaced);
+
+	return rejection.details.length > 0 ? [] : [rejection.fallback];
+}
+
+// The single slot every field uses: the server's text for this field outranks the client message,
+// so server text and zod text can never disagree in two places at once.
+function FieldError({
+	field,
+	details,
+	message
+}: {
+	field: string;
+	details: readonly ApiErrorViolation[];
+	message?: string;
+}) {
+	const serverMessages = detailMessages(details.filter(detail => detail.field === field));
+	const texts = serverMessages.length > 0 ? serverMessages : message ? [message] : [];
+	if (texts.length === 0) return null;
+
+	return (
+		<>
+			{texts.map((text, index) => (
+				<p
+					key={`${field}-${index}`}
+					className="text-danger text-xs"
+				>
+					{text}
+				</p>
+			))}
+		</>
+	);
+}
 
 const assetSchema = z
 	.object({
@@ -133,13 +210,36 @@ export function AssetFormSheet({ open, onOpenChange, asset, categories }: AssetF
 	const isEditing = Boolean(asset?.id);
 	const isSaving = createAsset.isPending || updateAsset.isPending;
 
+	// The rejection lives outside RHF on purpose: `setError` would push `isValid: false`, killing the
+	// submit button until some field is edited. In component state the button stays exactly as client
+	// validation left it and a second submit is possible without touching anything.
+	const [rejection, setRejection] = useState<AssetRejection | null>(null);
+	const rejectionDetails = rejection?.details ?? [];
+	const alertTexts = alertLines(
+		rejection,
+		renderedServerErrorFields(type, liabilityType, !isEditing)
+	);
+
 	useEffect(() => {
 		if (open) form.reset(valuesFrom(asset));
 	}, [open, asset, form]);
 
+	// A rejection belongs to the attempt that produced it: any change to the values retires it — an
+	// edit, or the reset that opens the sheet — so no message outlives the input it complained about
+	// and nothing from a previous attempt can resurface on the next one.
+	useEffect(
+		() =>
+			form.subscribe({
+				formState: { values: true },
+				callback: () => setRejection(null)
+			}),
+		[form]
+	);
+
 	const submit = form.handleSubmit(values => {
 		const selectedCategory = categories.find(item => item.id === values.categoryId);
 		const isLiability = selectedCategory?.type === ASSET_TYPE.LIABILITY;
+		const isAutomatic = isLiability && values.liabilityType === LIABILITY_TYPE.AUTOMATIC;
 
 		const body = {
 			name: values.name.trim(),
@@ -147,15 +247,20 @@ export function AssetFormSheet({ open, onOpenChange, asset, categories }: AssetF
 			originalCurrency: values.currency,
 			isFavorite: isLiability ? false : values.isFavorite,
 			liabilityType: isLiability ? (values.liabilityType ?? LIABILITY_TYPE.MANUAL) : undefined,
-			paymentFrequency:
-				isLiability && values.liabilityType === LIABILITY_TYPE.AUTOMATIC
-					? values.paymentFrequency!
-					: undefined,
-			paymentAmount:
-				isLiability && values.liabilityType === LIABILITY_TYPE.AUTOMATIC
-					? values.paymentAmount!
-					: undefined
+			paymentFrequency: isAutomatic ? values.paymentFrequency! : undefined,
+			paymentAmount: isAutomatic ? values.paymentAmount! : undefined
 		};
+
+		// A rejection belongs to a single attempt: no message from the previous one survives it.
+		setRejection(null);
+
+		// The sheet is the only caller of these two mutations, so the rejection is the whole story:
+		// no toast repeats it, and the fallback covers a failure with no envelope behind it.
+		const onError = (error: unknown) =>
+			setRejection({
+				details: getApiErrorDetails(error),
+				fallback: asset?.id ? UPDATE_FALLBACK : CREATE_FALLBACK
+			});
 
 		const onSuccess = () => onOpenChange(false);
 
@@ -164,7 +269,7 @@ export function AssetFormSheet({ open, onOpenChange, asset, categories }: AssetF
 			// clears the liability block when the asset moves out of a liability category.
 			updateAsset.mutate(
 				{ id: asset.id, body: { ...body, liabilityType: body.liabilityType ?? null } },
-				{ onSuccess }
+				{ onSuccess, onError }
 			);
 			return;
 		}
@@ -175,7 +280,7 @@ export function AssetFormSheet({ open, onOpenChange, asset, categories }: AssetF
 				initialValue: values.initialValue,
 				referenceDate: values.referenceDate
 			},
-			{ onSuccess }
+			{ onSuccess, onError }
 		);
 	});
 
@@ -208,9 +313,11 @@ export function AssetFormSheet({ open, onOpenChange, asset, categories }: AssetF
 							maxLength={NAME_MAX_LENGTH}
 							{...form.register("name")}
 						/>
-						{form.formState.errors.name ? (
-							<p className="text-danger text-xs">{form.formState.errors.name.message}</p>
-						) : null}
+						<FieldError
+							field="name"
+							details={rejectionDetails}
+							message={form.formState.errors.name?.message}
+						/>
 					</div>
 
 					<div className="flex flex-col gap-2">
@@ -275,9 +382,11 @@ export function AssetFormSheet({ open, onOpenChange, asset, categories }: AssetF
 								</Select>
 							)}
 						/>
-						{form.formState.errors.categoryId ? (
-							<p className="text-danger text-xs">{form.formState.errors.categoryId.message}</p>
-						) : null}
+						<FieldError
+							field="categoryId"
+							details={rejectionDetails}
+							message={form.formState.errors.categoryId?.message}
+						/>
 					</div>
 
 					<div className="flex flex-col gap-2">
@@ -341,6 +450,11 @@ export function AssetFormSheet({ open, onOpenChange, asset, categories }: AssetF
 										</Select>
 									)}
 								/>
+								{/* The schema never rejects this field on its own: the slot exists for the server's copy. */}
+								<FieldError
+									field="liabilityType"
+									details={rejectionDetails}
+								/>
 							</div>
 
 							{liabilityType === LIABILITY_TYPE.AUTOMATIC ? (
@@ -371,6 +485,11 @@ export function AssetFormSheet({ open, onOpenChange, asset, categories }: AssetF
 												</Select>
 											)}
 										/>
+										<FieldError
+											field="paymentFrequency"
+											details={rejectionDetails}
+											message={form.formState.errors.paymentFrequency?.message}
+										/>
 									</div>
 									<div className="flex flex-col gap-2">
 										<Label htmlFor="asset-payment">Payment amount</Label>
@@ -380,6 +499,11 @@ export function AssetFormSheet({ open, onOpenChange, asset, categories }: AssetF
 											step="0.01"
 											min={0}
 											{...form.register("paymentAmount", { valueAsNumber: true })}
+										/>
+										<FieldError
+											field="paymentAmount"
+											details={rejectionDetails}
+											message={form.formState.errors.paymentAmount?.message}
 										/>
 									</div>
 								</>
@@ -412,6 +536,11 @@ export function AssetFormSheet({ open, onOpenChange, asset, categories }: AssetF
 									min={0}
 									{...form.register("initialValue", { valueAsNumber: true })}
 								/>
+								<FieldError
+									field="initialValue"
+									details={rejectionDetails}
+									message={form.formState.errors.initialValue?.message}
+								/>
 							</div>
 							<div className="flex flex-col gap-2">
 								<Label htmlFor="asset-date">Value date</Label>
@@ -429,8 +558,24 @@ export function AssetFormSheet({ open, onOpenChange, asset, categories }: AssetF
 										/>
 									)}
 								/>
+								<FieldError
+									field="referenceDate"
+									details={rejectionDetails}
+									message={form.formState.errors.referenceDate?.message}
+								/>
 							</div>
 						</>
+					) : null}
+
+					{alertTexts.length > 0 ? (
+						<div
+							role="alert"
+							className="flex flex-col gap-0.5 text-danger text-xs"
+						>
+							{alertTexts.map((text, index) => (
+								<p key={`alert-${index}`}>{text}</p>
+							))}
+						</div>
 					) : null}
 
 					<SheetFooter>

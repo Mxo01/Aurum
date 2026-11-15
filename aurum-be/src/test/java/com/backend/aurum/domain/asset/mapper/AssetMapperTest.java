@@ -57,6 +57,7 @@ class AssetMapperTest {
 	private static final BigDecimal PREVIOUS_AMOUNT = new BigDecimal("400");
 	private static final BigDecimal CONVERTED_LATEST_AMOUNT = new BigDecimal("750");
 	private static final String UPDATED_ASSET_NAME = "Renamed asset";
+	private static final String CATEGORY_NOT_OWNED_MESSAGE = "This category does not belong to you";
 
 	@Mock
 	private AssetCategoryRepository categoryRepository;
@@ -154,9 +155,9 @@ class AssetMapperTest {
 		when(categoryRepository.findById(mockCategory.getId())).thenReturn(Optional.of(mockCategory));
 
 		// WHEN / THEN
-		assertThatThrownBy(() -> testSubject.toEntity(mockDto, mockUserId)).isInstanceOf(
-			AccessDeniedException.class
-		);
+		assertThatThrownBy(() -> testSubject.toEntity(mockDto, mockUserId))
+			.isInstanceOf(AccessDeniedException.class)
+			.hasMessage(CATEGORY_NOT_OWNED_MESSAGE);
 	}
 
 	@Test
@@ -190,9 +191,9 @@ class AssetMapperTest {
 		when(categoryRepository.findById(mockCategory.getId())).thenReturn(Optional.of(mockCategory));
 
 		// WHEN / THEN
-		assertThatThrownBy(() -> testSubject.toEntity(mockDto, null)).isInstanceOf(
-			AccessDeniedException.class
-		);
+		assertThatThrownBy(() -> testSubject.toEntity(mockDto, null))
+			.isInstanceOf(AccessDeniedException.class)
+			.hasMessage(CATEGORY_NOT_OWNED_MESSAGE);
 	}
 
 	@Test
@@ -328,9 +329,9 @@ class AssetMapperTest {
 		when(categoryRepository.findById(mockCategory.getId())).thenReturn(Optional.of(mockCategory));
 
 		// WHEN / THEN
-		assertThatThrownBy(() -> testSubject.toUpdate(mockDto, mockUserId)).isInstanceOf(
-			AccessDeniedException.class
-		);
+		assertThatThrownBy(() -> testSubject.toUpdate(mockDto, mockUserId))
+			.isInstanceOf(AccessDeniedException.class)
+			.hasMessage(CATEGORY_NOT_OWNED_MESSAGE);
 	}
 
 	@Test
@@ -344,9 +345,9 @@ class AssetMapperTest {
 		when(categoryRepository.findById(mockCategory.getId())).thenReturn(Optional.of(mockCategory));
 
 		// WHEN / THEN
-		assertThatThrownBy(() -> testSubject.toUpdate(mockDto, null)).isInstanceOf(
-			AccessDeniedException.class
-		);
+		assertThatThrownBy(() -> testSubject.toUpdate(mockDto, null))
+			.isInstanceOf(AccessDeniedException.class)
+			.hasMessage(CATEGORY_NOT_OWNED_MESSAGE);
 	}
 
 	@ParameterizedTest(name = "{0}")

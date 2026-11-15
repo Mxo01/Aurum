@@ -102,7 +102,7 @@ public class AssetMapper {
 		if (
 			category.getUser() != null && (userId == null || !category.getUser().getId().equals(userId))
 		) {
-			throw new AccessDeniedException("Category does not belong to the user");
+			throw new AccessDeniedException("This category does not belong to you");
 		}
 
 		return category;

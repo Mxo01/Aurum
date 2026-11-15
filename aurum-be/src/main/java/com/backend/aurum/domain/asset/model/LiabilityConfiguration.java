@@ -32,18 +32,22 @@ public record LiabilityConfiguration(
 		if (type == null) {
 			if (frequency != null || amount != null) {
 				throw new ValidationException(
-					"liabilityType is required when paymentFrequency or paymentAmount is provided"
+					"liabilityType",
+					"Liability type is required when a payment frequency or amount is set"
 				);
 			}
 			return;
 		}
 
 		if (amount != null && amount.signum() < 0) {
-			throw new ValidationException("paymentAmount cannot be negative");
+			throw new ValidationException("paymentAmount", "Payment amount cannot be negative");
 		}
 
 		if (amount != null && amount.stripTrailingZeros().scale() > MAX_AMOUNT_SCALE) {
-			throw new ValidationException("paymentAmount supports at most 4 decimals");
+			throw new ValidationException(
+				"paymentAmount",
+				"Payment amount cannot have more than 4 decimal places"
+			);
 		}
 
 		if (type == LiabilityType.AUTOMATIC) {
@@ -51,7 +55,10 @@ public record LiabilityConfiguration(
 		}
 
 		if (type == LiabilityType.MANUAL && amount != null && amount.signum() > 0) {
-			throw new ValidationException("A MANUAL liability cannot carry a positive paymentAmount");
+			throw new ValidationException(
+				"paymentAmount",
+				"A manual liability cannot have a payment amount"
+			);
 		}
 	}
 
@@ -65,7 +72,8 @@ public record LiabilityConfiguration(
 			return;
 		}
 		throw new ValidationException(
-			"liabilityType is only allowed when the asset category is a liability"
+			"liabilityType",
+			"Liability type is only allowed on a liability category"
 		);
 	}
 
@@ -91,12 +99,16 @@ public record LiabilityConfiguration(
 
 	private void validateAutomatic() {
 		if (frequency == null) {
-			throw new ValidationException("paymentFrequency is required for an AUTOMATIC liability");
+			throw new ValidationException(
+				"paymentFrequency",
+				"Payment frequency is required for an automatic liability"
+			);
 		}
 
 		if (amount == null || amount.signum() <= 0) {
 			throw new ValidationException(
-				"paymentAmount must be greater than 0 for an AUTOMATIC liability"
+				"paymentAmount",
+				"Payment amount must be greater than zero for an automatic liability"
 			);
 		}
 	}

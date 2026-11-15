@@ -57,7 +57,7 @@ public class SnapshotService {
 				assetId,
 				userId
 			);
-			throw new AccessDeniedException("Access denied: Asset does not belong to user");
+			throw new AccessDeniedException("This asset does not belong to you");
 		}
 		List<Snapshot> snapshots = snapshotRepository.findByAssetId(assetId);
 		log.debug(
@@ -170,9 +170,7 @@ public class SnapshotService {
 					s.getId(),
 					assetId
 				);
-				throw new AccessDeniedException(
-					"Snapshot " + s.getId() + " does not belong to asset " + assetId
-				);
+				throw new AccessDeniedException("This snapshot does not belong to the asset");
 			}
 
 			if (!s.getAsset().getUser().getId().equals(userId)) {
@@ -181,9 +179,7 @@ public class SnapshotService {
 					s.getId(),
 					userId
 				);
-				throw new AccessDeniedException(
-					"Access denied: Snapshot " + s.getId() + " does not belong to user"
-				);
+				throw new AccessDeniedException("This snapshot does not belong to you");
 			}
 		}
 

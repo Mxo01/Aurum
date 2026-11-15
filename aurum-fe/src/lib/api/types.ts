@@ -21,6 +21,8 @@ export type CreateTargetDTO = Schemas["CreateTargetDTO"];
 export type UpdateTargetDTO = Schemas["UpdateTargetDTO"];
 export type CreateAssetCategoryDTO = Schemas["CreateAssetCategoryDTO"];
 export type UpdateAssetCategoryDTO = Schemas["UpdateAssetCategoryDTO"];
+export type ApiErrorBody = Schemas["ApiErrorResponse"];
+export type ApiErrorDetail = Schemas["ErrorDetail"];
 
 export type AssetType = AssetDTO["type"];
 export type LiabilityType = NonNullable<AssetDTO["liabilityType"]>;

@@ -7,14 +7,15 @@ import com.backend.aurum.domain.shared.exception.AccessDeniedException;
 import com.backend.aurum.domain.shared.exception.ExchangeRateUnavailableException;
 import com.backend.aurum.domain.shared.exception.NotFoundException;
 import com.backend.aurum.domain.shared.exception.ValidationException;
+import com.backend.aurum.infrastructure.exception.ApiErrorResponse.ErrorDetail;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.InjectMocks;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -25,12 +26,18 @@ import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BeanPropertyBindingResult;
 import org.springframework.validation.FieldError;
+import org.springframework.validation.ObjectError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.server.ResponseStatusException;
 
 @ExtendWith(MockitoExtension.class)
 class GlobalExceptionHandlerTest {
 
+	private static final String NOT_FOUND_MESSAGE = "Asset not found";
+	private static final String ACCESS_DENIED_MESSAGE = "Asset does not belong to user";
+	private static final String VALIDATION_MESSAGE = "Invalid amount";
+	private static final String ILLEGAL_ARGUMENT_MESSAGE = "Bad input";
+	private static final String GENERIC_MESSAGE = "An unexpected error occurred";
 	private static final String EXCHANGE_RATE_UNAVAILABLE_MESSAGE =
 		"Exchange rates are temporarily unavailable, please retry later";
 	private static final String CONCURRENT_WRITE_MESSAGE =
@@ -48,303 +55,273 @@ class GlobalExceptionHandlerTest {
 	private static final String NAME_FIELD = "name";
 	private static final String NAME_MESSAGE = "must not be blank";
 	private static final String PAYMENT_AMOUNT_FIELD = "paymentAmount";
-	private static final String PAYMENT_AMOUNT_MESSAGE = "must be greater than or equal to 0";
-	private static final String FIELD_MESSAGE_SEPARATOR = " ";
-	private static final String FIELD_ERROR_SEPARATOR = "; ";
-	private static final Set<String> RESPONSE_FIELDS = Set.of(
-		"status",
-		"error",
-		"message",
-		"timestamp"
-	);
+	private static final String PAYMENT_AMOUNT_MESSAGE = "Payment amount cannot be negative";
+	private static final String GLOBAL_ERROR_MESSAGE = "Payment amount must match the liability type";
+	private static final String PINNED_FIELD_VIOLATION_JSON =
+		"{\"status\":400,\"error\":\"Bad Request\",\"errors\":[{" +
+		"\"field\":\"paymentAmount\",\"message\":\"Payment amount cannot be negative\"}]}";
+	private static final String PINNED_FIELDLESS_JSON =
+		"{\"status\":503,\"error\":\"Service Unavailable\",\"errors\":[{" +
+		"\"message\":\"Exchange rates are temporarily unavailable, please retry later\"}]}";
+
+	private static final ObjectMapper JSON_SERIALIZER = new ObjectMapper();
 
 	@InjectMocks
 	private GlobalExceptionHandler testSubject;
 
-	@Test
-	void handleResponseStatus_returns409_withTheConflictReason() {
+	@ParameterizedTest(name = "{0}")
+	@MethodSource("handlerFailures")
+	void answersTheErrorEnvelope_withTheStatusAndReasonPhraseOfTheFailure(FailureCase failureCase) {
 		// GIVEN
-		ResponseStatusException mockException = new ResponseStatusException(
+		Function<GlobalExceptionHandler, ResponseEntity<ApiErrorResponse>> mockHandler =
+			failureCase.handler();
+
+		// WHEN
+		ResponseEntity<ApiErrorResponse> expectedResponse = mockHandler.apply(testSubject);
+
+		// THEN
+		assertThat(expectedResponse.getStatusCode().value()).isEqualTo(failureCase.expectedStatus());
+		ApiErrorResponse expectedBody = expectedResponse.getBody();
+		assertThat(expectedBody).isNotNull();
+		assertThat(expectedBody.status()).isEqualTo(failureCase.expectedStatus());
+		assertThat(expectedBody.error()).isEqualTo(failureCase.expectedError());
+		assertThat(expectedBody.errors()).containsExactly(failureCase.expectedDetail());
+	}
+
+	static Stream<FailureCase> handlerFailures() {
+		NotFoundException mockNotFoundException = new NotFoundException(NOT_FOUND_MESSAGE);
+		AccessDeniedException mockAccessDeniedException = new AccessDeniedException(
+			ACCESS_DENIED_MESSAGE
+		);
+		ValidationException mockFieldViolation = new ValidationException(
+			PAYMENT_AMOUNT_FIELD,
+			VALIDATION_MESSAGE
+		);
+		ValidationException mockFieldlessViolation = new ValidationException(VALIDATION_MESSAGE);
+		ExchangeRateUnavailableException mockExchangeRateUnavailableException =
+			new ExchangeRateUnavailableException("frankfurter refused the connection");
+		OptimisticLockingFailureException mockStaleRowException = new OptimisticLockingFailureException(
+			STALE_ROW_DETAIL
+		);
+		IllegalArgumentException mockIllegalArgumentException = new IllegalArgumentException(
+			ILLEGAL_ARGUMENT_MESSAGE
+		);
+		ResponseStatusException mockConflictException = new ResponseStatusException(
 			HttpStatus.CONFLICT,
 			CONFLICT_REASON
 		);
-
-		// WHEN
-		ResponseEntity<Map<String, Object>> expectedResponse = testSubject.handleResponseStatus(
-			mockException
-		);
-
-		// THEN
-		assertThat(expectedResponse.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
-		assertThat(expectedResponse.getBody()).containsOnlyKeys(RESPONSE_FIELDS);
-		assertThat(expectedResponse.getBody()).containsEntry("status", HttpStatus.CONFLICT.value());
-		assertThat(expectedResponse.getBody()).containsEntry(
-			"error",
-			HttpStatus.CONFLICT.getReasonPhrase()
-		);
-		assertThat(expectedResponse.getBody()).containsEntry("message", CONFLICT_REASON);
-		assertThat(expectedResponse.getBody()).doesNotContainValue(null);
-	}
-
-	@Test
-	void handleResponseStatus_returns403_withTheForbiddenReason() {
-		// GIVEN
-		ResponseStatusException mockException = new ResponseStatusException(
+		ResponseStatusException mockForbiddenException = new ResponseStatusException(
 			HttpStatus.FORBIDDEN,
 			DEFAULT_CATEGORY_FORBIDDEN_REASON
 		);
-
-		// WHEN
-		ResponseEntity<Map<String, Object>> expectedResponse = testSubject.handleResponseStatus(
-			mockException
+		ResponseStatusException mockReasonlessException = new ResponseStatusException(
+			HttpStatus.NOT_FOUND
 		);
-
-		// THEN
-		assertThat(expectedResponse.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
-		assertThat(expectedResponse.getBody()).containsEntry("status", HttpStatus.FORBIDDEN.value());
-		assertThat(expectedResponse.getBody()).containsEntry(
-			"error",
-			HttpStatus.FORBIDDEN.getReasonPhrase()
-		);
-		assertThat(expectedResponse.getBody()).containsEntry(
-			"message",
-			DEFAULT_CATEGORY_FORBIDDEN_REASON
-		);
-	}
-
-	@Test
-	void handleResponseStatus_fallsBackToTheReasonPhrase_whenTheExceptionHasNoReason() {
-		// GIVEN
-		ResponseStatusException mockException = new ResponseStatusException(HttpStatus.NOT_FOUND);
-
-		// WHEN
-		ResponseEntity<Map<String, Object>> expectedResponse = testSubject.handleResponseStatus(
-			mockException
-		);
-
-		// THEN
-		assertThat(expectedResponse.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
-		assertThat(expectedResponse.getBody()).containsEntry(
-			"message",
-			HttpStatus.NOT_FOUND.getReasonPhrase()
-		);
-		assertThat(expectedResponse.getBody()).containsEntry(
-			"error",
-			HttpStatus.NOT_FOUND.getReasonPhrase()
-		);
-		assertThat(expectedResponse.getBody()).doesNotContainValue(null);
-	}
-
-	@Test
-	void handleResponseStatus_fallsBackToTheGenericReason_whenTheStatusCodeIsUnrecognized() {
-		// GIVEN
-		ResponseStatusException mockException = new ResponseStatusException(
+		ResponseStatusException mockUnrecognizedException = new ResponseStatusException(
 			HttpStatusCode.valueOf(UNRECOGNIZED_STATUS_CODE)
 		);
+		Exception mockUnexpectedException = new Exception("Internal details");
 
-		// WHEN
-		ResponseEntity<Map<String, Object>> expectedResponse = testSubject.handleResponseStatus(
-			mockException
+		return Stream.of(
+			new FailureCase(
+				"404 not found",
+				handler -> handler.handleNotFound(mockNotFoundException),
+				HttpStatus.NOT_FOUND.value(),
+				HttpStatus.NOT_FOUND.getReasonPhrase(),
+				new ErrorDetail(null, NOT_FOUND_MESSAGE)
+			),
+			new FailureCase(
+				"403 access denied",
+				handler -> handler.handleAccessDenied(mockAccessDeniedException),
+				HttpStatus.FORBIDDEN.value(),
+				HttpStatus.FORBIDDEN.getReasonPhrase(),
+				new ErrorDetail(null, ACCESS_DENIED_MESSAGE)
+			),
+			new FailureCase(
+				"400 validation naming an input",
+				handler -> handler.handleValidation(mockFieldViolation),
+				HttpStatus.BAD_REQUEST.value(),
+				HttpStatus.BAD_REQUEST.getReasonPhrase(),
+				new ErrorDetail(PAYMENT_AMOUNT_FIELD, VALIDATION_MESSAGE)
+			),
+			new FailureCase(
+				"400 validation without an input",
+				handler -> handler.handleValidation(mockFieldlessViolation),
+				HttpStatus.BAD_REQUEST.value(),
+				HttpStatus.BAD_REQUEST.getReasonPhrase(),
+				new ErrorDetail(null, VALIDATION_MESSAGE)
+			),
+			new FailureCase(
+				"400 illegal argument",
+				handler -> handler.handleIllegalArgument(mockIllegalArgumentException),
+				HttpStatus.BAD_REQUEST.value(),
+				HttpStatus.BAD_REQUEST.getReasonPhrase(),
+				new ErrorDetail(null, ILLEGAL_ARGUMENT_MESSAGE)
+			),
+			new FailureCase(
+				"503 exchange rate unavailable",
+				handler -> handler.handleExchangeRateUnavailable(mockExchangeRateUnavailableException),
+				HttpStatus.SERVICE_UNAVAILABLE.value(),
+				HttpStatus.SERVICE_UNAVAILABLE.getReasonPhrase(),
+				new ErrorDetail(null, EXCHANGE_RATE_UNAVAILABLE_MESSAGE)
+			),
+			new FailureCase(
+				"409 stale write",
+				handler -> handler.handleOptimisticLock(mockStaleRowException),
+				HttpStatus.CONFLICT.value(),
+				HttpStatus.CONFLICT.getReasonPhrase(),
+				new ErrorDetail(null, CONCURRENT_WRITE_MESSAGE)
+			),
+			new FailureCase(
+				"409 response status with a reason",
+				handler -> handler.handleResponseStatus(mockConflictException),
+				HttpStatus.CONFLICT.value(),
+				HttpStatus.CONFLICT.getReasonPhrase(),
+				new ErrorDetail(null, CONFLICT_REASON)
+			),
+			new FailureCase(
+				"403 response status with a reason",
+				handler -> handler.handleResponseStatus(mockForbiddenException),
+				HttpStatus.FORBIDDEN.value(),
+				HttpStatus.FORBIDDEN.getReasonPhrase(),
+				new ErrorDetail(null, DEFAULT_CATEGORY_FORBIDDEN_REASON)
+			),
+			new FailureCase(
+				"response status without a reason falls back to the status phrase",
+				handler -> handler.handleResponseStatus(mockReasonlessException),
+				HttpStatus.NOT_FOUND.value(),
+				HttpStatus.NOT_FOUND.getReasonPhrase(),
+				new ErrorDetail(null, HttpStatus.NOT_FOUND.getReasonPhrase())
+			),
+			new FailureCase(
+				"response status with an unrecognized code falls back to the generic phrase",
+				handler -> handler.handleResponseStatus(mockUnrecognizedException),
+				UNRECOGNIZED_STATUS_CODE,
+				UNRECOGNIZED_STATUS_REASON,
+				new ErrorDetail(null, UNRECOGNIZED_STATUS_REASON)
+			),
+			new FailureCase(
+				"500 unexpected failure",
+				handler -> handler.handleGeneric(mockUnexpectedException),
+				HttpStatus.INTERNAL_SERVER_ERROR.value(),
+				HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase(),
+				new ErrorDetail(null, GENERIC_MESSAGE)
+			)
 		);
-
-		// THEN
-		assertThat(expectedResponse.getStatusCode().value()).isEqualTo(UNRECOGNIZED_STATUS_CODE);
-		assertThat(expectedResponse.getBody()).containsEntry("status", UNRECOGNIZED_STATUS_CODE);
-		assertThat(expectedResponse.getBody()).containsEntry("error", UNRECOGNIZED_STATUS_REASON);
-		assertThat(expectedResponse.getBody()).containsEntry("message", UNRECOGNIZED_STATUS_REASON);
-		assertThat(expectedResponse.getBody()).doesNotContainValue(null);
 	}
 
 	@Test
-	void handleExchangeRateUnavailable_returns503_withTheDocumentedMessage() {
+	void serializesAFieldViolation_asThePinnedEnvelopeByteForByte() throws JsonProcessingException {
+		// GIVEN
+		ValidationException mockException = new ValidationException(
+			PAYMENT_AMOUNT_FIELD,
+			PAYMENT_AMOUNT_MESSAGE
+		);
+
+		// WHEN
+		ApiErrorResponse expectedBody = testSubject.handleValidation(mockException).getBody();
+
+		// THEN
+		assertThat(JSON_SERIALIZER.writeValueAsString(expectedBody)).isEqualTo(
+			PINNED_FIELD_VIOLATION_JSON
+		);
+	}
+
+	@Test
+	void serializesAFieldlessRejection_asThePinnedEnvelope_withoutTheFieldKey()
+		throws JsonProcessingException {
 		// GIVEN
 		ExchangeRateUnavailableException mockException = new ExchangeRateUnavailableException(
 			"frankfurter refused the connection"
 		);
 
 		// WHEN
-		ResponseEntity<Map<String, Object>> expectedResponse =
-			testSubject.handleExchangeRateUnavailable(mockException);
+		ApiErrorResponse expectedBody = testSubject
+			.handleExchangeRateUnavailable(mockException)
+			.getBody();
 
 		// THEN
-		assertThat(expectedResponse.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
-		assertThat(expectedResponse.getBody()).containsEntry("status", 503);
-		assertThat(expectedResponse.getBody()).containsEntry(
-			"error",
-			HttpStatus.SERVICE_UNAVAILABLE.getReasonPhrase()
-		);
-		assertThat(expectedResponse.getBody()).containsEntry(
-			"message",
-			EXCHANGE_RATE_UNAVAILABLE_MESSAGE
-		);
-		assertThat(expectedResponse.getBody()).containsOnlyKeys(RESPONSE_FIELDS);
+		assertThat(JSON_SERIALIZER.writeValueAsString(expectedBody)).isEqualTo(PINNED_FIELDLESS_JSON);
 	}
 
 	@Test
-	void handleOptimisticLock_returns409_withTheRetryMessage() {
+	void handleInvalidBody_answers400_withOneDetailPerInvalidField_inTheOrderTheyArrive() {
 		// GIVEN
-		OptimisticLockingFailureException mockException = new OptimisticLockingFailureException(
-			STALE_ROW_DETAIL
-		);
-
-		// WHEN
-		ResponseEntity<Map<String, Object>> expectedResponse = testSubject.handleOptimisticLock(
-			mockException
-		);
-
-		// THEN
-		assertThat(expectedResponse.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
-		assertThat(expectedResponse.getBody()).containsOnlyKeys(RESPONSE_FIELDS);
-		assertThat(expectedResponse.getBody()).containsEntry("status", HttpStatus.CONFLICT.value());
-		assertThat(expectedResponse.getBody()).containsEntry(
-			"error",
-			HttpStatus.CONFLICT.getReasonPhrase()
-		);
-		assertThat(expectedResponse.getBody()).containsEntry("message", CONCURRENT_WRITE_MESSAGE);
-	}
-
-	@Test
-	void handleNotFound_returns404() {
-		// GIVEN
-		NotFoundException mockException = new NotFoundException("Asset not found");
-
-		// WHEN
-		ResponseEntity<Map<String, Object>> expectedResponse = testSubject.handleNotFound(
-			mockException
-		);
-
-		// THEN
-		assertThat(expectedResponse.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
-		assertThat(expectedResponse.getBody()).containsEntry("message", "Asset not found");
-		assertThat(expectedResponse.getBody()).containsEntry("status", 404);
-	}
-
-	@Test
-	void handleAccessDenied_returns403() {
-		// GIVEN
-		AccessDeniedException mockException = new AccessDeniedException(
-			"Asset does not belong to user"
-		);
-
-		// WHEN
-		ResponseEntity<Map<String, Object>> expectedResponse = testSubject.handleAccessDenied(
-			mockException
-		);
-
-		// THEN
-		assertThat(expectedResponse.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
-		assertThat(expectedResponse.getBody()).containsEntry(
-			"message",
-			"Asset does not belong to user"
-		);
-		assertThat(expectedResponse.getBody()).containsEntry("status", 403);
-	}
-
-	@Test
-	void handleValidation_returns400() {
-		// GIVEN
-		ValidationException mockException = new ValidationException("Invalid amount");
-
-		// WHEN
-		ResponseEntity<Map<String, Object>> expectedResponse = testSubject.handleValidation(
-			mockException
-		);
-
-		// THEN
-		assertThat(expectedResponse.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-		assertThat(expectedResponse.getBody()).containsEntry("message", "Invalid amount");
-		assertThat(expectedResponse.getBody()).containsEntry("status", 400);
-	}
-
-	@Test
-	void handleIllegalArgument_returns400() {
-		// GIVEN
-		IllegalArgumentException mockException = new IllegalArgumentException("Bad input");
-
-		// WHEN
-		ResponseEntity<Map<String, Object>> expectedResponse = testSubject.handleIllegalArgument(
-			mockException
-		);
-
-		// THEN
-		assertThat(expectedResponse.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-		assertThat(expectedResponse.getBody()).containsEntry("message", "Bad input");
-	}
-
-	@Test
-	void handleGeneric_returns500_withoutExposingInternalMessage() {
-		// GIVEN
-		Exception mockException = new Exception("Internal details");
-
-		// WHEN
-		ResponseEntity<Map<String, Object>> expectedResponse = testSubject.handleGeneric(mockException);
-
-		// THEN
-		assertThat(expectedResponse.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
-		assertThat(expectedResponse.getBody()).containsEntry("message", "An unexpected error occurred");
-		assertThat(expectedResponse.getBody()).containsEntry("status", 500);
-	}
-
-	@ParameterizedTest(name = "{0}")
-	@MethodSource("invalidBodyInputs")
-	void handleInvalidBody_answers400_withTheFieldErrorsJoinedIntoOneMessage(
-		String scenario,
-		List<FieldErrorSpec> mockFieldErrors,
-		String expectedMessage
-	) {
-		// GIVEN
-		MethodArgumentNotValidException mockException = invalidBodyException(mockFieldErrors);
-
-		// WHEN
-		ResponseEntity<Map<String, Object>> expectedResponse = testSubject.handleInvalidBody(
-			mockException
-		);
-
-		// THEN
-		assertThat(expectedResponse.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-		assertThat(expectedResponse.getBody()).containsOnlyKeys(RESPONSE_FIELDS);
-		assertThat(expectedResponse.getBody()).containsEntry("status", HttpStatus.BAD_REQUEST.value());
-		assertThat(expectedResponse.getBody()).containsEntry(
-			"error",
-			HttpStatus.BAD_REQUEST.getReasonPhrase()
-		);
-		assertThat(expectedResponse.getBody()).containsEntry("message", expectedMessage);
-		assertThat(expectedResponse.getBody()).doesNotContainValue(null);
-	}
-
-	static Stream<Arguments> invalidBodyInputs() {
-		return Stream.of(
-			Arguments.of(
-				"a single field error names its field",
-				List.of(new FieldErrorSpec(PAYMENT_AMOUNT_FIELD, PAYMENT_AMOUNT_MESSAGE)),
-				PAYMENT_AMOUNT_FIELD + FIELD_MESSAGE_SEPARATOR + PAYMENT_AMOUNT_MESSAGE
+		MethodArgumentNotValidException mockException = invalidBodyException(
+			List.of(
+				new FieldErrorSpec(NAME_FIELD, NAME_MESSAGE),
+				new FieldErrorSpec(PAYMENT_AMOUNT_FIELD, PAYMENT_AMOUNT_MESSAGE)
 			),
-			Arguments.of(
-				"two field errors are joined in the order they arrive",
-				List.of(
-					new FieldErrorSpec(NAME_FIELD, NAME_MESSAGE),
-					new FieldErrorSpec(PAYMENT_AMOUNT_FIELD, PAYMENT_AMOUNT_MESSAGE)
-				),
-				NAME_FIELD +
-					FIELD_MESSAGE_SEPARATOR +
-					NAME_MESSAGE +
-					FIELD_ERROR_SEPARATOR +
-					PAYMENT_AMOUNT_FIELD +
-					FIELD_MESSAGE_SEPARATOR +
-					PAYMENT_AMOUNT_MESSAGE
-			),
-			Arguments.of(
-				"no field error falls back to the generic reason",
-				List.<FieldErrorSpec>of(),
-				INVALID_BODY_REASON
-			)
+			List.of()
 		);
+
+		// WHEN
+		ResponseEntity<ApiErrorResponse> expectedResponse = testSubject.handleInvalidBody(
+			mockException
+		);
+
+		// THEN
+		assertThat(expectedResponse.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+		ApiErrorResponse expectedBody = expectedResponse.getBody();
+		assertThat(expectedBody).isNotNull();
+		assertThat(expectedBody.error()).isEqualTo(HttpStatus.BAD_REQUEST.getReasonPhrase());
+		assertThat(expectedBody.errors()).containsExactly(
+			new ErrorDetail(NAME_FIELD, NAME_MESSAGE),
+			new ErrorDetail(PAYMENT_AMOUNT_FIELD, PAYMENT_AMOUNT_MESSAGE)
+		);
+	}
+
+	@Test
+	void handleInvalidBody_answers400_withAFieldlessDetail_forAGlobalError() {
+		// GIVEN
+		MethodArgumentNotValidException mockException = invalidBodyException(
+			List.of(),
+			List.of(GLOBAL_ERROR_MESSAGE)
+		);
+
+		// WHEN
+		ResponseEntity<ApiErrorResponse> expectedResponse = testSubject.handleInvalidBody(
+			mockException
+		);
+
+		// THEN
+		assertThat(expectedResponse.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+		ApiErrorResponse expectedBody = expectedResponse.getBody();
+		assertThat(expectedBody).isNotNull();
+		assertThat(expectedBody.errors()).containsExactly(new ErrorDetail(null, GLOBAL_ERROR_MESSAGE));
+	}
+
+	@Test
+	void handleInvalidBody_answers400_withTheGenericReason_whenNoErrorIsBound() {
+		// GIVEN
+		MethodArgumentNotValidException mockException = invalidBodyException(List.of(), List.of());
+
+		// WHEN
+		ResponseEntity<ApiErrorResponse> expectedResponse = testSubject.handleInvalidBody(
+			mockException
+		);
+
+		// THEN
+		assertThat(expectedResponse.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+		ApiErrorResponse expectedBody = expectedResponse.getBody();
+		assertThat(expectedBody).isNotNull();
+		assertThat(expectedBody.error()).isEqualTo(HttpStatus.BAD_REQUEST.getReasonPhrase());
+		assertThat(expectedBody.errors()).containsExactly(new ErrorDetail(null, INVALID_BODY_REASON));
 	}
 
 	private record FieldErrorSpec(String field, String message) {}
 
+	private record FailureCase(
+		String scenario,
+		Function<GlobalExceptionHandler, ResponseEntity<ApiErrorResponse>> handler,
+		int expectedStatus,
+		String expectedError,
+		ErrorDetail expectedDetail
+	) {}
+
 	private static MethodArgumentNotValidException invalidBodyException(
-		List<FieldErrorSpec> fieldErrors
+		List<FieldErrorSpec> fieldErrors,
+		List<String> globalErrors
 	) {
 		BeanPropertyBindingResult bindingResult = new BeanPropertyBindingResult(
 			new UpdateAssetDTO(),
@@ -354,6 +331,9 @@ class GlobalExceptionHandlerTest {
 			bindingResult.addError(
 				new FieldError(UPDATE_BODY_NAME, fieldError.field(), fieldError.message())
 			)
+		);
+		globalErrors.forEach(globalError ->
+			bindingResult.addError(new ObjectError(UPDATE_BODY_NAME, globalError))
 		);
 		return new MethodArgumentNotValidException(updateBodyParameter(), bindingResult);
 	}

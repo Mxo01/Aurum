@@ -2,7 +2,8 @@ package com.backend.aurum.domain.asset.model;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.catchThrowable;
+import static org.assertj.core.api.Assertions.catchThrowableOfType;
 
 import com.backend.aurum.domain.shared.exception.ValidationException;
 import java.math.BigDecimal;
@@ -44,24 +45,31 @@ class LiabilityConfigurationTest {
 
 	private static final BigDecimal FIVE_DECIMAL_PAYMENT = new BigDecimal("1.12345");
 
+	private static final String LIABILITY_TYPE_FIELD = "liabilityType";
+
+	private static final String PAYMENT_FREQUENCY_FIELD = "paymentFrequency";
+
+	private static final String PAYMENT_AMOUNT_FIELD = "paymentAmount";
+
 	private static final String MISSING_TYPE_WITH_FIELDS_MESSAGE =
-		"liabilityType is required when paymentFrequency or paymentAmount is provided";
+		"Liability type is required when a payment frequency or amount is set";
 
-	private static final String NEGATIVE_AMOUNT_MESSAGE = "paymentAmount cannot be negative";
+	private static final String NEGATIVE_AMOUNT_MESSAGE = "Payment amount cannot be negative";
 
-	private static final String AMOUNT_SCALE_MESSAGE = "paymentAmount supports at most 4 decimals";
+	private static final String AMOUNT_SCALE_MESSAGE =
+		"Payment amount cannot have more than 4 decimal places";
 
 	private static final String MISSING_FREQUENCY_MESSAGE =
-		"paymentFrequency is required for an AUTOMATIC liability";
+		"Payment frequency is required for an automatic liability";
 
 	private static final String NON_POSITIVE_AUTOMATIC_AMOUNT_MESSAGE =
-		"paymentAmount must be greater than 0 for an AUTOMATIC liability";
+		"Payment amount must be greater than zero for an automatic liability";
 
 	private static final String POSITIVE_MANUAL_AMOUNT_MESSAGE =
-		"A MANUAL liability cannot carry a positive paymentAmount";
+		"A manual liability cannot have a payment amount";
 
 	private static final String LIABILITY_OUTSIDE_LIABILITY_CATEGORY_MESSAGE =
-		"liabilityType is only allowed when the asset category is a liability";
+		"Liability type is only allowed on a liability category";
 
 	@ParameterizedTest(name = "{0}")
 	@MethodSource("rejectedConfigurations")
@@ -70,15 +78,21 @@ class LiabilityConfigurationTest {
 		LiabilityType type,
 		PaymentFrequency frequency,
 		BigDecimal amount,
-		String expectedMessage
+		String expectedMessage,
+		String expectedField
 	) {
 		// GIVEN
 		LiabilityConfiguration testSubject = new LiabilityConfiguration(type, frequency, amount);
 
-		// WHEN / THEN
-		assertThatThrownBy(testSubject::validate)
-			.isInstanceOf(ValidationException.class)
-			.hasMessage(expectedMessage);
+		// WHEN
+		ValidationException expectedViolation = catchThrowableOfType(
+			testSubject::validate,
+			ValidationException.class
+		);
+
+		// THEN
+		assertThat(expectedViolation).hasMessage(expectedMessage);
+		assertThat(expectedViolation.getField()).isEqualTo(expectedField);
 	}
 
 	static Stream<Arguments> rejectedConfigurations() {
@@ -88,77 +102,88 @@ class LiabilityConfigurationTest {
 				null,
 				MONTHLY,
 				null,
-				MISSING_TYPE_WITH_FIELDS_MESSAGE
+				MISSING_TYPE_WITH_FIELDS_MESSAGE,
+				LIABILITY_TYPE_FIELD
 			),
 			Arguments.of(
 				"no liability type, but a payment amount",
 				null,
 				null,
 				LEGACY_ZERO_PAYMENT,
-				MISSING_TYPE_WITH_FIELDS_MESSAGE
+				MISSING_TYPE_WITH_FIELDS_MESSAGE,
+				LIABILITY_TYPE_FIELD
 			),
 			Arguments.of(
 				"no liability type, with a frequency and an amount",
 				null,
 				MONTHLY,
 				MONTHLY_PAYMENT,
-				MISSING_TYPE_WITH_FIELDS_MESSAGE
+				MISSING_TYPE_WITH_FIELDS_MESSAGE,
+				LIABILITY_TYPE_FIELD
 			),
 			Arguments.of(
 				"a negative payment amount",
 				MANUAL,
 				null,
 				NEGATIVE_PAYMENT,
-				NEGATIVE_AMOUNT_MESSAGE
+				NEGATIVE_AMOUNT_MESSAGE,
+				PAYMENT_AMOUNT_FIELD
 			),
 			Arguments.of(
 				"a negative payment amount on an automatic liability",
 				AUTOMATIC,
 				MONTHLY,
 				NEGATIVE_PAYMENT,
-				NEGATIVE_AMOUNT_MESSAGE
+				NEGATIVE_AMOUNT_MESSAGE,
+				PAYMENT_AMOUNT_FIELD
 			),
 			Arguments.of(
 				"a payment amount with five decimals",
 				AUTOMATIC,
 				MONTHLY,
 				FIVE_DECIMAL_PAYMENT,
-				AMOUNT_SCALE_MESSAGE
+				AMOUNT_SCALE_MESSAGE,
+				PAYMENT_AMOUNT_FIELD
 			),
 			Arguments.of(
 				"an automatic liability without a payment frequency",
 				AUTOMATIC,
 				null,
 				MONTHLY_PAYMENT,
-				MISSING_FREQUENCY_MESSAGE
+				MISSING_FREQUENCY_MESSAGE,
+				PAYMENT_FREQUENCY_FIELD
 			),
 			Arguments.of(
 				"an automatic liability without a payment amount",
 				AUTOMATIC,
 				MONTHLY,
 				null,
-				NON_POSITIVE_AUTOMATIC_AMOUNT_MESSAGE
+				NON_POSITIVE_AUTOMATIC_AMOUNT_MESSAGE,
+				PAYMENT_AMOUNT_FIELD
 			),
 			Arguments.of(
 				"an automatic liability with a zero payment amount",
 				AUTOMATIC,
 				MONTHLY,
 				LEGACY_ZERO_PAYMENT,
-				NON_POSITIVE_AUTOMATIC_AMOUNT_MESSAGE
+				NON_POSITIVE_AUTOMATIC_AMOUNT_MESSAGE,
+				PAYMENT_AMOUNT_FIELD
 			),
 			Arguments.of(
 				"a manual liability with a positive payment amount",
 				MANUAL,
 				MONTHLY,
 				MONTHLY_PAYMENT,
-				POSITIVE_MANUAL_AMOUNT_MESSAGE
+				POSITIVE_MANUAL_AMOUNT_MESSAGE,
+				PAYMENT_AMOUNT_FIELD
 			),
 			Arguments.of(
 				"a manual liability without a frequency and a positive payment amount",
 				MANUAL,
 				null,
 				MONTHLY_PAYMENT,
-				POSITIVE_MANUAL_AMOUNT_MESSAGE
+				POSITIVE_MANUAL_AMOUNT_MESSAGE,
+				PAYMENT_AMOUNT_FIELD
 			)
 		);
 	}
@@ -216,10 +241,15 @@ class LiabilityConfigurationTest {
 		// GIVEN
 		LiabilityConfiguration testSubject = new LiabilityConfiguration(type, frequency, amount);
 
-		// WHEN / THEN
-		assertThatThrownBy(() -> testSubject.validateForCategory(ASSET_CATEGORY))
-			.isInstanceOf(ValidationException.class)
-			.hasMessage(LIABILITY_OUTSIDE_LIABILITY_CATEGORY_MESSAGE);
+		// WHEN
+		ValidationException expectedViolation = catchThrowableOfType(
+			() -> testSubject.validateForCategory(ASSET_CATEGORY),
+			ValidationException.class
+		);
+
+		// THEN
+		assertThat(expectedViolation).hasMessage(LIABILITY_OUTSIDE_LIABILITY_CATEGORY_MESSAGE);
+		assertThat(expectedViolation.getField()).isEqualTo(LIABILITY_TYPE_FIELD);
 	}
 
 	static Stream<Arguments> rejectedCategoryMismatches() {

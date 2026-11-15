@@ -56,7 +56,7 @@ public class AssetService {
 				id,
 				userId
 			);
-			throw new AccessDeniedException("Access denied: Asset does not belong to user");
+			throw new AccessDeniedException("This asset does not belong to you");
 		}
 
 		log.debug("AssetService#findById - Asset found: assetId={}, name={}", id, asset.getName());
@@ -178,7 +178,7 @@ public class AssetService {
 			return;
 		}
 		throw new ValidationException(
-			"An AUTOMATIC liability requires at least one snapshot before it can be updated"
+			"An automatic liability needs a snapshot before it can be updated"
 		);
 	}
 }

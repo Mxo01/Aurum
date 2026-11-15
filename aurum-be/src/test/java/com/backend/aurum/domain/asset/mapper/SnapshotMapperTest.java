@@ -52,6 +52,7 @@ class SnapshotMapperTest {
 	private static final BigDecimal STORED_RATE = new BigDecimal("2.0000");
 	private static final BigDecimal AMOUNT_IN_BASE_CURRENCY = new BigDecimal("200");
 	private static final int BASE_AMOUNT_SCALE = 4;
+	private static final String ASSET_NOT_OWNED_MESSAGE = "This asset does not belong to you";
 
 	@Mock
 	private AssetRepository assetRepository;
@@ -148,9 +149,9 @@ class SnapshotMapperTest {
 		when(assetRepository.findById(mockAsset.getId())).thenReturn(Optional.of(mockAsset));
 
 		// WHEN / THEN
-		assertThatThrownBy(() -> testSubject.toEntity(mockDto, mockUserId)).isInstanceOf(
-			AccessDeniedException.class
-		);
+		assertThatThrownBy(() -> testSubject.toEntity(mockDto, mockUserId))
+			.isInstanceOf(AccessDeniedException.class)
+			.hasMessage(ASSET_NOT_OWNED_MESSAGE);
 	}
 
 	@Test

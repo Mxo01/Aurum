@@ -77,7 +77,9 @@ class AssetCategoryControllerHttpTest {
 			.andExpect(status().isConflict())
 			.andExpect(jsonPath("$.status").value(HttpStatus.CONFLICT.value()))
 			.andExpect(jsonPath("$.error").value(HttpStatus.CONFLICT.getReasonPhrase()))
-			.andExpect(jsonPath("$.message").value(CATEGORY_IN_USE_REASON));
+			.andExpect(jsonPath("$.errors[0].message").value(CATEGORY_IN_USE_REASON))
+			.andExpect(jsonPath("$.message").doesNotExist())
+			.andExpect(jsonPath("$.timestamp").doesNotExist());
 	}
 
 	@Test
@@ -94,7 +96,7 @@ class AssetCategoryControllerHttpTest {
 		expectedResult
 			.andExpect(status().isForbidden())
 			.andExpect(jsonPath("$.status").value(HttpStatus.FORBIDDEN.value()))
-			.andExpect(jsonPath("$.message").value(ACCESS_DENIED_REASON));
+			.andExpect(jsonPath("$.errors[0].message").value(ACCESS_DENIED_REASON));
 	}
 
 	@Test
@@ -121,7 +123,7 @@ class AssetCategoryControllerHttpTest {
 		expectedResult
 			.andExpect(status().isInternalServerError())
 			.andExpect(jsonPath("$.status").value(HttpStatus.INTERNAL_SERVER_ERROR.value()))
-			.andExpect(jsonPath("$.message").value(UNEXPECTED_ERROR_MESSAGE));
+			.andExpect(jsonPath("$.errors[0].message").value(UNEXPECTED_ERROR_MESSAGE));
 	}
 
 	private static final class AuthenticationPrincipalResolver

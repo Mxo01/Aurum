@@ -39,7 +39,7 @@ public class SnapshotMapper {
 				.orElseThrow(() -> new NotFoundException("Asset not found"));
 
 			if (userId != null && !asset.getUser().getId().equals(userId)) {
-				throw new AccessDeniedException("Asset does not belong to the user");
+				throw new AccessDeniedException("This asset does not belong to you");
 			}
 			snapshot.setAsset(asset);
 			snapshot.setCurrency(asset.getOriginalCurrency());
