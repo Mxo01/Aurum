@@ -2,7 +2,6 @@ import { expect, test, type APIResponse, type Page } from "@playwright/test";
 
 const MANIFEST_PATH = "/site.webmanifest";
 const APPLE_TOUCH_ICON_PATH = "/apple-touch-icon.png";
-const OG_IMAGE_PATH = "/og-image.png";
 const FAVICON_PATH = "/favicon.ico";
 const FAVICON_SVG_PATH = "/favicon.svg";
 
@@ -25,7 +24,10 @@ const MANIFEST_START_URL = "/";
 const BRAND_BACKGROUND_COLOR = "#09090b";
 const BRAND_THEME_COLOR = "#09090b";
 
-const OG_IMAGE_URL = "https://aurum-networth.com/og-image.png";
+const OG_IMAGE_VERSION = "10b4661e";
+const OG_IMAGE_PATH = `/og-image.${OG_IMAGE_VERSION}.png`;
+const OG_IMAGE_LEGACY_PATH = "/og-image.png";
+const OG_IMAGE_URL = `https://aurum-networth.com${OG_IMAGE_PATH}`;
 
 interface ManifestIcon {
 	src: string;
@@ -66,22 +68,22 @@ interface ManifestAssetFixture {
 
 type StaticAssetFixture = BinaryAssetFixture | ManifestAssetFixture;
 
+function pngAsset(path: string): BinaryAssetFixture {
+	return {
+		kind: "binary",
+		path,
+		acceptedContentTypes: [PNG_CONTENT_TYPE],
+		signature: PNG_SIGNATURE,
+		minimumBytes: MINIMUM_PNG_BYTES
+	};
+}
+
 const STATIC_ASSET_FIXTURES: readonly StaticAssetFixture[] = [
 	{ kind: "manifest", path: MANIFEST_PATH, acceptedContentTypes: [MANIFEST_CONTENT_TYPE] },
-	{
-		kind: "binary",
-		path: APPLE_TOUCH_ICON_PATH,
-		acceptedContentTypes: [PNG_CONTENT_TYPE],
-		signature: PNG_SIGNATURE,
-		minimumBytes: MINIMUM_PNG_BYTES
-	},
-	{
-		kind: "binary",
-		path: OG_IMAGE_PATH,
-		acceptedContentTypes: [PNG_CONTENT_TYPE],
-		signature: PNG_SIGNATURE,
-		minimumBytes: MINIMUM_PNG_BYTES
-	},
+	pngAsset(APPLE_TOUCH_ICON_PATH),
+	pngAsset(OG_IMAGE_PATH),
+	// Already-published links point at the unversioned artwork; it must keep resolving.
+	pngAsset(OG_IMAGE_LEGACY_PATH),
 	{
 		kind: "binary",
 		path: FAVICON_PATH,
