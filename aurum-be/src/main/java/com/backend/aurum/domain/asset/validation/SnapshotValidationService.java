@@ -7,7 +7,7 @@ import com.backend.aurum.domain.asset.model.LiabilityType;
 import com.backend.aurum.domain.asset.repository.AssetRepository;
 import com.backend.aurum.domain.shared.exception.AccessDeniedException;
 import com.backend.aurum.domain.shared.exception.ValidationException;
-import java.math.BigDecimal;
+import com.backend.aurum.domain.shared.validation.AmountRules;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.util.Objects;
@@ -35,16 +35,22 @@ public class SnapshotValidationService {
 		if (dto.getAmountOriginalCurrency() == null) {
 			throw new ValidationException("amountOriginalCurrency", "Amount is required");
 		}
-		if (dto.getAmountOriginalCurrency().compareTo(BigDecimal.ZERO) < 0) {
-			throw new ValidationException("amountOriginalCurrency", "Amount cannot be negative");
-		}
-		if (
-			dto.getExchangeRateToBase() != null &&
-			dto.getExchangeRateToBase().compareTo(BigDecimal.ZERO) <= 0
-		) {
-			throw new ValidationException(
+		AmountRules.requireNonNegative(
+			dto.getAmountOriginalCurrency(),
+			"amountOriginalCurrency",
+			"Amount"
+		);
+		AmountRules.requireAmount(dto.getAmountOriginalCurrency(), "amountOriginalCurrency", "Amount");
+		if (dto.getExchangeRateToBase() != null) {
+			AmountRules.requirePositive(
+				dto.getExchangeRateToBase(),
 				"exchangeRateToBase",
-				"Exchange rate must be greater than zero"
+				"Exchange rate"
+			);
+			AmountRules.requireExchangeRate(
+				dto.getExchangeRateToBase(),
+				"exchangeRateToBase",
+				"Exchange rate"
 			);
 		}
 
@@ -69,16 +75,22 @@ public class SnapshotValidationService {
 		if (dto.getAmountOriginalCurrency() == null) {
 			throw new ValidationException("amountOriginalCurrency", "Amount is required");
 		}
-		if (dto.getAmountOriginalCurrency().compareTo(BigDecimal.ZERO) < 0) {
-			throw new ValidationException("amountOriginalCurrency", "Amount cannot be negative");
-		}
-		if (
-			dto.getExchangeRateToBase() != null &&
-			dto.getExchangeRateToBase().compareTo(BigDecimal.ZERO) <= 0
-		) {
-			throw new ValidationException(
+		AmountRules.requireNonNegative(
+			dto.getAmountOriginalCurrency(),
+			"amountOriginalCurrency",
+			"Amount"
+		);
+		AmountRules.requireAmount(dto.getAmountOriginalCurrency(), "amountOriginalCurrency", "Amount");
+		if (dto.getExchangeRateToBase() != null) {
+			AmountRules.requirePositive(
+				dto.getExchangeRateToBase(),
 				"exchangeRateToBase",
-				"Exchange rate must be greater than zero"
+				"Exchange rate"
+			);
+			AmountRules.requireExchangeRate(
+				dto.getExchangeRateToBase(),
+				"exchangeRateToBase",
+				"Exchange rate"
 			);
 		}
 
