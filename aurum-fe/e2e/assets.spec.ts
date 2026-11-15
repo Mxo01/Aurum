@@ -7,6 +7,11 @@ const SCHEDULE_DESCRIPTION = "Follows the automatic payment schedule";
 const SCHEDULE_TITLE = /^Value follows the automatic payment schedule/;
 const GROUP_NAMES = ["Investments", "Mortgage", "Real Estate"];
 
+const FIXED_NOW = new Date("2026-03-15T12:00:00");
+const TODAY = "2026-03-15";
+const FUTURE_DAY = "2026-04-15";
+const DATE_NOT_FUTURE = "The date cannot be in the future";
+
 const AUTOMATIC_LIABILITY = {
 	name: "Car Loan",
 	category: "Mortgage",
@@ -104,19 +109,33 @@ test("filters the list with the search", async ({ page }) => {
 	await expect(page.getByText("Mortgage").filter({ visible: true }).first()).toBeVisible();
 });
 
-test("bounds the asset value date at today", async ({ page }) => {
+test("rejects a future value date and accepts today again", async ({ page }) => {
+	await page.clock.install({ time: FIXED_NOW });
 	await page.goto("/assets");
 	await page.getByRole("button", { name: "Add asset" }).click();
-	await page.getByRole("button", { name: "Value date" }).click();
 
+	const valueDate = page.getByRole("button", { name: "Value date" });
+	await valueDate.click();
+
+	const nextMonth = page.getByRole("button", { name: "Go to the Next Month" });
+	await expect(nextMonth).not.toHaveAttribute("aria-disabled", "true");
+	await nextMonth.click();
+	await page.locator(`[data-day="${FUTURE_DAY}"] button`).click();
+
+	const dateError = page.getByText(DATE_NOT_FUTURE);
+	await expect(dateError).toBeVisible();
+
+	await valueDate.click();
+	await page.getByRole("button", { name: "Go to the Previous Month" }).click();
+	await page.locator(`[data-day="${TODAY}"] button`).click();
+
+	await expect(dateError).toHaveCount(0);
+
+	await valueDate.click();
 	const calendar = page.locator("[data-radix-popper-content-wrapper]");
+	await expect(calendar).toBeVisible();
 	const month = calendar.locator("select").first();
 	const year = calendar.locator("select").nth(1);
-
-	await expect(page.getByRole("button", { name: "Go to the Next Month" })).toHaveAttribute(
-		"aria-disabled",
-		"true"
-	);
 
 	await month.selectOption({ label: "March" });
 	await expect(month).toHaveValue("2");

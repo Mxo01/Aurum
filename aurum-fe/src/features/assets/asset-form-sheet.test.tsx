@@ -1,7 +1,9 @@
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { addMonths, format, startOfMonth } from "date-fns";
+import { enUS } from "date-fns/locale";
 import { http, HttpResponse } from "msw";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { env } from "@/lib/env";
 import type { ApiErrorBody, ApiErrorDetail, AssetDTO } from "@/lib/api/types";
 import { buildAsset, buildCategory } from "@/test/fixtures/portfolio";
@@ -796,5 +798,180 @@ describe("AssetFormSheet rejection", () => {
 		expect(screen.queryByRole("alert")).not.toBeInTheDocument();
 		expect(screen.queryByText(rejectionDetails.name.message)).not.toBeInTheDocument();
 		expect(screen.queryByText(rejectionDetails.unfielded.message)).not.toBeInTheDocument();
+	});
+});
+
+// The sentences #91 puts on the screen: short, human, and never the zod default.
+const AMOUNT_REQUIRED = "Enter an amount";
+const NUMBER_INVALID = "Enter a number";
+const AMOUNT_NOT_NEGATIVE = "Cannot be negative";
+const PAYMENT_AMOUNT_REQUIRED = "Enter the payment amount";
+const DATE_NOT_FUTURE = "The date cannot be in the future";
+const ZOD_DEFAULT_MESSAGE = /Invalid input/;
+const NO_BROWSER_VALIDATION = "novalidate";
+
+const COMMA_INITIAL_VALUE = "1234,56";
+const COMMA_INITIAL_VALUE_NUMBER = 1234.56;
+
+function expectBrowserSafeAmountField(field: HTMLElement) {
+	expect(field).toHaveAttribute("type", "text");
+	expect(field).toHaveAttribute("inputmode", "decimal");
+	expect(field).not.toHaveAttribute("min");
+	expect(field).not.toHaveAttribute("step");
+}
+
+describe("AssetFormSheet amount messages", () => {
+	const initialValueCases = [
+		{ description: "an empty initial value", value: "", message: AMOUNT_REQUIRED },
+		{ description: "an unparsable initial value", value: "abc", message: NUMBER_INVALID },
+		{ description: "a negative initial value", value: "-10", message: AMOUNT_NOT_NEGATIVE }
+	];
+
+	it.each(initialValueCases)(
+		'should answer $description with "$message" and never the zod default',
+		async ({ value, message }) => {
+			// GIVEN
+			renderWithProviders(sheet(true, null));
+
+			// WHEN
+			fireEvent.change(screen.getByLabelText("Initial value"), { target: { value } });
+
+			// THEN
+			expect(await within(fieldGroup("Initial value")).findByText(message)).toBeInTheDocument();
+			expect(screen.getAllByText(message)).toHaveLength(1);
+			expect(screen.queryByText(ZOD_DEFAULT_MESSAGE)).not.toBeInTheDocument();
+		}
+	);
+
+	const paymentCases = [
+		{ description: "an empty payment", value: "", message: PAYMENT_AMOUNT_REQUIRED },
+		{ description: "a zero payment", value: "0", message: PAYMENT_AMOUNT_REQUIRED },
+		{ description: "an unparsable payment", value: "abc", message: NUMBER_INVALID }
+	];
+
+	it.each(paymentCases)(
+		'should answer $description of an automatic liability with "$message"',
+		async ({ value, message }) => {
+			// GIVEN
+			renderWithProviders(sheet(true, null));
+			await fillCreateForm({ categoryName: LIABILITY_CATEGORY_NAME, automatic: true });
+
+			// WHEN
+			fireEvent.change(screen.getByLabelText("Payment amount"), { target: { value } });
+
+			// THEN
+			expect(await within(fieldGroup("Payment amount")).findByText(message)).toBeInTheDocument();
+			expect(screen.getAllByText(message)).toHaveLength(1);
+			expect(screen.queryByText(ZOD_DEFAULT_MESSAGE)).not.toBeInTheDocument();
+		}
+	);
+
+	it("should say a negative payment once", async () => {
+		// GIVEN
+		renderWithProviders(sheet(true, null));
+		await fillCreateForm({ categoryName: LIABILITY_CATEGORY_NAME, automatic: true });
+
+		// WHEN
+		fireEvent.change(screen.getByLabelText("Payment amount"), { target: { value: "-5" } });
+
+		// THEN
+		expect(
+			await within(fieldGroup("Payment amount")).findByText(AMOUNT_NOT_NEGATIVE)
+		).toBeInTheDocument();
+		expect(screen.getAllByText(AMOUNT_NOT_NEGATIVE)).toHaveLength(1);
+		expect(screen.queryByText(PAYMENT_AMOUNT_REQUIRED)).not.toBeInTheDocument();
+	});
+});
+
+describe("AssetFormSheet browser validation", () => {
+	it("should leave every amount to our own validation", async () => {
+		// GIVEN
+		renderWithProviders(sheet(true, null));
+		await selectOption("Category", LIABILITY_CATEGORY_NAME);
+		await selectOption("Liability type", AUTOMATIC);
+
+		// WHEN
+		const { form } = submitButton("Add asset");
+
+		// THEN
+		expect(form).toHaveAttribute(NO_BROWSER_VALIDATION);
+		expectBrowserSafeAmountField(screen.getByLabelText("Initial value"));
+		expectBrowserSafeAmountField(screen.getByLabelText("Payment amount"));
+	});
+});
+
+function sentInitialValue(body: unknown): unknown {
+	if (typeof body !== "object" || body === null || !("initialValue" in body)) {
+		throw new Error("The create request carried no initial value");
+	}
+
+	return body.initialValue;
+}
+
+describe("AssetFormSheet comma decimals", () => {
+	it("should send a comma amount to the API as a number", async () => {
+		// GIVEN
+		let postedBody: unknown;
+		server.use(
+			http.post(`${env.apiUrl}/assets`, async ({ request }) => {
+				postedBody = await request.json();
+				return HttpResponse.json(buildAsset());
+			})
+		);
+		renderWithProviders(sheet(true, null));
+		await fillCreateForm({ categoryName: ASSET_CATEGORY_NAME });
+
+		// WHEN
+		fireEvent.change(screen.getByLabelText("Initial value"), {
+			target: { value: COMMA_INITIAL_VALUE }
+		});
+		await submit("Add asset");
+
+		// THEN
+		await waitFor(() => expect(postedBody).toBeDefined());
+		expect(postedBody).toMatchObject({ initialValue: COMMA_INITIAL_VALUE_NUMBER });
+		expect(typeof sentInitialValue(postedBody)).toBe("number");
+		expect(screen.queryByText(ZOD_DEFAULT_MESSAGE)).not.toBeInTheDocument();
+	});
+});
+
+const FROZEN_TODAY = new Date(2026, 2, 15, 12);
+
+function calendarDayLabel(date: Date) {
+	return format(date, "PPPP", { locale: enUS });
+}
+
+const NEXT_MONTH_FIRST_DAY_LABEL = calendarDayLabel(startOfMonth(addMonths(FROZEN_TODAY, 1)));
+const TODAY_DAY_LABEL = `Today, ${calendarDayLabel(FROZEN_TODAY)}`;
+
+describe("AssetFormSheet value date", () => {
+	afterEach(() => {
+		vi.useRealTimers();
+	});
+
+	it("should reject a future date picked from the calendar and accept today again", async () => {
+		// GIVEN
+		vi.useFakeTimers({ toFake: ["Date"] });
+		vi.setSystemTime(FROZEN_TODAY);
+		const user = userEvent.setup();
+		renderWithProviders(sheet(true, null));
+
+		// WHEN
+		await user.click(screen.getByRole("button", { name: "Value date" }));
+		await user.click(await screen.findByRole("button", { name: "Go to the Next Month" }));
+		await user.click(screen.getByRole("button", { name: NEXT_MONTH_FIRST_DAY_LABEL }));
+
+		// THEN
+		expect(await within(fieldGroup("Value date")).findByText(DATE_NOT_FUTURE)).toBeInTheDocument();
+		expect(screen.getAllByText(DATE_NOT_FUTURE)).toHaveLength(1);
+		expect(screen.queryByText(ZOD_DEFAULT_MESSAGE)).not.toBeInTheDocument();
+
+		// WHEN
+		await user.click(screen.getByRole("button", { name: "Value date" }));
+		await user.click(await screen.findByRole("button", { name: "Go to the Previous Month" }));
+		await user.click(screen.getByRole("button", { name: TODAY_DAY_LABEL }));
+
+		// THEN
+		await waitFor(() => expect(screen.queryByText(DATE_NOT_FUTURE)).not.toBeInTheDocument());
 	});
 });

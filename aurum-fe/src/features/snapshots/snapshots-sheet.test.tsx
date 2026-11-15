@@ -60,6 +60,27 @@ const USD_SNAPSHOT_DISPLAY = "$18,400.00";
 const FALLBACK_SNAPSHOT_DISPLAY = "€18,400.00";
 const USD_SNAPSHOT_DATE = "Sep 1, 2026";
 
+const SNAPSHOT_VALUE_LABEL = "Snapshot value";
+const ADD_BUTTON_NAME = "Add";
+const EMPTY_AMOUNT_MESSAGE = "Enter an amount";
+const INVALID_AMOUNT_MESSAGE = "Enter a number";
+const NEGATIVE_AMOUNT_MESSAGE = "Cannot be negative";
+const ZOD_FALLBACK_MESSAGE = /Invalid input/i;
+const COMMA_DECIMAL_INPUT = "1234,56";
+const COMMA_DECIMAL_AMOUNT = 1234.56;
+
+interface InvalidAmountCase {
+	name: string;
+	value: string;
+	expectedMessage: string;
+}
+
+const invalidAmountCases: InvalidAmountCase[] = [
+	{ name: "empty", value: "", expectedMessage: EMPTY_AMOUNT_MESSAGE },
+	{ name: "unparsable", value: "abc", expectedMessage: INVALID_AMOUNT_MESSAGE },
+	{ name: "negative", value: "-5", expectedMessage: NEGATIVE_AMOUNT_MESSAGE }
+];
+
 function buildUsdSnapshot(overrides: Partial<SnapshotDTO> = {}): SnapshotDTO {
 	return buildSnapshot({
 		id: "s3",
@@ -140,12 +161,79 @@ describe("SnapshotsSheet", () => {
 		await screen.findByText("History · Apartment Berlin");
 
 		// WHEN
-		fireEvent.change(screen.getByLabelText("Snapshot value"), { target: { value: "450000" } });
-		fireEvent.click(screen.getByRole("button", { name: "Add" }));
+		fireEvent.change(screen.getByLabelText(SNAPSHOT_VALUE_LABEL), { target: { value: "450000" } });
+		fireEvent.click(screen.getByRole("button", { name: ADD_BUTTON_NAME }));
 
 		// THEN
 		await waitFor(() => expect(postedBody).toBeDefined());
 		expect(postedBody).toMatchObject({ assetId: "a1", amountOriginalCurrency: 450000 });
+	});
+
+	it("should render a free-text decimal value input without native bounds", async () => {
+		// GIVEN
+		useSnapshotsFixture();
+		const testSubject = SnapshotsSheet;
+		renderWithProviders(
+			createElement(testSubject, { open: true, onOpenChange: () => undefined, asset: mockAsset })
+		);
+
+		// WHEN
+		const input = await screen.findByLabelText(SNAPSHOT_VALUE_LABEL);
+
+		// THEN
+		expect(input).toHaveAttribute("type", "text");
+		expect(input).toHaveAttribute("inputMode", "decimal");
+		expect(input).not.toHaveAttribute("min");
+		expect(input).not.toHaveAttribute("step");
+	});
+
+	it("should accept a comma decimal and post it as a number", async () => {
+		// GIVEN
+		useSnapshotsFixture();
+		let postedBody: { amountOriginalCurrency?: unknown } | undefined;
+		server.use(
+			http.post(`${env.apiUrl}/snapshots`, async ({ request }) => {
+				postedBody = (await request.json()) as { amountOriginalCurrency?: unknown };
+				return HttpResponse.json({ id: "new" });
+			})
+		);
+		const testSubject = SnapshotsSheet;
+		renderWithProviders(
+			createElement(testSubject, { open: true, onOpenChange: () => undefined, asset: mockAsset })
+		);
+		await screen.findByText("History · Apartment Berlin");
+		const input = screen.getByLabelText(SNAPSHOT_VALUE_LABEL);
+
+		// WHEN
+		fireEvent.change(input, { target: { value: COMMA_DECIMAL_INPUT } });
+		fireEvent.click(screen.getByRole("button", { name: ADD_BUTTON_NAME }));
+
+		// THEN
+		await waitFor(() => expect(postedBody).toBeDefined());
+		expect(postedBody?.amountOriginalCurrency).toBe(COMMA_DECIMAL_AMOUNT);
+		expect(typeof postedBody?.amountOriginalCurrency).toBe("number");
+		await waitFor(() => expect(input).toHaveValue(""));
+		expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+	});
+
+	it("should clear the snapshot value error once the user types again", async () => {
+		// GIVEN
+		useSnapshotsFixture();
+		const testSubject = SnapshotsSheet;
+		renderWithProviders(
+			createElement(testSubject, { open: true, onOpenChange: () => undefined, asset: mockAsset })
+		);
+		await screen.findByText("History · Apartment Berlin");
+		const input = screen.getByLabelText(SNAPSHOT_VALUE_LABEL);
+		fireEvent.change(input, { target: { value: "abc" } });
+		fireEvent.click(screen.getByRole("button", { name: ADD_BUTTON_NAME }));
+		expect(screen.getByRole("alert")).toHaveTextContent(INVALID_AMOUNT_MESSAGE);
+
+		// WHEN
+		fireEvent.change(input, { target: { value: "abc1" } });
+
+		// THEN
+		expect(screen.queryByRole("alert")).not.toBeInTheDocument();
 	});
 
 	it("should delete the selected snapshots", async () => {
@@ -275,30 +363,37 @@ describe("SnapshotsSheet", () => {
 		expect(screen.queryByRole("button", { name: /Delete selected/ })).not.toBeInTheDocument();
 	});
 
-	it("should ignore an invalid or negative snapshot value", async () => {
-		// GIVEN
-		useSnapshotsFixture();
-		let posts = 0;
-		server.use(
-			http.post(`${env.apiUrl}/snapshots`, () => {
-				posts += 1;
-				return HttpResponse.json({ id: "new" });
-			})
-		);
-		const testSubject = SnapshotsSheet;
-		renderWithProviders(
-			createElement(testSubject, { open: true, onOpenChange: () => undefined, asset: mockAsset })
-		);
-		await screen.findByText("History · Apartment Berlin");
-		const input = screen.getByLabelText("Snapshot value");
+	it.each(invalidAmountCases)(
+		'should reject a $name snapshot value with "$expectedMessage" and never post',
+		async ({ value, expectedMessage }) => {
+			// GIVEN
+			useSnapshotsFixture();
+			let posts = 0;
+			server.use(
+				http.post(`${env.apiUrl}/snapshots`, () => {
+					posts += 1;
+					return HttpResponse.json({ id: "new" });
+				})
+			);
+			const testSubject = SnapshotsSheet;
+			renderWithProviders(
+				createElement(testSubject, { open: true, onOpenChange: () => undefined, asset: mockAsset })
+			);
+			await screen.findByText("History · Apartment Berlin");
+			const input = screen.getByLabelText(SNAPSHOT_VALUE_LABEL);
+			const addButton = screen.getByRole("button", { name: ADD_BUTTON_NAME });
+			expect(addButton).toBeEnabled();
 
-		// WHEN
-		fireEvent.change(input, { target: { value: "-5" } });
-		fireEvent.click(screen.getByRole("button", { name: "Add" }));
+			// WHEN
+			fireEvent.change(input, { target: { value } });
+			fireEvent.click(addButton);
 
-		// THEN
-		expect(posts).toBe(0);
-	});
+			// THEN
+			expect(screen.getByRole("alert")).toHaveTextContent(expectedMessage);
+			expect(screen.queryByText(ZOD_FALLBACK_MESSAGE)).not.toBeInTheDocument();
+			expect(posts).toBe(0);
+		}
+	);
 
 	it("should format the chart axis and the tooltip", async () => {
 		// GIVEN
