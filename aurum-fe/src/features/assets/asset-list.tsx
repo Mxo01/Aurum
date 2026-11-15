@@ -1,6 +1,15 @@
-import { ChevronDown, ChevronRight, History, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import {
+	ChevronDown,
+	ChevronRight,
+	History,
+	MoreHorizontal,
+	Pencil,
+	Repeat,
+	Trash2
+} from "lucide-react";
 import { Delta } from "@/components/app/delta";
 import { EditableText } from "@/components/app/editable-text";
+import { EditableValue } from "@/components/app/editable-value";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,13 +21,13 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { CategoryIcon } from "@/features/categories/icon-map";
 import type { AssetDTO } from "@/lib/api/types";
-import { ASSET_TYPE } from "@/lib/api/types";
+import { ASSET_TYPE, LIABILITY_TYPE } from "@/lib/api/types";
 import { assetTrend } from "@/lib/format/asset";
+import { formatCurrency } from "@/lib/format/money";
 import { usePreferences } from "@/lib/format/use-preferences";
 import { cn } from "@/lib/utils";
 import { groupAssets } from "./assets.utils";
 import { FavoriteToggle } from "./favorite-toggle";
-import { EditableValue } from "@/components/app/editable-value";
 
 interface AssetListProps {
 	assets: AssetDTO[];
@@ -70,6 +79,39 @@ function RowActions({
 	);
 }
 
+const AUTOMATIC_VALUE_TITLE =
+	"Value follows the automatic payment schedule and cannot be edited here.";
+
+function groupTotalTitle(currency: string) {
+	return `Group total in ${currency}, your base currency. Row values are shown in each asset's own currency.`;
+}
+
+function ScheduledValue({
+	value,
+	currency,
+	className
+}: {
+	value: number;
+	currency: string;
+	className?: string;
+}) {
+	const { locale, isPrivacy } = usePreferences();
+
+	return (
+		<span
+			className={cn("inline-flex items-center gap-1.5", className)}
+			title={AUTOMATIC_VALUE_TITLE}
+		>
+			<span className="num">{formatCurrency(value, { currency, locale, privacy: isPrivacy })}</span>
+			<Repeat
+				aria-hidden
+				className="text-muted-foreground size-3.5 shrink-0"
+			/>
+			<span className="sr-only">Follows the automatic payment schedule</span>
+		</span>
+	);
+}
+
 export function AssetList({
 	assets,
 	collapsed,
@@ -81,7 +123,7 @@ export function AssetList({
 	onToggleFavorite,
 	onValueSave
 }: AssetListProps) {
-	const { money } = usePreferences();
+	const { money, currency } = usePreferences();
 	const groups = groupAssets(assets);
 
 	return (
@@ -117,8 +159,12 @@ export function AssetList({
 								<CategoryIcon name={group.icon} />
 								<span className="text-sm font-semibold">{group.name}</span>
 								<Badge variant="outline">{group.assets.length}</Badge>
-								<span className="num text-muted-foreground ml-auto text-xs">
+								<span
+									className="num text-muted-foreground ml-auto flex items-center gap-1 text-xs"
+									title={groupTotalTitle(currency)}
+								>
 									{money(group.total)}
+									<span>{currency}</span>
 								</span>
 							</button>
 
@@ -127,6 +173,7 @@ export function AssetList({
 									{group.assets.map(asset => {
 										const trend = assetTrend(asset);
 										const isLiability = asset.type === ASSET_TYPE.LIABILITY;
+										const isAutomaticLiability = asset.liabilityType === LIABILITY_TYPE.AUTOMATIC;
 
 										return (
 											<div
@@ -157,12 +204,19 @@ export function AssetList({
 													</Badge>
 												</div>
 												<div className="text-right">
-													<EditableValue
-														value={asset.latestValue ?? 0}
-														currency={asset.originalCurrency}
-														label={asset.name}
-														onSave={value => onValueSave(asset, value)}
-													/>
+													{isAutomaticLiability ? (
+														<ScheduledValue
+															value={asset.latestValue ?? 0}
+															currency={asset.originalCurrency}
+														/>
+													) : (
+														<EditableValue
+															value={asset.latestValue ?? 0}
+															currency={asset.originalCurrency}
+															label={asset.name}
+															onSave={value => onValueSave(asset, value)}
+														/>
+													)}
 												</div>
 												<div className="text-right">
 													{trend === null ? (
@@ -213,8 +267,12 @@ export function AssetList({
 								<CategoryIcon name={group.icon} />
 								<span className="text-sm font-semibold">{group.name}</span>
 								<Badge variant="outline">{group.assets.length}</Badge>
-								<span className="num text-muted-foreground ml-auto text-xs">
+								<span
+									className="num text-muted-foreground ml-auto flex items-center gap-1 text-xs"
+									title={groupTotalTitle(currency)}
+								>
 									{money(group.total)}
+									<span>{currency}</span>
 								</span>
 							</button>
 
@@ -222,6 +280,7 @@ export function AssetList({
 								? group.assets.map(asset => {
 										const trend = assetTrend(asset);
 										const isLiability = asset.type === ASSET_TYPE.LIABILITY;
+										const isAutomaticLiability = asset.liabilityType === LIABILITY_TYPE.AUTOMATIC;
 
 										return (
 											<div
@@ -254,13 +313,21 @@ export function AssetList({
 													)}
 												</div>
 												<div className="flex items-center justify-between">
-													<EditableValue
-														value={asset.latestValue ?? 0}
-														currency={asset.originalCurrency}
-														label={asset.name}
-														onSave={value => onValueSave(asset, value)}
-														className="text-sm"
-													/>
+													{isAutomaticLiability ? (
+														<ScheduledValue
+															value={asset.latestValue ?? 0}
+															currency={asset.originalCurrency}
+															className="text-sm"
+														/>
+													) : (
+														<EditableValue
+															value={asset.latestValue ?? 0}
+															currency={asset.originalCurrency}
+															label={asset.name}
+															onSave={value => onValueSave(asset, value)}
+															className="text-sm"
+														/>
+													)}
 													<RowActions
 														asset={asset}
 														onEdit={onEdit}

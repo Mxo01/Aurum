@@ -19,7 +19,15 @@ const jwt = `${b64({ alg: "none", typ: "JWT" })}.${b64({
 
 const profile = { id: "u1", currency: "EUR", locale: "en-US", picture: null };
 
-const categories = [
+interface AssetCategory {
+	id: string;
+	name: string;
+	type: "ASSET" | "LIABILITY";
+	icon: string;
+	isDefault: boolean;
+}
+
+const categories: AssetCategory[] = [
 	{ id: "c1", name: "Real Estate", type: "ASSET", icon: "pi-home", isDefault: true },
 	{ id: "c2", name: "Investments", type: "ASSET", icon: "pi-chart-line", isDefault: true },
 	{ id: "c3", name: "Cash", type: "ASSET", icon: "pi-wallet", isDefault: true },
@@ -42,8 +50,8 @@ interface Asset {
 	initialValue: number;
 	referenceDate: string;
 	liabilityType: "MANUAL" | "AUTOMATIC" | null;
-	paymentFrequency: null;
-	paymentAmount: null;
+	paymentFrequency: "WEEKLY" | "MONTHLY" | "YEARLY" | null;
+	paymentAmount: number | null;
 }
 
 function buildAsset(overrides: Partial<Asset> & Pick<Asset, "id" | "name">): Asset {
@@ -236,13 +244,19 @@ export class ApiMock {
 		if (path === "/assets" && method === "POST") {
 			const body = await request.postDataJSON();
 			const category = categories.find(item => item.id === body.categoryId) ?? categories[0];
+			const initialValue = body.initialValue ?? 0;
 			const asset = buildAsset({
 				id: `a${this.assets.length + 1}`,
 				name: body.name,
 				categoryId: category.id,
-				latestValue: body.initialValue ?? 0,
-				latestValueBase: body.initialValue ?? 0,
-				isFavorite: Boolean(body.isFavorite)
+				type: category.type,
+				originalCurrency: body.originalCurrency ?? "EUR",
+				latestValue: initialValue,
+				latestValueBase: initialValue,
+				isFavorite: Boolean(body.isFavorite),
+				liabilityType: body.liabilityType ?? null,
+				paymentFrequency: body.paymentFrequency ?? null,
+				paymentAmount: body.paymentAmount ?? null
 			});
 			this.assets.push(asset);
 			return this.json(route, asset, 200);
