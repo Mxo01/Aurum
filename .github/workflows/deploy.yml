@@ -82,7 +82,7 @@ jobs:
           target: /opt/aurum
 
       - name: Deploy on server
-        uses: appleboy/ssh-action@v1.0.3
+        uses: appleboy/ssh-action@v1.2.5
         env:
           GHCR_TOKEN: ${{ secrets.GHCR_PAT }}
           GITHUB_OWNER: ${{ github.repository_owner }}
