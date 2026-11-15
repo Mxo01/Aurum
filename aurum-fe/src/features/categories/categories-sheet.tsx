@@ -34,6 +34,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { AssetCategoryDTO, AssetType } from "@/lib/api/types";
 import { ASSET_TYPE } from "@/lib/api/types";
 import { cn } from "@/lib/utils";
+import { MESSAGE } from "@/lib/validation";
 import { CategoryIcon } from "./icon-map";
 import { CATEGORY_ICON_OPTIONS } from "./icon-options";
 import { useCategories, useCreateCategory, useDeleteCategory, useUpdateCategory } from "./api";
@@ -218,7 +219,7 @@ function CategoryForm({
 		event.preventDefault();
 		const trimmed = name.trim();
 		if (!trimmed) {
-			setError("Name is required");
+			setError(MESSAGE.nameRequired);
 			return;
 		}
 
@@ -234,6 +235,7 @@ function CategoryForm({
 
 	return (
 		<form
+			noValidate
 			onSubmit={submit}
 			className="flex flex-col gap-4"
 		>

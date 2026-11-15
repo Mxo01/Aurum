@@ -39,6 +39,7 @@ import { todayISO } from "@/lib/format/date";
 import { formatCurrency } from "@/lib/format/money";
 import { usePreferences } from "@/lib/format/use-preferences";
 import { usePrefersReducedMotion } from "@/lib/use-prefers-reduced-motion";
+import { MESSAGE, decimalError, decimalValue } from "@/lib/validation";
 import { useCreateSnapshot, useDeleteSnapshots, useSnapshots } from "./api";
 
 const CHART_HEIGHT = 240;
@@ -72,6 +73,7 @@ function SnapshotsBody({ asset }: { asset: AssetDTO }) {
 	const [selected, setSelected] = useState<Set<string>>(new Set());
 	const [newDate, setNewDate] = useState(todayISO());
 	const [newValue, setNewValue] = useState("");
+	const [valueError, setValueError] = useState<string | null>(null);
 
 	const isAutomatic = asset.liabilityType === "AUTOMATIC";
 	const ordered = [...(snapshots.data ?? [])].sort((a, b) =>
@@ -92,16 +94,24 @@ function SnapshotsBody({ asset }: { asset: AssetDTO }) {
 	};
 
 	const addSnapshot = () => {
-		const parsed = Number(newValue.replace(",", "."));
-		if (!Number.isFinite(parsed) || parsed < 0) return;
+		const error = decimalError(newValue, { min: 0, minMessage: MESSAGE.amountNotNegative });
+		if (error) {
+			setValueError(error);
+			return;
+		}
 
 		createSnapshot.mutate(
 			{
 				assetId: asset.id,
 				referenceDate: newDate,
-				amountOriginalCurrency: parsed
+				amountOriginalCurrency: decimalValue(newValue)
 			},
-			{ onSuccess: () => setNewValue("") }
+			{
+				onSuccess: () => {
+					setNewValue("");
+					setValueError(null);
+				}
+			}
 		);
 	};
 
@@ -213,21 +223,33 @@ function SnapshotsBody({ asset }: { asset: AssetDTO }) {
 										Value ({asset.originalCurrency})
 									</span>
 									<Input
-										type="number"
-										step="0.01"
-										min={0}
+										type="text"
+										inputMode="decimal"
 										value={newValue}
-										onChange={event => setNewValue(event.target.value)}
+										onChange={event => {
+											setNewValue(event.target.value);
+											setValueError(null);
+										}}
 										aria-label="Snapshot value"
+										aria-invalid={valueError ? true : undefined}
 									/>
 								</div>
 								<Button
 									onClick={addSnapshot}
-									disabled={!newValue || createSnapshot.isPending}
+									disabled={createSnapshot.isPending}
 								>
 									<Plus className="size-4" /> Add
 								</Button>
 							</div>
+
+							{valueError ? (
+								<p
+									role="alert"
+									className="text-danger px-1 text-xs"
+								>
+									{valueError}
+								</p>
+							) : null}
 
 							{selected.size > 0 ? (
 								<AlertDialog>

@@ -26,6 +26,7 @@ import {
 	SheetTitle
 } from "@/components/ui/sheet";
 import { todayISO } from "@/lib/format/date";
+import { decimalError, decimalText, decimalValue, isFutureDate, MESSAGE } from "@/lib/validation";
 import { getApiErrorDetails, type ApiErrorViolation } from "@/lib/api/errors";
 import {
 	ASSET_TYPE,
@@ -121,18 +122,25 @@ const assetSchema = z
 		name: z
 			.string()
 			.trim()
-			.min(1, "Name is required")
-			.max(NAME_MAX_LENGTH, "Maximum 100 characters"),
-		categoryId: z.string().min(1, "Category is required"),
+			.min(1, MESSAGE.nameRequired)
+			.max(NAME_MAX_LENGTH, MESSAGE.nameTooLong(NAME_MAX_LENGTH)),
+		categoryId: z.string().min(1, MESSAGE.categoryRequired),
 		currency: z.custom<Currency>(value => CURRENCIES.includes(value as Currency), {
-			message: "Select a currency"
+			message: MESSAGE.currencyRequired
 		}),
 		isFavorite: z.boolean(),
-		initialValue: z.number().min(0, "Cannot be negative"),
-		referenceDate: z.string().min(1, "Pick a date"),
+		initialValue: decimalText({ required: MESSAGE.amountRequired, min: 0 }),
+		referenceDate: z
+			.string()
+			.min(1, MESSAGE.dateRequired)
+			.refine(value => !isFutureDate(value), MESSAGE.dateNotFuture),
 		liabilityType: z.enum(["MANUAL", "AUTOMATIC"]).nullable(),
 		paymentFrequency: z.enum(["WEEKLY", "MONTHLY", "YEARLY"]).nullable(),
-		paymentAmount: z.number().min(0, "Cannot be negative").nullable()
+		paymentAmount: decimalText({
+			optional: true,
+			min: 0,
+			minMessage: MESSAGE.amountNotNegative
+		})
 	})
 	.superRefine((values, context) => {
 		if (values.liabilityType !== LIABILITY_TYPE.AUTOMATIC) return;
@@ -141,14 +149,18 @@ const assetSchema = z
 			context.addIssue({
 				code: "custom",
 				path: ["paymentFrequency"],
-				message: "Select a frequency"
+				message: MESSAGE.frequencyRequired
 			});
 		}
-		if (!values.paymentAmount || values.paymentAmount <= 0) {
+
+		// The field rule already speaks for text it cannot parse or a negative amount; only the
+		// missing and the zero case are left for the automatic liability to refuse.
+		const paymentFieldError = decimalError(values.paymentAmount, { optional: true, min: 0 });
+		if (paymentFieldError === null && decimalValue(values.paymentAmount) <= 0) {
 			context.addIssue({
 				code: "custom",
 				path: ["paymentAmount"],
-				message: "Enter the payment amount"
+				message: MESSAGE.paymentAmountRequired
 			});
 		}
 	});
@@ -161,11 +173,11 @@ function emptyValues(): AssetFormValues {
 		categoryId: "",
 		currency: "EUR",
 		isFavorite: false,
-		initialValue: 0,
+		initialValue: "0",
 		referenceDate: todayISO(),
 		liabilityType: null,
 		paymentFrequency: null,
-		paymentAmount: null
+		paymentAmount: ""
 	};
 }
 
@@ -177,11 +189,11 @@ function valuesFrom(asset: AssetDTO | null): AssetFormValues {
 		categoryId: asset.categoryId,
 		currency: asset.originalCurrency,
 		isFavorite: asset.isFavorite,
-		initialValue: 0,
+		initialValue: "0",
 		referenceDate: todayISO(),
 		liabilityType: asset.liabilityType ?? null,
 		paymentFrequency: asset.paymentFrequency ?? null,
-		paymentAmount: asset.paymentAmount ?? null
+		paymentAmount: asset.paymentAmount === null ? "" : String(asset.paymentAmount)
 	};
 }
 
@@ -248,7 +260,7 @@ export function AssetFormSheet({ open, onOpenChange, asset, categories }: AssetF
 			isFavorite: isLiability ? false : values.isFavorite,
 			liabilityType: isLiability ? (values.liabilityType ?? LIABILITY_TYPE.MANUAL) : undefined,
 			paymentFrequency: isAutomatic ? values.paymentFrequency! : undefined,
-			paymentAmount: isAutomatic ? values.paymentAmount! : undefined
+			paymentAmount: isAutomatic ? decimalValue(values.paymentAmount) : undefined
 		};
 
 		// A rejection belongs to a single attempt: no message from the previous one survives it.
@@ -277,7 +289,7 @@ export function AssetFormSheet({ open, onOpenChange, asset, categories }: AssetF
 		createAsset.mutate(
 			{
 				...body,
-				initialValue: values.initialValue,
+				initialValue: decimalValue(values.initialValue),
 				referenceDate: values.referenceDate
 			},
 			{ onSuccess, onError }
@@ -303,6 +315,7 @@ export function AssetFormSheet({ open, onOpenChange, asset, categories }: AssetF
 				</SheetHeader>
 
 				<form
+					noValidate
 					onSubmit={submit}
 					className="flex flex-1 flex-col gap-4 overflow-y-auto overscroll-contain px-1.5 pt-1 pb-1.5"
 				>
@@ -495,10 +508,9 @@ export function AssetFormSheet({ open, onOpenChange, asset, categories }: AssetF
 										<Label htmlFor="asset-payment">Payment amount</Label>
 										<Input
 											id="asset-payment"
-											type="number"
-											step="0.01"
-											min={0}
-											{...form.register("paymentAmount", { valueAsNumber: true })}
+											type="text"
+											inputMode="decimal"
+											{...form.register("paymentAmount")}
 										/>
 										<FieldError
 											field="paymentAmount"
@@ -531,10 +543,9 @@ export function AssetFormSheet({ open, onOpenChange, asset, categories }: AssetF
 								<Label htmlFor="asset-initial">Initial value</Label>
 								<Input
 									id="asset-initial"
-									type="number"
-									step="0.01"
-									min={0}
-									{...form.register("initialValue", { valueAsNumber: true })}
+									type="text"
+									inputMode="decimal"
+									{...form.register("initialValue")}
 								/>
 								<FieldError
 									field="initialValue"
@@ -553,7 +564,6 @@ export function AssetFormSheet({ open, onOpenChange, asset, categories }: AssetF
 											value={field.value}
 											onChange={field.onChange}
 											label="Value date"
-											max={todayISO()}
 											toYear={new Date().getFullYear()}
 										/>
 									)}

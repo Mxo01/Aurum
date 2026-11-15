@@ -3,6 +3,7 @@ import { Input } from "@/components/ui/input";
 import { formatCurrency } from "@/lib/format/money";
 import { usePreferences } from "@/lib/format/use-preferences";
 import { cn } from "@/lib/utils";
+import { MESSAGE, parseDecimalInput } from "@/lib/validation";
 
 interface EditableValueProps {
 	value: number;
@@ -26,6 +27,7 @@ export function EditableValue({
 	const { locale, isPrivacy } = usePreferences();
 	const [editing, setEditing] = useState(false);
 	const [draft, setDraft] = useState(String(value));
+	const [invalid, setInvalid] = useState(false);
 	const inputRef = useRef<HTMLInputElement>(null);
 
 	useEffect(() => {
@@ -39,35 +41,61 @@ export function EditableValue({
 
 	const start = () => {
 		setDraft(String(value));
+		setInvalid(false);
 		setEditing(true);
 	};
 
 	const commit = () => {
-		const parsed = Number(draft.replace(",", "."));
+		const parsed = parseDecimalInput(draft);
+		if (parsed === null) {
+			setInvalid(true);
+			return;
+		}
+
+		setInvalid(false);
 		setEditing(false);
-		if (Number.isFinite(parsed) && parsed !== value) onSave(parsed);
+		if (parsed !== value) onSave(parsed);
+	};
+
+	const cancel = () => {
+		setInvalid(false);
+		setEditing(false);
 	};
 
 	if (editing) {
 		return (
-			<Input
-				ref={inputRef}
-				type="number"
-				step="0.01"
-				value={draft}
-				onChange={event => setDraft(event.target.value)}
-				onBlur={commit}
-				onKeyDown={event => {
-					if (event.key === "Enter") event.currentTarget.blur();
-					if (event.key === "Escape") setEditing(false);
-				}}
-				className={cn(
-					"num h-8 w-32",
-					align === "left" ? "text-left" : "ml-auto text-right",
-					className
-				)}
-				aria-label={`Edit ${label} in ${currency}`}
-			/>
+			<div className="relative">
+				<Input
+					ref={inputRef}
+					type="text"
+					inputMode="decimal"
+					value={draft}
+					onChange={event => {
+						setDraft(event.target.value);
+						setInvalid(false);
+					}}
+					onBlur={commit}
+					onKeyDown={event => {
+						if (event.key === "Enter") commit();
+						if (event.key === "Escape") cancel();
+					}}
+					aria-invalid={invalid}
+					aria-label={`Edit ${label} in ${currency}`}
+					className={cn(
+						"num h-8 w-32",
+						align === "left" ? "text-left" : "ml-auto text-right",
+						className
+					)}
+				/>
+				{invalid ? (
+					<p
+						role="alert"
+						className="text-danger text-xs"
+					>
+						{MESSAGE.numberInvalid}
+					</p>
+				) : null}
+			</div>
 		);
 	}
 

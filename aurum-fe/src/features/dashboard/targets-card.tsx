@@ -44,17 +44,23 @@ import {
 } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { MESSAGE, decimalText, decimalValue } from "@/lib/validation";
 import { tomorrowISO } from "@/lib/format/date";
 import { usePreferences } from "@/lib/format/use-preferences";
 import type { TargetDTO, TargetStatus } from "@/lib/api/types";
 import { useCreateTarget, useDeleteTarget, useUpdateTarget } from "@/features/targets/api";
 
+const NAME_MAX_LENGTH = 100;
+
 const targetSchema = z.object({
-	name: z.string().min(1, "Name is required").max(100, "Maximum 100 characters"),
+	name: z
+		.string()
+		.min(1, MESSAGE.nameRequired)
+		.max(NAME_MAX_LENGTH, MESSAGE.nameTooLong(NAME_MAX_LENGTH)),
 	type: z.enum(["NET_WORTH", "MANUAL"]),
-	targetAmount: z.number().min(1, "Enter an amount greater than zero"),
-	currentAmount: z.number().min(0, "Cannot be negative"),
-	deadline: z.string().min(1, "Pick a deadline")
+	targetAmount: decimalText({ min: 0, exclusiveMin: true, minMessage: MESSAGE.amountPositive }),
+	currentAmount: decimalText({ min: 0 }),
+	deadline: z.string().min(1, MESSAGE.dateRequired)
 });
 
 type TargetFormValues = z.infer<typeof targetSchema>;
@@ -69,8 +75,8 @@ function emptyValues(): TargetFormValues {
 	return {
 		name: "",
 		type: "MANUAL",
-		targetAmount: 0,
-		currentAmount: 0,
+		targetAmount: "0",
+		currentAmount: "0",
 		deadline: tomorrowISO()
 	};
 }
@@ -121,8 +127,8 @@ export function TargetsCard({ targets, isLoading, currency }: TargetsCardProps) 
 				? {
 						name: editing.name,
 						type: editing.type,
-						targetAmount: editing.targetAmount,
-						currentAmount: editing.currentAmount ?? 0,
+						targetAmount: String(editing.targetAmount),
+						currentAmount: String(editing.currentAmount ?? 0),
 						deadline: editing.deadline
 					}
 				: emptyValues()
@@ -159,8 +165,8 @@ export function TargetsCard({ targets, isLoading, currency }: TargetsCardProps) 
 		const body = {
 			name: values.name,
 			type: values.type,
-			targetAmount: values.targetAmount,
-			currentAmount: values.type === "MANUAL" ? values.currentAmount : undefined,
+			targetAmount: decimalValue(values.targetAmount),
+			currentAmount: values.type === "MANUAL" ? decimalValue(values.currentAmount) : undefined,
 			deadline: values.deadline
 		};
 
@@ -309,6 +315,7 @@ export function TargetsCard({ targets, isLoading, currency }: TargetsCardProps) 
 					</SheetHeader>
 
 					<form
+						noValidate
 						onSubmit={submit}
 						className="flex flex-1 flex-col gap-4 overflow-y-auto overscroll-contain px-1.5 pt-1 pb-1.5"
 					>
@@ -343,7 +350,7 @@ export function TargetsCard({ targets, isLoading, currency }: TargetsCardProps) 
 							<Input
 								id="target-name"
 								placeholder="e.g. New car"
-								maxLength={100}
+								maxLength={NAME_MAX_LENGTH}
 								{...form.register("name")}
 							/>
 							{form.formState.errors.name ? (
@@ -355,10 +362,9 @@ export function TargetsCard({ targets, isLoading, currency }: TargetsCardProps) 
 							<Label htmlFor="target-amount">Target amount</Label>
 							<Input
 								id="target-amount"
-								type="number"
-								min={0}
-								step="0.01"
-								{...form.register("targetAmount", { valueAsNumber: true })}
+								type="text"
+								inputMode="decimal"
+								{...form.register("targetAmount")}
 							/>
 							{form.formState.errors.targetAmount ? (
 								<p className="text-danger text-xs">{form.formState.errors.targetAmount.message}</p>
@@ -370,10 +376,9 @@ export function TargetsCard({ targets, isLoading, currency }: TargetsCardProps) 
 								<Label htmlFor="target-current">Current saved amount</Label>
 								<Input
 									id="target-current"
-									type="number"
-									min={0}
-									step="0.01"
-									{...form.register("currentAmount", { valueAsNumber: true })}
+									type="text"
+									inputMode="decimal"
+									{...form.register("currentAmount")}
 								/>
 								{form.formState.errors.currentAmount ? (
 									<p className="text-danger text-xs">

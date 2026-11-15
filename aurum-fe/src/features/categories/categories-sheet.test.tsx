@@ -3,6 +3,7 @@ import { createElement } from "react";
 import { http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
 import { env } from "@/lib/env";
+import { MESSAGE } from "@/lib/validation";
 import { buildCategory } from "@/test/fixtures/portfolio";
 import { server } from "@/test/msw/server";
 import { renderWithProviders } from "@/test/render";
@@ -15,6 +16,23 @@ const mockCategories = [
 
 function useCategoriesFixture() {
 	server.use(http.get(`${env.apiUrl}/categories`, () => HttpResponse.json(mockCategories)));
+}
+
+const NAME_INPUT_LABEL = "Name";
+const ADD_CATEGORY = "Add category";
+const CREATE_CATEGORY = "Create category";
+
+const BLANK_NAMES = [
+	{ describe: "an empty name", value: "" },
+	{ describe: "a whitespace-only name", value: "   " }
+];
+
+function renderCategoriesSheet() {
+	useCategoriesFixture();
+	const testSubject = CategoriesSheet;
+	return renderWithProviders(
+		createElement(testSubject, { open: true, onOpenChange: () => undefined })
+	);
 }
 
 describe("CategoriesSheet", () => {
@@ -169,4 +187,69 @@ it("should toggle the selected icon off", async () => {
 
 	// THEN
 	expect(home).toHaveAttribute("aria-pressed", "false");
+});
+
+describe("CategoriesSheet client validation", () => {
+	it("should turn off the browser's own validation on the category form", async () => {
+		// GIVEN
+		renderCategoriesSheet();
+		await screen.findByText("Real Estate");
+		fireEvent.click(screen.getByRole("button", { name: ADD_CATEGORY }));
+		const nameInput = screen.getByLabelText(NAME_INPUT_LABEL);
+
+		// THEN
+		expect(nameInput.closest("form")).toHaveAttribute("noValidate");
+		expect(nameInput).not.toBeRequired();
+	});
+
+	it.each(BLANK_NAMES)(
+		"should answer $describe with the shared required message and no request",
+		async ({ value }) => {
+			// GIVEN
+			let postedCalls = 0;
+			server.use(
+				http.post(`${env.apiUrl}/categories`, () => {
+					postedCalls += 1;
+					return HttpResponse.json(mockCategories[0]);
+				})
+			);
+			renderCategoriesSheet();
+			await screen.findByText("Real Estate");
+			fireEvent.click(screen.getByRole("button", { name: ADD_CATEGORY }));
+			fireEvent.change(screen.getByLabelText(NAME_INPUT_LABEL), { target: { value } });
+
+			// WHEN
+			fireEvent.click(screen.getByRole("button", { name: CREATE_CATEGORY }));
+
+			// THEN
+			expect(await screen.findByText(MESSAGE.nameRequired)).toBeInTheDocument();
+			expect(screen.getAllByText(MESSAGE.nameRequired)).toHaveLength(1);
+			expect(postedCalls).toBe(0);
+		}
+	);
+
+	it("should label a custom asset category as an asset", async () => {
+		// GIVEN
+		const customAsset = buildCategory({ name: "Stocks" });
+		server.use(http.get(`${env.apiUrl}/categories`, () => HttpResponse.json([customAsset])));
+		const testSubject = CategoriesSheet;
+
+		// WHEN
+		renderWithProviders(createElement(testSubject, { open: true, onOpenChange: () => undefined }));
+
+		// THEN
+		expect(await screen.findByText("Asset")).toBeInTheDocument();
+	});
+
+	it("should not render the body while the sheet is closed", () => {
+		// GIVEN
+		useCategoriesFixture();
+		const testSubject = CategoriesSheet;
+
+		// WHEN
+		renderWithProviders(createElement(testSubject, { open: false, onOpenChange: () => undefined }));
+
+		// THEN
+		expect(screen.queryByRole("button", { name: ADD_CATEGORY })).not.toBeInTheDocument();
+	});
 });

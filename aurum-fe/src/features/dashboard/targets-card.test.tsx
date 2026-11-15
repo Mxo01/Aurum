@@ -5,6 +5,7 @@ import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { env } from "@/lib/env";
 import { toDateOnly } from "@/lib/format/date";
+import type { CreateTargetDTO } from "@/lib/api/types";
 import { buildTarget } from "@/test/fixtures/portfolio";
 import { server } from "@/test/msw/server";
 import { renderWithProviders } from "@/test/render";
@@ -48,6 +49,78 @@ function renderCard(props: Partial<Parameters<typeof TargetsCard>[0]> = {}, rout
 		}),
 		{ route }
 	);
+}
+
+const AMOUNT_FIELD = {
+	target: "Target amount",
+	current: "Current saved amount"
+} as const;
+
+const EXPECTED_MESSAGE = {
+	amountRequired: "Enter an amount",
+	numberInvalid: "Enter a number",
+	amountPositive: "Enter an amount greater than zero",
+	amountNotNegative: "Cannot be negative"
+} as const;
+
+// The zod default is never a sentence a person should read.
+const ZOD_NATIVE_MESSAGE = /Invalid input/;
+
+const VALID_TARGET_NAME = "New car";
+const GARBAGE_INPUT = "abc";
+const ZERO_INPUT = "0";
+const NEGATIVE_INPUT = "-5";
+const EMPTY_INPUT = "";
+const COMMA_DECIMAL_INPUT = "1500,50";
+const COMMA_DECIMAL_VALUE = 1500.5;
+const NATIVE_VALIDATION_ATTRIBUTES = ["min", "step", "max"] as const;
+
+interface AmountMessageCase {
+	readonly scenario: string;
+	readonly field: string;
+	readonly input: string;
+	readonly expected: string;
+}
+
+const AMOUNT_MESSAGE_CASES: AmountMessageCase[] = [
+	{
+		scenario: "empty target amount",
+		field: AMOUNT_FIELD.target,
+		input: EMPTY_INPUT,
+		expected: EXPECTED_MESSAGE.amountRequired
+	},
+	{
+		scenario: "unparsable target amount",
+		field: AMOUNT_FIELD.target,
+		input: GARBAGE_INPUT,
+		expected: EXPECTED_MESSAGE.numberInvalid
+	},
+	{
+		scenario: "zero target amount",
+		field: AMOUNT_FIELD.target,
+		input: ZERO_INPUT,
+		expected: EXPECTED_MESSAGE.amountPositive
+	},
+	{
+		scenario: "unparsable current amount",
+		field: AMOUNT_FIELD.current,
+		input: GARBAGE_INPUT,
+		expected: EXPECTED_MESSAGE.numberInvalid
+	},
+	{
+		scenario: "negative current amount",
+		field: AMOUNT_FIELD.current,
+		input: NEGATIVE_INPUT,
+		expected: EXPECTED_MESSAGE.amountNotNegative
+	}
+];
+
+async function openCreateForm() {
+	const user = userEvent.setup();
+	renderCard({ targets: [] });
+	await user.click(screen.getByRole("button", { name: /Set a target/ }));
+	await screen.findByRole("heading", { name: "New target" });
+	return user;
 }
 
 function targetsUrl() {
@@ -267,7 +340,75 @@ describe("TargetsCard", () => {
 
 		// THEN
 		expect(await screen.findByText("Name is required")).toBeInTheDocument();
-		expect(screen.getByText("Enter an amount greater than zero")).toBeInTheDocument();
+		expect(screen.getByText(EXPECTED_MESSAGE.amountPositive)).toBeInTheDocument();
+		expect(screen.queryByText(ZOD_NATIVE_MESSAGE)).not.toBeInTheDocument();
+	});
+
+	it.each(AMOUNT_MESSAGE_CASES)(
+		"should show the amount sentence for a $scenario",
+		async ({ field, input, expected }) => {
+			// GIVEN
+			const testSubject = TargetsCard;
+			await openCreateForm();
+
+			// WHEN
+			fireEvent.change(screen.getByLabelText(field), { target: { value: input } });
+			fireEvent.submit(
+				screen.getByRole("button", { name: "Create target" }).closest("form") as HTMLFormElement
+			);
+
+			// THEN
+			expect(await screen.findByText(expected)).toBeInTheDocument();
+			expect(screen.queryByText(ZOD_NATIVE_MESSAGE)).not.toBeInTheDocument();
+			expect(testSubject).toBeDefined();
+		}
+	);
+
+	it("should disable native validation on the form and the amount inputs", async () => {
+		// GIVEN
+		const testSubject = TargetsCard;
+		await openCreateForm();
+
+		// WHEN
+		const form = screen.getByRole("button", { name: "Create target" }).closest("form");
+
+		// THEN
+		expect(testSubject).toBeDefined();
+		expect(form).toHaveAttribute("noValidate");
+		for (const field of [AMOUNT_FIELD.target, AMOUNT_FIELD.current]) {
+			const input = screen.getByLabelText(field);
+			expect(input).toHaveAttribute("type", "text");
+			expect(input).toHaveAttribute("inputMode", "decimal");
+			for (const attribute of NATIVE_VALIDATION_ATTRIBUTES) {
+				expect(input).not.toHaveAttribute(attribute);
+			}
+		}
+	});
+
+	it("should submit a comma decimal target amount as a number", async () => {
+		// GIVEN
+		let postedBody: CreateTargetDTO | undefined;
+		server.use(
+			http.post(targetsUrl(), async ({ request }) => {
+				postedBody = (await request.json()) as CreateTargetDTO;
+				return HttpResponse.json(buildTarget({ name: VALID_TARGET_NAME }));
+			})
+		);
+		const user = await openCreateForm();
+		fireEvent.change(screen.getByLabelText("Name"), { target: { value: VALID_TARGET_NAME } });
+
+		// WHEN
+		fireEvent.change(screen.getByLabelText(AMOUNT_FIELD.target), {
+			target: { value: COMMA_DECIMAL_INPUT }
+		});
+		const submit = screen.getByRole("button", { name: "Create target" });
+		await waitFor(() => expect(submit).toBeEnabled());
+		await user.click(submit);
+
+		// THEN
+		await waitFor(() => expect(postedBody).toBeDefined());
+		expect(postedBody?.targetAmount).toBe(COMMA_DECIMAL_VALUE);
+		expect(typeof postedBody?.targetAmount).toBe("number");
 	});
 
 	it("should edit the active target from the menu", async () => {
@@ -422,24 +563,6 @@ describe("TargetsCard", () => {
 		expect(screen.getByText("€0 / €50,000")).toBeInTheDocument();
 		expect(screen.getByText("0%")).toBeInTheDocument();
 		expect(screen.getByText("In progress")).toBeInTheDocument();
-	});
-
-	it("should show the negative current amount error", async () => {
-		// GIVEN
-		const user = userEvent.setup();
-		renderCard({ targets: [] });
-		await user.click(screen.getByRole("button", { name: /Set a target/ }));
-
-		// WHEN
-		fireEvent.change(screen.getByLabelText("Current saved amount"), {
-			target: { value: "-5" }
-		});
-		fireEvent.submit(
-			screen.getByRole("button", { name: "Create target" }).closest("form") as HTMLFormElement
-		);
-
-		// THEN
-		expect(await screen.findByText("Cannot be negative")).toBeInTheDocument();
 	});
 
 	it("should edit a net worth target without a current amount", async () => {
