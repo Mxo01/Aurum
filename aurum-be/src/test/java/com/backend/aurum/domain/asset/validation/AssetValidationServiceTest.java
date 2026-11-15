@@ -50,6 +50,16 @@ class AssetValidationServiceTest {
 
 	private static final BigDecimal OPENING_VALUE = new BigDecimal("1000");
 
+	private static final BigDecimal OPENING_VALUE_AT_FOUR_DECIMALS = new BigDecimal("1000.0001");
+
+	private static final BigDecimal OPENING_VALUE_OVER_FOUR_DECIMALS = new BigDecimal("1000.00001");
+
+	private static final BigDecimal OPENING_VALUE_OVER_FIFTEEN_INTEGER_DIGITS = new BigDecimal(
+		"1234567890123456"
+	);
+
+	private static final BigDecimal NEGATIVE_OPENING_VALUE = new BigDecimal("-1000");
+
 	private static final BigDecimal LARGE_OPENING_VALUE = new BigDecimal("5000");
 
 	private static final BigDecimal MONTHLY_PAYMENT = new BigDecimal("200");
@@ -101,6 +111,14 @@ class AssetValidationServiceTest {
 		"An automatic liability needs a value date";
 
 	private static final String FUTURE_REFERENCE_DATE_MESSAGE = "Value date cannot be in the future";
+
+	private static final String NEGATIVE_AMOUNT_MESSAGE_FOR_OPENING_VALUE =
+		"Amount cannot be negative";
+
+	private static final String OPENING_VALUE_OVER_SCALE_MESSAGE =
+		"Amount cannot have more than 4 decimal places";
+
+	private static final String OPENING_VALUE_TOO_LARGE_MESSAGE = "Amount is too large";
 
 	@Mock
 	private Clock clock;
@@ -249,6 +267,86 @@ class AssetValidationServiceTest {
 				},
 				MISSING_REFERENCE_DATE_MESSAGE,
 				REFERENCE_DATE_FIELD
+			),
+			Arguments.of(
+				"an automatic liability with a negative opening value",
+				(Consumer<CreateAssetDTO>) dto -> {
+					dto.setLiabilityType(LiabilityType.AUTOMATIC);
+					dto.setPaymentFrequency(PaymentFrequency.MONTHLY);
+					dto.setPaymentAmount(MONTHLY_PAYMENT);
+					dto.setInitialValue(NEGATIVE_OPENING_VALUE);
+				},
+				MISSING_OPENING_VALUE_MESSAGE,
+				INITIAL_VALUE_FIELD
+			),
+			Arguments.of(
+				"a manual liability with a negative opening value",
+				(Consumer<CreateAssetDTO>) dto -> {
+					dto.setLiabilityType(LiabilityType.MANUAL);
+					dto.setInitialValue(NEGATIVE_OPENING_VALUE);
+				},
+				NEGATIVE_AMOUNT_MESSAGE_FOR_OPENING_VALUE,
+				INITIAL_VALUE_FIELD
+			),
+			Arguments.of(
+				"an asset without a liability and a negative opening value",
+				(Consumer<CreateAssetDTO>) dto -> dto.setInitialValue(NEGATIVE_OPENING_VALUE),
+				NEGATIVE_AMOUNT_MESSAGE_FOR_OPENING_VALUE,
+				INITIAL_VALUE_FIELD
+			),
+			Arguments.of(
+				"a manual liability with an opening value over four decimals",
+				(Consumer<CreateAssetDTO>) dto -> {
+					dto.setLiabilityType(LiabilityType.MANUAL);
+					dto.setInitialValue(OPENING_VALUE_OVER_FOUR_DECIMALS);
+				},
+				OPENING_VALUE_OVER_SCALE_MESSAGE,
+				INITIAL_VALUE_FIELD
+			),
+			Arguments.of(
+				"a manual liability with an opening value over fifteen integer digits",
+				(Consumer<CreateAssetDTO>) dto -> {
+					dto.setLiabilityType(LiabilityType.MANUAL);
+					dto.setInitialValue(OPENING_VALUE_OVER_FIFTEEN_INTEGER_DIGITS);
+				},
+				OPENING_VALUE_TOO_LARGE_MESSAGE,
+				INITIAL_VALUE_FIELD
+			)
+		);
+	}
+
+	@ParameterizedTest(name = "create: an automatic liability with {0}")
+	@MethodSource("automaticOpeningValuesOutsideTheAmountRules")
+	void validate_createDto_rejectsAnAutomaticOpeningValueOutsideTheAmountRules(
+		String scenario,
+		BigDecimal openingValue,
+		String expectedMessage
+	) {
+		// GIVEN
+		stubFixedToday();
+		CreateAssetDTO mockDto = buildAutomaticCreateDto();
+		mockDto.setInitialValue(openingValue);
+		mockDto.setReferenceDate(FIXED_TODAY);
+
+		// WHEN / THEN
+		assertValidationViolation(
+			() -> testSubject.validate(mockDto),
+			expectedMessage,
+			INITIAL_VALUE_FIELD
+		);
+	}
+
+	static Stream<Arguments> automaticOpeningValuesOutsideTheAmountRules() {
+		return Stream.of(
+			Arguments.of(
+				"an opening value over four decimals",
+				OPENING_VALUE_OVER_FOUR_DECIMALS,
+				OPENING_VALUE_OVER_SCALE_MESSAGE
+			),
+			Arguments.of(
+				"an opening value over fifteen integer digits",
+				OPENING_VALUE_OVER_FIFTEEN_INTEGER_DIGITS,
+				OPENING_VALUE_TOO_LARGE_MESSAGE
 			)
 		);
 	}
@@ -319,6 +417,18 @@ class AssetValidationServiceTest {
 		mockDto.setPaymentFrequency(PaymentFrequency.MONTHLY);
 		mockDto.setPaymentAmount(NO_PAYMENT);
 		mockDto.setInitialValue(LARGE_OPENING_VALUE);
+		mockDto.setReferenceDate(BEYOND_TIMEZONE_SKEW);
+
+		// WHEN / THEN
+		assertThatCode(() -> testSubject.validate(mockDto)).doesNotThrowAnyException();
+	}
+
+	@Test
+	void validate_createDto_acceptsAManualOpeningValueAtTheMoneyScaleAndPrecision() {
+		// GIVEN
+		CreateAssetDTO mockDto = buildCreateDto();
+		mockDto.setLiabilityType(LiabilityType.MANUAL);
+		mockDto.setInitialValue(OPENING_VALUE_AT_FOUR_DECIMALS);
 		mockDto.setReferenceDate(BEYOND_TIMEZONE_SKEW);
 
 		// WHEN / THEN

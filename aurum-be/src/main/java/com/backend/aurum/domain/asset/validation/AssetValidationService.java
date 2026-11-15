@@ -4,6 +4,7 @@ import com.backend.aurum.domain.asset.dto.CreateAssetDTO;
 import com.backend.aurum.domain.asset.dto.UpdateAssetDTO;
 import com.backend.aurum.domain.asset.model.LiabilityConfiguration;
 import com.backend.aurum.domain.shared.exception.ValidationException;
+import com.backend.aurum.domain.shared.validation.AmountRules;
 import java.time.Clock;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -58,13 +59,26 @@ public class AssetValidationService {
 
 	/**
 	 * An AUTOMATIC liability without a snapshot is skipped by every scheduler run, silently and
-	 * forever, so the opening balance is part of the configuration it must be created with.
+	 * forever, so the opening balance is part of the configuration it must be created with. A manual
+	 * asset writes the same value as an opening snapshot, under the same column, so the amount rules
+	 * apply to both.
 	 */
 	private void validateOpeningSnapshot(CreateAssetDTO dto, LiabilityConfiguration liability) {
-		if (!liability.isAutomatic()) {
+		if (liability.isAutomatic()) {
+			validateAutomaticOpeningSnapshot(dto);
+			AmountRules.requireAmount(dto.getInitialValue(), "initialValue", "Amount");
 			return;
 		}
 
+		if (dto.getInitialValue() == null) {
+			return;
+		}
+
+		AmountRules.requireNonNegative(dto.getInitialValue(), "initialValue", "Amount");
+		AmountRules.requireAmount(dto.getInitialValue(), "initialValue", "Amount");
+	}
+
+	private void validateAutomaticOpeningSnapshot(CreateAssetDTO dto) {
 		if (dto.getInitialValue() == null || dto.getInitialValue().signum() <= 0) {
 			throw new ValidationException(
 				"initialValue",

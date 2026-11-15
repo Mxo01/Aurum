@@ -5,7 +5,7 @@ import { useApi } from "@/lib/api/api-context";
 import { unwrap } from "@/lib/api/client";
 import { getApiErrorMessage } from "@/lib/api/errors";
 import { queryKeys } from "@/lib/api/keys";
-import type { Currency, Locale, UserDTO } from "@/lib/api/types";
+import type { Currency, Locale, UserExportDTO } from "@/lib/api/types";
 
 export const PROFILE_STALE_TIME = 5 * 60 * 1000;
 
@@ -121,4 +121,4 @@ export function useExportData() {
 	});
 }
 
-export type ExportPayload = UserDTO;
+export type ExportPayload = UserExportDTO;

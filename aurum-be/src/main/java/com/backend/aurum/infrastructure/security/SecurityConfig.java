@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -30,12 +31,15 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+@Slf4j
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
 public class SecurityConfig {
 
 	private static final String PROTECTED_RESOURCE_METADATA = "/.well-known/oauth-protected-resource";
+
+	private static final String BARE_WILDCARD_ORIGIN = "*";
 
 	@Value("${spring.security.oauth2.resourceserver.jwt.issuer-uri}")
 	private String issuerUri;
@@ -176,10 +180,22 @@ public class SecurityConfig {
 		return source;
 	}
 
+	/**
+	 * The browser app's CORS policy.
+	 *
+	 * <p>The origin list is trimmed and validated once, before the source is handed to the
+	 * filter chain. Credentials are allowed, and Spring combines a credentials-allowing
+	 * configuration with an allowed origin pattern by reflecting the caller's
+	 * {@code Origin}: the bare {@code *} entry would make every site an allowed origin, so
+	 * startup fails instead of shipping that policy. Subdomain patterns such as
+	 * {@code https://*.aurum-networth.com} stay allowed, because they still pin the host.
+	 */
 	@Bean
 	public CorsConfigurationSource corsConfigurationSource() {
+		List<String> origins = parseCorsAllowedOrigins(corsAllowedOrigins);
+		log.info("CORS allowed origins for the web API: {}", origins);
+
 		CorsConfiguration configuration = new CorsConfiguration();
-		List<String> origins = new ArrayList<>(Arrays.asList(corsAllowedOrigins.split(",")));
 		configuration.setAllowedOriginPatterns(origins);
 		configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
 		configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept"));
@@ -190,5 +206,17 @@ public class SecurityConfig {
 		source.registerCorsConfiguration("/**", configuration);
 
 		return source;
+	}
+
+	private static List<String> parseCorsAllowedOrigins(String raw) {
+		List<String> origins = Arrays.stream(raw.split(",")).map(String::trim).toList();
+
+		if (origins.contains(BARE_WILDCARD_ORIGIN)) {
+			throw new IllegalStateException(
+				"cors.allowed-origins must not be a bare wildcard when credentials are allowed"
+			);
+		}
+
+		return List.copyOf(origins);
 	}
 }

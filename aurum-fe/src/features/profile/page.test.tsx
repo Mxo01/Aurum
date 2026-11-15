@@ -2,7 +2,7 @@ import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createElement } from "react";
 import { http, HttpResponse } from "msw";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { env } from "@/lib/env";
 import { toast } from "sonner";
 import { buildProfile } from "@/test/fixtures/portfolio";
@@ -10,6 +10,16 @@ import { server } from "@/test/msw/server";
 import { renderWithProviders } from "@/test/render";
 import { useThemeStore } from "@/stores/theme";
 import { ProfilePage } from "./page";
+
+const ACCOUNT_PICTURE = "https://example.com/avatar.jpg";
+const STORED_PICTURE = "ZmFrZV9qcGVn";
+const STORED_PICTURE_SOURCE = `data:image/jpeg;base64,${STORED_PICTURE}`;
+const STORED_ACCOUNT_CURRENCY = "USD";
+const STORED_ACCOUNT_LOCALE = "it-IT";
+const ITALIAN_LOCALE_LABEL = "Italian · 1.234,56";
+const ACCOUNT_INITIALS = "MD";
+const PROFILE_PICTURE_NAME = "Profile picture";
+const LOADED_IMAGE_NATURAL_WIDTH = 1;
 
 const { mockLogout, mockUser } = vi.hoisted(() => ({
 	mockLogout: vi.fn(),
@@ -29,6 +39,21 @@ vi.mock("@auth0/auth0-react", () => ({
 	})
 }));
 
+// Radix mounts the avatar image only once the browser reports it loaded, and
+// happy-dom never loads one, so the loader is stubbed to report success.
+function stubLoadedImages() {
+	class LoadedImage {
+		complete = true;
+		naturalWidth = LOADED_IMAGE_NATURAL_WIDTH;
+		crossOrigin: string | null = null;
+		referrerPolicy = "";
+		src = "";
+		addEventListener() {}
+		removeEventListener() {}
+	}
+	vi.stubGlobal("Image", LoadedImage);
+}
+
 function useProfileFixture() {
 	server.use(http.get(`${env.apiUrl}/users`, () => HttpResponse.json(buildProfile())));
 }
@@ -37,6 +62,8 @@ describe("ProfilePage", () => {
 	beforeEach(() => {
 		mockUser.sub = "auth0|123";
 		mockUser.name = "Mario Di Modica";
+		mockUser.email = "mario@example.com";
+		mockUser.picture = ACCOUNT_PICTURE;
 		mockLogout.mockReset();
 		localStorage.clear();
 		document.documentElement.className = "";
@@ -45,6 +72,10 @@ describe("ProfilePage", () => {
 			value: { writeText: vi.fn().mockResolvedValue(undefined) },
 			configurable: true
 		});
+	});
+
+	afterEach(() => {
+		vi.unstubAllGlobals();
 	});
 
 	it("should render the personal details and preferences", async () => {
@@ -60,6 +91,81 @@ describe("ProfilePage", () => {
 		expect(await screen.findByDisplayValue("Mario Di Modica")).toBeInTheDocument();
 		expect(screen.getByLabelText("Currency")).toHaveTextContent("EUR");
 		expect(screen.getByLabelText("Locale")).toHaveTextContent("English · 1,234.56");
+	});
+
+	it("should render the picture, the currency and the locale of the profile", async () => {
+		// GIVEN
+		stubLoadedImages();
+		server.use(
+			http.get(`${env.apiUrl}/users`, () =>
+				HttpResponse.json(
+					buildProfile({
+						currency: STORED_ACCOUNT_CURRENCY,
+						locale: STORED_ACCOUNT_LOCALE,
+						picture: STORED_PICTURE
+					})
+				)
+			)
+		);
+		const testSubject = ProfilePage;
+
+		// WHEN
+		renderWithProviders(createElement(testSubject));
+
+		// THEN
+		await waitFor(() =>
+			expect(screen.getByLabelText("Currency")).toHaveTextContent(STORED_ACCOUNT_CURRENCY)
+		);
+		expect(screen.getByRole("img", { name: PROFILE_PICTURE_NAME })).toHaveAttribute(
+			"src",
+			STORED_PICTURE_SOURCE
+		);
+		expect(screen.getByLabelText("Locale")).toHaveTextContent(ITALIAN_LOCALE_LABEL);
+	});
+
+	it("should fall back to the account picture when the profile has none", async () => {
+		// GIVEN
+		stubLoadedImages();
+		server.use(
+			http.get(`${env.apiUrl}/users`, () =>
+				HttpResponse.json(buildProfile({ picture: null, locale: STORED_ACCOUNT_LOCALE }))
+			)
+		);
+		const testSubject = ProfilePage;
+
+		// WHEN
+		renderWithProviders(createElement(testSubject));
+
+		// THEN
+		await waitFor(() =>
+			expect(screen.getByLabelText("Locale")).toHaveTextContent(ITALIAN_LOCALE_LABEL)
+		);
+		expect(screen.getByRole("img", { name: PROFILE_PICTURE_NAME })).toHaveAttribute(
+			"src",
+			ACCOUNT_PICTURE
+		);
+		expect(screen.queryByRole("button", { name: /Remove/ })).not.toBeInTheDocument();
+	});
+
+	it("should show the account initials when neither picture exists", async () => {
+		// GIVEN
+		mockUser.picture = undefined;
+		server.use(
+			http.get(`${env.apiUrl}/users`, () =>
+				HttpResponse.json(buildProfile({ picture: null, locale: STORED_ACCOUNT_LOCALE }))
+			)
+		);
+		const testSubject = ProfilePage;
+
+		// WHEN
+		renderWithProviders(createElement(testSubject));
+
+		// THEN
+		await waitFor(() =>
+			expect(screen.getByLabelText("Locale")).toHaveTextContent(ITALIAN_LOCALE_LABEL)
+		);
+		expect(screen.getByText(ACCOUNT_INITIALS)).toBeInTheDocument();
+		expect(screen.queryByRole("img", { name: PROFILE_PICTURE_NAME })).not.toBeInTheDocument();
 	});
 
 	it("should update the currency and the locale", async () => {

@@ -92,3 +92,6 @@ databaseChangeLog:
   - include:
       file: db/changelog/changes/2026-11-15-null-legacy-liability-fields-on-asset-categories.sql
       relativeToChangelogFile: false
+  - include:
+      file: db/changelog/changes/2026-11-15-add-asset-optimistic-lock.sql
+      relativeToChangelogFile: false

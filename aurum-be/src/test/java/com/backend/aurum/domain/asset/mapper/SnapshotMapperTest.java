@@ -2,6 +2,7 @@ package com.backend.aurum.domain.asset.mapper;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.backend.aurum.domain.asset.dto.CreateSnapshotDTO;
@@ -53,6 +54,7 @@ class SnapshotMapperTest {
 	private static final BigDecimal AMOUNT_IN_BASE_CURRENCY = new BigDecimal("200");
 	private static final int BASE_AMOUNT_SCALE = 4;
 	private static final String ASSET_NOT_OWNED_MESSAGE = "This asset does not belong to you";
+	private static final String USER_ID_FIELD = "userId";
 
 	@Mock
 	private AssetRepository assetRepository;
@@ -169,22 +171,15 @@ class SnapshotMapperTest {
 	}
 
 	@Test
-	void toEntity_createDto_skipsOwnershipCheck_whenUserIdIsNull() {
+	void toEntity_createDto_rejectsANullUserId_beforeTheAssetIsLoaded() {
 		// GIVEN
-		User mockOtherUser = Instancio.create(User.class);
-		Asset mockAsset = Instancio.of(Asset.class)
-			.set(Select.field(Asset::getUser), mockOtherUser)
-			.create();
-		CreateSnapshotDTO mockDto = Instancio.of(CreateSnapshotDTO.class)
-			.set(Select.field(CreateSnapshotDTO::getAssetId), mockAsset.getId())
-			.create();
-		when(assetRepository.findById(mockAsset.getId())).thenReturn(Optional.of(mockAsset));
+		CreateSnapshotDTO mockDto = Instancio.create(CreateSnapshotDTO.class);
 
-		// WHEN
-		Snapshot result = testSubject.toEntity(mockDto, null);
-
-		// THEN
-		assertThat(result.getAsset()).isEqualTo(mockAsset);
+		// WHEN / THEN
+		assertThatThrownBy(() -> testSubject.toEntity(mockDto, null))
+			.isInstanceOf(NullPointerException.class)
+			.hasMessage(USER_ID_FIELD);
+		verifyNoInteractions(assetRepository);
 	}
 
 	@Test

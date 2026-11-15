@@ -32,6 +32,7 @@ public class AssetMapper {
 	private final SnapshotMapper snapshotMapper;
 
 	public Asset toEntity(CreateAssetDTO dto, UUID userId) {
+		Objects.requireNonNull(userId, "userId");
 		if (dto == null) return null;
 		Asset asset = new Asset();
 		asset.setName(dto.getName());
@@ -43,12 +44,10 @@ public class AssetMapper {
 		asset.setPaymentFrequency(dto.getPaymentFrequency());
 		asset.setPaymentAmount(dto.getPaymentAmount());
 
-		if (userId != null) {
-			User user = userRepository
-				.findById(userId)
-				.orElseThrow(() -> new NotFoundException("User not found"));
-			asset.setUser(user);
-		}
+		User user = userRepository
+			.findById(userId)
+			.orElseThrow(() -> new NotFoundException("User not found"));
+		asset.setUser(user);
 
 		if (dto.getCategoryId() != null) {
 			asset.setCategory(resolveCategory(dto.getCategoryId(), userId));
@@ -95,13 +94,12 @@ public class AssetMapper {
 	}
 
 	private AssetCategory resolveCategory(UUID categoryId, UUID userId) {
+		Objects.requireNonNull(userId, "userId");
 		AssetCategory category = categoryRepository
 			.findById(Objects.requireNonNull(categoryId))
 			.orElseThrow(() -> new NotFoundException("Category not found"));
 
-		if (
-			category.getUser() != null && (userId == null || !category.getUser().getId().equals(userId))
-		) {
+		if (category.getUser() != null && !category.getUser().getId().equals(userId)) {
 			throw new AccessDeniedException("This category does not belong to you");
 		}
 

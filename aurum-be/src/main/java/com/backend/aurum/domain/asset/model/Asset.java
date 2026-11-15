@@ -19,6 +19,7 @@ import jakarta.persistence.OneToMany;
 import jakarta.persistence.OrderBy;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -82,6 +83,10 @@ public class Asset {
 
 	@Column(name = "settled_at")
 	private LocalDateTime settledAt;
+
+	@Version
+	@Column(nullable = false)
+	private Long version;
 
 	@Column(nullable = false, updatable = false)
 	private LocalDateTime createdAt;

@@ -24,6 +24,7 @@ public class SnapshotMapper {
 	private final AssetRepository assetRepository;
 
 	public Snapshot toEntity(CreateSnapshotDTO dto, UUID userId) {
+		Objects.requireNonNull(userId, "userId");
 		if (dto == null) return null;
 		Snapshot snapshot = new Snapshot();
 		snapshot.setReferenceDate(dto.getReferenceDate());
@@ -38,7 +39,7 @@ public class SnapshotMapper {
 				.findById(Objects.requireNonNull(dto.getAssetId()))
 				.orElseThrow(() -> new NotFoundException("Asset not found"));
 
-			if (userId != null && !asset.getUser().getId().equals(userId)) {
+			if (!asset.getUser().getId().equals(userId)) {
 				throw new AccessDeniedException("This asset does not belong to you");
 			}
 			snapshot.setAsset(asset);

@@ -10,6 +10,8 @@ import static org.mockito.Mockito.when;
 import com.backend.aurum.domain.asset.model.AssetCategory;
 import com.backend.aurum.domain.asset.repository.AssetCategoryRepository;
 import com.backend.aurum.domain.asset.repository.AssetRepository;
+import com.backend.aurum.domain.shared.exception.AccessDeniedException;
+import com.backend.aurum.domain.shared.exception.ConflictException;
 import com.backend.aurum.domain.user.model.User;
 import java.util.List;
 import java.util.Optional;
@@ -21,8 +23,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.server.ResponseStatusException;
 
 @ExtendWith(MockitoExtension.class)
 class AssetCategoryServiceTest {
@@ -121,7 +121,7 @@ class AssetCategoryServiceTest {
 	}
 
 	@Test
-	void update_throwsForbidden_whenCategoryIsDefault() {
+	void update_throwsAccessDenied_whenCategoryIsDefault() {
 		// GIVEN
 		UUID mockUserId = UUID.randomUUID();
 		AssetCategory mockCategory = Instancio.of(AssetCategory.class)
@@ -133,14 +133,13 @@ class AssetCategoryServiceTest {
 		// WHEN / THEN
 		assertThatThrownBy(() ->
 			testSubject.update(mockCategory.getId(), mockDetails, mockUserId)
-		).isInstanceOfSatisfying(ResponseStatusException.class, expectedException -> {
-			assertThat(expectedException.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
-			assertThat(expectedException.getReason()).isEqualTo(DEFAULT_UPDATE_REASON);
-		});
+		).isInstanceOfSatisfying(AccessDeniedException.class, expectedException ->
+			assertThat(expectedException).hasMessage(DEFAULT_UPDATE_REASON)
+		);
 	}
 
 	@Test
-	void update_throwsForbidden_whenCategoryBelongsToDifferentUser() {
+	void update_throwsAccessDenied_whenCategoryBelongsToDifferentUser() {
 		// GIVEN
 		UUID mockUserId = UUID.randomUUID();
 		UUID otherUserId = UUID.randomUUID();
@@ -156,10 +155,9 @@ class AssetCategoryServiceTest {
 		// WHEN / THEN
 		assertThatThrownBy(() ->
 			testSubject.update(mockCategory.getId(), mockDetails, mockUserId)
-		).isInstanceOfSatisfying(ResponseStatusException.class, expectedException -> {
-			assertThat(expectedException.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
-			assertThat(expectedException.getReason()).isEqualTo(FOREIGN_UPDATE_REASON);
-		});
+		).isInstanceOfSatisfying(AccessDeniedException.class, expectedException ->
+			assertThat(expectedException).hasMessage(FOREIGN_UPDATE_REASON)
+		);
 	}
 
 	@Test
@@ -196,15 +194,14 @@ class AssetCategoryServiceTest {
 		// WHEN / THEN
 		assertThatThrownBy(() ->
 			testSubject.delete(mockCategory.getId(), mockUserId)
-		).isInstanceOfSatisfying(ResponseStatusException.class, expectedException -> {
-			assertThat(expectedException.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
-			assertThat(expectedException.getReason()).isEqualTo(CATEGORY_IN_USE_REASON);
-		});
+		).isInstanceOfSatisfying(ConflictException.class, expectedException ->
+			assertThat(expectedException).hasMessage(CATEGORY_IN_USE_REASON)
+		);
 		verify(categoryRepository, never()).deleteById(mockCategory.getId());
 	}
 
 	@Test
-	void delete_throwsForbidden_whenCategoryIsDefault() {
+	void delete_throwsAccessDenied_whenCategoryIsDefault() {
 		// GIVEN
 		UUID mockUserId = UUID.randomUUID();
 		AssetCategory mockCategory = Instancio.of(AssetCategory.class)
@@ -215,15 +212,14 @@ class AssetCategoryServiceTest {
 		// WHEN / THEN
 		assertThatThrownBy(() ->
 			testSubject.delete(mockCategory.getId(), mockUserId)
-		).isInstanceOfSatisfying(ResponseStatusException.class, expectedException -> {
-			assertThat(expectedException.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
-			assertThat(expectedException.getReason()).isEqualTo(DEFAULT_DELETE_REASON);
-		});
+		).isInstanceOfSatisfying(AccessDeniedException.class, expectedException ->
+			assertThat(expectedException).hasMessage(DEFAULT_DELETE_REASON)
+		);
 		verifyNoInteractions(assetRepository);
 	}
 
 	@Test
-	void delete_throwsForbidden_whenCategoryBelongsToDifferentUser() {
+	void delete_throwsAccessDenied_whenCategoryBelongsToDifferentUser() {
 		// GIVEN
 		UUID mockUserId = UUID.randomUUID();
 		UUID otherUserId = UUID.randomUUID();
@@ -238,10 +234,9 @@ class AssetCategoryServiceTest {
 		// WHEN / THEN
 		assertThatThrownBy(() ->
 			testSubject.delete(mockCategory.getId(), mockUserId)
-		).isInstanceOfSatisfying(ResponseStatusException.class, expectedException -> {
-			assertThat(expectedException.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
-			assertThat(expectedException.getReason()).isEqualTo(FOREIGN_DELETE_REASON);
-		});
+		).isInstanceOfSatisfying(AccessDeniedException.class, expectedException ->
+			assertThat(expectedException).hasMessage(FOREIGN_DELETE_REASON)
+		);
 		verifyNoInteractions(assetRepository);
 	}
 }

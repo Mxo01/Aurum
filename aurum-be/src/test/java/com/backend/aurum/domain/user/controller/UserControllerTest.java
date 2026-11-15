@@ -8,13 +8,17 @@ import static org.mockito.Mockito.when;
 import com.backend.aurum.domain.user.dto.UpdateCurrencyDTO;
 import com.backend.aurum.domain.user.dto.UpdateLocaleDTO;
 import com.backend.aurum.domain.user.dto.UpdateNameDTO;
+import com.backend.aurum.domain.user.dto.UserDTO;
 import com.backend.aurum.domain.user.dto.UserExportDTO;
 import com.backend.aurum.domain.user.enums.Currency;
 import com.backend.aurum.domain.user.enums.Locale;
 import com.backend.aurum.domain.user.model.User;
 import com.backend.aurum.domain.user.model.UserPrincipal;
 import com.backend.aurum.domain.user.service.UserService;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.instancio.Instancio;
 import org.instancio.Select;
@@ -32,6 +36,14 @@ import org.springframework.test.util.ReflectionTestUtils;
 @ExtendWith(MockitoExtension.class)
 class UserControllerTest {
 
+	private static final String ID_KEY = "id";
+
+	private static final String CURRENCY_KEY = "currency";
+
+	private static final String LOCALE_KEY = "locale";
+
+	private static final String PICTURE_KEY = "picture";
+
 	@Mock
 	private UserService userService;
 
@@ -47,19 +59,42 @@ class UserControllerTest {
 	}
 
 	@Test
-	void getUser_returnsOkWithUserFromService() {
+	void getUser_returnsTheProfileDto_andNothingElse() {
 		// GIVEN
 		UUID mockUserId = UUID.randomUUID();
 		UserPrincipal mockPrincipal = buildPrincipal(mockUserId, "auth0|user");
-		User stubbedUser = Instancio.create(User.class);
+		User stubbedUser = Instancio.of(User.class).set(Select.field(User::getId), mockUserId).create();
 		when(userService.getUserById(mockUserId)).thenReturn(stubbedUser);
 
 		// WHEN
-		ResponseEntity<User> expectedResponse = testSubject.getUser(mockPrincipal);
+		ResponseEntity<UserDTO> expectedResponse = testSubject.getUser(mockPrincipal);
 
 		// THEN
 		assertThat(expectedResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
-		assertThat(expectedResponse.getBody()).isEqualTo(stubbedUser);
+		UserDTO expectedProfile = expectedResponse.getBody();
+		assertThat(expectedProfile.getId()).isEqualTo(mockUserId);
+		assertThat(expectedProfile.getCurrency()).isEqualTo(stubbedUser.getCurrency());
+		assertThat(expectedProfile.getLocale()).isEqualTo(stubbedUser.getLocale());
+		assertThat(expectedProfile.getPicture()).isEqualTo(stubbedUser.getPicture());
+	}
+
+	@Test
+	void getUser_serializesOnlyTheProfileFields() {
+		// GIVEN
+		UUID mockUserId = UUID.randomUUID();
+		UserPrincipal mockPrincipal = buildPrincipal(mockUserId, "auth0|user");
+		User stubbedUser = Instancio.of(User.class).set(Select.field(User::getId), mockUserId).create();
+		when(userService.getUserById(mockUserId)).thenReturn(stubbedUser);
+
+		// WHEN
+		UserDTO expectedProfile = testSubject.getUser(mockPrincipal).getBody();
+
+		// THEN
+		Map<String, Object> expectedSerialized = new ObjectMapper().convertValue(
+			expectedProfile,
+			new TypeReference<Map<String, Object>>() {}
+		);
+		assertThat(expectedSerialized).containsOnlyKeys(ID_KEY, CURRENCY_KEY, LOCALE_KEY, PICTURE_KEY);
 	}
 
 	@Test

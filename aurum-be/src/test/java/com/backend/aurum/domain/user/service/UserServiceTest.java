@@ -2,9 +2,16 @@ package com.backend.aurum.domain.user.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.notNull;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import com.auth0.client.mgmt.ManagementAPI;
 import com.auth0.client.mgmt.UsersEntity;
 import com.auth0.exception.Auth0Exception;
@@ -33,6 +40,10 @@ import com.backend.aurum.domain.user.enums.Locale;
 import com.backend.aurum.domain.user.model.User;
 import com.backend.aurum.domain.user.model.UserPrincipal;
 import com.backend.aurum.domain.user.repository.UserRepository;
+import com.backend.aurum.domain.user.service.ProfilePictureFixture.Corner;
+import com.backend.aurum.domain.user.service.ProfilePictureFixture.Format;
+import com.backend.aurum.domain.user.service.ProfilePictureFixture.Quadrant;
+import com.backend.aurum.domain.user.service.ProfilePictureFixture.QuadrantLayout;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -43,11 +54,14 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Predicate;
 import java.util.stream.Stream;
 import java.util.zip.CRC32;
 import javax.imageio.ImageIO;
 import org.instancio.Instancio;
 import org.instancio.Select;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -56,6 +70,8 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.multipart.MultipartFile;
@@ -66,6 +82,10 @@ class UserServiceTest {
 	private static final String NAME_FIELD = "name";
 
 	private static final String FILE_FIELD = "file";
+
+	private static final String DEFAULT_FILE_NAME = "avatar";
+
+	private static final String OCTET_STREAM_CONTENT_TYPE = "application/octet-stream";
 
 	private static final String MISSING_NAME_MESSAGE = "Name is required";
 
@@ -167,6 +187,67 @@ class UserServiceTest {
 
 	private static final int EXIF_SEGMENT_LENGTH_BYTES = 2;
 
+	private static final byte[] JPEG_MAGIC_BYTES = { (byte) 0xFF, (byte) 0xD8, (byte) 0xFF };
+
+	private static final String CURRENCY_FIELD = "currency";
+
+	private static final String LOCALE_FIELD = "locale";
+
+	private static final String MISSING_CURRENCY_MESSAGE = "Select a currency";
+
+	private static final String MISSING_LOCALE_MESSAGE = "Select a language";
+
+	private static final String UNPROCESSABLE_PICTURE_MESSAGE = "The picture could not be processed";
+
+	private static final String FORGED_LINE_BREAK = "\n";
+
+	private static final String FORGED_FILE_NAME = "avatar" + FORGED_LINE_BREAK + "ERROR forged";
+
+	private static final String SANITIZED_FILE_NAME = "avatarERROR forged";
+
+	private static final Level VISIBLE_LOG_LEVEL = Level.INFO;
+
+	private static final Level DETAIL_LOG_LEVEL = Level.DEBUG;
+
+	private enum ExifOrientation {
+		IDENTITY(1, QuadrantLayout.SOURCE),
+		MIRRORED_HORIZONTALLY(
+			2,
+			new QuadrantLayout(Quadrant.GREEN, Quadrant.RED, Quadrant.WHITE, Quadrant.BLUE)
+		),
+		ROTATED_180(3, new QuadrantLayout(Quadrant.WHITE, Quadrant.BLUE, Quadrant.GREEN, Quadrant.RED)),
+		MIRRORED_VERTICALLY(
+			4,
+			new QuadrantLayout(Quadrant.BLUE, Quadrant.WHITE, Quadrant.RED, Quadrant.GREEN)
+		),
+		TRANSPOSED(5, new QuadrantLayout(Quadrant.RED, Quadrant.BLUE, Quadrant.GREEN, Quadrant.WHITE)),
+		ROTATED_90_CLOCKWISE(
+			6,
+			new QuadrantLayout(Quadrant.BLUE, Quadrant.RED, Quadrant.WHITE, Quadrant.GREEN)
+		),
+		TRANSVERSE(7, new QuadrantLayout(Quadrant.WHITE, Quadrant.GREEN, Quadrant.BLUE, Quadrant.RED)),
+		ROTATED_90_COUNTER_CLOCKWISE(
+			8,
+			new QuadrantLayout(Quadrant.GREEN, Quadrant.WHITE, Quadrant.RED, Quadrant.BLUE)
+		);
+
+		private final int value;
+		private final QuadrantLayout layout;
+
+		ExifOrientation(int value, QuadrantLayout layout) {
+			this.value = value;
+			this.layout = layout;
+		}
+
+		int value() {
+			return value;
+		}
+
+		QuadrantLayout layout() {
+			return layout;
+		}
+	}
+
 	@Mock
 	private UserRepository userRepository;
 
@@ -187,6 +268,28 @@ class UserServiceTest {
 
 	@InjectMocks
 	private UserService testSubject;
+
+	private ListAppender<ILoggingEvent> capturedLogLines;
+
+	private Logger userServiceLogger;
+
+	private Level stubbedLogLevel;
+
+	@BeforeEach
+	void captureLogLines() {
+		userServiceLogger = (Logger) LoggerFactory.getLogger(UserService.class);
+		stubbedLogLevel = userServiceLogger.getLevel();
+		userServiceLogger.setLevel(DETAIL_LOG_LEVEL);
+		capturedLogLines = new ListAppender<>();
+		capturedLogLines.start();
+		userServiceLogger.addAppender(capturedLogLines);
+	}
+
+	@AfterEach
+	void releaseLogLines() {
+		userServiceLogger.detachAppender(capturedLogLines);
+		userServiceLogger.setLevel(stubbedLogLevel);
+	}
 
 	@Test
 	void findOrCreate_returnsExistingUser_whenFound() {
@@ -228,7 +331,7 @@ class UserServiceTest {
 			.thenReturn(Optional.empty())
 			.thenReturn(Optional.of(stubbedUser));
 		when(userRepository.saveAndFlush(org.mockito.ArgumentMatchers.notNull())).thenThrow(
-			new org.springframework.dao.DataIntegrityViolationException("duplicate key")
+			new DataIntegrityViolationException("duplicate key")
 		);
 
 		// WHEN
@@ -244,7 +347,7 @@ class UserServiceTest {
 		String mockJwtId = "auth0|orphaned";
 		when(userRepository.findByJwtId(mockJwtId)).thenReturn(Optional.empty());
 		when(userRepository.saveAndFlush(org.mockito.ArgumentMatchers.notNull())).thenThrow(
-			new org.springframework.dao.DataIntegrityViolationException("duplicate key")
+			new DataIntegrityViolationException("duplicate key")
 		);
 
 		// WHEN / THEN
@@ -374,6 +477,28 @@ class UserServiceTest {
 		assertThatThrownBy(() -> testSubject.updateLocale(mockUserId, mockDto)).isInstanceOf(
 			NotFoundException.class
 		);
+	}
+
+	@Test
+	void updateCurrency_answersThePinned400_whenTheCurrencyIsMissing() {
+		// WHEN / THEN
+		assertThatThrownBy(() ->
+			testSubject.updateCurrency(UUID.randomUUID(), new UpdateCurrencyDTO(null))
+		).isInstanceOfSatisfying(ValidationException.class, expectedException -> {
+			assertThat(expectedException.getField()).isEqualTo(CURRENCY_FIELD);
+			assertThat(expectedException.getMessage()).isEqualTo(MISSING_CURRENCY_MESSAGE);
+		});
+	}
+
+	@Test
+	void updateLocale_answersThePinned400_whenTheLocaleIsMissing() {
+		// WHEN / THEN
+		assertThatThrownBy(() ->
+			testSubject.updateLocale(UUID.randomUUID(), new UpdateLocaleDTO(null))
+		).isInstanceOfSatisfying(ValidationException.class, expectedException -> {
+			assertThat(expectedException.getField()).isEqualTo(LOCALE_FIELD);
+			assertThat(expectedException.getMessage()).isEqualTo(MISSING_LOCALE_MESSAGE);
+		});
 	}
 
 	@Test
@@ -695,6 +820,143 @@ class UserServiceTest {
 	}
 
 	@Test
+	void deleteUser_keepsTheAuth0SubjectOutOfTheVisibleLog() throws Auth0Exception {
+		// GIVEN
+		UUID mockUserId = UUID.randomUUID();
+		String mockJwtId = "auth0|delete";
+		stubAuth0Deletion(mockJwtId);
+
+		// WHEN
+		testSubject.deleteUser(mockUserId, mockJwtId);
+
+		// THEN
+		assertThat(loggedMessagesAtOrAbove(VISIBLE_LOG_LEVEL))
+			.noneMatch(message -> message.contains(mockJwtId))
+			.anyMatch(message -> message.contains(mockUserId.toString()));
+		assertThat(loggedMessagesAt(DETAIL_LOG_LEVEL)).anyMatch(message -> message.contains(mockJwtId));
+	}
+
+	@Test
+	void deleteUser_keepsTheAuth0SubjectOutOfTheErrorLog_whenAuth0Fails() throws Auth0Exception {
+		// GIVEN
+		String mockJwtId = "auth0|faildelete";
+		when(stubAuth0Deletion(mockJwtId).execute()).thenThrow(new Auth0Exception("deletion failed"));
+
+		// WHEN / THEN
+		assertThatThrownBy(() -> testSubject.deleteUser(UUID.randomUUID(), mockJwtId)).isInstanceOf(
+			RuntimeException.class
+		);
+		assertThat(loggedMessagesAtOrAbove(VISIBLE_LOG_LEVEL)).noneMatch(message ->
+			message.contains(mockJwtId)
+		);
+	}
+
+	@Test
+	void updateAuth0Name_keepsTheAuth0SubjectOutOfTheVisibleLog() throws Auth0Exception {
+		// GIVEN
+		String mockJwtId = "auth0|user";
+		stubAuth0NameUpdate(mockJwtId);
+
+		// WHEN
+		testSubject.updateAuth0Name(mockJwtId, new UpdateNameDTO(VALID_NAME));
+
+		// THEN
+		assertThat(loggedMessagesAtOrAbove(VISIBLE_LOG_LEVEL)).noneMatch(message ->
+			message.contains(mockJwtId)
+		);
+	}
+
+	@Test
+	void updateAuth0Name_keepsTheAuth0SubjectOutOfTheErrorLog_whenAuth0Fails() throws Auth0Exception {
+		// GIVEN
+		String mockJwtId = "auth0|failedname";
+		when(stubAuth0NameUpdate(mockJwtId).execute()).thenThrow(new Auth0Exception("update failed"));
+
+		// WHEN / THEN
+		assertThatThrownBy(() ->
+			testSubject.updateAuth0Name(mockJwtId, new UpdateNameDTO(VALID_NAME))
+		).isInstanceOf(RuntimeException.class);
+		assertThat(loggedMessagesAtOrAbove(VISIBLE_LOG_LEVEL)).noneMatch(message ->
+			message.contains(mockJwtId)
+		);
+	}
+
+	@Test
+	void findOrCreate_keepsTheAuth0SubjectOutOfTheInfoLog() {
+		// GIVEN
+		String mockJwtId = "auth0|newuser";
+		when(userRepository.findByJwtId(mockJwtId)).thenReturn(Optional.empty());
+		when(userRepository.saveAndFlush(notNull())).thenReturn(Instancio.create(User.class));
+
+		// WHEN
+		testSubject.findOrCreate(mockJwtId);
+
+		// THEN
+		assertThat(loggedMessagesAtOrAbove(VISIBLE_LOG_LEVEL)).noneMatch(message ->
+			message.contains(mockJwtId)
+		);
+	}
+
+	@Test
+	void findOrCreate_keepsTheAuth0SubjectOutOfTheConcurrencyWarning() {
+		// GIVEN
+		String mockJwtId = "auth0|concurrent";
+		User stubbedUser = Instancio.create(User.class);
+		when(userRepository.findByJwtId(mockJwtId))
+			.thenReturn(Optional.empty())
+			.thenReturn(Optional.of(stubbedUser));
+		when(userRepository.saveAndFlush(notNull())).thenThrow(
+			new DataIntegrityViolationException("duplicate key")
+		);
+
+		// WHEN
+		testSubject.findOrCreate(mockJwtId);
+
+		// THEN
+		assertThat(loggedMessagesAtOrAbove(VISIBLE_LOG_LEVEL)).noneMatch(message ->
+			message.contains(mockJwtId)
+		);
+		assertThat(loggedMessagesAt(DETAIL_LOG_LEVEL)).anyMatch(message -> message.contains(mockJwtId));
+	}
+
+	private Request<Void> stubAuth0Deletion(String jwtId) throws Auth0Exception {
+		ManagementAPI mockMgmt = mock(ManagementAPI.class);
+		UsersEntity mockUsers = mock(UsersEntity.class);
+		Request<Void> mockRequest = mock(Request.class);
+		when(auth0ManagementService.getManagementAPI()).thenReturn(mockMgmt);
+		when(mockMgmt.users()).thenReturn(mockUsers);
+		when(mockUsers.delete(jwtId)).thenReturn(mockRequest);
+		return mockRequest;
+	}
+
+	private Request<com.auth0.json.mgmt.users.User> stubAuth0NameUpdate(String jwtId)
+		throws Auth0Exception {
+		ManagementAPI mockMgmt = mock(ManagementAPI.class);
+		UsersEntity mockUsers = mock(UsersEntity.class);
+		Request<com.auth0.json.mgmt.users.User> mockRequest = mock(Request.class);
+		when(auth0ManagementService.getManagementAPI()).thenReturn(mockMgmt);
+		when(mockMgmt.users()).thenReturn(mockUsers);
+		when(mockUsers.update(eq(jwtId), notNull())).thenReturn(mockRequest);
+		return mockRequest;
+	}
+
+	private List<String> loggedMessagesAtOrAbove(Level level) {
+		return loggedMessagesWhere(event -> event.getLevel().isGreaterOrEqual(level));
+	}
+
+	private List<String> loggedMessagesAt(Level level) {
+		return loggedMessagesWhere(event -> event.getLevel() == level);
+	}
+
+	private List<String> loggedMessagesWhere(Predicate<ILoggingEvent> condition) {
+		return capturedLogLines.list
+			.stream()
+			.filter(condition)
+			.map(ILoggingEvent::getFormattedMessage)
+			.toList();
+	}
+
+	@Test
 	void exceedsPixelLimit_isFalseWithinTheLimit() {
 		assertThat(UserService.exceedsPixelLimit(2_000, 2_000)).isFalse();
 	}
@@ -767,10 +1029,7 @@ class UserServiceTest {
 		testSubject.updatePicture(mockUserId, mockFile);
 
 		// THEN
-		byte[] expectedPicture = Base64.getDecoder().decode(mockUser.getPicture());
-		BufferedImage expectedImage = ImageIO.read(new ByteArrayInputStream(expectedPicture));
-		assertThat(expectedImage.getWidth()).isEqualTo(PROFILE_PICTURE_SIZE);
-		assertThat(expectedImage.getHeight()).isEqualTo(PROFILE_PICTURE_SIZE);
+		assertStoredProfilePictureIsSquare(mockUser);
 	}
 
 	@Test
@@ -878,6 +1137,73 @@ class UserServiceTest {
 		);
 	}
 
+	@ParameterizedTest(name = "{0} with {1}")
+	@MethodSource("exifOrientedPictures")
+	void updatePicture_orientsThePictureTheExifDemands(Format format, ExifOrientation orientation)
+		throws IOException {
+		// GIVEN
+		UUID mockUserId = UUID.randomUUID();
+		User mockUser = userWithoutPicture();
+		MultipartFile mockFile = buildPictureFile(
+			ProfilePictureFixture.picture(format, orientation.value())
+		);
+		when(userRepository.findById(mockUserId)).thenReturn(Optional.of(mockUser));
+
+		// WHEN
+		testSubject.updatePicture(mockUserId, mockFile);
+
+		// THEN
+		QuadrantLayout expectedLayout = format.carriesExif()
+			? orientation.layout()
+			: QuadrantLayout.SOURCE;
+		BufferedImage expectedPicture = readStoredProfilePicture(mockUser);
+		for (Corner corner : Corner.values()) {
+			assertThat(ProfilePictureFixture.quadrantOf(expectedPicture, corner))
+				.as("%s with %s, %s quadrant", format, orientation, corner)
+				.isEqualTo(expectedLayout.at(corner));
+		}
+	}
+
+	private static Stream<Arguments> exifOrientedPictures() {
+		return Arrays.stream(Format.values()).flatMap(format ->
+			Arrays.stream(ExifOrientation.values()).map(orientation -> Arguments.of(format, orientation))
+		);
+	}
+
+	@Test
+	void updatePicture_answersThePinned400_whenThePictureCannotBeProcessed() throws IOException {
+		// GIVEN
+		MultipartFile mockFile = buildPictureFile(ProfilePictureFixture.jpegWithoutScanData());
+
+		// WHEN / THEN
+		assertThatThrownBy(() ->
+			testSubject.updatePicture(UUID.randomUUID(), mockFile)
+		).isInstanceOfSatisfying(ValidationException.class, expectedException -> {
+			assertThat(expectedException.getField()).isEqualTo(FILE_FIELD);
+			assertThat(expectedException.getMessage()).isEqualTo(UNPROCESSABLE_PICTURE_MESSAGE);
+		});
+	}
+
+	@Test
+	void updatePicture_stripsTheLineBreakOutOfTheLoggedFileName() throws IOException {
+		// GIVEN
+		UUID mockUserId = UUID.randomUUID();
+		User mockUser = userWithoutPicture();
+		MultipartFile mockFile = buildPictureFile(
+			FORGED_FILE_NAME,
+			ProfilePictureFixture.picture(Format.JPEG, ExifOrientation.IDENTITY.value())
+		);
+		when(userRepository.findById(mockUserId)).thenReturn(Optional.of(mockUser));
+
+		// WHEN
+		testSubject.updatePicture(mockUserId, mockFile);
+
+		// THEN
+		assertThat(loggedMessagesAt(DETAIL_LOG_LEVEL))
+			.anyMatch(message -> message.contains(SANITIZED_FILE_NAME))
+			.allMatch(message -> !message.contains(FORGED_LINE_BREAK));
+	}
+
 	private static Stream<Arguments> supportedPictureFormats() {
 		return Stream.of(Arguments.of(GIF_FORMAT), Arguments.of(BMP_FORMAT));
 	}
@@ -887,10 +1213,21 @@ class UserServiceTest {
 	}
 
 	private static void assertStoredProfilePictureIsSquare(User mockUser) throws IOException {
-		byte[] expectedPicture = Base64.getDecoder().decode(mockUser.getPicture());
-		BufferedImage expectedImage = ImageIO.read(new ByteArrayInputStream(expectedPicture));
+		BufferedImage expectedImage = readStoredProfilePicture(mockUser);
 		assertThat(expectedImage.getWidth()).isEqualTo(PROFILE_PICTURE_SIZE);
 		assertThat(expectedImage.getHeight()).isEqualTo(PROFILE_PICTURE_SIZE);
+	}
+
+	/**
+	 * The stored value is bare base64, the SPA adds the data-URL prefix, and whatever the upload
+	 * format was the profile picture is a JPEG.
+	 */
+	private static BufferedImage readStoredProfilePicture(User mockUser) throws IOException {
+		byte[] expectedPicture = Base64.getDecoder().decode(mockUser.getPicture());
+		assertThat(Arrays.copyOf(expectedPicture, JPEG_MAGIC_BYTES.length))
+			.as("the stored picture starts with the JPEG signature")
+			.isEqualTo(JPEG_MAGIC_BYTES);
+		return ImageIO.read(new ByteArrayInputStream(expectedPicture));
 	}
 
 	private static byte[] encodedPicture(String formatName) throws IOException {
@@ -984,7 +1321,11 @@ class UserServiceTest {
 	}
 
 	private MultipartFile buildPictureFile(byte[] bytes) {
-		return new MockMultipartFile("file", "avatar", "application/octet-stream", bytes);
+		return buildPictureFile(DEFAULT_FILE_NAME, bytes);
+	}
+
+	private MultipartFile buildPictureFile(String fileName, byte[] bytes) {
+		return new MockMultipartFile(FILE_FIELD, fileName, OCTET_STREAM_CONTENT_TYPE, bytes);
 	}
 
 	private static byte[] unknownFormatBytes() {

@@ -11,6 +11,7 @@ import com.backend.aurum.domain.shared.currency.CurrencyConversionService;
 import com.backend.aurum.domain.shared.exception.AccessDeniedException;
 import com.backend.aurum.domain.shared.exception.NotFoundException;
 import com.backend.aurum.domain.shared.exception.ValidationException;
+import com.backend.aurum.domain.shared.logging.LogSafe;
 import com.backend.aurum.domain.user.enums.Currency;
 import com.backend.aurum.domain.user.model.User;
 import java.math.BigDecimal;
@@ -59,26 +60,29 @@ public class AssetService {
 			throw new AccessDeniedException("This asset does not belong to you");
 		}
 
-		log.debug("AssetService#findById - Asset found: assetId={}, name={}", id, asset.getName());
+		log.debug(
+			"AssetService#findById - Asset found: assetId={}, name={}",
+			id,
+			LogSafe.text(asset.getName())
+		);
 		return asset;
 	}
 
 	@Transactional
 	public Asset save(Asset asset, BigDecimal initialValue, LocalDate referenceDate) {
-		log.debug("AssetService#save - Persisting new asset: name={}", asset.getName());
+		log.debug("AssetService#save - Persisting new asset: name={}", LogSafe.text(asset.getName()));
 		requireLiabilityCategoryMatch(LiabilityConfiguration.of(asset), asset.getCategory());
 		Asset savedAsset = assetRepository.save(Objects.requireNonNull(asset));
 		log.info(
 			"AssetService#save - Asset created: assetId={}, name={}",
 			savedAsset.getId(),
-			savedAsset.getName()
+			LogSafe.text(savedAsset.getName())
 		);
 
 		if (initialValue != null && referenceDate != null) {
 			log.debug(
-				"AssetService#save - Creating initial snapshot for assetId={}, amount={}, date={}",
+				"AssetService#save - Creating initial snapshot for assetId={}, date={}",
 				savedAsset.getId(),
-				initialValue,
 				referenceDate
 			);
 			Snapshot snapshot = new Snapshot();
@@ -144,7 +148,7 @@ public class AssetService {
 		log.info(
 			"AssetService#update - Asset updated: assetId={}, name={}",
 			updated.getId(),
-			updated.getName()
+			LogSafe.text(updated.getName())
 		);
 		return updated;
 	}

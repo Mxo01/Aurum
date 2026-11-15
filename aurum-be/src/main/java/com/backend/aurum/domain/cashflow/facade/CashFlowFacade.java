@@ -6,6 +6,7 @@ import com.backend.aurum.domain.cashflow.dto.UpdateCashFlowEntryDTO;
 import com.backend.aurum.domain.cashflow.mapper.CashFlowMapper;
 import com.backend.aurum.domain.cashflow.model.CashFlow;
 import com.backend.aurum.domain.cashflow.service.CashFlowService;
+import com.backend.aurum.domain.cashflow.validation.CashFlowValidationService;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +18,7 @@ public class CashFlowFacade {
 
 	private final CashFlowService cashFlowService;
 	private final CashFlowMapper mapper;
+	private final CashFlowValidationService validationService;
 
 	public CashFlowYearDTO getYear(UUID userId, Integer year) {
 		List<CashFlow> entries = cashFlowService.getEntriesForYear(userId, year);
@@ -41,6 +43,7 @@ public class CashFlowFacade {
 		Integer month,
 		UpdateCashFlowEntryDTO dto
 	) {
+		validationService.validate(year, month, dto);
 		CashFlow updated = cashFlowService.upsertEntry(
 			userId,
 			year,

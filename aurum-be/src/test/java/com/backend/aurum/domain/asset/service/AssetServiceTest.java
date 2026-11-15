@@ -344,6 +344,11 @@ class AssetServiceTest {
 				"no liability block in a liability category",
 				noLiability(),
 				LIABILITY_CATEGORY_TYPE
+			),
+			Arguments.of(
+				"a liability block without a category",
+				automaticLiability(STORED_PAYMENT_FREQUENCY, STORED_PAYMENT_AMOUNT),
+				null
 			)
 		);
 	}
@@ -863,7 +868,7 @@ class AssetServiceTest {
 
 	private Asset newAsset(LiabilityConfiguration liability, AssetType categoryType) {
 		return Instancio.of(Asset.class)
-			.set(Select.field(Asset::getCategory), categoryOf(categoryType))
+			.set(Select.field(Asset::getCategory), categoryType == null ? null : categoryOf(categoryType))
 			.set(Select.field(Asset::getLiabilityType), liability.type())
 			.set(Select.field(Asset::getPaymentFrequency), liability.frequency())
 			.set(Select.field(Asset::getPaymentAmount), liability.amount())

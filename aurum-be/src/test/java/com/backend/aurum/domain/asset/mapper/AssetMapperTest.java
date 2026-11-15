@@ -58,6 +58,7 @@ class AssetMapperTest {
 	private static final BigDecimal CONVERTED_LATEST_AMOUNT = new BigDecimal("750");
 	private static final String UPDATED_ASSET_NAME = "Renamed asset";
 	private static final String CATEGORY_NOT_OWNED_MESSAGE = "This category does not belong to you";
+	private static final String USER_ID_FIELD = "userId";
 
 	@Mock
 	private AssetCategoryRepository categoryRepository;
@@ -163,37 +164,35 @@ class AssetMapperTest {
 	@Test
 	void toEntity_createDto_appliesDefaults_whenOptionalFieldsAreAbsent() {
 		// GIVEN
+		UUID mockUserId = UUID.randomUUID();
+		User mockUser = userWithId(mockUserId);
 		CreateAssetDTO mockDto = Instancio.of(CreateAssetDTO.class)
 			.set(Select.field(CreateAssetDTO::getIsFavorite), null)
 			.set(Select.field(CreateAssetDTO::getOriginalCurrency), null)
 			.set(Select.field(CreateAssetDTO::getCategoryId), null)
 			.create();
+		when(userRepository.findById(mockUserId)).thenReturn(Optional.of(mockUser));
 
 		// WHEN
-		Asset result = testSubject.toEntity(mockDto, null);
+		Asset result = testSubject.toEntity(mockDto, mockUserId);
 
 		// THEN
 		assertThat(result.getIsFavorite()).isFalse();
 		assertThat(result.getOriginalCurrency()).isEqualTo(Currency.EUR);
-		assertThat(result.getUser()).isNull();
+		assertThat(result.getUser()).isEqualTo(mockUser);
 		assertThat(result.getCategory()).isNull();
 	}
 
 	@Test
-	void toEntity_createDto_throwsAccessDeniedException_whenCategoryIsOwned_andNoUserIsGiven() {
+	void toEntity_createDto_rejectsANullUserId_beforeTheCategoryAndTheOwnerAreRead() {
 		// GIVEN
-		AssetCategory mockCategory = Instancio.of(AssetCategory.class)
-			.set(Select.field(AssetCategory::getUser), Instancio.create(User.class))
-			.create();
-		CreateAssetDTO mockDto = Instancio.of(CreateAssetDTO.class)
-			.set(Select.field(CreateAssetDTO::getCategoryId), mockCategory.getId())
-			.create();
-		when(categoryRepository.findById(mockCategory.getId())).thenReturn(Optional.of(mockCategory));
+		CreateAssetDTO mockDto = Instancio.create(CreateAssetDTO.class);
 
 		// WHEN / THEN
 		assertThatThrownBy(() -> testSubject.toEntity(mockDto, null))
-			.isInstanceOf(AccessDeniedException.class)
-			.hasMessage(CATEGORY_NOT_OWNED_MESSAGE);
+			.isInstanceOf(NullPointerException.class)
+			.hasMessage(USER_ID_FIELD);
+		verifyNoInteractions(userRepository, categoryRepository);
 	}
 
 	@Test
@@ -287,7 +286,7 @@ class AssetMapperTest {
 	}
 
 	@Test
-	void toUpdate_acceptsACategoryWithoutAnOwner_whenNoUserIsGiven() {
+	void toUpdate_acceptsACategoryWithoutAnOwner() {
 		// GIVEN
 		AssetCategory mockCategory = Instancio.of(AssetCategory.class)
 			.set(Select.field(AssetCategory::getUser), null)
@@ -297,7 +296,7 @@ class AssetMapperTest {
 		when(categoryRepository.findById(mockCategory.getId())).thenReturn(Optional.of(mockCategory));
 
 		// WHEN
-		AssetUpdate expectedUpdate = testSubject.toUpdate(mockDto, null);
+		AssetUpdate expectedUpdate = testSubject.toUpdate(mockDto, UUID.randomUUID());
 
 		// THEN
 		assertThat(expectedUpdate.category()).contains(mockCategory);
@@ -335,19 +334,16 @@ class AssetMapperTest {
 	}
 
 	@Test
-	void toUpdate_throwsAccessDeniedException_whenTheCategoryIsOwned_andNoUserIsGiven() {
+	void toUpdate_rejectsANullUserId_beforeTheCategoryIsLoaded() {
 		// GIVEN
-		AssetCategory mockCategory = Instancio.of(AssetCategory.class)
-			.set(Select.field(AssetCategory::getUser), Instancio.create(User.class))
-			.create();
 		UpdateAssetDTO mockDto = buildUpdateDto();
-		mockDto.setCategoryId(mockCategory.getId());
-		when(categoryRepository.findById(mockCategory.getId())).thenReturn(Optional.of(mockCategory));
+		mockDto.setCategoryId(UUID.randomUUID());
 
 		// WHEN / THEN
 		assertThatThrownBy(() -> testSubject.toUpdate(mockDto, null))
-			.isInstanceOf(AccessDeniedException.class)
-			.hasMessage(CATEGORY_NOT_OWNED_MESSAGE);
+			.isInstanceOf(NullPointerException.class)
+			.hasMessage(USER_ID_FIELD);
+		verifyNoInteractions(categoryRepository);
 	}
 
 	@ParameterizedTest(name = "{0}")

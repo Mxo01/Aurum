@@ -63,6 +63,26 @@ class SnapshotValidationServiceTest {
 
 	private static final BigDecimal NEGATIVE_RATE = new BigDecimal("-0.5");
 
+	private static final BigDecimal AMOUNT_AT_FOUR_DECIMALS = new BigDecimal("500.0001");
+
+	private static final BigDecimal AMOUNT_OVER_FOUR_DECIMALS = new BigDecimal("500.00001");
+
+	private static final BigDecimal AMOUNT_AT_NINETEEN_DIGITS = new BigDecimal(
+		"123456789012345.9999"
+	);
+
+	private static final BigDecimal AMOUNT_OVER_FIFTEEN_INTEGER_DIGITS = new BigDecimal(
+		"1234567890123456"
+	);
+
+	private static final BigDecimal RATE_AT_SIX_DECIMALS = new BigDecimal("0.123456");
+
+	private static final BigDecimal RATE_OVER_SIX_DECIMALS = new BigDecimal("0.1234567");
+
+	private static final BigDecimal RATE_AT_CEILING = new BigDecimal("1000000");
+
+	private static final BigDecimal RATE_OVER_CEILING = new BigDecimal("1000001");
+
 	private static final String ASSET_ID_FIELD = "assetId";
 
 	private static final String REFERENCE_DATE_FIELD = "referenceDate";
@@ -83,6 +103,16 @@ class SnapshotValidationServiceTest {
 
 	private static final String NON_POSITIVE_EXCHANGE_RATE_MESSAGE =
 		"Exchange rate must be greater than zero";
+
+	private static final String AMOUNT_SCALE_MESSAGE =
+		"Amount cannot have more than 4 decimal places";
+
+	private static final String AMOUNT_TOO_LARGE_MESSAGE = "Amount is too large";
+
+	private static final String RATE_SCALE_MESSAGE =
+		"Exchange rate cannot have more than 6 decimal places";
+
+	private static final String RATE_TOO_LARGE_MESSAGE = "Exchange rate is too large";
 
 	private static final String ASSET_NOT_FOUND_MESSAGE = "Asset not found";
 
@@ -158,6 +188,30 @@ class SnapshotValidationServiceTest {
 				createDtoWith(dto -> dto.setExchangeRateToBase(NEGATIVE_RATE)),
 				EXCHANGE_RATE_FIELD,
 				NON_POSITIVE_EXCHANGE_RATE_MESSAGE
+			),
+			new CreateRejection(
+				"400 on the amount when it has more than four decimals",
+				createDtoWith(dto -> dto.setAmountOriginalCurrency(AMOUNT_OVER_FOUR_DECIMALS)),
+				AMOUNT_FIELD,
+				AMOUNT_SCALE_MESSAGE
+			),
+			new CreateRejection(
+				"400 on the amount when it does not fit the money column",
+				createDtoWith(dto -> dto.setAmountOriginalCurrency(AMOUNT_OVER_FIFTEEN_INTEGER_DIGITS)),
+				AMOUNT_FIELD,
+				AMOUNT_TOO_LARGE_MESSAGE
+			),
+			new CreateRejection(
+				"400 on the exchange rate when it has more than six decimals",
+				createDtoWith(dto -> dto.setExchangeRateToBase(RATE_OVER_SIX_DECIMALS)),
+				EXCHANGE_RATE_FIELD,
+				RATE_SCALE_MESSAGE
+			),
+			new CreateRejection(
+				"400 on the exchange rate when it is past the ceiling",
+				createDtoWith(dto -> dto.setExchangeRateToBase(RATE_OVER_CEILING)),
+				EXCHANGE_RATE_FIELD,
+				RATE_TOO_LARGE_MESSAGE
 			)
 		);
 	}
@@ -220,6 +274,30 @@ class SnapshotValidationServiceTest {
 				snapshotDtoWith(dto -> dto.setExchangeRateToBase(NEGATIVE_RATE)),
 				EXCHANGE_RATE_FIELD,
 				NON_POSITIVE_EXCHANGE_RATE_MESSAGE
+			),
+			new SnapshotRejection(
+				"400 on the amount when it has more than four decimals",
+				snapshotDtoWith(dto -> dto.setAmountOriginalCurrency(AMOUNT_OVER_FOUR_DECIMALS)),
+				AMOUNT_FIELD,
+				AMOUNT_SCALE_MESSAGE
+			),
+			new SnapshotRejection(
+				"400 on the amount when it does not fit the money column",
+				snapshotDtoWith(dto -> dto.setAmountOriginalCurrency(AMOUNT_OVER_FIFTEEN_INTEGER_DIGITS)),
+				AMOUNT_FIELD,
+				AMOUNT_TOO_LARGE_MESSAGE
+			),
+			new SnapshotRejection(
+				"400 on the exchange rate when it has more than six decimals",
+				snapshotDtoWith(dto -> dto.setExchangeRateToBase(RATE_OVER_SIX_DECIMALS)),
+				EXCHANGE_RATE_FIELD,
+				RATE_SCALE_MESSAGE
+			),
+			new SnapshotRejection(
+				"400 on the exchange rate when it is past the ceiling",
+				snapshotDtoWith(dto -> dto.setExchangeRateToBase(RATE_OVER_CEILING)),
+				EXCHANGE_RATE_FIELD,
+				RATE_TOO_LARGE_MESSAGE
 			)
 		);
 	}
@@ -463,6 +541,58 @@ class SnapshotValidationServiceTest {
 		).doesNotThrowAnyException();
 	}
 
+	@ParameterizedTest(name = "create: {0}")
+	@MethodSource("acceptedAmounts")
+	void validate_createDto_acceptsAmountsAndRatesWithinTheirColumns(
+		AcceptedAmounts acceptedAmounts
+	) {
+		// GIVEN
+		Asset mockAsset = buildAsset(REQUESTING_USER_ID, null);
+		CreateSnapshotDTO mockDto = buildCreateDto(mockAsset.getId());
+		mockDto.setAmountOriginalCurrency(acceptedAmounts.amount());
+		mockDto.setExchangeRateToBase(acceptedAmounts.rate());
+		when(assetRepository.findById(mockAsset.getId())).thenReturn(Optional.of(mockAsset));
+
+		// WHEN / THEN
+		assertThatCode(() ->
+			testSubject.validate(mockDto, REQUESTING_USER_ID)
+		).doesNotThrowAnyException();
+	}
+
+	@ParameterizedTest(name = "update: {0}")
+	@MethodSource("acceptedAmounts")
+	void validate_snapshotDto_acceptsAmountsAndRatesWithinTheirColumns(
+		AcceptedAmounts acceptedAmounts
+	) {
+		// GIVEN
+		Asset mockAsset = buildAsset(REQUESTING_USER_ID, null);
+		SnapshotDTO mockDto = buildSnapshotDto(mockAsset.getId());
+		mockDto.setAmountOriginalCurrency(acceptedAmounts.amount());
+		mockDto.setExchangeRateToBase(acceptedAmounts.rate());
+		when(assetRepository.findById(mockAsset.getId())).thenReturn(Optional.of(mockAsset));
+
+		// WHEN / THEN
+		assertThatCode(() ->
+			testSubject.validate(mockDto, REQUESTING_USER_ID)
+		).doesNotThrowAnyException();
+	}
+
+	static Stream<AcceptedAmounts> acceptedAmounts() {
+		return Stream.of(
+			new AcceptedAmounts(
+				"an amount with four decimals and a rate with six",
+				AMOUNT_AT_FOUR_DECIMALS,
+				RATE_AT_SIX_DECIMALS
+			),
+			new AcceptedAmounts(
+				"the widest amount the money column holds",
+				AMOUNT_AT_NINETEEN_DIGITS,
+				POSITIVE_RATE
+			),
+			new AcceptedAmounts("a rate exactly at the ceiling", SNAPSHOT_AMOUNT, RATE_AT_CEILING)
+		);
+	}
+
 	static Stream<Arguments> toleratedReferenceDates() {
 		return Stream.of(Arguments.of(FIXED_TODAY), Arguments.of(TOMORROW));
 	}
@@ -524,4 +654,6 @@ class SnapshotValidationServiceTest {
 		String expectedField,
 		String expectedMessage
 	) {}
+
+	private record AcceptedAmounts(String scenario, BigDecimal amount, BigDecimal rate) {}
 }

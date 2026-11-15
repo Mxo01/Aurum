@@ -12,6 +12,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.backend.aurum.domain.asset.dto.CreateAssetCategoryDTO;
 import com.backend.aurum.domain.asset.facade.AssetCategoryFacade;
+import com.backend.aurum.domain.shared.exception.AccessDeniedException;
+import com.backend.aurum.domain.shared.exception.ConflictException;
 import com.backend.aurum.domain.shared.exception.ValidationException;
 import com.backend.aurum.domain.user.model.User;
 import com.backend.aurum.domain.user.model.UserPrincipal;
@@ -37,7 +39,6 @@ import org.springframework.web.bind.support.WebDataBinderFactory;
 import org.springframework.web.context.request.NativeWebRequest;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.method.support.ModelAndViewContainer;
-import org.springframework.web.server.ResponseStatusException;
 
 @ExtendWith(MockitoExtension.class)
 class AssetCategoryControllerHttpTest {
@@ -114,7 +115,7 @@ class AssetCategoryControllerHttpTest {
 	@Test
 	void deleteCategory_answers409WithNoField_asThePinnedEnvelope() throws Exception {
 		// GIVEN
-		doThrow(new ResponseStatusException(HttpStatus.CONFLICT, CATEGORY_IN_USE_REASON))
+		doThrow(new ConflictException(CATEGORY_IN_USE_REASON))
 			.when(categoryFacade)
 			.deleteCategory(mockCategoryId, mockUserId);
 
@@ -134,9 +135,9 @@ class AssetCategoryControllerHttpTest {
 	}
 
 	@Test
-	void deleteCategory_answers403WithNoField_asThePinnedEnvelope() throws Exception {
+	void deleteCategory_answers403WithNoField_whenTheCategoryBelongsToAnotherUser() throws Exception {
 		// GIVEN
-		doThrow(new ResponseStatusException(HttpStatus.FORBIDDEN, FOREIGN_CATEGORY_REASON))
+		doThrow(new AccessDeniedException(FOREIGN_CATEGORY_REASON))
 			.when(categoryFacade)
 			.deleteCategory(mockCategoryId, mockUserId);
 
