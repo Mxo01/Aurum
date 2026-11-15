@@ -82,7 +82,9 @@ public class AssetFacade {
 		validationService.validate(dto);
 		AssetUpdate update = mapper.toUpdate(dto, userId);
 		Asset updated = assetService.update(id, update, userId);
-		List<Snapshot> latestTwo = snapshotRepository.findTop2ByAssetIdOrderByReferenceDateDesc(id);
+		List<Snapshot> latestTwo = snapshotRepository.findTop2ByAssetIdOrderByReferenceDateDescIdAsc(
+			id
+		);
 		LocalDate today = LocalDate.now(clock);
 		RateBook book = conversionService.book(
 			currencyOf(userId),

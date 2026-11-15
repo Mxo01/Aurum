@@ -103,9 +103,10 @@ autoconfiguration lives in its own module, so `spring-boot-liquibase` is a
 declared dependency; without it no changeset runs and `spring.liquibase.*` stays
 inert.
 
-Applied changesets are recorded in `databasechangelog`. Production holds 23
-rows, one per changeset that predates this one, so it needs nothing: the next
-deploy applies only the newer changesets.
+Applied changesets are recorded in `databasechangelog`. A database that is up
+to date holds one row per changeset — 29 at the time of writing — and needs
+nothing: Liquibase applies only the changesets it has not recorded yet. The
+count is a checkpoint to compare against, never a constant to assume.
 
 ### One-time baseline for a database that predates the module
 

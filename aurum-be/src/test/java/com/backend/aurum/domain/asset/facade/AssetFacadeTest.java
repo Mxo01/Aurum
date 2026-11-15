@@ -237,7 +237,7 @@ class AssetFacadeTest {
 		stubUserCurrency(mockUserId, USER_CURRENCY);
 		when(mapper.toUpdate(mockDto, mockUserId)).thenReturn(mockUpdate);
 		when(assetService.update(mockId, mockUpdate, mockUserId)).thenReturn(mockUpdated);
-		when(snapshotRepository.findTop2ByAssetIdOrderByReferenceDateDesc(mockId)).thenReturn(
+		when(snapshotRepository.findTop2ByAssetIdOrderByReferenceDateDescIdAsc(mockId)).thenReturn(
 			stubbedSnapshots
 		);
 		when(mapper.toDtoLight(mockUpdated, stubbedSnapshots, book, TODAY)).thenReturn(stubbedDto);

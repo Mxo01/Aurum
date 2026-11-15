@@ -14,6 +14,7 @@ import com.backend.aurum.domain.asset.mapper.AssetMapper;
 import com.backend.aurum.domain.asset.model.Asset;
 import com.backend.aurum.domain.asset.model.AssetCategory;
 import com.backend.aurum.domain.asset.model.AssetType;
+import com.backend.aurum.domain.asset.model.LiabilityType;
 import com.backend.aurum.domain.asset.model.Snapshot;
 import com.backend.aurum.domain.asset.repository.AssetRepository;
 import com.backend.aurum.domain.asset.repository.SnapshotRepository;
@@ -32,6 +33,7 @@ import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -48,23 +50,38 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class AnalyticsServiceTest {
 
 	private static final LocalDate TODAY = LocalDate.of(2026, 6, 15);
-	private static final LocalDate LATEST_SNAPSHOT_DATE = LocalDate.of(2026, 6, 14);
-	private static final LocalDate OLDEST_SNAPSHOT_DATE = LocalDate.of(2025, 6, 14);
-	private static final LocalDate ONE_MONTH_ANCHOR = LocalDate.of(2026, 5, 14);
-	private static final LocalDate SIX_MONTHS_ANCHOR = LocalDate.of(2025, 12, 14);
-	private static final LocalDate CURRENCY_IMPACT_START = LocalDate.of(2026, 5, 15);
-	private static final LocalDate ONE_YEAR_AGO = LocalDate.of(2025, 6, 15);
-	private static final LocalDate JANUARY_SNAPSHOT_DATE = LocalDate.of(2025, 1, 10);
-	private static final LocalDate PROJECTION_BASELINE_DATE = LocalDate.of(2024, 12, 31);
+	private static final LocalDate ONE_YEAR_AGO = TODAY.minusYears(1);
+	private static final LocalDate SUMMARY_WINDOW_START = TODAY.minusYears(1).minusMonths(2);
+	private static final LocalDate CURRENCY_IMPACT_START = TODAY.minusMonths(1);
+	private static final LocalDate LATEST_DATA_DATE = LocalDate.of(2026, 6, 10);
+	private static final LocalDate TIE_SNAPSHOT_DATE = LocalDate.of(2026, 6, 10);
+	private static final LocalDate STALE_SNAPSHOT_DATE = LocalDate.of(2024, 6, 15);
 	private static final LocalDate FUTURE_SNAPSHOT_DATE = LocalDate.of(2026, 6, 20);
-	private static final LocalDate MID_SERIES_SNAPSHOT_DATE = LocalDate.of(2026, 1, 1);
+	private static final LocalDate CHART_SNAPSHOT_DATE = LocalDate.of(2026, 1, 1);
+	private static final LocalDate CURRENCY_IMPACT_SNAPSHOT_DATE = LocalDate.of(2026, 5, 10);
+	private static final LocalDate HISTORY_SNAPSHOT_DATE = LocalDate.of(2024, 12, 31);
+	private static final LocalDate OLDEST_SNAPSHOT_DATE = LocalDate.of(2021, 3, 1);
 
 	private static final Currency EUR = Currency.EUR;
-	private static final Currency GBP = Currency.GBP;
 	private static final Currency USD = Currency.USD;
 
-	private static final BigDecimal STORED_RATE = new BigDecimal("2.0000");
+	private static final UUID SNAPSHOT_LOWEST_ID = UUID.fromString(
+		"00000000-0000-4000-8000-000000000001"
+	);
+	private static final UUID SNAPSHOT_HIGHEST_ID = UUID.fromString(
+		"00000000-0000-4000-8000-000000000002"
+	);
 
+	private static final UUID TWIN_ASSET_ID = UUID.fromString("3f7c1e2a-0000-4000-8000-000000000001");
+	private static final UUID TWIN_LIABILITY_ID = UUID.fromString(
+		"9b2d4c6e-0000-4000-8000-000000000002"
+	);
+	private static final String TWIN_NAME = "Twin";
+	private static final String TWIN_ASSET_SERIES = "Twin (3f7c1e2a)";
+	private static final String TWIN_LIABILITY_SERIES = "Twin (9b2d4c6e)";
+	private static final String CASH_NAME = "Cash";
+
+	private static final BigDecimal STORED_RATE = new BigDecimal("2.0000");
 	private static final String EXCHANGE_RATE_OUTAGE_MESSAGE =
 		"Exchange rate provider is unavailable";
 
@@ -124,26 +141,1019 @@ class AnalyticsServiceTest {
 	private AnalyticsService testSubject;
 
 	@Test
-	void getNetWorth_convertsIntoUserCurrencyAtToday() {
+	void getSummary_carriesInTheLastValue_whenItsOnlySnapshotPredatesTheWindow() {
+		// GIVEN
+		UUID mockUserId = UUID.randomUUID();
+		stubClockAt(TODAY);
+		stubUserCurrency(mockUserId, EUR);
+		Asset mockAsset = buildAsset(buildCategory(AssetType.ASSET, "Cash"), EUR, "Stale", false);
+		Snapshot mockStaleSnapshot = buildSnapshot(mockAsset, "4000", STALE_SNAPSHOT_DATE);
+		List<LocalDate> expectedDates = summaryDates(STALE_SNAPSHOT_DATE);
+		RateBook mockBook = stubBook(EUR, List.of(EUR), expectedDates);
+		AssetDTO stubbedTopAsset = Instancio.create(AssetDTO.class);
+		when(
+			assetMapper.toDtoLight(eq(mockAsset), eq(List.of(mockStaleSnapshot)), eq(mockBook), eq(TODAY))
+		).thenReturn(stubbedTopAsset);
+		stubAssets(mockUserId, mockAsset);
+		stubSummarySnapshots(mockUserId, List.of(), List.of(mockStaleSnapshot), STALE_SNAPSHOT_DATE);
+
+		// WHEN
+		AnalyticsSummaryDTO expectedSummary = testSubject.getSummary(mockUserId);
+
+		// THEN
+		assertThat(expectedSummary.getTotalNetWorth()).isEqualByComparingTo(new BigDecimal("4000"));
+		assertThat(expectedSummary.getTotalGrossAssets()).isEqualByComparingTo(new BigDecimal("4000"));
+		assertThat(expectedSummary.getTotalLiabilities()).isEqualByComparingTo(BigDecimal.ZERO);
+		assertThat(expectedSummary.getTopAssets()).containsExactly(stubbedTopAsset);
+	}
+
+	@Test
+	void getSummary_dedupesTheCarryInRow_whenBothQueriesReturnIt() {
+		// GIVEN
+		UUID mockUserId = UUID.randomUUID();
+		stubClockAt(TODAY);
+		stubUserCurrency(mockUserId, EUR);
+		Asset mockAsset = buildAsset(buildCategory(AssetType.ASSET, "Equities"), EUR, "Fund", false);
+		Snapshot mockSnapshot = buildSnapshot(mockAsset, "4000", LATEST_DATA_DATE);
+		List<LocalDate> expectedDates = summaryDates(LATEST_DATA_DATE);
+		RateBook mockBook = stubBook(EUR, List.of(EUR), expectedDates);
+		AssetDTO stubbedTopAsset = Instancio.create(AssetDTO.class);
+		when(
+			assetMapper.toDtoLight(eq(mockAsset), eq(List.of(mockSnapshot)), eq(mockBook), eq(TODAY))
+		).thenReturn(stubbedTopAsset);
+		stubAssets(mockUserId, mockAsset);
+		stubSummarySnapshots(
+			mockUserId,
+			List.of(mockSnapshot),
+			List.of(mockSnapshot),
+			LATEST_DATA_DATE
+		);
+
+		// WHEN
+		AnalyticsSummaryDTO expectedSummary = testSubject.getSummary(mockUserId);
+
+		// THEN
+		assertThat(expectedSummary.getTotalNetWorth()).isEqualByComparingTo(new BigDecimal("4000"));
+		assertThat(expectedSummary.getTopAssets()).containsExactly(stubbedTopAsset);
+	}
+
+	@Test
+	void getSummary_summarisesLiabilitiesOnTheirOwnPass() {
+		// GIVEN
+		UUID mockUserId = UUID.randomUUID();
+		stubClockAt(TODAY);
+		stubUserCurrency(mockUserId, EUR);
+		Asset mockAsset = buildAsset(buildCategory(AssetType.ASSET, "Equities"), EUR, "Fund", false);
+		Asset mockLiability = buildLiability(
+			buildCategory(AssetType.LIABILITY, "Debts"),
+			EUR,
+			"Mortgage",
+			false
+		);
+		Snapshot mockAssetSnapshot = buildSnapshot(mockAsset, "1000", LATEST_DATA_DATE);
+		Snapshot mockLiabilitySnapshot = buildSnapshot(mockLiability, "400", LATEST_DATA_DATE);
+		List<LocalDate> expectedDates = summaryDates(LATEST_DATA_DATE);
+		stubBook(EUR, List.of(EUR), expectedDates);
+		stubAssets(mockUserId, mockAsset, mockLiability);
+		stubSummarySnapshots(
+			mockUserId,
+			List.of(mockAssetSnapshot, mockLiabilitySnapshot),
+			List.of(),
+			LATEST_DATA_DATE
+		);
+
+		// WHEN
+		AnalyticsSummaryDTO expectedSummary = testSubject.getSummary(mockUserId);
+
+		// THEN
+		BigDecimal expectedNetWorth = expectedSummary.getTotalNetWorth();
+		BigDecimal expectedGrossAssets = expectedSummary.getTotalGrossAssets();
+		BigDecimal expectedLiabilities = expectedSummary.getTotalLiabilities();
+		assertThat(expectedGrossAssets).isEqualByComparingTo(new BigDecimal("1000"));
+		assertThat(expectedLiabilities).isEqualByComparingTo(new BigDecimal("400"));
+		assertThat(expectedNetWorth).isEqualByComparingTo(new BigDecimal("600"));
+		assertThat(expectedNetWorth).isEqualByComparingTo(
+			expectedGrossAssets.subtract(expectedLiabilities)
+		);
+	}
+
+	@Test
+	void getSummary_followsTheLiabilityType_notTheCategory() {
+		// GIVEN
+		UUID mockUserId = UUID.randomUUID();
+		stubClockAt(TODAY);
+		stubUserCurrency(mockUserId, EUR);
+		Asset mockAsset = buildAsset(buildCategory(AssetType.ASSET, "Equities"), EUR, "Fund", false);
+		Asset mockDebtInAssetCategory = buildLiability(
+			buildCategory(AssetType.ASSET, "Equities"),
+			EUR,
+			"Retyped debt",
+			false
+		);
+		Asset mockAssetInLiabilityCategory = buildAsset(
+			buildCategory(AssetType.LIABILITY, "Debts"),
+			EUR,
+			"Retyped asset",
+			false
+		);
+		Snapshot mockAssetSnapshot = buildSnapshot(mockAsset, "1000", LATEST_DATA_DATE);
+		Snapshot mockDebtSnapshot = buildSnapshot(mockDebtInAssetCategory, "700", LATEST_DATA_DATE);
+		Snapshot mockRetypedSnapshot = buildSnapshot(
+			mockAssetInLiabilityCategory,
+			"400",
+			LATEST_DATA_DATE
+		);
+		List<LocalDate> expectedDates = summaryDates(LATEST_DATA_DATE);
+		RateBook mockBook = stubBook(EUR, List.of(EUR), expectedDates);
+		AssetDTO stubbedTopAsset = Instancio.create(AssetDTO.class);
+		AssetDTO stubbedRetypedAsset = Instancio.create(AssetDTO.class);
+		when(
+			assetMapper.toDtoLight(eq(mockAsset), eq(List.of(mockAssetSnapshot)), eq(mockBook), eq(TODAY))
+		).thenReturn(stubbedTopAsset);
+		when(
+			assetMapper.toDtoLight(
+				eq(mockAssetInLiabilityCategory),
+				eq(List.of(mockRetypedSnapshot)),
+				eq(mockBook),
+				eq(TODAY)
+			)
+		).thenReturn(stubbedRetypedAsset);
+		stubAssets(mockUserId, mockAsset, mockDebtInAssetCategory, mockAssetInLiabilityCategory);
+		stubSummarySnapshots(
+			mockUserId,
+			List.of(mockAssetSnapshot, mockDebtSnapshot, mockRetypedSnapshot),
+			List.of(),
+			LATEST_DATA_DATE
+		);
+
+		// WHEN
+		AnalyticsSummaryDTO expectedSummary = testSubject.getSummary(mockUserId);
+
+		// THEN
+		assertThat(expectedSummary.getTotalGrossAssets()).isEqualByComparingTo(new BigDecimal("1400"));
+		assertThat(expectedSummary.getTotalLiabilities()).isEqualByComparingTo(new BigDecimal("700"));
+		assertThat(expectedSummary.getTotalNetWorth()).isEqualByComparingTo(new BigDecimal("700"));
+		assertThat(expectedSummary.getDebtToAssetRatio()).isEqualByComparingTo(new BigDecimal("50"));
+		assertThat(expectedSummary.getAssetAllocation()).containsOnlyKeys("Equities", "Debts");
+		assertThat(expectedSummary.getAssetAllocation().get("Equities")).isEqualByComparingTo(
+			new BigDecimal("71.43")
+		);
+		assertThat(expectedSummary.getAssetAllocation().get("Debts")).isEqualByComparingTo(
+			new BigDecimal("28.57")
+		);
+		assertThat(expectedSummary.getTopAssets()).containsExactly(
+			stubbedTopAsset,
+			stubbedRetypedAsset
+		);
+	}
+
+	@Test
+	void getChartData_followsTheLiabilityType_whenBuildingFavouriteSeries() {
+		// GIVEN
+		UUID mockUserId = UUID.randomUUID();
+		stubClockAt(TODAY);
+		stubUserCurrency(mockUserId, EUR);
+		Asset mockDebtInAssetCategory = buildLiability(
+			buildCategory(AssetType.ASSET, "Property"),
+			EUR,
+			"Mortgage",
+			true
+		);
+		Asset mockAssetInLiabilityCategory = buildAsset(
+			buildCategory(AssetType.LIABILITY, "Debts"),
+			EUR,
+			"Savings",
+			true
+		);
+		Snapshot mockDebtSnapshot = buildSnapshot(mockDebtInAssetCategory, "500", CHART_SNAPSHOT_DATE);
+		Snapshot mockAssetSnapshot = buildSnapshot(
+			mockAssetInLiabilityCategory,
+			"300",
+			CHART_SNAPSHOT_DATE
+		);
+		stubBook(EUR, List.of(EUR), ONE_YEAR_CHART_DATES);
+		stubAssets(mockUserId, mockDebtInAssetCategory, mockAssetInLiabilityCategory);
+		stubSnapshots(mockUserId, mockDebtSnapshot, mockAssetSnapshot);
+
+		// WHEN
+		ChartDataDTO expectedChart = testSubject.getChartData(mockUserId);
+
+		// THEN
+		int lastPoint = ONE_YEAR_CHART_DATES.size() - 1;
+		assertThat(expectedChart.getFavoriteAssetsValues()).containsOnlyKeys("Mortgage", "Savings");
+		assertThat(expectedChart.getFavoriteAssetsTypes()).containsEntry("Mortgage", "LIABILITY");
+		assertThat(expectedChart.getFavoriteAssetsTypes()).containsEntry("Savings", "ASSET");
+		assertThat(
+			expectedChart.getFavoriteAssetsValues().get("Mortgage").get(lastPoint)
+		).isEqualByComparingTo(new BigDecimal("-500"));
+		assertThat(
+			expectedChart.getFavoriteAssetsValues().get("Savings").get(lastPoint)
+		).isEqualByComparingTo(new BigDecimal("300"));
+		assertThat(expectedChart.getTotalNetWorth().get(lastPoint)).isEqualByComparingTo(
+			new BigDecimal("-200")
+		);
+		assertThat(expectedChart.getTotalAssetsOnly().get(lastPoint)).isEqualByComparingTo(
+			new BigDecimal("300")
+		);
+	}
+
+	@Test
+	void getSummary_usesTheLastSnapshotAtOrBeforeToday() {
+		// GIVEN
+		UUID mockUserId = UUID.randomUUID();
+		stubClockAt(TODAY);
+		stubUserCurrency(mockUserId, EUR);
+		Asset mockAsset = buildAsset(buildCategory(AssetType.ASSET, "Equities"), EUR, "Fund", false);
+		Asset mockFutureOnlyAsset = buildAsset(
+			buildCategory(AssetType.ASSET, "Cash"),
+			EUR,
+			"Future only",
+			false
+		);
+		Snapshot mockCurrentSnapshot = buildSnapshot(mockAsset, "1000", LATEST_DATA_DATE);
+		Snapshot mockFutureSnapshot = buildSnapshot(mockFutureOnlyAsset, "5000", FUTURE_SNAPSHOT_DATE);
+		List<LocalDate> expectedDates = summaryDates(FUTURE_SNAPSHOT_DATE);
+		stubBook(EUR, List.of(EUR), expectedDates);
+		stubAssets(mockUserId, mockAsset, mockFutureOnlyAsset);
+		stubSummarySnapshots(
+			mockUserId,
+			List.of(mockCurrentSnapshot, mockFutureSnapshot),
+			List.of(),
+			LATEST_DATA_DATE
+		);
+
+		// WHEN
+		AnalyticsSummaryDTO expectedSummary = testSubject.getSummary(mockUserId);
+
+		// THEN
+		assertThat(expectedSummary.getTotalNetWorth()).isEqualByComparingTo(new BigDecimal("1000"));
+		assertThat(expectedSummary.getTotalGrossAssets()).isEqualByComparingTo(new BigDecimal("1000"));
+	}
+
+	@Test
+	void getSummary_breaksSameDateTiesByTheLowestId() {
+		// GIVEN
+		UUID mockUserId = UUID.randomUUID();
+		stubClockAt(TODAY);
+		stubUserCurrency(mockUserId, EUR);
+		Asset mockAsset = buildAsset(buildCategory(AssetType.ASSET, "Cash"), EUR, "Ledger", false);
+		Snapshot mockHighIdSnapshot = buildSnapshot(mockAsset, "1000", TIE_SNAPSHOT_DATE);
+		mockHighIdSnapshot.setId(SNAPSHOT_HIGHEST_ID);
+		Snapshot mockLowIdSnapshot = buildSnapshot(mockAsset, "600", TIE_SNAPSHOT_DATE);
+		mockLowIdSnapshot.setId(SNAPSHOT_LOWEST_ID);
+		List<LocalDate> expectedDates = summaryDates(TIE_SNAPSHOT_DATE);
+		stubBook(EUR, List.of(EUR), expectedDates);
+		stubAssets(mockUserId, mockAsset);
+		stubSummarySnapshots(
+			mockUserId,
+			List.of(mockHighIdSnapshot, mockLowIdSnapshot),
+			List.of(),
+			TIE_SNAPSHOT_DATE
+		);
+
+		// WHEN
+		AnalyticsSummaryDTO expectedSummary = testSubject.getSummary(mockUserId);
+
+		// THEN
+		assertThat(expectedSummary.getTotalNetWorth()).isEqualByComparingTo(new BigDecimal("600"));
+		assertThat(expectedSummary.getTotalGrossAssets()).isEqualByComparingTo(new BigDecimal("600"));
+	}
+
+	@Test
+	void getChartData_breaksSameDateTiesByTheLowestId() {
+		// GIVEN
+		UUID mockUserId = UUID.randomUUID();
+		stubClockAt(TODAY);
+		stubUserCurrency(mockUserId, EUR);
+		Asset mockAsset = buildAsset(buildCategory(AssetType.ASSET, "Cash"), EUR, "Ledger", false);
+		Snapshot mockHighIdSnapshot = buildSnapshot(mockAsset, "1000", CHART_SNAPSHOT_DATE);
+		mockHighIdSnapshot.setId(SNAPSHOT_HIGHEST_ID);
+		Snapshot mockLowIdSnapshot = buildSnapshot(mockAsset, "600", CHART_SNAPSHOT_DATE);
+		mockLowIdSnapshot.setId(SNAPSHOT_LOWEST_ID);
+		stubBook(EUR, List.of(EUR), ONE_YEAR_CHART_DATES);
+		stubAssets(mockUserId, mockAsset);
+		stubSnapshots(mockUserId, mockHighIdSnapshot, mockLowIdSnapshot);
+
+		// WHEN
+		ChartDataDTO expectedChart = testSubject.getChartData(mockUserId);
+
+		// THEN
+		int tiePoint = ONE_YEAR_CHART_DATES.indexOf(CHART_SNAPSHOT_DATE.withDayOfMonth(31));
+		assertThat(expectedChart.getTotalAssetsOnly().get(0)).isEqualByComparingTo(BigDecimal.ZERO);
+		assertThat(expectedChart.getTotalAssetsOnly().get(tiePoint)).isEqualByComparingTo(
+			new BigDecimal("600")
+		);
+		assertThat(expectedChart.getTotalNetWorth().get(tiePoint)).isEqualByComparingTo(
+			new BigDecimal("600")
+		);
+		assertThat(
+			expectedChart.getTotalAssetsOnly().get(ONE_YEAR_CHART_DATES.size() - 1)
+		).isEqualByComparingTo(new BigDecimal("600"));
+	}
+
+	@Test
+	void getSummary_allocatesByTheLowestIdOnASameDateTie() {
+		// GIVEN
+		UUID mockUserId = UUID.randomUUID();
+		stubClockAt(TODAY);
+		stubUserCurrency(mockUserId, EUR);
+		Asset mockAsset = buildAsset(buildCategory(AssetType.ASSET, "Equities"), EUR, "Fund", false);
+		Asset mockOtherAsset = buildAsset(
+			buildCategory(AssetType.ASSET, "Bonds"),
+			EUR,
+			"Bonds fund",
+			false
+		);
+		Snapshot mockHighIdSnapshot = buildSnapshot(mockAsset, "1000", TIE_SNAPSHOT_DATE);
+		mockHighIdSnapshot.setId(SNAPSHOT_HIGHEST_ID);
+		Snapshot mockLowIdSnapshot = buildSnapshot(mockAsset, "600", TIE_SNAPSHOT_DATE);
+		mockLowIdSnapshot.setId(SNAPSHOT_LOWEST_ID);
+		Snapshot mockOtherSnapshot = buildSnapshot(mockOtherAsset, "400", TIE_SNAPSHOT_DATE);
+		List<LocalDate> expectedDates = summaryDates(TIE_SNAPSHOT_DATE);
+		stubBook(EUR, List.of(EUR), expectedDates);
+		stubAssets(mockUserId, mockAsset, mockOtherAsset);
+		stubSummarySnapshots(
+			mockUserId,
+			List.of(mockHighIdSnapshot, mockLowIdSnapshot, mockOtherSnapshot),
+			List.of(),
+			TIE_SNAPSHOT_DATE
+		);
+
+		// WHEN
+		AnalyticsSummaryDTO expectedSummary = testSubject.getSummary(mockUserId);
+
+		// THEN
+		assertThat(expectedSummary.getAssetAllocation().get("Equities")).isEqualByComparingTo(
+			new BigDecimal("60")
+		);
+		assertThat(expectedSummary.getAssetAllocation().get("Bonds")).isEqualByComparingTo(
+			new BigDecimal("40")
+		);
+	}
+
+	@Test
+	void getSummary_ranksTopAssetsByTheLowestIdOnASameDateTie() {
+		// GIVEN
+		UUID mockUserId = UUID.randomUUID();
+		stubClockAt(TODAY);
+		stubUserCurrency(mockUserId, EUR);
+		Asset mockAsset = buildAsset(buildCategory(AssetType.ASSET, "Equities"), EUR, "Fund", false);
+		Asset mockBiggerAsset = buildAsset(
+			buildCategory(AssetType.ASSET, "Bonds"),
+			EUR,
+			"Bigger fund",
+			false
+		);
+		Snapshot mockHighIdSnapshot = buildSnapshot(mockAsset, "1000", TIE_SNAPSHOT_DATE);
+		mockHighIdSnapshot.setId(SNAPSHOT_HIGHEST_ID);
+		Snapshot mockLowIdSnapshot = buildSnapshot(mockAsset, "600", TIE_SNAPSHOT_DATE);
+		mockLowIdSnapshot.setId(SNAPSHOT_LOWEST_ID);
+		Snapshot mockBiggerSnapshot = buildSnapshot(mockBiggerAsset, "800", TIE_SNAPSHOT_DATE);
+		List<LocalDate> expectedDates = summaryDates(TIE_SNAPSHOT_DATE);
+		RateBook mockBook = stubBook(EUR, List.of(EUR), expectedDates);
+		AssetDTO stubbedBiggerAsset = Instancio.create(AssetDTO.class);
+		AssetDTO stubbedAsset = Instancio.create(AssetDTO.class);
+		when(
+			assetMapper.toDtoLight(
+				eq(mockBiggerAsset),
+				eq(List.of(mockBiggerSnapshot)),
+				eq(mockBook),
+				eq(TODAY)
+			)
+		).thenReturn(stubbedBiggerAsset);
+		when(
+			assetMapper.toDtoLight(
+				eq(mockAsset),
+				eq(List.of(mockLowIdSnapshot, mockHighIdSnapshot)),
+				eq(mockBook),
+				eq(TODAY)
+			)
+		).thenReturn(stubbedAsset);
+		stubAssets(mockUserId, mockAsset, mockBiggerAsset);
+		stubSummarySnapshots(
+			mockUserId,
+			List.of(mockHighIdSnapshot, mockLowIdSnapshot, mockBiggerSnapshot),
+			List.of(),
+			TIE_SNAPSHOT_DATE
+		);
+
+		// WHEN
+		AnalyticsSummaryDTO expectedSummary = testSubject.getSummary(mockUserId);
+
+		// THEN
+		assertThat(expectedSummary.getTopAssets()).containsExactly(stubbedBiggerAsset, stubbedAsset);
+	}
+
+	@Test
+	void getSummary_computesDebtToAssetRatioOverGrossAssets() {
+		// GIVEN
+		UUID mockUserId = UUID.randomUUID();
+		stubClockAt(TODAY);
+		stubUserCurrency(mockUserId, EUR);
+		Asset mockAsset = buildAsset(buildCategory(AssetType.ASSET, "Equities"), EUR, "Fund", false);
+		Asset mockLiability = buildLiability(
+			buildCategory(AssetType.LIABILITY, "Debts"),
+			EUR,
+			"Mortgage",
+			false
+		);
+		Snapshot mockAssetSnapshot = buildSnapshot(mockAsset, "3000", LATEST_DATA_DATE);
+		Snapshot mockLiabilitySnapshot = buildSnapshot(mockLiability, "1000", LATEST_DATA_DATE);
+		List<LocalDate> expectedDates = summaryDates(LATEST_DATA_DATE);
+		stubBook(EUR, List.of(EUR), expectedDates);
+		stubAssets(mockUserId, mockAsset, mockLiability);
+		stubSummarySnapshots(
+			mockUserId,
+			List.of(mockAssetSnapshot, mockLiabilitySnapshot),
+			List.of(),
+			LATEST_DATA_DATE
+		);
+
+		// WHEN
+		AnalyticsSummaryDTO expectedSummary = testSubject.getSummary(mockUserId);
+
+		// THEN
+		assertThat(expectedSummary.getTotalGrossAssets()).isEqualByComparingTo(new BigDecimal("3000"));
+		assertThat(expectedSummary.getTotalLiabilities()).isEqualByComparingTo(new BigDecimal("1000"));
+		assertThat(expectedSummary.getDebtToAssetRatio()).isEqualTo(new BigDecimal("33.3300"));
+	}
+
+	@Test
+	void getSummary_returnsZeroDebtToAssetRatio_whenThereAreNoGrossAssets() {
+		// GIVEN
+		UUID mockUserId = UUID.randomUUID();
+		stubClockAt(TODAY);
+		stubUserCurrency(mockUserId, EUR);
+		Asset mockLiability = buildLiability(
+			buildCategory(AssetType.LIABILITY, "Debts"),
+			EUR,
+			"Mortgage",
+			false
+		);
+		Snapshot mockLiabilitySnapshot = buildSnapshot(mockLiability, "500", LATEST_DATA_DATE);
+		List<LocalDate> expectedDates = summaryDates(LATEST_DATA_DATE);
+		stubBook(EUR, List.of(EUR), expectedDates);
+		stubAssets(mockUserId, mockLiability);
+		stubSummarySnapshots(mockUserId, List.of(mockLiabilitySnapshot), List.of(), LATEST_DATA_DATE);
+
+		// WHEN
+		AnalyticsSummaryDTO expectedSummary = testSubject.getSummary(mockUserId);
+
+		// THEN
+		assertThat(expectedSummary.getTotalGrossAssets()).isEqualByComparingTo(BigDecimal.ZERO);
+		assertThat(expectedSummary.getTotalLiabilities()).isEqualByComparingTo(new BigDecimal("500"));
+		assertThat(expectedSummary.getDebtToAssetRatio()).isEqualByComparingTo(BigDecimal.ZERO);
+	}
+
+	@Test
+	void getSummary_excludesLiabilitiesFromAssetAllocation() {
+		// GIVEN
+		UUID mockUserId = UUID.randomUUID();
+		stubClockAt(TODAY);
+		stubUserCurrency(mockUserId, EUR);
+		Asset mockAsset = buildAsset(buildCategory(AssetType.ASSET, "Equities"), EUR, "Fund", false);
+		Asset mockLiability = buildLiability(
+			buildCategory(AssetType.LIABILITY, "Debts"),
+			EUR,
+			"Mortgage",
+			false
+		);
+		Snapshot mockAssetSnapshot = buildSnapshot(mockAsset, "1000", LATEST_DATA_DATE);
+		Snapshot mockLiabilitySnapshot = buildSnapshot(mockLiability, "500", LATEST_DATA_DATE);
+		List<LocalDate> expectedDates = summaryDates(LATEST_DATA_DATE);
+		stubBook(EUR, List.of(EUR), expectedDates);
+		stubAssets(mockUserId, mockAsset, mockLiability);
+		stubSummarySnapshots(
+			mockUserId,
+			List.of(mockAssetSnapshot, mockLiabilitySnapshot),
+			List.of(),
+			LATEST_DATA_DATE
+		);
+
+		// WHEN
+		AnalyticsSummaryDTO expectedSummary = testSubject.getSummary(mockUserId);
+
+		// THEN
+		assertThat(expectedSummary.getAssetAllocation()).containsOnlyKeys("Equities");
+		assertThat(expectedSummary.getAssetAllocation().get("Equities")).isEqualByComparingTo(
+			new BigDecimal("100")
+		);
+	}
+
+	@Test
+	void getSummary_leavesAssetsWithoutSnapshotsOutOfTheAllocationDenominator() {
+		// GIVEN
+		UUID mockUserId = UUID.randomUUID();
+		stubClockAt(TODAY);
+		stubUserCurrency(mockUserId, EUR);
+		Asset mockAsset = buildAsset(buildCategory(AssetType.ASSET, "Equities"), EUR, "Fund", false);
+		Asset mockUnvaluedAsset = buildAsset(
+			buildCategory(AssetType.ASSET, "Bonds"),
+			EUR,
+			"Unvalued",
+			false
+		);
+		Snapshot mockSnapshot = buildSnapshot(mockAsset, "1000", LATEST_DATA_DATE);
+		List<LocalDate> expectedDates = summaryDates(LATEST_DATA_DATE);
+		stubBook(EUR, List.of(EUR), expectedDates);
+		stubAssets(mockUserId, mockAsset, mockUnvaluedAsset);
+		stubSummarySnapshots(mockUserId, List.of(mockSnapshot), List.of(), LATEST_DATA_DATE);
+
+		// WHEN
+		AnalyticsSummaryDTO expectedSummary = testSubject.getSummary(mockUserId);
+
+		// THEN
+		assertThat(expectedSummary.getAssetAllocation()).containsOnlyKeys("Equities");
+		assertThat(expectedSummary.getAssetAllocation().get("Equities")).isEqualByComparingTo(
+			new BigDecimal("100")
+		);
+	}
+
+	@Test
+	void getSummary_chargesACurrencyGainOnADebtAsALoss() {
 		// GIVEN
 		UUID mockUserId = UUID.randomUUID();
 		stubClockAt(TODAY);
 		stubUserCurrency(mockUserId, USD);
-		Asset mockAsset = buildAsset(buildCategory(AssetType.ASSET, "Equities"), EUR, "World", false);
-		Snapshot mockSnapshot = buildSnapshot(mockAsset, "1000", TODAY.minusDays(10));
-		List<LocalDate> expectedDates = List.of(TODAY);
-		stubSourceRates(EUR, USD, Map.of(TODAY, new BigDecimal("1.5")), expectedDates);
-		stubBook(USD, List.of(EUR), expectedDates);
-		when(assetRepository.findByUserIdOrderByCreatedAtDesc(mockUserId)).thenReturn(
-			List.of(mockAsset)
+		Asset mockAsset = buildAsset(buildCategory(AssetType.ASSET, "Equities"), EUR, "Fund", false);
+		Asset mockLiability = buildLiability(
+			buildCategory(AssetType.LIABILITY, "Debts"),
+			EUR,
+			"Mortgage",
+			false
 		);
-		when(snapshotRepository.findByAssetUserId(mockUserId)).thenReturn(List.of(mockSnapshot));
+		Snapshot mockAssetSnapshot = buildSnapshot(mockAsset, "1000", CURRENCY_IMPACT_SNAPSHOT_DATE);
+		Snapshot mockLiabilitySnapshot = buildSnapshot(
+			mockLiability,
+			"400",
+			CURRENCY_IMPACT_SNAPSHOT_DATE
+		);
+		List<LocalDate> expectedDates = summaryDates(CURRENCY_IMPACT_SNAPSHOT_DATE);
+		Map<LocalDate, BigDecimal> expectedRates = new HashMap<>();
+		for (LocalDate date : expectedDates) {
+			expectedRates.put(date, new BigDecimal("1.10"));
+		}
+		expectedRates.put(TODAY, new BigDecimal("1.40"));
+		stubSourceRates(EUR, USD, expectedRates, expectedDates);
+		stubBook(USD, List.of(EUR), expectedDates);
+		stubAssets(mockUserId, mockAsset, mockLiability);
+		stubSummarySnapshots(
+			mockUserId,
+			List.of(mockAssetSnapshot, mockLiabilitySnapshot),
+			List.of(),
+			CURRENCY_IMPACT_SNAPSHOT_DATE
+		);
 
 		// WHEN
-		BigDecimal expectedNetWorth = testSubject.getNetWorth(mockUserId);
+		AnalyticsSummaryDTO expectedSummary = testSubject.getSummary(mockUserId);
 
 		// THEN
-		assertThat(expectedNetWorth).isEqualByComparingTo(new BigDecimal("1500"));
+		assertThat(expectedSummary.getCurrencyImpact()).isEqualByComparingTo(new BigDecimal("180"));
+	}
+
+	@Test
+	void getSummary_resolvesSameDateTiesByTheLowestId_whenComputingCurrencyImpact() {
+		// GIVEN
+		UUID mockUserId = UUID.randomUUID();
+		stubClockAt(TODAY);
+		stubUserCurrency(mockUserId, USD);
+		Asset mockLiability = buildLiability(
+			buildCategory(AssetType.LIABILITY, "Debts"),
+			EUR,
+			"Mortgage",
+			false
+		);
+		Snapshot mockHighIdSnapshot = buildSnapshot(
+			mockLiability,
+			"900",
+			CURRENCY_IMPACT_SNAPSHOT_DATE
+		);
+		mockHighIdSnapshot.setId(SNAPSHOT_HIGHEST_ID);
+		Snapshot mockLowIdSnapshot = buildSnapshot(mockLiability, "400", CURRENCY_IMPACT_SNAPSHOT_DATE);
+		mockLowIdSnapshot.setId(SNAPSHOT_LOWEST_ID);
+		List<LocalDate> expectedDates = summaryDates(CURRENCY_IMPACT_SNAPSHOT_DATE);
+		Map<LocalDate, BigDecimal> expectedRates = new HashMap<>();
+		for (LocalDate date : expectedDates) {
+			expectedRates.put(date, new BigDecimal("1.20"));
+		}
+		expectedRates.put(TODAY, new BigDecimal("1.50"));
+		stubSourceRates(EUR, USD, expectedRates, expectedDates);
+		stubBook(USD, List.of(EUR), expectedDates);
+		stubAssets(mockUserId, mockLiability);
+		stubSummarySnapshots(
+			mockUserId,
+			List.of(mockHighIdSnapshot, mockLowIdSnapshot),
+			List.of(),
+			CURRENCY_IMPACT_SNAPSHOT_DATE
+		);
+
+		// WHEN
+		AnalyticsSummaryDTO expectedSummary = testSubject.getSummary(mockUserId);
+
+		// THEN
+		assertThat(expectedSummary.getCurrencyImpact()).isEqualByComparingTo(new BigDecimal("-120"));
+	}
+
+	@Test
+	void getSummary_readsOldestSnapshotYearFromTheRepository() {
+		// GIVEN
+		UUID mockUserId = UUID.randomUUID();
+		stubClockAt(TODAY);
+		stubUserCurrency(mockUserId, EUR);
+		Asset mockAsset = buildAsset(buildCategory(AssetType.ASSET, "Cash"), EUR, "Fund", false);
+		Snapshot mockSnapshot = buildSnapshot(mockAsset, "1000", LATEST_DATA_DATE);
+		List<LocalDate> expectedDates = summaryDates(LATEST_DATA_DATE);
+		stubBook(EUR, List.of(EUR), expectedDates);
+		stubAssets(mockUserId, mockAsset);
+		stubSummarySnapshots(mockUserId, List.of(mockSnapshot), List.of(), OLDEST_SNAPSHOT_DATE);
+
+		// WHEN
+		AnalyticsSummaryDTO expectedSummary = testSubject.getSummary(mockUserId);
+
+		// THEN
+		assertThat(expectedSummary.getOldestSnapshotYear()).isEqualTo(OLDEST_SNAPSHOT_DATE.getYear());
+	}
+
+	@Test
+	void getSummary_returnsNullOldestSnapshotYear_whenTheQueryIsEmpty() {
+		// GIVEN
+		UUID mockUserId = UUID.randomUUID();
+		stubClockAt(TODAY);
+		stubUserCurrency(mockUserId, EUR);
+		Asset mockAsset = buildAsset(buildCategory(AssetType.ASSET, "Cash"), EUR, "Fund", false);
+		Snapshot mockSnapshot = buildSnapshot(mockAsset, "1000", LATEST_DATA_DATE);
+		List<LocalDate> expectedDates = summaryDates(LATEST_DATA_DATE);
+		stubBook(EUR, List.of(EUR), expectedDates);
+		stubAssets(mockUserId, mockAsset);
+		stubSummarySnapshots(mockUserId, List.of(mockSnapshot), List.of(), null);
+
+		// WHEN
+		AnalyticsSummaryDTO expectedSummary = testSubject.getSummary(mockUserId);
+
+		// THEN
+		assertThat(expectedSummary.getOldestSnapshotYear()).isNull();
+	}
+
+	@Test
+	void getSummary_reportsEachVariationAgainstItsOwnAnchorDate() {
+		// GIVEN
+		UUID mockUserId = UUID.randomUUID();
+		stubClockAt(TODAY);
+		stubUserCurrency(mockUserId, EUR);
+		Asset mockAsset = buildAsset(buildCategory(AssetType.ASSET, "Cash"), EUR, "Fund", false);
+		Snapshot mockLatestSnapshot = buildSnapshot(mockAsset, "1000", LATEST_DATA_DATE);
+		Snapshot mockPreviousSnapshot = buildSnapshot(
+			mockAsset,
+			"500",
+			LATEST_DATA_DATE.minusMonths(1)
+		);
+		List<LocalDate> expectedDates = summaryDates(LATEST_DATA_DATE);
+		stubBook(EUR, List.of(EUR), expectedDates);
+		stubAssets(mockUserId, mockAsset);
+		stubSummarySnapshots(
+			mockUserId,
+			List.of(mockLatestSnapshot, mockPreviousSnapshot),
+			List.of(),
+			LATEST_DATA_DATE
+		);
+
+		// WHEN
+		AnalyticsSummaryDTO expectedSummary = testSubject.getSummary(mockUserId);
+
+		// THEN
+		DeltaDTO expectedOneMonth = expectedSummary.getVariations().getOneMonth();
+		assertThat(expectedOneMonth.getAbsolute()).isEqualByComparingTo(new BigDecimal("500"));
+		assertThat(expectedOneMonth.getPercentage()).isEqualByComparingTo(new BigDecimal("100"));
+		assertThat(expectedSummary.getVariations().getSixMonths().getAbsolute()).isEqualByComparingTo(
+			new BigDecimal("1000")
+		);
+		assertThat(expectedSummary.getVariations().getSixMonths().getPercentage()).isEqualByComparingTo(
+			BigDecimal.ZERO
+		);
+	}
+
+	@Test
+	void getSummary_convertsTheOneMonthVariationAtItsOwnAnchorRate() {
+		// GIVEN
+		UUID mockUserId = UUID.randomUUID();
+		stubClockAt(TODAY);
+		stubUserCurrency(mockUserId, USD);
+		Asset mockAsset = buildAsset(buildCategory(AssetType.ASSET, "Equities"), EUR, "Fund", false);
+		Snapshot mockCurrentSnapshot = buildSnapshot(mockAsset, "1000", LATEST_DATA_DATE);
+		Snapshot mockAnchorSnapshot = buildSnapshot(mockAsset, "1000", LATEST_DATA_DATE.minusMonths(1));
+		List<LocalDate> expectedDates = summaryDates(LATEST_DATA_DATE);
+		Map<LocalDate, BigDecimal> expectedRates = new HashMap<>();
+		for (LocalDate date : expectedDates) {
+			expectedRates.put(date, new BigDecimal("1.20"));
+		}
+		expectedRates.put(TODAY, new BigDecimal("1.50"));
+		stubSourceRates(EUR, USD, expectedRates, expectedDates);
+		stubBook(USD, List.of(EUR), expectedDates);
+		stubAssets(mockUserId, mockAsset);
+		stubSummarySnapshots(
+			mockUserId,
+			List.of(mockCurrentSnapshot, mockAnchorSnapshot),
+			List.of(),
+			LATEST_DATA_DATE
+		);
+
+		// WHEN
+		AnalyticsSummaryDTO expectedSummary = testSubject.getSummary(mockUserId);
+
+		// THEN
+		DeltaDTO expectedOneMonth = expectedSummary.getVariations().getOneMonth();
+		assertThat(expectedSummary.getTotalNetWorth()).isEqualByComparingTo(new BigDecimal("1500"));
+		assertThat(expectedOneMonth.getAbsolute()).isEqualByComparingTo(new BigDecimal("300"));
+		assertThat(expectedOneMonth.getPercentage()).isEqualByComparingTo(new BigDecimal("25"));
+	}
+
+	@Test
+	void getSummary_returnsZeroes_whenThereIsNoData() {
+		// GIVEN
+		UUID mockUserId = UUID.randomUUID();
+		stubClockAt(TODAY);
+		stubUserCurrency(mockUserId, EUR);
+		stubBook(EUR, List.of(), summaryDates(TODAY));
+		stubAssets(mockUserId);
+		stubSummarySnapshots(mockUserId, List.of(), List.of(), null);
+
+		// WHEN
+		AnalyticsSummaryDTO expectedSummary = testSubject.getSummary(mockUserId);
+
+		// THEN
+		assertThat(expectedSummary.getTotalNetWorth()).isEqualByComparingTo(BigDecimal.ZERO);
+		assertThat(expectedSummary.getTotalGrossAssets()).isEqualByComparingTo(BigDecimal.ZERO);
+		assertThat(expectedSummary.getTotalLiabilities()).isEqualByComparingTo(BigDecimal.ZERO);
+		assertThat(expectedSummary.getDebtToAssetRatio()).isEqualByComparingTo(BigDecimal.ZERO);
+		assertThat(expectedSummary.getCurrencyImpact()).isEqualByComparingTo(BigDecimal.ZERO);
+		assertThat(expectedSummary.getAssetAllocation()).isEmpty();
+		assertThat(expectedSummary.getTopAssets()).isEmpty();
+		assertThat(expectedSummary.getOldestSnapshotYear()).isNull();
+	}
+
+	@Test
+	void getSummary_propagatesExchangeRateOutage_whenRatesAreUnavailable() {
+		// GIVEN
+		UUID mockUserId = UUID.randomUUID();
+		stubClockAt(TODAY);
+		stubUserCurrency(mockUserId, USD);
+		Asset mockAsset = buildAsset(buildCategory(AssetType.ASSET, "Equities"), EUR, "Fund", false);
+		ExchangeRateUnavailableException stubbedOutage = new ExchangeRateUnavailableException(
+			EXCHANGE_RATE_OUTAGE_MESSAGE
+		);
+		when(conversionService.book(eq(USD), eq(List.of(EUR)), eq(summaryDates(TODAY)))).thenThrow(
+			stubbedOutage
+		);
+		stubAssets(mockUserId, mockAsset);
+
+		// WHEN / THEN
+		assertThatThrownBy(() -> testSubject.getSummary(mockUserId)).isSameAs(stubbedOutage);
+	}
+
+	@Test
+	void getChartData_suffixesASharedFavouriteNameWithTheAssetShortId() {
+		// GIVEN
+		UUID mockUserId = UUID.randomUUID();
+		stubClockAt(TODAY);
+		stubUserCurrency(mockUserId, EUR);
+		Asset mockTwinAsset = buildAsset(
+			buildCategory(AssetType.ASSET, "Equities"),
+			EUR,
+			TWIN_NAME,
+			true
+		);
+		mockTwinAsset.setId(TWIN_ASSET_ID);
+		Asset mockTwinLiability = buildLiability(
+			buildCategory(AssetType.LIABILITY, "Debts"),
+			EUR,
+			TWIN_NAME,
+			true
+		);
+		mockTwinLiability.setId(TWIN_LIABILITY_ID);
+		Asset mockCashAsset = buildAsset(buildCategory(AssetType.ASSET, "Cash"), EUR, CASH_NAME, true);
+		Snapshot mockTwinSnapshot = buildSnapshot(mockTwinAsset, "300", CHART_SNAPSHOT_DATE);
+		Snapshot mockTwinLiabilitySnapshot = buildSnapshot(
+			mockTwinLiability,
+			"120",
+			CHART_SNAPSHOT_DATE
+		);
+		Snapshot mockCashSnapshot = buildSnapshot(mockCashAsset, "100", CHART_SNAPSHOT_DATE);
+		stubBook(EUR, List.of(EUR), ONE_YEAR_CHART_DATES);
+		stubAssets(mockUserId, mockTwinAsset, mockTwinLiability, mockCashAsset);
+		stubSnapshots(mockUserId, mockTwinSnapshot, mockTwinLiabilitySnapshot, mockCashSnapshot);
+
+		// WHEN
+		ChartDataDTO expectedChart = testSubject.getChartData(mockUserId);
+
+		// THEN
+		int lastPoint = ONE_YEAR_CHART_DATES.size() - 1;
+		assertThat(expectedChart.getFavoriteAssetsValues()).containsOnlyKeys(
+			TWIN_ASSET_SERIES,
+			TWIN_LIABILITY_SERIES,
+			CASH_NAME
+		);
+		assertThat(expectedChart.getFavoriteAssetsValues().get(TWIN_ASSET_SERIES)).hasSize(
+			expectedChart.getLabels().size()
+		);
+		assertThat(expectedChart.getFavoriteAssetsValues().get(TWIN_LIABILITY_SERIES)).hasSize(
+			expectedChart.getLabels().size()
+		);
+		assertThat(expectedChart.getFavoriteAssetsValues().get(CASH_NAME)).hasSize(
+			expectedChart.getLabels().size()
+		);
+		assertThat(
+			expectedChart.getFavoriteAssetsValues().get(TWIN_ASSET_SERIES).get(lastPoint)
+		).isEqualByComparingTo(new BigDecimal("300"));
+		assertThat(
+			expectedChart.getFavoriteAssetsValues().get(TWIN_LIABILITY_SERIES).get(lastPoint)
+		).isEqualByComparingTo(new BigDecimal("-120"));
+		assertThat(
+			expectedChart.getFavoriteAssetsValues().get(CASH_NAME).get(lastPoint)
+		).isEqualByComparingTo(new BigDecimal("100"));
+	}
+
+	@Test
+	void getChartData_buildsMonthlyLabelsForAllHistory() {
+		// GIVEN
+		UUID mockUserId = UUID.randomUUID();
+		stubClockAt(TODAY);
+		stubUserCurrency(mockUserId, EUR);
+		stubBookForAnyDates(EUR, List.of());
+		stubAssets(mockUserId);
+		stubSnapshots(mockUserId);
+
+		// WHEN
+		ChartDataDTO expectedChart = testSubject.getChartData(mockUserId, true);
+
+		// THEN
+		assertThat(expectedChart.getLabels()).hasSize(121);
+	}
+
+	@Test
+	void getChartDataForYear_buildsOnePointPerMonthOfTheYear() {
+		// GIVEN
+		UUID mockUserId = UUID.randomUUID();
+		stubUserCurrency(mockUserId, EUR);
+		Asset mockAsset = buildAsset(buildCategory(AssetType.ASSET, "Equities"), EUR, "Fund", false);
+		Snapshot mockSnapshot = buildSnapshot(mockAsset, "1000", HISTORY_SNAPSHOT_DATE);
+		stubBook(EUR, List.of(EUR), CHART_2025_DATES);
+		stubAssets(mockUserId, mockAsset);
+		stubSnapshots(mockUserId, mockSnapshot);
+
+		// WHEN
+		ChartDataDTO expectedChart = testSubject.getChartDataForYear(mockUserId, 2025);
+
+		// THEN
+		assertThat(expectedChart.getLabels()).hasSize(12);
+		assertThat(expectedChart.getLabels().get(0)).isEqualTo("JAN 25");
+		assertThat(expectedChart.getLabels().get(11)).isEqualTo("DEC 25");
+		assertThat(expectedChart.getTotalAssetsOnly().get(0)).isEqualByComparingTo(
+			new BigDecimal("1000")
+		);
+		assertThat(expectedChart.getTotalNetWorth().get(11)).isEqualByComparingTo(
+			new BigDecimal("1000")
+		);
+	}
+
+	@Test
+	void getProjections_returnsOneEntryPerYearUpToTheRequestedCount() {
+		// GIVEN
+		UUID mockUserId = UUID.randomUUID();
+		stubClockAt(TODAY);
+		stubUserCurrency(mockUserId, EUR);
+		Asset mockAsset = buildAsset(buildCategory(AssetType.ASSET, "Equities"), EUR, "Fund", false);
+		Snapshot mockCurrentSnapshot = buildSnapshot(mockAsset, "2000", LATEST_DATA_DATE);
+		Snapshot mockBaselineSnapshot = buildSnapshot(mockAsset, "1000", ONE_YEAR_AGO.minusDays(1));
+		stubBook(EUR, List.of(EUR), List.of(TODAY, ONE_YEAR_AGO));
+		stubAssets(mockUserId, mockAsset);
+		stubSnapshots(mockUserId, mockCurrentSnapshot, mockBaselineSnapshot);
+
+		// WHEN
+		Map<Integer, BigDecimal> expectedProjections = testSubject.getProjections(mockUserId, 3, false);
+
+		// THEN
+		assertThat(expectedProjections).containsOnlyKeys(1, 2, 3);
+		assertThat(expectedProjections.get(1)).isEqualTo(new BigDecimal("4000.00"));
+		assertThat(expectedProjections.get(2)).isEqualTo(new BigDecimal("8000.00"));
+		assertThat(expectedProjections.get(3)).isEqualTo(new BigDecimal("16000.00"));
+	}
+
+	@Test
+	void getProjections_projectsGrossAssets_whenOnlyAssetsAreAsked() {
+		// GIVEN
+		UUID mockUserId = UUID.randomUUID();
+		stubClockAt(TODAY);
+		stubUserCurrency(mockUserId, EUR);
+		Asset mockAsset = buildAsset(buildCategory(AssetType.ASSET, "Equities"), EUR, "Fund", false);
+		Asset mockLiability = buildLiability(
+			buildCategory(AssetType.LIABILITY, "Debts"),
+			EUR,
+			"Mortgage",
+			false
+		);
+		Snapshot mockCurrentSnapshot = buildSnapshot(mockAsset, "1000", LATEST_DATA_DATE);
+		Snapshot mockBaselineSnapshot = buildSnapshot(mockAsset, "500", ONE_YEAR_AGO.minusDays(1));
+		Snapshot mockCurrentLiabilitySnapshot = buildSnapshot(mockLiability, "200", LATEST_DATA_DATE);
+		Snapshot mockBaselineLiabilitySnapshot = buildSnapshot(
+			mockLiability,
+			"200",
+			ONE_YEAR_AGO.minusDays(1)
+		);
+		stubBook(EUR, List.of(EUR), List.of(TODAY, ONE_YEAR_AGO));
+		stubAssets(mockUserId, mockAsset, mockLiability);
+		stubSnapshots(
+			mockUserId,
+			mockCurrentSnapshot,
+			mockBaselineSnapshot,
+			mockCurrentLiabilitySnapshot,
+			mockBaselineLiabilitySnapshot
+		);
+
+		// WHEN
+		Map<Integer, BigDecimal> expectedProjections = testSubject.getProjections(mockUserId, 2, true);
+
+		// THEN
+		assertThat(expectedProjections).containsOnlyKeys(1, 2);
+		assertThat(expectedProjections.get(1)).isEqualTo(new BigDecimal("2000.00"));
+		assertThat(expectedProjections.get(2)).isEqualTo(new BigDecimal("4000.00"));
+	}
+
+	@Test
+	void getProjections_returnsEmptyMap_whenYearsIsBelowOne() {
+		// GIVEN
+		UUID mockUserId = UUID.randomUUID();
+
+		// WHEN
+		Map<Integer, BigDecimal> expectedProjections = testSubject.getProjections(mockUserId, 0, false);
+
+		// THEN
+		assertThat(expectedProjections).isEmpty();
+	}
+
+	@Test
+	void getProjections_holdsTheCurrentValue_whenTheBaselineIsNotPositive() {
+		// GIVEN
+		UUID mockUserId = UUID.randomUUID();
+		stubClockAt(TODAY);
+		stubUserCurrency(mockUserId, EUR);
+		Asset mockAsset = buildAsset(buildCategory(AssetType.ASSET, "Equities"), EUR, "Fund", false);
+		Snapshot mockCurrentSnapshot = buildSnapshot(mockAsset, "1000", LATEST_DATA_DATE);
+		Snapshot mockBaselineSnapshot = buildSnapshot(mockAsset, "0", ONE_YEAR_AGO.minusDays(1));
+		stubBook(EUR, List.of(EUR), List.of(TODAY, ONE_YEAR_AGO));
+		stubAssets(mockUserId, mockAsset);
+		stubSnapshots(mockUserId, mockCurrentSnapshot, mockBaselineSnapshot);
+
+		// WHEN
+		Map<Integer, BigDecimal> expectedProjections = testSubject.getProjections(mockUserId, 2, false);
+
+		// THEN
+		assertThat(expectedProjections).containsOnlyKeys(1, 2);
+		assertThat(expectedProjections.get(1)).isEqualTo(new BigDecimal("1000.00"));
+		assertThat(expectedProjections.get(2)).isEqualTo(new BigDecimal("1000.00"));
+	}
+
+	@Test
+	void getProjections_holdsTheCurrentValue_whenTheUserIsShrinking() {
+		// GIVEN
+		UUID mockUserId = UUID.randomUUID();
+		stubClockAt(TODAY);
+		stubUserCurrency(mockUserId, EUR);
+		Asset mockAsset = buildAsset(buildCategory(AssetType.ASSET, "Equities"), EUR, "Fund", false);
+		Snapshot mockCurrentSnapshot = buildSnapshot(mockAsset, "1000", LATEST_DATA_DATE);
+		Snapshot mockBaselineSnapshot = buildSnapshot(mockAsset, "1500", ONE_YEAR_AGO.minusDays(1));
+		stubBook(EUR, List.of(EUR), List.of(TODAY, ONE_YEAR_AGO));
+		stubAssets(mockUserId, mockAsset);
+		stubSnapshots(mockUserId, mockCurrentSnapshot, mockBaselineSnapshot);
+
+		// WHEN
+		Map<Integer, BigDecimal> expectedProjections = testSubject.getProjections(mockUserId, 2, false);
+
+		// THEN
+		assertThat(expectedProjections).containsOnlyKeys(1, 2);
+		assertThat(expectedProjections.get(1)).isEqualTo(new BigDecimal("1000.00"));
+		assertThat(expectedProjections.get(2)).isEqualTo(new BigDecimal("1000.00"));
+	}
+
+	@Test
+	void getProjections_returnsZeroes_whenTheCurrentValueIsNotPositive() {
+		// GIVEN
+		UUID mockUserId = UUID.randomUUID();
+		stubClockAt(TODAY);
+		stubUserCurrency(mockUserId, EUR);
+		Asset mockAsset = buildAsset(buildCategory(AssetType.ASSET, "Equities"), EUR, "Fund", false);
+		Snapshot mockCurrentSnapshot = buildSnapshot(mockAsset, "0", LATEST_DATA_DATE);
+		Snapshot mockBaselineSnapshot = buildSnapshot(mockAsset, "1000", ONE_YEAR_AGO.minusDays(1));
+		stubBook(EUR, List.of(EUR), List.of(TODAY, ONE_YEAR_AGO));
+		stubAssets(mockUserId, mockAsset);
+		stubSnapshots(mockUserId, mockCurrentSnapshot, mockBaselineSnapshot);
+
+		// WHEN
+		Map<Integer, BigDecimal> expectedProjections = testSubject.getProjections(mockUserId, 2, false);
+
+		// THEN
+		assertThat(expectedProjections).containsOnlyKeys(1, 2);
+		assertThat(expectedProjections.get(1)).isEqualTo(new BigDecimal("0.00"));
+		assertThat(expectedProjections.get(2)).isEqualTo(new BigDecimal("0.00"));
 	}
 
 	@Test
@@ -152,14 +1162,11 @@ class AnalyticsServiceTest {
 		UUID mockUserId = UUID.randomUUID();
 		stubClockAt(TODAY);
 		stubUserCurrency(mockUserId, EUR);
-		Asset mockAsset = buildAsset(buildCategory(AssetType.ASSET, "Equities"), EUR, "World", false);
-		Snapshot mockSnapshot = buildSnapshot(mockAsset, "1000", TODAY.minusDays(10));
-		List<LocalDate> expectedDates = List.of(TODAY);
-		stubBook(EUR, List.of(EUR), expectedDates);
-		when(assetRepository.findByUserIdOrderByCreatedAtDesc(mockUserId)).thenReturn(
-			List.of(mockAsset)
-		);
-		when(snapshotRepository.findByAssetUserId(mockUserId)).thenReturn(List.of(mockSnapshot));
+		Asset mockAsset = buildAsset(buildCategory(AssetType.ASSET, "Equities"), EUR, "Fund", false);
+		Snapshot mockSnapshot = buildSnapshot(mockAsset, "1000", LATEST_DATA_DATE);
+		stubBook(EUR, List.of(EUR), List.of(TODAY));
+		stubAssets(mockUserId, mockAsset);
+		stubSnapshots(mockUserId, mockSnapshot);
 
 		// WHEN
 		BigDecimal expectedNetWorth = testSubject.getNetWorth(mockUserId);
@@ -173,15 +1180,12 @@ class AnalyticsServiceTest {
 		// GIVEN
 		UUID mockUserId = UUID.randomUUID();
 		stubClockAt(TODAY);
-		stubUserCurrency(mockUserId, USD);
-		Asset mockAsset = buildAsset(buildCategory(AssetType.ASSET, "Equities"), null, "World", false);
-		Snapshot mockSnapshot = buildSnapshot(mockAsset, "1000", TODAY.minusDays(10));
-		List<LocalDate> expectedDates = List.of(TODAY);
-		stubBook(USD, Collections.singletonList(null), expectedDates);
-		when(assetRepository.findByUserIdOrderByCreatedAtDesc(mockUserId)).thenReturn(
-			List.of(mockAsset)
-		);
-		when(snapshotRepository.findByAssetUserId(mockUserId)).thenReturn(List.of(mockSnapshot));
+		stubUserCurrency(mockUserId, EUR);
+		Asset mockAsset = buildAsset(buildCategory(AssetType.ASSET, "Equities"), null, "Fund", false);
+		Snapshot mockSnapshot = buildSnapshot(mockAsset, "1000", LATEST_DATA_DATE);
+		stubBook(EUR, Collections.singletonList(null), List.of(TODAY));
+		stubAssets(mockUserId, mockAsset);
+		stubSnapshots(mockUserId, mockSnapshot);
 
 		// WHEN
 		BigDecimal expectedNetWorth = testSubject.getNetWorth(mockUserId);
@@ -195,717 +1199,11 @@ class AnalyticsServiceTest {
 		// GIVEN
 		UUID mockUserId = UUID.randomUUID();
 		stubClockAt(TODAY);
-		when(assetRepository.findByUserIdOrderByCreatedAtDesc(mockUserId)).thenReturn(List.of());
-		when(snapshotRepository.findByAssetUserId(mockUserId)).thenReturn(List.of());
-		when(userRepository.findById(mockUserId)).thenReturn(Optional.empty());
 
 		// WHEN / THEN
 		assertThatThrownBy(() -> testSubject.getNetWorth(mockUserId)).isInstanceOf(
 			NotFoundException.class
 		);
-	}
-
-	@Test
-	void getNetWorth_propagatesExchangeRateOutage_whenRatesAreUnavailable() {
-		// GIVEN
-		UUID mockUserId = UUID.randomUUID();
-		stubClockAt(TODAY);
-		stubUserCurrency(mockUserId, USD);
-		Asset mockAsset = buildAsset(buildCategory(AssetType.ASSET, "Equities"), EUR, "World", false);
-		ExchangeRateUnavailableException stubbedOutage = stubExchangeRateOutage(
-			USD,
-			EUR,
-			List.of(TODAY)
-		);
-		when(assetRepository.findByUserIdOrderByCreatedAtDesc(mockUserId)).thenReturn(
-			List.of(mockAsset)
-		);
-		when(snapshotRepository.findByAssetUserId(mockUserId)).thenReturn(List.of());
-
-		// WHEN / THEN
-		assertThatThrownBy(() -> testSubject.getNetWorth(mockUserId)).isSameAs(stubbedOutage);
-	}
-
-	@Test
-	void getSummary_convertsCurrentTotalsAndEachVariationAtItsOwnDate() {
-		// GIVEN
-		UUID mockUserId = UUID.randomUUID();
-		stubClockAt(TODAY);
-		stubUserCurrency(mockUserId, USD);
-		Asset mockAsset = buildAsset(buildCategory(AssetType.ASSET, "Equities"), EUR, "World", false);
-		Snapshot mockLatestSnapshot = buildSnapshot(mockAsset, "2000", LATEST_SNAPSHOT_DATE);
-		Snapshot mockOldestSnapshot = buildSnapshot(mockAsset, "1000", OLDEST_SNAPSHOT_DATE);
-		List<LocalDate> expectedDates = summaryDates(LATEST_SNAPSHOT_DATE);
-		stubSourceRates(
-			EUR,
-			USD,
-			Map.of(
-				OLDEST_SNAPSHOT_DATE,
-				new BigDecimal("1.15"),
-				SIX_MONTHS_ANCHOR,
-				new BigDecimal("1.25"),
-				ONE_MONTH_ANCHOR,
-				new BigDecimal("1.2"),
-				CURRENCY_IMPACT_START,
-				new BigDecimal("1.1"),
-				TODAY,
-				new BigDecimal("1.5")
-			),
-			expectedDates
-		);
-		RateBook mockBook = stubBook(USD, List.of(EUR), expectedDates);
-		AssetDTO stubbedTopAsset = Instancio.create(AssetDTO.class);
-		when(
-			assetMapper.toDtoLight(
-				eq(mockAsset),
-				eq(List.of(mockLatestSnapshot, mockOldestSnapshot)),
-				eq(mockBook),
-				eq(TODAY)
-			)
-		).thenReturn(stubbedTopAsset);
-		when(assetRepository.findByUserIdOrderByCreatedAtDesc(mockUserId)).thenReturn(
-			List.of(mockAsset)
-		);
-		when(
-			snapshotRepository.findByAssetUserIdAndReferenceDateGreaterThanEqual(
-				eq(mockUserId),
-				eq(TODAY.minusYears(1).minusMonths(2))
-			)
-		).thenReturn(List.of(mockLatestSnapshot, mockOldestSnapshot));
-
-		// WHEN
-		AnalyticsSummaryDTO expectedSummary = testSubject.getSummary(mockUserId);
-
-		// THEN
-		assertThat(expectedSummary.getTotalNetWorth()).isEqualByComparingTo(new BigDecimal("3000"));
-		assertThat(expectedSummary.getTotalGrossAssets()).isEqualByComparingTo(new BigDecimal("3000"));
-		assertThat(expectedSummary.getVariations().getOneMonth().getAbsolute()).isEqualByComparingTo(
-			new BigDecimal("1800")
-		);
-		assertThat(expectedSummary.getVariations().getOneMonth().getPercentage()).isEqualByComparingTo(
-			new BigDecimal("150")
-		);
-		assertThat(expectedSummary.getVariations().getSixMonths().getAbsolute()).isEqualByComparingTo(
-			new BigDecimal("1750")
-		);
-		assertThat(expectedSummary.getVariations().getOneYear().getAbsolute()).isEqualByComparingTo(
-			new BigDecimal("1850")
-		);
-		assertThat(
-			expectedSummary.getAssetVariations().getOneMonth().getAbsolute()
-		).isEqualByComparingTo(new BigDecimal("1800"));
-		assertThat(expectedSummary.getCurrencyImpact()).isEqualByComparingTo(new BigDecimal("400"));
-		assertThat(expectedSummary.getAssetAllocation().get("Equities")).isEqualByComparingTo(
-			new BigDecimal("100")
-		);
-		assertThat(expectedSummary.getTopAssets()).containsExactly(stubbedTopAsset);
-		assertThat(expectedSummary.getOldestSnapshotYear()).isEqualTo(OLDEST_SNAPSHOT_DATE.getYear());
-	}
-
-	@Test
-	void getSummary_subtractsConvertedLiabilitiesFromConvertedAssets() {
-		// GIVEN
-		UUID mockUserId = UUID.randomUUID();
-		stubClockAt(TODAY);
-		stubUserCurrency(mockUserId, USD);
-		Asset mockAsset = buildAsset(buildCategory(AssetType.ASSET, "Equities"), EUR, "World", false);
-		Asset mockLiability = buildAsset(
-			buildCategory(AssetType.LIABILITY, "Debts"),
-			EUR,
-			"Mortgage",
-			false
-		);
-		Snapshot mockAssetSnapshot = buildSnapshot(mockAsset, "1000", TODAY);
-		Snapshot mockLiabilitySnapshot = buildSnapshot(mockLiability, "400", TODAY);
-		List<LocalDate> expectedDates = summaryDates(TODAY);
-		stubSourceRates(EUR, USD, Map.of(TODAY, new BigDecimal("1.5")), expectedDates);
-		stubBook(USD, List.of(EUR), expectedDates);
-		when(assetRepository.findByUserIdOrderByCreatedAtDesc(mockUserId)).thenReturn(
-			List.of(mockAsset, mockLiability)
-		);
-		when(
-			snapshotRepository.findByAssetUserIdAndReferenceDateGreaterThanEqual(
-				eq(mockUserId),
-				eq(TODAY.minusYears(1).minusMonths(2))
-			)
-		).thenReturn(List.of(mockAssetSnapshot, mockLiabilitySnapshot));
-
-		// WHEN
-		AnalyticsSummaryDTO expectedSummary = testSubject.getSummary(mockUserId);
-
-		// THEN
-		assertThat(expectedSummary.getTotalGrossAssets()).isEqualByComparingTo(new BigDecimal("1500"));
-		assertThat(expectedSummary.getTotalLiabilities()).isEqualByComparingTo(new BigDecimal("600"));
-		assertThat(expectedSummary.getTotalNetWorth()).isEqualByComparingTo(new BigDecimal("900"));
-		assertThat(expectedSummary.getDebtToAssetRatio()).isEqualByComparingTo(new BigDecimal("28.57"));
-		assertThat(expectedSummary.getAssetAllocation().get("Equities")).isEqualByComparingTo(
-			new BigDecimal("71.43")
-		);
-		assertThat(expectedSummary.getAssetAllocation().get("Debts")).isEqualByComparingTo(
-			new BigDecimal("28.57")
-		);
-		assertThat(expectedSummary.getVariations().getOneMonth().getPercentage()).isEqualByComparingTo(
-			BigDecimal.ZERO
-		);
-		assertThat(
-			expectedSummary.getAssetVariations().getOneMonth().getAbsolute()
-		).isEqualByComparingTo(new BigDecimal("1500"));
-	}
-
-	@Test
-	void getSummary_returnsZeroes_whenThereIsNoData() {
-		// GIVEN
-		UUID mockUserId = UUID.randomUUID();
-		stubClockAt(TODAY);
-		stubUserCurrency(mockUserId, USD);
-		List<LocalDate> expectedDates = summaryDates(TODAY);
-		stubBook(USD, List.of(), expectedDates);
-		when(assetRepository.findByUserIdOrderByCreatedAtDesc(mockUserId)).thenReturn(List.of());
-		when(
-			snapshotRepository.findByAssetUserIdAndReferenceDateGreaterThanEqual(
-				eq(mockUserId),
-				eq(TODAY.minusYears(1).minusMonths(2))
-			)
-		).thenReturn(List.of());
-
-		// WHEN
-		AnalyticsSummaryDTO expectedSummary = testSubject.getSummary(mockUserId);
-
-		// THEN
-		assertThat(expectedSummary.getTotalNetWorth()).isEqualByComparingTo(BigDecimal.ZERO);
-		assertThat(expectedSummary.getTotalLiabilities()).isEqualByComparingTo(BigDecimal.ZERO);
-		assertThat(expectedSummary.getDebtToAssetRatio()).isEqualByComparingTo(BigDecimal.ZERO);
-		assertThat(expectedSummary.getCurrencyImpact()).isEqualByComparingTo(BigDecimal.ZERO);
-		assertThat(expectedSummary.getAssetAllocation()).isEmpty();
-		assertThat(expectedSummary.getTopAssets()).isEmpty();
-		assertThat(expectedSummary.getOldestSnapshotYear()).isNull();
-		DeltaDTO expectedOneMonth = expectedSummary.getVariations().getOneMonth();
-		assertThat(expectedOneMonth.getAbsolute()).isEqualByComparingTo(BigDecimal.ZERO);
-		assertThat(expectedOneMonth.getPercentage()).isEqualByComparingTo(BigDecimal.ZERO);
-	}
-
-	@Test
-	void getSummary_propagatesExchangeRateOutage_whenRatesAreUnavailable() {
-		// GIVEN
-		UUID mockUserId = UUID.randomUUID();
-		stubClockAt(TODAY);
-		stubUserCurrency(mockUserId, USD);
-		Asset mockAsset = buildAsset(buildCategory(AssetType.ASSET, "Equities"), EUR, "World", false);
-		ExchangeRateUnavailableException stubbedOutage = stubExchangeRateOutage(
-			USD,
-			EUR,
-			summaryDates(TODAY)
-		);
-		when(assetRepository.findByUserIdOrderByCreatedAtDesc(mockUserId)).thenReturn(
-			List.of(mockAsset)
-		);
-		when(
-			snapshotRepository.findByAssetUserIdAndReferenceDateGreaterThanEqual(
-				eq(mockUserId),
-				eq(TODAY.minusYears(1).minusMonths(2))
-			)
-		).thenReturn(List.of());
-
-		// WHEN / THEN
-		assertThatThrownBy(() -> testSubject.getSummary(mockUserId)).isSameAs(stubbedOutage);
-	}
-
-	@Test
-	void getSummary_ordersTopAssetsByConvertedValue() {
-		// GIVEN
-		UUID mockUserId = UUID.randomUUID();
-		stubClockAt(TODAY);
-		stubUserCurrency(mockUserId, USD);
-		Asset mockEuroAsset = buildAsset(
-			buildCategory(AssetType.ASSET, "Equities"),
-			EUR,
-			"Euro fund",
-			false
-		);
-		Asset mockPoundAsset = buildAsset(
-			buildCategory(AssetType.ASSET, "Bonds"),
-			GBP,
-			"UK fund",
-			false
-		);
-		Asset mockLiability = buildAsset(
-			buildCategory(AssetType.LIABILITY, "Debts"),
-			EUR,
-			"Mortgage",
-			false
-		);
-		Asset mockUncategorized = buildAsset(null, EUR, "Loose cash", false);
-		Asset mockUntracked = buildAsset(
-			buildCategory(AssetType.ASSET, "Equities"),
-			EUR,
-			"Untracked",
-			false
-		);
-		Snapshot mockEuroSnapshot = buildSnapshot(mockEuroAsset, "100", TODAY);
-		Snapshot mockPoundSnapshot = buildSnapshot(mockPoundAsset, "200", TODAY);
-		Snapshot mockLiabilitySnapshot = buildSnapshot(mockLiability, "500", TODAY);
-		Snapshot mockUncategorizedSnapshot = buildSnapshot(mockUncategorized, "50", TODAY);
-		List<LocalDate> expectedDates = summaryDates(TODAY);
-		stubSourceRates(EUR, USD, Map.of(TODAY, new BigDecimal("3.0")), expectedDates);
-		stubSourceRates(GBP, USD, Map.of(TODAY, BigDecimal.ONE), expectedDates);
-		RateBook mockBook = stubBook(USD, List.of(EUR, GBP), expectedDates);
-		AssetDTO stubbedEuroAsset = Instancio.create(AssetDTO.class);
-		AssetDTO stubbedPoundAsset = Instancio.create(AssetDTO.class);
-		AssetDTO stubbedUntrackedAsset = Instancio.create(AssetDTO.class);
-		when(
-			assetMapper.toDtoLight(
-				eq(mockEuroAsset),
-				eq(List.of(mockEuroSnapshot)),
-				eq(mockBook),
-				eq(TODAY)
-			)
-		).thenReturn(stubbedEuroAsset);
-		when(
-			assetMapper.toDtoLight(
-				eq(mockPoundAsset),
-				eq(List.of(mockPoundSnapshot)),
-				eq(mockBook),
-				eq(TODAY)
-			)
-		).thenReturn(stubbedPoundAsset);
-		when(
-			assetMapper.toDtoLight(eq(mockUntracked), eq(List.of()), eq(mockBook), eq(TODAY))
-		).thenReturn(stubbedUntrackedAsset);
-		when(assetRepository.findByUserIdOrderByCreatedAtDesc(mockUserId)).thenReturn(
-			List.of(mockEuroAsset, mockPoundAsset, mockLiability, mockUncategorized, mockUntracked)
-		);
-		when(
-			snapshotRepository.findByAssetUserIdAndReferenceDateGreaterThanEqual(
-				eq(mockUserId),
-				eq(TODAY.minusYears(1).minusMonths(2))
-			)
-		).thenReturn(
-			List.of(mockEuroSnapshot, mockPoundSnapshot, mockLiabilitySnapshot, mockUncategorizedSnapshot)
-		);
-
-		// WHEN
-		AnalyticsSummaryDTO expectedSummary = testSubject.getSummary(mockUserId);
-
-		// THEN
-		assertThat(expectedSummary.getTopAssets()).containsExactly(
-			stubbedEuroAsset,
-			stubbedPoundAsset,
-			stubbedUntrackedAsset
-		);
-		assertThat(expectedSummary.getAssetAllocation().get("Other")).isEqualByComparingTo(
-			new BigDecimal("6.98")
-		);
-	}
-
-	@Test
-	void getChartData_convertsEveryMonthEndAtItsOwnDate() {
-		// GIVEN
-		UUID mockUserId = UUID.randomUUID();
-		stubClockAt(TODAY);
-		stubUserCurrency(mockUserId, USD);
-		Asset mockAsset = buildAsset(buildCategory(AssetType.ASSET, "Equities"), EUR, "World", false);
-		Snapshot mockSnapshot = buildSnapshot(mockAsset, "1000", JANUARY_SNAPSHOT_DATE);
-		stubSourceRates(
-			EUR,
-			USD,
-			Map.of(ONE_YEAR_CHART_DATES.get(0), new BigDecimal("1.1"), TODAY, new BigDecimal("1.5")),
-			ONE_YEAR_CHART_DATES
-		);
-		stubBook(USD, List.of(EUR), ONE_YEAR_CHART_DATES);
-		when(assetRepository.findByUserIdOrderByCreatedAtDesc(mockUserId)).thenReturn(
-			List.of(mockAsset)
-		);
-		when(snapshotRepository.findByAssetUserId(mockUserId)).thenReturn(List.of(mockSnapshot));
-
-		// WHEN
-		ChartDataDTO expectedChart = testSubject.getChartData(mockUserId, false);
-
-		// THEN
-		assertThat(expectedChart.getLabels()).hasSize(ONE_YEAR_CHART_DATES.size());
-		assertThat(expectedChart.getLabels().get(0)).isEqualTo("JUN 25");
-		assertThat(expectedChart.getLabels().get(ONE_YEAR_CHART_DATES.size() - 1)).isEqualTo("JUN 26");
-		assertThat(expectedChart.getTotalAssetsOnly().get(0)).isEqualByComparingTo(
-			new BigDecimal("1100")
-		);
-		assertThat(
-			expectedChart.getTotalAssetsOnly().get(ONE_YEAR_CHART_DATES.size() - 1)
-		).isEqualByComparingTo(new BigDecimal("1500"));
-		assertThat(expectedChart.getTotalNetWorth().get(0)).isEqualByComparingTo(
-			new BigDecimal("1100")
-		);
-	}
-
-	@Test
-	void getChartData_buildsMonthlyLabelsForAllHistory() {
-		// GIVEN
-		UUID mockUserId = UUID.randomUUID();
-		stubClockAt(TODAY);
-		stubUserCurrency(mockUserId, USD);
-		when(conversionService.book(eq(USD), eq(List.of()), anyCollection())).thenReturn(
-			buildBook(USD, List.of(), List.of())
-		);
-		when(assetRepository.findByUserIdOrderByCreatedAtDesc(mockUserId)).thenReturn(List.of());
-		when(snapshotRepository.findByAssetUserId(mockUserId)).thenReturn(List.of());
-
-		// WHEN
-		ChartDataDTO expectedChart = testSubject.getChartData(mockUserId, true);
-
-		// THEN
-		assertThat(expectedChart.getLabels()).hasSize(121);
-	}
-
-	@Test
-	void getChartData_propagatesExchangeRateOutage_whenRatesAreUnavailable() {
-		// GIVEN
-		UUID mockUserId = UUID.randomUUID();
-		stubClockAt(TODAY);
-		stubUserCurrency(mockUserId, USD);
-		Asset mockAsset = buildAsset(buildCategory(AssetType.ASSET, "Equities"), EUR, "World", false);
-		ExchangeRateUnavailableException stubbedOutage = stubExchangeRateOutage(
-			USD,
-			EUR,
-			ONE_YEAR_CHART_DATES
-		);
-		when(assetRepository.findByUserIdOrderByCreatedAtDesc(mockUserId)).thenReturn(
-			List.of(mockAsset)
-		);
-		when(snapshotRepository.findByAssetUserId(mockUserId)).thenReturn(List.of());
-
-		// WHEN / THEN
-		assertThatThrownBy(() -> testSubject.getChartData(mockUserId, false)).isSameAs(stubbedOutage);
-	}
-
-	@Test
-	void getChartDataForYear_buildsOnePointPerMonthOfTheYear() {
-		// GIVEN
-		UUID mockUserId = UUID.randomUUID();
-		stubUserCurrency(mockUserId, EUR);
-		Asset mockAsset = buildAsset(buildCategory(AssetType.ASSET, "Equities"), EUR, "World", false);
-		Snapshot mockSnapshot = buildSnapshot(mockAsset, "1000", PROJECTION_BASELINE_DATE);
-		stubBook(EUR, List.of(EUR), CHART_2025_DATES);
-		when(assetRepository.findByUserIdOrderByCreatedAtDesc(mockUserId)).thenReturn(
-			List.of(mockAsset)
-		);
-		when(snapshotRepository.findByAssetUserId(mockUserId)).thenReturn(List.of(mockSnapshot));
-
-		// WHEN
-		ChartDataDTO expectedChart = testSubject.getChartDataForYear(mockUserId, 2025);
-
-		// THEN
-		assertThat(expectedChart.getLabels()).hasSize(12);
-		assertThat(expectedChart.getLabels().get(0)).isEqualTo("JAN 25");
-		assertThat(expectedChart.getLabels().get(11)).isEqualTo("DEC 25");
-		assertThat(expectedChart.getTotalAssetsOnly().get(0)).isEqualByComparingTo(
-			new BigDecimal("1000")
-		);
-		assertThat(expectedChart.getTotalAssetsOnly().get(11)).isEqualByComparingTo(
-			new BigDecimal("1000")
-		);
-	}
-
-	@Test
-	void getChartData_convertsFavouriteSeriesAndNegatesLiabilities() {
-		// GIVEN
-		UUID mockUserId = UUID.randomUUID();
-		stubClockAt(TODAY);
-		stubUserCurrency(mockUserId, USD);
-		Asset mockFavouriteAsset = buildAsset(
-			buildCategory(AssetType.ASSET, "Equities"),
-			EUR,
-			"Favourite asset",
-			true
-		);
-		Asset mockFavouriteLiability = buildAsset(
-			buildCategory(AssetType.LIABILITY, "Debts"),
-			EUR,
-			"Favourite liability",
-			true
-		);
-		Asset mockFavouriteUncategorized = buildAsset(null, EUR, "Favourite cash", true);
-		Asset mockFavouriteWithoutSnapshots = buildAsset(
-			buildCategory(AssetType.ASSET, "Equities"),
-			EUR,
-			"Favourite empty",
-			true
-		);
-		Asset mockFavouriteLate = buildAsset(
-			buildCategory(AssetType.ASSET, "Equities"),
-			EUR,
-			"Favourite late",
-			true
-		);
-		Asset mockPlainAsset = buildAsset(
-			buildCategory(AssetType.ASSET, "Equities"),
-			EUR,
-			"Plain",
-			false
-		);
-		Snapshot mockAssetSnapshot = buildSnapshot(mockFavouriteAsset, "500", JANUARY_SNAPSHOT_DATE);
-		Snapshot mockLiabilitySnapshot = buildSnapshot(
-			mockFavouriteLiability,
-			"300",
-			JANUARY_SNAPSHOT_DATE
-		);
-		Snapshot mockUncategorizedSnapshot = buildSnapshot(
-			mockFavouriteUncategorized,
-			"100",
-			JANUARY_SNAPSHOT_DATE
-		);
-		Snapshot mockPlainSnapshot = buildSnapshot(mockPlainAsset, "999", JANUARY_SNAPSHOT_DATE);
-		Snapshot mockLateSnapshot = buildSnapshot(mockFavouriteLate, "700", MID_SERIES_SNAPSHOT_DATE);
-		stubSourceRates(
-			EUR,
-			USD,
-			Map.of(ONE_YEAR_CHART_DATES.get(0), BigDecimal.ONE),
-			ONE_YEAR_CHART_DATES
-		);
-		stubBook(USD, List.of(EUR), ONE_YEAR_CHART_DATES);
-		when(assetRepository.findByUserIdOrderByCreatedAtDesc(mockUserId)).thenReturn(
-			List.of(
-				mockFavouriteAsset,
-				mockFavouriteLiability,
-				mockFavouriteUncategorized,
-				mockFavouriteWithoutSnapshots,
-				mockFavouriteLate,
-				mockPlainAsset
-			)
-		);
-		when(snapshotRepository.findByAssetUserId(mockUserId)).thenReturn(
-			List.of(
-				mockAssetSnapshot,
-				mockLiabilitySnapshot,
-				mockUncategorizedSnapshot,
-				mockPlainSnapshot,
-				mockLateSnapshot
-			)
-		);
-
-		// WHEN
-		ChartDataDTO expectedChart = testSubject.getChartData(mockUserId);
-
-		// THEN
-		assertThat(
-			expectedChart.getFavoriteAssetsValues().get("Favourite asset").get(0)
-		).isEqualByComparingTo(new BigDecimal("500"));
-		assertThat(
-			expectedChart.getFavoriteAssetsValues().get("Favourite liability").get(0)
-		).isEqualByComparingTo(new BigDecimal("-300"));
-		assertThat(
-			expectedChart.getFavoriteAssetsValues().get("Favourite cash").get(0)
-		).isEqualByComparingTo(new BigDecimal("100"));
-		assertThat(
-			expectedChart.getFavoriteAssetsValues().get("Favourite empty").get(0)
-		).isEqualByComparingTo(BigDecimal.ZERO);
-		assertThat(
-			expectedChart.getFavoriteAssetsValues().get("Favourite late").get(0)
-		).isEqualByComparingTo(BigDecimal.ZERO);
-		assertThat(
-			expectedChart
-				.getFavoriteAssetsValues()
-				.get("Favourite late")
-				.get(ONE_YEAR_CHART_DATES.size() - 1)
-		).isEqualByComparingTo(new BigDecimal("700"));
-		assertThat(expectedChart.getFavoriteAssetsTypes()).containsEntry(
-			"Favourite liability",
-			"LIABILITY"
-		);
-		assertThat(expectedChart.getFavoriteAssetsTypes()).containsEntry("Favourite asset", "ASSET");
-		assertThat(expectedChart.getTotalNetWorth().get(0)).isEqualByComparingTo(
-			new BigDecimal("1299")
-		);
-		assertThat(expectedChart.getTotalAssetsOnly().get(0)).isEqualByComparingTo(
-			new BigDecimal("1499")
-		);
-	}
-
-	@Test
-	void getProjections_convertsCurrentValueAtTodayAndBaselineOneYearAgo() {
-		// GIVEN
-		UUID mockUserId = UUID.randomUUID();
-		stubClockAt(TODAY);
-		stubUserCurrency(mockUserId, USD);
-		Asset mockAsset = buildAsset(buildCategory(AssetType.ASSET, "Equities"), EUR, "World", false);
-		Snapshot mockCurrentSnapshot = buildSnapshot(mockAsset, "2000", LATEST_SNAPSHOT_DATE);
-		Snapshot mockBaselineSnapshot = buildSnapshot(mockAsset, "1000", OLDEST_SNAPSHOT_DATE);
-		List<LocalDate> expectedDates = List.of(TODAY, ONE_YEAR_AGO);
-		stubSourceRates(
-			EUR,
-			USD,
-			Map.of(
-				OLDEST_SNAPSHOT_DATE,
-				new BigDecimal("1.2"),
-				LATEST_SNAPSHOT_DATE,
-				new BigDecimal("1.5")
-			),
-			expectedDates
-		);
-		stubBook(USD, List.of(EUR), expectedDates);
-		when(assetRepository.findByUserIdOrderByCreatedAtDesc(mockUserId)).thenReturn(
-			List.of(mockAsset)
-		);
-		when(snapshotRepository.findByAssetUserId(mockUserId)).thenReturn(
-			List.of(mockCurrentSnapshot, mockBaselineSnapshot)
-		);
-
-		// WHEN
-		Map<Integer, BigDecimal> expectedProjections = testSubject.getProjections(
-			mockUserId,
-			10,
-			false
-		);
-
-		// THEN
-		assertThat(expectedProjections).containsOnlyKeys(1, 5, 10);
-		assertThat(expectedProjections.get(1)).isEqualByComparingTo(new BigDecimal("7500"));
-		assertThat(expectedProjections.get(5)).isEqualByComparingTo(new BigDecimal("292968.75"));
-		assertThat(expectedProjections.get(10)).isEqualByComparingTo(new BigDecimal("28610229.49"));
-	}
-
-	@Test
-	void getProjections_returnsCurrentValue_whenTheUserIsShrinking() {
-		// GIVEN
-		UUID mockUserId = UUID.randomUUID();
-		stubClockAt(TODAY);
-		stubUserCurrency(mockUserId, EUR);
-		Asset mockAsset = buildAsset(buildCategory(AssetType.ASSET, "Equities"), EUR, "World", false);
-		Snapshot mockCurrentSnapshot = buildSnapshot(mockAsset, "1000", LATEST_SNAPSHOT_DATE);
-		Snapshot mockBaselineSnapshot = buildSnapshot(mockAsset, "1500", OLDEST_SNAPSHOT_DATE);
-		List<LocalDate> expectedDates = List.of(TODAY, ONE_YEAR_AGO);
-		stubBook(EUR, List.of(EUR), expectedDates);
-		when(assetRepository.findByUserIdOrderByCreatedAtDesc(mockUserId)).thenReturn(
-			List.of(mockAsset)
-		);
-		when(snapshotRepository.findByAssetUserId(mockUserId)).thenReturn(
-			List.of(mockCurrentSnapshot, mockBaselineSnapshot)
-		);
-
-		// WHEN
-		Map<Integer, BigDecimal> expectedProjections = testSubject.getProjections(
-			mockUserId,
-			10,
-			false
-		);
-
-		// THEN
-		assertThat(expectedProjections.get(1)).isEqualByComparingTo(new BigDecimal("1000"));
-		assertThat(expectedProjections.get(5)).isEqualByComparingTo(new BigDecimal("1000"));
-		assertThat(expectedProjections.get(10)).isEqualByComparingTo(new BigDecimal("1000"));
-	}
-
-	@Test
-	void getProjections_returnsZeroes_whenThereIsNothingToProject() {
-		// GIVEN
-		UUID mockUserId = UUID.randomUUID();
-		stubClockAt(TODAY);
-		stubUserCurrency(mockUserId, EUR);
-		Asset mockAsset = buildAsset(buildCategory(AssetType.ASSET, "Equities"), EUR, "World", false);
-		Snapshot mockSnapshot = buildSnapshot(mockAsset, "0", LATEST_SNAPSHOT_DATE);
-		List<LocalDate> expectedDates = List.of(TODAY, ONE_YEAR_AGO);
-		stubBook(EUR, List.of(EUR), expectedDates);
-		when(assetRepository.findByUserIdOrderByCreatedAtDesc(mockUserId)).thenReturn(
-			List.of(mockAsset)
-		);
-		when(snapshotRepository.findByAssetUserId(mockUserId)).thenReturn(List.of(mockSnapshot));
-
-		// WHEN
-		Map<Integer, BigDecimal> expectedProjections = testSubject.getProjections(mockUserId, 10, true);
-
-		// THEN
-		assertThat(expectedProjections.get(1)).isEqualByComparingTo(BigDecimal.ZERO);
-		assertThat(expectedProjections.get(5)).isEqualByComparingTo(BigDecimal.ZERO);
-		assertThat(expectedProjections.get(10)).isEqualByComparingTo(BigDecimal.ZERO);
-	}
-
-	@Test
-	void getProjections_returnsCurrentValue_whenThereIsNoBaselineToCompare() {
-		// GIVEN
-		UUID mockUserId = UUID.randomUUID();
-		stubClockAt(TODAY);
-		stubUserCurrency(mockUserId, EUR);
-		Asset mockAsset = buildAsset(buildCategory(AssetType.ASSET, "Equities"), EUR, "World", false);
-		Snapshot mockCurrentSnapshot = buildSnapshot(mockAsset, "1000", LATEST_SNAPSHOT_DATE);
-		List<LocalDate> expectedDates = List.of(TODAY, ONE_YEAR_AGO);
-		stubBook(EUR, List.of(EUR), expectedDates);
-		when(assetRepository.findByUserIdOrderByCreatedAtDesc(mockUserId)).thenReturn(
-			List.of(mockAsset)
-		);
-		when(snapshotRepository.findByAssetUserId(mockUserId)).thenReturn(List.of(mockCurrentSnapshot));
-
-		// WHEN
-		Map<Integer, BigDecimal> expectedProjections = testSubject.getProjections(
-			mockUserId,
-			10,
-			false
-		);
-
-		// THEN
-		assertThat(expectedProjections.get(1)).isEqualByComparingTo(new BigDecimal("1000"));
-		assertThat(expectedProjections.get(5)).isEqualByComparingTo(new BigDecimal("1000"));
-		assertThat(expectedProjections.get(10)).isEqualByComparingTo(new BigDecimal("1000"));
-	}
-
-	@Test
-	void getProjections_propagatesExchangeRateOutage_whenRatesAreUnavailable() {
-		// GIVEN
-		UUID mockUserId = UUID.randomUUID();
-		stubClockAt(TODAY);
-		stubUserCurrency(mockUserId, USD);
-		Asset mockAsset = buildAsset(buildCategory(AssetType.ASSET, "Equities"), EUR, "World", false);
-		ExchangeRateUnavailableException stubbedOutage = stubExchangeRateOutage(
-			USD,
-			EUR,
-			List.of(TODAY, ONE_YEAR_AGO)
-		);
-		when(assetRepository.findByUserIdOrderByCreatedAtDesc(mockUserId)).thenReturn(
-			List.of(mockAsset)
-		);
-		when(snapshotRepository.findByAssetUserId(mockUserId)).thenReturn(List.of());
-
-		// WHEN / THEN
-		assertThatThrownBy(() -> testSubject.getProjections(mockUserId, 10, false)).isSameAs(
-			stubbedOutage
-		);
-	}
-
-	@Test
-	void getSummary_ignoresSnapshotDatedAfterToday() {
-		// GIVEN
-		UUID mockUserId = UUID.randomUUID();
-		stubClockAt(TODAY);
-		stubUserCurrency(mockUserId, EUR);
-		Asset mockAsset = buildAsset(buildCategory(AssetType.ASSET, "Equities"), EUR, "World", false);
-		Snapshot mockFutureSnapshot = buildSnapshot(mockAsset, "1000", FUTURE_SNAPSHOT_DATE);
-		List<LocalDate> expectedDates = summaryDates(FUTURE_SNAPSHOT_DATE);
-		RateBook mockBook = stubBook(EUR, List.of(EUR), expectedDates);
-		AssetDTO stubbedTopAsset = Instancio.create(AssetDTO.class);
-		when(
-			assetMapper.toDtoLight(
-				eq(mockAsset),
-				eq(List.of(mockFutureSnapshot)),
-				eq(mockBook),
-				eq(TODAY)
-			)
-		).thenReturn(stubbedTopAsset);
-		when(assetRepository.findByUserIdOrderByCreatedAtDesc(mockUserId)).thenReturn(
-			List.of(mockAsset)
-		);
-		when(
-			snapshotRepository.findByAssetUserIdAndReferenceDateGreaterThanEqual(
-				eq(mockUserId),
-				eq(TODAY.minusYears(1).minusMonths(2))
-			)
-		).thenReturn(List.of(mockFutureSnapshot));
-
-		// WHEN
-		AnalyticsSummaryDTO expectedSummary = testSubject.getSummary(mockUserId);
-
-		// THEN
-		assertThat(expectedSummary.getTotalNetWorth()).isEqualByComparingTo(BigDecimal.ZERO);
-		assertThat(expectedSummary.getCurrencyImpact()).isEqualByComparingTo(BigDecimal.ZERO);
-		assertThat(expectedSummary.getAssetAllocation().get("Equities")).isEqualByComparingTo(
-			new BigDecimal("100")
-		);
-		assertThat(expectedSummary.getTopAssets()).containsExactly(stubbedTopAsset);
 	}
 
 	private void stubClockAt(LocalDate date) {
@@ -919,6 +1217,32 @@ class AnalyticsServiceTest {
 			.set(Select.field(User::getCurrency), currency)
 			.create();
 		when(userRepository.findById(userId)).thenReturn(Optional.of(mockUser));
+	}
+
+	private void stubAssets(UUID userId, Asset... assets) {
+		when(assetRepository.findByUserIdOrderByCreatedAtDesc(userId)).thenReturn(List.of(assets));
+	}
+
+	private void stubSnapshots(UUID userId, Snapshot... snapshots) {
+		when(snapshotRepository.findByAssetUserId(userId)).thenReturn(List.of(snapshots));
+	}
+
+	private void stubSummarySnapshots(
+		UUID userId,
+		List<Snapshot> windowSnapshots,
+		List<Snapshot> carryInSnapshots,
+		LocalDate oldestReferenceDate
+	) {
+		when(
+			snapshotRepository.findByAssetUserIdAndReferenceDateGreaterThanEqual(
+				eq(userId),
+				eq(SUMMARY_WINDOW_START)
+			)
+		).thenReturn(windowSnapshots);
+		when(snapshotRepository.findLatestPerAssetByUserId(userId)).thenReturn(carryInSnapshots);
+		when(snapshotRepository.findOldestReferenceDateByAssetUserId(userId)).thenReturn(
+			Optional.ofNullable(oldestReferenceDate)
+		);
 	}
 
 	private void stubSourceRates(
@@ -938,22 +1262,10 @@ class AnalyticsServiceTest {
 		return mockBook;
 	}
 
-	private ExchangeRateUnavailableException stubExchangeRateOutage(
-		Currency target,
-		Currency source,
-		List<LocalDate> dates
-	) {
-		ExchangeRateUnavailableException stubbedOutage = new ExchangeRateUnavailableException(
-			EXCHANGE_RATE_OUTAGE_MESSAGE
+	private void stubBookForAnyDates(Currency target, List<Currency> sources) {
+		when(conversionService.book(eq(target), eq(sources), anyCollection())).thenReturn(
+			buildBook(target, sources, List.of())
 		);
-		when(exchangeRateProvider.getRates(source.getValue(), target.getValue(), dates)).thenThrow(
-			stubbedOutage
-		);
-		when(conversionService.book(eq(target), eq(List.of(source)), eq(dates))).thenAnswer(
-			invocation ->
-				buildBook(invocation.getArgument(0), invocation.getArgument(1), invocation.getArgument(2))
-		);
-		return stubbedOutage;
 	}
 
 	private RateBook buildBook(Currency target, List<Currency> sources, Collection<LocalDate> dates) {
@@ -966,7 +1278,7 @@ class AnalyticsServiceTest {
 			latestDataDate.minusMonths(1),
 			latestDataDate.minusMonths(6),
 			latestDataDate.minusYears(1),
-			TODAY.minusMonths(1)
+			CURRENCY_IMPACT_START
 		);
 	}
 
@@ -984,12 +1296,32 @@ class AnalyticsServiceTest {
 		String name,
 		boolean favorite
 	) {
+		return buildAsset(category, currency, name, favorite, null);
+	}
+
+	private Asset buildLiability(
+		AssetCategory category,
+		Currency currency,
+		String name,
+		boolean favorite
+	) {
+		return buildAsset(category, currency, name, favorite, LiabilityType.MANUAL);
+	}
+
+	private Asset buildAsset(
+		AssetCategory category,
+		Currency currency,
+		String name,
+		boolean favorite,
+		LiabilityType liabilityType
+	) {
 		return Instancio.of(Asset.class)
 			.set(Select.field(Asset::getUser), null)
 			.set(Select.field(Asset::getCategory), category)
 			.set(Select.field(Asset::getOriginalCurrency), currency)
 			.set(Select.field(Asset::getName), name)
 			.set(Select.field(Asset::getIsFavorite), favorite)
+			.set(Select.field(Asset::getLiabilityType), liabilityType)
 			.set(Select.field(Asset::getSnapshots), new ArrayList<>())
 			.create();
 	}
