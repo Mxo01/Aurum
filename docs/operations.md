@@ -46,14 +46,21 @@ Guards on the workflow:
   `cancel-in-progress: false`: a second deploy queues behind the running one and
   never cancels an `up` halfway.
 - **Pinned host key.** Both SSH steps pass
-  `fingerprint: SHA256:Ii4jvYvpxCXbiP8B1isJd1BhzIVZys4o5lERjrU2cz4`, so a
+  `fingerprint: SHA256:VJhnXvd0pZ6gY7SIlJRZVUYCPmGXZjQ5z7h6hcHp4ew`, so a
   `known_hosts`-less runner still refuses a host whose key changed. That
-  fingerprint is the public ED25519 host key, not a secret; it is the same on
-  the IP and on the API hostname. Re-derive it before ever changing it:
+  fingerprint is the public RSA host key, not a secret; it is the same on the IP
+  and on the API hostname. The RSA key is the one the action actually
+  negotiates: the Go SSH client prefers `rsa-sha2-*` over ECDSA and ED25519, so a
+  fingerprint taken from another key type fails with `host key fingerprint
+  mismatch`. Re-derive it before ever changing it:
 
   ```bash
-  ssh-keyscan -t ed25519 <host> | ssh-keygen -lf -
+  ssh-keyscan -t rsa <host> | ssh-keygen -lf -
   ```
+
+  The host also publishes ECDSA and ED25519 keys (`ssh-keyscan <host>` lists
+  them); their fingerprints are informational only and are not what the deploy
+  verifies.
 
 The workflow builds the image, pushes `:latest` and `:<sha>`, copies
 `docker-compose.prod.yml` to `/opt/aurum`, writes `GHCR_IMAGE` (the SHA tag) and
