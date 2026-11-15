@@ -88,7 +88,9 @@ public class SnapshotService {
 
 	/**
 	 * The user's own valuation of an asset: it matches user rows only, so a month already paid by
-	 * the scheduler keeps its scheduled row untouched.
+	 * the scheduler keeps its scheduled row untouched. A valuation that repeats the latest user
+	 * one — same amount, same currency, no earlier date — writes nothing: the history must not grow
+	 * with points that carry no new information.
 	 */
 	@Transactional
 	public Snapshot saveOrUpdate(
@@ -103,6 +105,17 @@ public class SnapshotService {
 			referenceDate,
 			amount
 		);
+		Optional<Snapshot> latestUserSnapshot = snapshotRepository
+			.findFirstByAssetIdAndSourceOrderByReferenceDateDescIdAsc(asset.getId(), SnapshotSource.USER)
+			.filter(latest -> carriesNoNewInformation(latest, asset, amount, referenceDate));
+		if (latestUserSnapshot.isPresent()) {
+			Snapshot unchanged = latestUserSnapshot.get();
+			log.debug(
+				"SnapshotService#saveOrUpdate - Snapshot snapshotId={} already holds this amount in this currency, nothing written",
+				unchanged.getId()
+			);
+			return unchanged;
+		}
 		Optional<Snapshot> existing = findExistingForMonth(asset.getId(), referenceDate);
 		if (existing.isPresent()) {
 			log.debug(
@@ -197,5 +210,18 @@ public class SnapshotService {
 		snapshot.setSource(source);
 		snapshot.setCurrency(asset.getOriginalCurrency());
 		return snapshot;
+	}
+
+	private boolean carriesNoNewInformation(
+		Snapshot latest,
+		Asset asset,
+		BigDecimal amount,
+		LocalDate referenceDate
+	) {
+		return (
+			amount.compareTo(latest.getAmountOriginalCurrency()) == 0 &&
+			Objects.equals(latest.resolveCurrency(), asset.getOriginalCurrency()) &&
+			!referenceDate.isBefore(latest.getReferenceDate())
+		);
 	}
 }

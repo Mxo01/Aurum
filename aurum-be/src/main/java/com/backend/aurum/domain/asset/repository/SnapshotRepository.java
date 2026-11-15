@@ -23,6 +23,13 @@ public interface SnapshotRepository extends JpaRepository<Snapshot, UUID> {
 		LocalDate end
 	);
 
+	// The row a new valuation of one source is compared against: newest first, same-date tie broken
+	// by the lowest id, as every other read does.
+	Optional<Snapshot> findFirstByAssetIdAndSourceOrderByReferenceDateDescIdAsc(
+		UUID assetId,
+		SnapshotSource source
+	);
+
 	// A same-date user/scheduler pair must resolve the same way on every run: the payment chain
 	// reads a stable outstanding balance.
 	Optional<Snapshot> findFirstByAssetIdOrderByReferenceDateDescIdAsc(UUID assetId);

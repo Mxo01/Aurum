@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.notNull;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -38,14 +39,20 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class SnapshotServiceTest {
 
 	private static final LocalDate REFERENCE_DATE = LocalDate.of(2026, 3, 10);
+	private static final LocalDate EARLIER_REFERENCE_DATE = LocalDate.of(2026, 3, 3);
+	private static final LocalDate LATER_REFERENCE_DATE = LocalDate.of(2026, 3, 20);
+	private static final LocalDate NEXT_MONTH_REFERENCE_DATE = LocalDate.of(2026, 4, 2);
 	private static final LocalDate SCHEDULED_REFERENCE_DATE = LocalDate.of(2026, 3, 17);
 	private static final LocalDate MONTH_START = LocalDate.of(2026, 3, 1);
 	private static final LocalDate MONTH_END = LocalDate.of(2026, 3, 31);
 	private static final BigDecimal USER_AMOUNT = new BigDecimal("5000");
+	private static final BigDecimal LATEST_ROW_AMOUNT = new BigDecimal("5000.0000");
+	private static final BigDecimal EARLIER_USER_AMOUNT = new BigDecimal("4000");
 	private static final BigDecimal SCHEDULED_AMOUNT = new BigDecimal("120");
 	private static final BigDecimal UPDATED_USER_AMOUNT = new BigDecimal("4500");
 	private static final BigDecimal SCHEDULED_BALANCE = new BigDecimal("4880");
 	private static final BigDecimal USER_EXCHANGE_RATE = new BigDecimal("1.000000");
+	private static final BigDecimal LATEST_ROW_EXCHANGE_RATE = new BigDecimal("1.234500");
 	private static final BigDecimal SCHEDULED_EXCHANGE_RATE = new BigDecimal("1.085000");
 	private static final Currency CURRENT_CURRENCY = Currency.EUR;
 	private static final Currency CHANGED_CURRENCY = Currency.GBP;
@@ -219,6 +226,248 @@ class SnapshotServiceTest {
 		assertThat(mockScheduledRow.getCurrency()).isEqualTo(SCHEDULER_CURRENCY);
 		assertThat(mockScheduledRow.getAmountOriginalCurrency()).isEqualByComparingTo(SCHEDULED_AMOUNT);
 		assertThat(mockScheduledRow.getReferenceDate()).isEqualTo(SCHEDULED_REFERENCE_DATE);
+	}
+
+	@Test
+	void saveOrUpdate_returnsTheLatestUserRow_whenTheAmountRepeatsInALaterMonth() {
+		// GIVEN
+		Asset mockAsset = buildAsset(CURRENT_CURRENCY);
+		Snapshot mockLatestRow = buildRow(
+			SnapshotSource.USER,
+			LATEST_ROW_AMOUNT,
+			REFERENCE_DATE,
+			CURRENT_CURRENCY
+		);
+		stubLatestUserRow(mockAsset, Optional.of(mockLatestRow));
+
+		// WHEN
+		Snapshot expectedSnapshot = testSubject.saveOrUpdate(
+			mockAsset,
+			USER_AMOUNT,
+			NEXT_MONTH_REFERENCE_DATE,
+			USER_EXCHANGE_RATE
+		);
+
+		// THEN
+		assertThat(expectedSnapshot).isSameAs(mockLatestRow);
+		verify(snapshotRepository, never()).save(notNull());
+	}
+
+	@Test
+	void saveOrUpdate_returnsTheLatestUserRow_whenTheDateIsALaterDayOfTheSameMonth() {
+		// GIVEN
+		Asset mockAsset = buildAsset(CURRENT_CURRENCY);
+		Snapshot mockLatestRow = buildRow(
+			SnapshotSource.USER,
+			LATEST_ROW_AMOUNT,
+			EARLIER_REFERENCE_DATE,
+			CURRENT_CURRENCY
+		);
+		stubLatestUserRow(mockAsset, Optional.of(mockLatestRow));
+
+		// WHEN
+		Snapshot expectedSnapshot = testSubject.saveOrUpdate(
+			mockAsset,
+			USER_AMOUNT,
+			REFERENCE_DATE,
+			USER_EXCHANGE_RATE
+		);
+
+		// THEN
+		assertThat(expectedSnapshot).isSameAs(mockLatestRow);
+		verify(snapshotRepository, never()).save(notNull());
+		verify(snapshotRepository, never()).findFirstByAssetIdAndSourceAndReferenceDateBetween(
+			mockAsset.getId(),
+			SnapshotSource.USER,
+			MONTH_START,
+			MONTH_END
+		);
+	}
+
+	@Test
+	void saveOrUpdate_writes_whenTheReferenceDateBackfillsBeforeTheLatestUserRow() {
+		// GIVEN
+		Asset mockAsset = buildAsset(CURRENT_CURRENCY);
+		Snapshot mockLatestRow = buildRow(
+			SnapshotSource.USER,
+			LATEST_ROW_AMOUNT,
+			LATER_REFERENCE_DATE,
+			CURRENT_CURRENCY
+		);
+		stubLatestUserRow(mockAsset, Optional.of(mockLatestRow));
+		stubUserMonthLookup(mockAsset, EARLIER_REFERENCE_DATE, Optional.of(mockLatestRow));
+		stubSaveReturningInput();
+
+		// WHEN
+		Snapshot expectedSnapshot = testSubject.saveOrUpdate(
+			mockAsset,
+			USER_AMOUNT,
+			EARLIER_REFERENCE_DATE,
+			USER_EXCHANGE_RATE
+		);
+
+		// THEN
+		assertThat(expectedSnapshot).isSameAs(mockLatestRow);
+		assertThat(expectedSnapshot.getReferenceDate()).isEqualTo(EARLIER_REFERENCE_DATE);
+	}
+
+	@Test
+	void saveOrUpdate_writesTheMonthRow_whenTheAmountChanged() {
+		// GIVEN
+		Asset mockAsset = buildAsset(CURRENT_CURRENCY);
+		Snapshot mockMonthRow = buildRow(
+			SnapshotSource.USER,
+			LATEST_ROW_AMOUNT,
+			EARLIER_REFERENCE_DATE,
+			CURRENT_CURRENCY
+		);
+		stubLatestUserRow(mockAsset, Optional.of(mockMonthRow));
+		stubUserMonthLookup(mockAsset, REFERENCE_DATE, Optional.of(mockMonthRow));
+		stubSaveReturningInput();
+
+		// WHEN
+		Snapshot expectedSnapshot = testSubject.saveOrUpdate(
+			mockAsset,
+			UPDATED_USER_AMOUNT,
+			REFERENCE_DATE,
+			USER_EXCHANGE_RATE
+		);
+
+		// THEN
+		assertThat(expectedSnapshot).isSameAs(mockMonthRow);
+		assertThat(expectedSnapshot.getAmountOriginalCurrency()).isEqualByComparingTo(
+			UPDATED_USER_AMOUNT
+		);
+	}
+
+	@Test
+	void saveOrUpdate_writes_whenTheLatestRowIsStampedInAnotherCurrency() {
+		// GIVEN
+		Asset mockAsset = buildAsset(CURRENT_CURRENCY);
+		Snapshot mockLatestRow = buildRow(
+			SnapshotSource.USER,
+			LATEST_ROW_AMOUNT,
+			EARLIER_REFERENCE_DATE,
+			CHANGED_CURRENCY
+		);
+		stubLatestUserRow(mockAsset, Optional.of(mockLatestRow));
+		stubUserMonthLookup(mockAsset, NEXT_MONTH_REFERENCE_DATE, Optional.empty());
+		stubSaveReturningInput();
+
+		// WHEN
+		Snapshot expectedSnapshot = testSubject.saveOrUpdate(
+			mockAsset,
+			USER_AMOUNT,
+			NEXT_MONTH_REFERENCE_DATE,
+			USER_EXCHANGE_RATE
+		);
+
+		// THEN
+		assertThat(expectedSnapshot).isNotSameAs(mockLatestRow);
+		assertThat(expectedSnapshot.getCurrency()).isEqualTo(CURRENT_CURRENCY);
+		assertThat(expectedSnapshot.getAmountOriginalCurrency()).isEqualByComparingTo(USER_AMOUNT);
+	}
+
+	@Test
+	void saveOrUpdate_writesTheFirstSnapshot_whenNoUserRowExists() {
+		// GIVEN
+		Asset mockAsset = buildAsset(CURRENT_CURRENCY);
+		stubLatestUserRow(mockAsset, Optional.empty());
+		stubUserMonthLookup(mockAsset, REFERENCE_DATE, Optional.empty());
+		stubSaveReturningInput();
+
+		// WHEN
+		Snapshot expectedSnapshot = testSubject.saveOrUpdate(
+			mockAsset,
+			USER_AMOUNT,
+			REFERENCE_DATE,
+			USER_EXCHANGE_RATE
+		);
+
+		// THEN
+		assertThat(expectedSnapshot.getSource()).isEqualTo(SnapshotSource.USER);
+		assertThat(expectedSnapshot.getAmountOriginalCurrency()).isEqualByComparingTo(USER_AMOUNT);
+		assertThat(expectedSnapshot.getReferenceDate()).isEqualTo(REFERENCE_DATE);
+		assertThat(expectedSnapshot.getCurrency()).isEqualTo(CURRENT_CURRENCY);
+	}
+
+	@Test
+	void saveOrUpdate_leavesTheSkippedRowUntouched_whenTheAmountRepeats() {
+		// GIVEN
+		Asset mockAsset = buildAsset(CURRENT_CURRENCY);
+		Snapshot mockLatestRow = Instancio.of(Snapshot.class)
+			.set(Select.field(Snapshot::getAsset), mockAsset)
+			.set(Select.field(Snapshot::getSource), SnapshotSource.USER)
+			.set(Select.field(Snapshot::getAmountOriginalCurrency), LATEST_ROW_AMOUNT)
+			.set(Select.field(Snapshot::getReferenceDate), REFERENCE_DATE)
+			.set(Select.field(Snapshot::getCurrency), CURRENT_CURRENCY)
+			.set(Select.field(Snapshot::getExchangeRateToBase), LATEST_ROW_EXCHANGE_RATE)
+			.create();
+		UUID expectedId = mockLatestRow.getId();
+		LocalDate expectedReferenceDate = mockLatestRow.getReferenceDate();
+		BigDecimal expectedAmount = mockLatestRow.getAmountOriginalCurrency();
+		Currency expectedCurrency = mockLatestRow.getCurrency();
+		SnapshotSource expectedSource = mockLatestRow.getSource();
+		BigDecimal expectedExchangeRate = mockLatestRow.getExchangeRateToBase();
+		Long expectedVersion = mockLatestRow.getVersion();
+		stubLatestUserRow(mockAsset, Optional.of(mockLatestRow));
+
+		// WHEN
+		Snapshot expectedSnapshot = testSubject.saveOrUpdate(
+			mockAsset,
+			USER_AMOUNT,
+			REFERENCE_DATE,
+			USER_EXCHANGE_RATE
+		);
+
+		// THEN
+		assertThat(expectedSnapshot).isSameAs(mockLatestRow);
+		assertThat(expectedSnapshot.getId()).isEqualTo(expectedId);
+		assertThat(expectedSnapshot.getReferenceDate()).isEqualTo(expectedReferenceDate);
+		assertThat(expectedSnapshot.getAmountOriginalCurrency()).isEqualByComparingTo(expectedAmount);
+		assertThat(expectedSnapshot.getCurrency()).isEqualTo(expectedCurrency);
+		assertThat(expectedSnapshot.getSource()).isEqualTo(expectedSource);
+		assertThat(expectedSnapshot.getExchangeRateToBase()).isEqualByComparingTo(expectedExchangeRate);
+		assertThat(expectedSnapshot.getVersion()).isEqualTo(expectedVersion);
+		verify(snapshotRepository, never()).save(notNull());
+	}
+
+	@Test
+	void saveOrUpdate_writes_whenOnlyAScheduledRowNewerThanTheLatestUserRowRepeatsTheAmount() {
+		// GIVEN
+		Asset mockAsset = buildAsset(CURRENT_CURRENCY);
+		Snapshot mockLatestUserRow = buildRow(
+			SnapshotSource.USER,
+			EARLIER_USER_AMOUNT,
+			EARLIER_REFERENCE_DATE,
+			CURRENT_CURRENCY
+		);
+		Snapshot mockNewerScheduledRow = buildRow(
+			SnapshotSource.SCHEDULER,
+			USER_AMOUNT,
+			LATER_REFERENCE_DATE,
+			CURRENT_CURRENCY
+		);
+		stubLatestUserRow(mockAsset, Optional.of(mockLatestUserRow));
+		lenient()
+			.when(snapshotRepository.findFirstByAssetIdOrderByReferenceDateDescIdAsc(mockAsset.getId()))
+			.thenReturn(Optional.of(mockNewerScheduledRow));
+		stubUserMonthLookup(mockAsset, LATER_REFERENCE_DATE, Optional.of(mockLatestUserRow));
+		stubSaveReturningInput();
+
+		// WHEN
+		Snapshot expectedSnapshot = testSubject.saveOrUpdate(
+			mockAsset,
+			USER_AMOUNT,
+			LATER_REFERENCE_DATE,
+			USER_EXCHANGE_RATE
+		);
+
+		// THEN
+		assertThat(expectedSnapshot).isSameAs(mockLatestUserRow);
+		assertThat(expectedSnapshot).isNotSameAs(mockNewerScheduledRow);
+		assertThat(expectedSnapshot.getAmountOriginalCurrency()).isEqualByComparingTo(USER_AMOUNT);
+		assertThat(expectedSnapshot.getReferenceDate()).isEqualTo(LATER_REFERENCE_DATE);
 	}
 
 	@ParameterizedTest(name = "findExistingForMonth with {0}")
@@ -403,6 +652,42 @@ class SnapshotServiceTest {
 		// THEN
 		assertThat(expectedVersionAnnotated).isTrue();
 		assertThat(expectedVersionField.getType()).isEqualTo(Long.class);
+	}
+
+	private Asset buildAsset(Currency currency) {
+		return Instancio.of(Asset.class)
+			.set(Select.field(Asset::getOriginalCurrency), currency)
+			.create();
+	}
+
+	private void stubLatestUserRow(Asset asset, Optional<Snapshot> userRow) {
+		when(
+			snapshotRepository.findFirstByAssetIdAndSourceOrderByReferenceDateDescIdAsc(
+				asset.getId(),
+				SnapshotSource.USER
+			)
+		).thenReturn(userRow);
+	}
+
+	private void stubUserMonthLookup(
+		Asset asset,
+		LocalDate referenceDate,
+		Optional<Snapshot> userRow
+	) {
+		when(
+			snapshotRepository.findFirstByAssetIdAndSourceAndReferenceDateBetween(
+				asset.getId(),
+				SnapshotSource.USER,
+				referenceDate.withDayOfMonth(1),
+				referenceDate.withDayOfMonth(referenceDate.lengthOfMonth())
+			)
+		).thenReturn(userRow);
+	}
+
+	private void stubSaveReturningInput() {
+		when(snapshotRepository.save(notNull())).thenAnswer(invocation ->
+			invocation.<Snapshot>getArgument(0)
+		);
 	}
 
 	private void stubMonthLookup(
