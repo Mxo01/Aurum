@@ -118,6 +118,9 @@ public class SnapshotService {
 		snapshot.setAsset(asset);
 		snapshot.setAmountOriginalCurrency(amount);
 		snapshot.setReferenceDate(referenceDate);
+		// The posted amount is in the asset's current currency: a row that predates a currency
+		// change is restated in that currency rather than converted.
+		snapshot.setCurrency(asset.getOriginalCurrency());
 		snapshot.setExchangeRateToBase(exchangeRate);
 		Snapshot saved = snapshotRepository.save(Objects.requireNonNull(snapshot));
 		log.info("SnapshotService#saveOrUpdate - Snapshot persisted: snapshotId={}", saved.getId());
@@ -196,6 +199,7 @@ public class SnapshotService {
 		Snapshot snapshot = new Snapshot();
 		snapshot.setAsset(asset);
 		snapshot.setSource(source);
+		snapshot.setCurrency(asset.getOriginalCurrency());
 		return snapshot;
 	}
 }

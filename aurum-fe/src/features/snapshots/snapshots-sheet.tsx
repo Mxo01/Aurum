@@ -110,7 +110,7 @@ function SnapshotsBody({ asset }: { asset: AssetDTO }) {
 			<SheetHeader>
 				<SheetTitle className="truncate">History · {asset.name}</SheetTitle>
 				<SheetDescription>
-					{asset.originalCurrency} values, converted to {currency} for the chart.
+					Each value in the currency it was recorded in. The chart is converted to {currency}.
 				</SheetDescription>
 			</SheetHeader>
 
@@ -178,7 +178,7 @@ function SnapshotsBody({ asset }: { asset: AssetDTO }) {
 											<td className="py-2">{date(snapshot.referenceDate)}</td>
 											<td className="num py-2 text-right">
 												{formatCurrency(snapshot.amountOriginalCurrency, {
-													currency: asset.originalCurrency,
+													currency: snapshot.currency ?? asset.originalCurrency,
 													locale,
 													privacy: isPrivacy,
 													digits: 2

@@ -49,6 +49,8 @@ class AssetMapperTest {
 
 	private static final Currency USER_CURRENCY = Currency.USD;
 	private static final Currency ASSET_CURRENCY = Currency.EUR;
+	private static final Currency ROW_CURRENCY = Currency.GBP;
+	private static final Currency CHANGED_ASSET_CURRENCY = Currency.CHF;
 	private static final LocalDate AS_OF = LocalDate.of(2026, 6, 15);
 	private static final BigDecimal RATE_TO_USER_CURRENCY = new BigDecimal("1.5");
 	private static final BigDecimal LATEST_AMOUNT = new BigDecimal("500");
@@ -488,12 +490,8 @@ class AssetMapperTest {
 			.set(Select.field(Asset::getCategory), mockCategory)
 			.set(Select.field(Asset::getOriginalCurrency), ASSET_CURRENCY)
 			.create();
-		Snapshot mockLatestSnapshot = Instancio.of(Snapshot.class)
-			.set(Select.field(Snapshot::getAmountOriginalCurrency), LATEST_AMOUNT)
-			.create();
-		Snapshot mockPreviousSnapshot = Instancio.of(Snapshot.class)
-			.set(Select.field(Snapshot::getAmountOriginalCurrency), PREVIOUS_AMOUNT)
-			.create();
+		Snapshot mockLatestSnapshot = buildSnapshot(LATEST_AMOUNT, ASSET_CURRENCY);
+		Snapshot mockPreviousSnapshot = buildSnapshot(PREVIOUS_AMOUNT, ASSET_CURRENCY);
 		List<Snapshot> mockLatestTwo = List.of(mockLatestSnapshot, mockPreviousSnapshot);
 		RateBook mockBook = stubBook(ASSET_CURRENCY, USER_CURRENCY, AS_OF);
 
@@ -502,20 +500,46 @@ class AssetMapperTest {
 
 		// THEN
 		assertThat(result.getLatestValue()).isEqualByComparingTo(LATEST_AMOUNT);
+		assertThat(result.getLatestValueCurrency()).isEqualTo(ASSET_CURRENCY);
 		assertThat(result.getLatestValueBase()).isEqualByComparingTo(CONVERTED_LATEST_AMOUNT);
 		assertThat(result.getPreviousValue()).isEqualByComparingTo(PREVIOUS_AMOUNT);
+		assertThat(result.getPreviousValueCurrency()).isEqualTo(ASSET_CURRENCY);
 	}
 
 	@Test
-	void toDtoLight_isIdentity_whenAssetUsesTheUserCurrency() {
+	void toDtoLight_readsEachRowThroughItsOwnCurrency_whenTheAssetCurrencyChangedSince() {
 		// GIVEN
 		Asset mockAsset = Instancio.of(Asset.class)
 			.set(Select.field(Asset::getCategory), null)
-			.set(Select.field(Asset::getOriginalCurrency), USER_CURRENCY)
+			.set(Select.field(Asset::getOriginalCurrency), CHANGED_ASSET_CURRENCY)
 			.create();
-		Snapshot mockLatestSnapshot = Instancio.of(Snapshot.class)
-			.set(Select.field(Snapshot::getAmountOriginalCurrency), LATEST_AMOUNT)
+		Snapshot mockLatestSnapshot = buildSnapshot(LATEST_AMOUNT, ROW_CURRENCY);
+		Snapshot mockPreviousSnapshot = buildSnapshot(PREVIOUS_AMOUNT, ASSET_CURRENCY);
+		RateBook mockBook = stubBook(ROW_CURRENCY, USER_CURRENCY, AS_OF);
+
+		// WHEN
+		AssetDTO result = testSubject.toDtoLight(
+			mockAsset,
+			List.of(mockLatestSnapshot, mockPreviousSnapshot),
+			mockBook,
+			AS_OF
+		);
+
+		// THEN
+		assertThat(result.getOriginalCurrency()).isEqualTo(CHANGED_ASSET_CURRENCY);
+		assertThat(result.getLatestValueCurrency()).isEqualTo(ROW_CURRENCY);
+		assertThat(result.getLatestValueBase()).isEqualByComparingTo(CONVERTED_LATEST_AMOUNT);
+		assertThat(result.getPreviousValueCurrency()).isEqualTo(ASSET_CURRENCY);
+	}
+
+	@Test
+	void toDtoLight_isIdentity_whenTheRowUsesTheUserCurrency() {
+		// GIVEN
+		Asset mockAsset = Instancio.of(Asset.class)
+			.set(Select.field(Asset::getCategory), null)
+			.set(Select.field(Asset::getOriginalCurrency), ASSET_CURRENCY)
 			.create();
+		Snapshot mockLatestSnapshot = buildSnapshot(LATEST_AMOUNT, USER_CURRENCY);
 		RateBook mockBook = book(USER_CURRENCY, List.of(USER_CURRENCY), List.of(AS_OF));
 
 		// WHEN
@@ -527,20 +551,20 @@ class AssetMapperTest {
 		);
 
 		// THEN
+		assertThat(result.getLatestValueCurrency()).isEqualTo(USER_CURRENCY);
 		assertThat(result.getLatestValueBase()).isEqualByComparingTo(LATEST_AMOUNT);
 		assertThat(result.getPreviousValue()).isNull();
+		assertThat(result.getPreviousValueCurrency()).isNull();
 	}
 
 	@Test
-	void toDtoLight_convertsInTheBookTarget_whenTheAssetHasNoCurrency() {
+	void toDtoLight_convertsInTheBookTarget_whenNeitherTheRowNorTheAssetCarriesACurrency() {
 		// GIVEN
 		Asset mockAsset = Instancio.of(Asset.class)
 			.set(Select.field(Asset::getCategory), null)
 			.set(Select.field(Asset::getOriginalCurrency), null)
 			.create();
-		Snapshot mockLatestSnapshot = Instancio.of(Snapshot.class)
-			.set(Select.field(Snapshot::getAmountOriginalCurrency), LATEST_AMOUNT)
-			.create();
+		Snapshot mockLatestSnapshot = buildSnapshot(LATEST_AMOUNT, null);
 		RateBook mockBook = emptyBook(USER_CURRENCY);
 		BigDecimal expectedAnalyticsBase = mockBook.convert(LATEST_AMOUNT, mockBook.target(), AS_OF);
 
@@ -554,6 +578,7 @@ class AssetMapperTest {
 
 		// THEN
 		assertThat(result.getLatestValue()).isEqualByComparingTo(LATEST_AMOUNT);
+		assertThat(result.getLatestValueCurrency()).isEqualTo(mockBook.target());
 		assertThat(result.getLatestValueBase()).isEqualByComparingTo(expectedAnalyticsBase);
 		assertThat(result.getLatestValueBase()).isEqualByComparingTo(LATEST_AMOUNT);
 		assertThat(result.getPreviousValue()).isNull();
@@ -595,6 +620,14 @@ class AssetMapperTest {
 		dto.setOriginalCurrency(ASSET_CURRENCY);
 		dto.setIsFavorite(true);
 		return dto;
+	}
+
+	private Snapshot buildSnapshot(BigDecimal amount, Currency currency) {
+		return Instancio.of(Snapshot.class)
+			.set(Select.field(Snapshot::getAsset), null)
+			.set(Select.field(Snapshot::getAmountOriginalCurrency), amount)
+			.set(Select.field(Snapshot::getCurrency), currency)
+			.create();
 	}
 
 	private User userWithId(UUID userId) {

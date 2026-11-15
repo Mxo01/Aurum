@@ -199,6 +199,8 @@ class AssetServiceTest {
 		assertThat(expectedSnapshot.getAmountOriginalCurrency()).isEqualTo(mockInitialValue);
 		assertThat(expectedSnapshot.getReferenceDate()).isEqualTo(mockReferenceDate);
 		assertThat(expectedSnapshot.getAsset()).isEqualTo(stubbedSaved);
+		assertThat(expectedSnapshot.getCurrency()).isEqualTo(mockAssetCurrency);
+		assertThat(expectedSnapshot.getCurrency()).isNotEqualTo(mockUserCurrency);
 	}
 
 	@Test

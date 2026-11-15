@@ -54,7 +54,7 @@ flowchart LR
 - **Currency conversion is read-time and lives in the domain** —
   `domain/shared/currency/CurrencyConversionService` resolves the rates a request
   needs into one immutable `RateBook`; every amount is converted through that
-  book *before* it is summed, so a total in the user's currency never mixes
+  book _before_ it is summed, so a total in the user's currency never mixes
   unconverted values. `RateBook` fails on a missing rate instead of returning a
   number in the wrong currency.
 - **Where to change what** — asset and snapshot read projections convert in
@@ -167,10 +167,11 @@ User ──1:N── Target
 AssetCategory ──1:N── Asset
 ```
 
-A `Snapshot` stores `amountOriginalCurrency` and `exchangeRateToBase`. The stored
-rate is the historical record of the rate used when the snapshot was written —
-it is not what the totals use. Every read converts `amountOriginalCurrency` at
-read time through the `RateBook` in the user's current currency, and that is what
+A `Snapshot` owns its currency: the `currency` column is stamped when the snapshot
+is written, and `amountOriginalCurrency` is expressed in it. `exchangeRateToBase`
+stays the historical record of the rate used at write time — it is not what the
+totals use. Every read converts each snapshot through its own currency into the
+user's current currency at read time via the `RateBook`, and that is what
 `amountBaseCurrency` on `SnapshotDTO` carries. Changing the user's currency
 therefore needs no migration and no re-rating.
 
@@ -199,11 +200,11 @@ cd aurum-be && ./mvnw clean package
 
 ## Deployment
 
-| Part | Where | Trigger |
-| --- | --- | --- |
-| Frontend | Vercel, `aurum-networth.com` | push to `main` (Vercel integration) |
-| Backend | Hetzner VPS via Docker Compose, `api.aurum-networth.com` | `deploy.yml`, push to `main` touching `aurum-be/**`, `docker-compose.prod.yml`, or the workflow itself |
-| Database | PostgreSQL 17 container on the same VPS | `docker compose up -d` during the backend deploy |
+| Part     | Where                                                    | Trigger                                                                                                |
+| -------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| Frontend | Vercel, `aurum-networth.com`                             | push to `main` (Vercel integration)                                                                    |
+| Backend  | Hetzner VPS via Docker Compose, `api.aurum-networth.com` | `deploy.yml`, push to `main` touching `aurum-be/**`, `docker-compose.prod.yml`, or the workflow itself |
+| Database | PostgreSQL 17 container on the same VPS                  | `docker compose up -d` during the backend deploy                                                       |
 
 The deploy workflow builds the backend image, pushes it to GHCR, copies
 `docker-compose.prod.yml` to the server, and runs `docker compose pull && up -d`

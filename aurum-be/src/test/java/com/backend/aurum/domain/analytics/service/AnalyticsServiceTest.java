@@ -32,7 +32,6 @@ import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -64,6 +63,7 @@ class AnalyticsServiceTest {
 
 	private static final Currency EUR = Currency.EUR;
 	private static final Currency USD = Currency.USD;
+	private static final Currency GBP = Currency.GBP;
 
 	private static final UUID SNAPSHOT_LOWEST_ID = UUID.fromString(
 		"00000000-0000-4000-8000-000000000001"
@@ -82,6 +82,8 @@ class AnalyticsServiceTest {
 	private static final String CASH_NAME = "Cash";
 
 	private static final BigDecimal STORED_RATE = new BigDecimal("2.0000");
+	private static final BigDecimal SNAPSHOT_CURRENCY_RATE = new BigDecimal("1.50");
+	private static final String OTHER_CATEGORY_LABEL = "Other";
 	private static final String EXCHANGE_RATE_OUTAGE_MESSAGE =
 		"Exchange rate provider is unavailable";
 
@@ -388,6 +390,56 @@ class AnalyticsServiceTest {
 		// THEN
 		assertThat(expectedSummary.getTotalNetWorth()).isEqualByComparingTo(new BigDecimal("1000"));
 		assertThat(expectedSummary.getTotalGrossAssets()).isEqualByComparingTo(new BigDecimal("1000"));
+	}
+
+	@Test
+	void getSummary_ignoresFutureSnapshots_whenAllocatingAndRankingTopAssets() {
+		// GIVEN
+		UUID mockUserId = UUID.randomUUID();
+		stubClockAt(TODAY);
+		stubUserCurrency(mockUserId, EUR);
+		Asset mockAsset = buildAsset(buildCategory(AssetType.ASSET, "Equities"), EUR, "Fund", false);
+		Asset mockFutureAsset = buildAsset(
+			buildCategory(AssetType.ASSET, "Bonds"),
+			EUR,
+			"Future",
+			false
+		);
+		Snapshot mockCurrentSnapshot = buildSnapshot(mockAsset, "1000", LATEST_DATA_DATE);
+		Snapshot mockFutureSnapshot = buildSnapshot(mockFutureAsset, "5000", FUTURE_SNAPSHOT_DATE);
+		List<LocalDate> expectedDates = summaryDates(FUTURE_SNAPSHOT_DATE);
+		RateBook mockBook = stubBook(EUR, List.of(EUR), expectedDates);
+		AssetDTO stubbedAsset = Instancio.create(AssetDTO.class);
+		AssetDTO stubbedFutureAsset = Instancio.create(AssetDTO.class);
+		when(
+			assetMapper.toDtoLight(
+				eq(mockAsset),
+				eq(List.of(mockCurrentSnapshot)),
+				eq(mockBook),
+				eq(TODAY)
+			)
+		).thenReturn(stubbedAsset);
+		when(
+			assetMapper.toDtoLight(eq(mockFutureAsset), eq(List.of()), eq(mockBook), eq(TODAY))
+		).thenReturn(stubbedFutureAsset);
+		stubAssets(mockUserId, mockAsset, mockFutureAsset);
+		stubSummarySnapshots(
+			mockUserId,
+			List.of(mockCurrentSnapshot, mockFutureSnapshot),
+			List.of(),
+			LATEST_DATA_DATE
+		);
+
+		// WHEN
+		AnalyticsSummaryDTO expectedSummary = testSubject.getSummary(mockUserId);
+
+		// THEN
+		assertThat(expectedSummary.getTotalNetWorth()).isEqualByComparingTo(new BigDecimal("1000"));
+		assertThat(expectedSummary.getAssetAllocation()).containsOnlyKeys("Equities");
+		assertThat(expectedSummary.getAssetAllocation().get("Equities")).isEqualByComparingTo(
+			new BigDecimal("100")
+		);
+		assertThat(expectedSummary.getTopAssets()).containsExactly(stubbedAsset, stubbedFutureAsset);
 	}
 
 	@Test
@@ -755,6 +807,108 @@ class AnalyticsServiceTest {
 	}
 
 	@Test
+	void getSummary_convertsSnapshotsInTheCurrencyTheyWereWrittenIn() {
+		// GIVEN
+		UUID mockUserId = UUID.randomUUID();
+		stubClockAt(TODAY);
+		stubUserCurrency(mockUserId, USD);
+		Asset mockAsset = buildAsset(buildCategory(AssetType.ASSET, "Equities"), EUR, "Fund", false);
+		Snapshot mockSnapshot = buildSnapshot(mockAsset, "100", LATEST_DATA_DATE, GBP);
+		List<LocalDate> expectedDates = summaryDates(LATEST_DATA_DATE);
+		Map<LocalDate, BigDecimal> expectedRates = new HashMap<>();
+		for (LocalDate date : expectedDates) {
+			expectedRates.put(date, SNAPSHOT_CURRENCY_RATE);
+		}
+		stubSourceRates(GBP, USD, expectedRates, expectedDates);
+		stubBook(USD, List.of(GBP), expectedDates);
+		stubAssets(mockUserId, mockAsset);
+		stubSummarySnapshots(mockUserId, List.of(mockSnapshot), List.of(), LATEST_DATA_DATE);
+
+		// WHEN
+		AnalyticsSummaryDTO expectedSummary = testSubject.getSummary(mockUserId);
+
+		// THEN
+		assertThat(expectedSummary.getTotalNetWorth()).isEqualByComparingTo(new BigDecimal("150"));
+		assertThat(expectedSummary.getTotalGrossAssets()).isEqualByComparingTo(new BigDecimal("150"));
+	}
+
+	@Test
+	void getSummary_measuresCurrencyImpact_inTheSnapshotCurrency() {
+		// GIVEN
+		UUID mockUserId = UUID.randomUUID();
+		stubClockAt(TODAY);
+		stubUserCurrency(mockUserId, EUR);
+		Asset mockAsset = buildAsset(buildCategory(AssetType.ASSET, "Equities"), USD, "Fund", false);
+		Snapshot mockSnapshot = buildSnapshot(mockAsset, "1000", CURRENCY_IMPACT_SNAPSHOT_DATE, EUR);
+		List<LocalDate> expectedDates = summaryDates(CURRENCY_IMPACT_SNAPSHOT_DATE);
+		stubBook(EUR, List.of(EUR), expectedDates);
+		stubAssets(mockUserId, mockAsset);
+		stubSummarySnapshots(
+			mockUserId,
+			List.of(mockSnapshot),
+			List.of(),
+			CURRENCY_IMPACT_SNAPSHOT_DATE
+		);
+
+		// WHEN
+		AnalyticsSummaryDTO expectedSummary = testSubject.getSummary(mockUserId);
+
+		// THEN
+		assertThat(expectedSummary.getTotalNetWorth()).isEqualByComparingTo(new BigDecimal("1000"));
+		assertThat(expectedSummary.getCurrencyImpact()).isEqualByComparingTo(BigDecimal.ZERO);
+	}
+
+	@Test
+	void getSummary_fallsBackToTheBookTarget_whenNeitherRowNorAssetDeclareACurrency() {
+		// GIVEN
+		UUID mockUserId = UUID.randomUUID();
+		stubClockAt(TODAY);
+		stubUserCurrency(mockUserId, USD);
+		Asset mockAsset = buildAsset(buildCategory(AssetType.ASSET, "Equities"), EUR, "Legacy", false);
+		mockAsset.setOriginalCurrency(null);
+		Snapshot mockSnapshot = buildSnapshot(mockAsset, "4000", LATEST_DATA_DATE);
+		List<LocalDate> expectedDates = summaryDates(LATEST_DATA_DATE);
+		RateBook mockBook = stubBook(USD, List.of(), expectedDates);
+		AssetDTO stubbedTopAsset = Instancio.create(AssetDTO.class);
+		when(
+			assetMapper.toDtoLight(eq(mockAsset), eq(List.of(mockSnapshot)), eq(mockBook), eq(TODAY))
+		).thenReturn(stubbedTopAsset);
+		stubAssets(mockUserId, mockAsset);
+		stubSummarySnapshots(mockUserId, List.of(mockSnapshot), List.of(), LATEST_DATA_DATE);
+
+		// WHEN
+		AnalyticsSummaryDTO expectedSummary = testSubject.getSummary(mockUserId);
+
+		// THEN
+		assertThat(expectedSummary.getTotalNetWorth()).isEqualByComparingTo(new BigDecimal("4000"));
+		assertThat(expectedSummary.getTotalGrossAssets()).isEqualByComparingTo(new BigDecimal("4000"));
+	}
+
+	@Test
+	void getSummary_labelsAssetsWithoutCategoryAsOther() {
+		// GIVEN
+		UUID mockUserId = UUID.randomUUID();
+		stubClockAt(TODAY);
+		stubUserCurrency(mockUserId, EUR);
+		Asset mockAsset = buildAsset(buildCategory(AssetType.ASSET, "Equities"), EUR, "Fund", false);
+		mockAsset.setCategory(null);
+		Snapshot mockSnapshot = buildSnapshot(mockAsset, "1000", LATEST_DATA_DATE);
+		List<LocalDate> expectedDates = summaryDates(LATEST_DATA_DATE);
+		stubBook(EUR, List.of(EUR), expectedDates);
+		stubAssets(mockUserId, mockAsset);
+		stubSummarySnapshots(mockUserId, List.of(mockSnapshot), List.of(), LATEST_DATA_DATE);
+
+		// WHEN
+		AnalyticsSummaryDTO expectedSummary = testSubject.getSummary(mockUserId);
+
+		// THEN
+		assertThat(expectedSummary.getAssetAllocation()).containsOnlyKeys(OTHER_CATEGORY_LABEL);
+		assertThat(expectedSummary.getAssetAllocation().get(OTHER_CATEGORY_LABEL)).isEqualByComparingTo(
+			new BigDecimal("100")
+		);
+	}
+
+	@Test
 	void getSummary_readsOldestSnapshotYearFromTheRepository() {
 		// GIVEN
 		UUID mockUserId = UUID.randomUUID();
@@ -901,7 +1055,7 @@ class AnalyticsServiceTest {
 		ExchangeRateUnavailableException stubbedOutage = new ExchangeRateUnavailableException(
 			EXCHANGE_RATE_OUTAGE_MESSAGE
 		);
-		when(conversionService.book(eq(USD), eq(List.of(EUR)), eq(summaryDates(TODAY)))).thenThrow(
+		when(conversionService.book(eq(USD), eq(List.of()), eq(summaryDates(TODAY)))).thenThrow(
 			stubbedOutage
 		);
 		stubAssets(mockUserId, mockAsset);
@@ -1183,7 +1337,7 @@ class AnalyticsServiceTest {
 		stubUserCurrency(mockUserId, EUR);
 		Asset mockAsset = buildAsset(buildCategory(AssetType.ASSET, "Equities"), null, "Fund", false);
 		Snapshot mockSnapshot = buildSnapshot(mockAsset, "1000", LATEST_DATA_DATE);
-		stubBook(EUR, Collections.singletonList(null), List.of(TODAY));
+		stubBook(EUR, List.of(), List.of(TODAY));
 		stubAssets(mockUserId, mockAsset);
 		stubSnapshots(mockUserId, mockSnapshot);
 
@@ -1327,10 +1481,20 @@ class AnalyticsServiceTest {
 	}
 
 	private Snapshot buildSnapshot(Asset asset, String amount, LocalDate referenceDate) {
+		return buildSnapshot(asset, amount, referenceDate, null);
+	}
+
+	private Snapshot buildSnapshot(
+		Asset asset,
+		String amount,
+		LocalDate referenceDate,
+		Currency snapshotCurrency
+	) {
 		return Instancio.of(Snapshot.class)
 			.set(Select.field(Snapshot::getAsset), asset)
 			.set(Select.field(Snapshot::getAmountOriginalCurrency), new BigDecimal(amount))
 			.set(Select.field(Snapshot::getReferenceDate), referenceDate)
+			.set(Select.field(Snapshot::getCurrency), snapshotCurrency)
 			.set(Select.field(Snapshot::getExchangeRateToBase), STORED_RATE)
 			.create();
 	}

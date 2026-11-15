@@ -104,7 +104,7 @@ declared dependency; without it no changeset runs and `spring.liquibase.*` stays
 inert.
 
 Applied changesets are recorded in `databasechangelog`. A database that is up
-to date holds one row per changeset — 29 at the time of writing — and needs
+to date holds one row per changeset — 31 at the time of writing — and needs
 nothing: Liquibase applies only the changesets it has not recorded yet. The
 count is a checkpoint to compare against, never a constant to assume.
 

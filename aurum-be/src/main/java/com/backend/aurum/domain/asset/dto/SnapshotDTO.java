@@ -1,6 +1,7 @@
 package com.backend.aurum.domain.asset.dto;
 
 import com.backend.aurum.domain.asset.model.SnapshotSource;
+import com.backend.aurum.domain.user.enums.Currency;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -15,6 +16,7 @@ import lombok.Data;
 		"assetName",
 		"referenceDate",
 		"amountOriginalCurrency",
+		"currency",
 		"exchangeRateToBase",
 		"amountBaseCurrency",
 		"source"
@@ -32,6 +34,7 @@ public class SnapshotDTO {
 
 	private LocalDate referenceDate;
 	private BigDecimal amountOriginalCurrency;
+	private Currency currency;
 
 	@Schema(nullable = true)
 	private BigDecimal exchangeRateToBase;

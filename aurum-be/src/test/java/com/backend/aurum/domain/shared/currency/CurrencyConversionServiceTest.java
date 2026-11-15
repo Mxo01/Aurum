@@ -29,7 +29,7 @@ class CurrencyConversionServiceTest {
 	private static final Currency EURO = Currency.EUR;
 	private static final Currency POUND = Currency.GBP;
 	private static final LocalDate REFERENCE_DATE = LocalDate.of(2026, 11, 14);
-	private static final LocalDate EARLIER_DATE = LocalDate.of(2026, 10, 1);
+	private static final LocalDate EARLIER_DATE = LocalDate.of(2026, 11, 10);
 	private static final BigDecimal EURO_RATE = new BigDecimal("1.0800");
 	private static final BigDecimal POUND_RATE = new BigDecimal("1.2700");
 

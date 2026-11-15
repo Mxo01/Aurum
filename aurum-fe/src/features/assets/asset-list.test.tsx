@@ -23,6 +23,10 @@ const MORTGAGE_DISPLAY = "€268,000.00";
 const CAR_LOAN_DISPLAY = "$18,400.00";
 const CAR_LOAN_TOTAL_DISPLAY = "€17,000.00";
 const UNPRICED_LOAN_DISPLAY = "$0.00";
+const SAVINGS_DISPLAY = "€24,000.00";
+const US_LOAN_DISPLAY = "$18,400.00";
+// The note depends on the currency pair, not on the asset, so every USD value on a EUR asset shares it.
+const CROSS_CURRENCY_NOTE = `Shown in USD. A new value is saved in EUR, the asset's current currency.`;
 const NEXT_APARTMENT_VALUE = 440_000;
 const NEXT_MORTGAGE_VALUE = 260_000;
 
@@ -93,6 +97,48 @@ const mockStaleAsset = buildAsset({
 	previousValue: null
 });
 
+const mockCrossCurrencyLiability = buildAsset({
+	id: "a6",
+	name: "US Loan",
+	categoryName: "Loans",
+	categoryIcon: "pi-car",
+	type: "LIABILITY",
+	liabilityType: "MANUAL",
+	originalCurrency: "EUR",
+	latestValue: 18_400,
+	latestValueBase: 17_000,
+	latestValueCurrency: "USD",
+	previousValue: 19_500,
+	previousValueCurrency: "EUR"
+});
+
+const mockUnpricedCrossCurrencyLiability = buildAsset({
+	id: "a8",
+	name: "Unpriced US Loan",
+	categoryName: "Loans",
+	categoryIcon: "pi-car",
+	type: "LIABILITY",
+	liabilityType: "MANUAL",
+	originalCurrency: "EUR",
+	latestValue: null,
+	latestValueBase: null,
+	latestValueCurrency: "USD",
+	previousValue: null
+});
+
+const mockUnconvertedAsset = buildAsset({
+	id: "a7",
+	name: "Savings",
+	categoryName: "Cash",
+	categoryIcon: "pi-wallet",
+	type: "ASSET",
+	originalCurrency: "EUR",
+	latestValue: 24_000,
+	latestValueBase: 24_000,
+	latestValueCurrency: null,
+	previousValue: 23_000
+});
+
 function nameEditorLabel(asset: AssetDTO) {
 	return `Edit ${asset.name}, currently ${asset.name}`;
 }
@@ -101,8 +147,8 @@ function valueEditorLabel(asset: AssetDTO, display: string) {
 	return `Edit ${asset.name}, currently ${display}`;
 }
 
-function valueInputLabel(asset: AssetDTO) {
-	return `Edit ${asset.name} in ${asset.originalCurrency}`;
+function valueInputLabel(asset: AssetDTO, currency = asset.originalCurrency) {
+	return `Edit ${asset.name} in ${currency}`;
 }
 
 function renderAssetList(assets: AssetDTO[], collapsed = new Set<string>()) {
@@ -339,5 +385,94 @@ describe("AssetList group headers", () => {
 			`${CAR_LOAN_TOTAL_DISPLAY}${BASE_CURRENCY}`,
 			`${CAR_LOAN_TOTAL_DISPLAY}${BASE_CURRENCY}`
 		]);
+	});
+});
+
+describe("AssetList cross-currency values", () => {
+	it("should show the latest value in its snapshot currency", () => {
+		// GIVEN
+		renderAssetList([mockCrossCurrencyLiability]);
+
+		// WHEN
+		const lockedValues = screen.getAllByTitle(CROSS_CURRENCY_NOTE);
+
+		// THEN
+		expect(lockedValues).toHaveLength(RENDERS_PER_LAYOUT);
+		for (const lockedValue of lockedValues) {
+			expect(lockedValue.tagName).toBe("SPAN");
+			expect(lockedValue).toHaveTextContent(US_LOAN_DISPLAY);
+			expect(lockedValue.querySelector("button")).toBeNull();
+		}
+		expect(screen.getAllByText(CROSS_CURRENCY_NOTE)).toHaveLength(RENDERS_PER_LAYOUT);
+	});
+
+	it("should render an unpriced cross-currency value as zero without an inline editor", () => {
+		// GIVEN
+		const { onValueSave } = renderAssetList([mockUnpricedCrossCurrencyLiability]);
+
+		// WHEN
+		const lockedValues = screen.getAllByTitle(CROSS_CURRENCY_NOTE);
+		const [lockedValue] = lockedValues;
+		fireEvent.click(lockedValue as HTMLElement);
+
+		// THEN
+		expect(lockedValues).toHaveLength(RENDERS_PER_LAYOUT);
+		for (const value of lockedValues) {
+			expect(value.tagName).toBe("SPAN");
+			expect(value).toHaveTextContent(UNPRICED_LOAN_DISPLAY);
+			expect(value.querySelector("button")).toBeNull();
+		}
+		expect(screen.getAllByText(CROSS_CURRENCY_NOTE)).toHaveLength(RENDERS_PER_LAYOUT);
+		expect(
+			screen.queryAllByRole("button", {
+				name: valueEditorLabel(mockUnpricedCrossCurrencyLiability, UNPRICED_LOAN_DISPLAY)
+			})
+		).toHaveLength(0);
+		expect(onValueSave).not.toHaveBeenCalled();
+	});
+
+	it("should not offer an inline editor for a cross-currency value", () => {
+		// GIVEN
+		const { onValueSave } = renderAssetList([mockCrossCurrencyLiability]);
+		const [lockedValue] = screen.getAllByTitle(CROSS_CURRENCY_NOTE);
+
+		// WHEN
+		fireEvent.click(lockedValue as HTMLElement);
+
+		// THEN
+		expect(
+			screen.queryAllByRole("button", {
+				name: valueEditorLabel(mockCrossCurrencyLiability, US_LOAN_DISPLAY)
+			})
+		).toHaveLength(0);
+		expect(
+			screen.queryByLabelText(valueInputLabel(mockCrossCurrencyLiability, "USD"))
+		).not.toBeInTheDocument();
+		expect(onValueSave).not.toHaveBeenCalled();
+	});
+
+	it("should fall back to the asset currency when the value currency is unknown", () => {
+		// GIVEN
+		renderAssetList([mockUnconvertedAsset]);
+
+		// WHEN
+		const valueEditors = screen.getAllByRole("button", {
+			name: valueEditorLabel(mockUnconvertedAsset, SAVINGS_DISPLAY)
+		});
+
+		// THEN
+		expect(valueEditors).toHaveLength(RENDERS_PER_LAYOUT);
+		expect(screen.queryByText(/^Shown in /)).not.toBeInTheDocument();
+	});
+
+	it("should hide the trend when the value changed currency", () => {
+		// GIVEN
+		renderAssetList([mockCrossCurrencyLiability]);
+
+		// WHEN
+		const noDataLabels = screen.getAllByText(NO_TREND_LABEL);
+
+		// THEN
+		expect(noDataLabels).toHaveLength(RENDERS_PER_LAYOUT);
 	});
 });

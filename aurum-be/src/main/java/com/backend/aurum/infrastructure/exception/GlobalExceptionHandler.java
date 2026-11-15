@@ -8,6 +8,7 @@ import java.time.Instant;
 import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
@@ -49,6 +50,17 @@ public class GlobalExceptionHandler {
 		return buildResponse(
 			HttpStatus.SERVICE_UNAVAILABLE,
 			"Exchange rates are temporarily unavailable, please retry later"
+		);
+	}
+
+	@ExceptionHandler(OptimisticLockingFailureException.class)
+	public ResponseEntity<Map<String, Object>> handleOptimisticLock(
+		OptimisticLockingFailureException ex
+	) {
+		log.warn("Concurrent modification rejected: {}", ex.getMessage());
+		return buildResponse(
+			HttpStatus.CONFLICT,
+			"This record was changed by another request, reload it and retry"
 		);
 	}
 

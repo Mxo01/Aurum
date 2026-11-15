@@ -14,7 +14,10 @@ import com.backend.aurum.domain.asset.repository.AssetRepository;
 import com.backend.aurum.domain.asset.repository.SnapshotRepository;
 import com.backend.aurum.domain.shared.exception.AccessDeniedException;
 import com.backend.aurum.domain.shared.exception.NotFoundException;
+import com.backend.aurum.domain.user.enums.Currency;
 import com.backend.aurum.domain.user.model.User;
+import jakarta.persistence.Version;
+import java.lang.reflect.Field;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -44,6 +47,10 @@ class SnapshotServiceTest {
 	private static final BigDecimal SCHEDULED_BALANCE = new BigDecimal("4880");
 	private static final BigDecimal USER_EXCHANGE_RATE = new BigDecimal("1.000000");
 	private static final BigDecimal SCHEDULED_EXCHANGE_RATE = new BigDecimal("1.085000");
+	private static final Currency CURRENT_CURRENCY = Currency.EUR;
+	private static final Currency CHANGED_CURRENCY = Currency.GBP;
+	private static final Currency SCHEDULER_CURRENCY = Currency.USD;
+	private static final String VERSION_FIELD = "version";
 
 	@Mock
 	private SnapshotRepository snapshotRepository;
@@ -121,14 +128,22 @@ class SnapshotServiceTest {
 
 	@ParameterizedTest(name = "saveOrUpdate with {0}")
 	@EnumSource(MonthState.class)
-	void saveOrUpdate_persistsOnlyTheUserRowOfTheMonth(MonthState monthState) {
+	void saveOrUpdate_stampsTheRowWithTheAssetCurrencyOfTheWrite(MonthState monthState) {
 		// GIVEN
-		Asset mockAsset = Instancio.create(Asset.class);
-		Snapshot mockUserRow = buildRow(SnapshotSource.USER, USER_AMOUNT, REFERENCE_DATE);
+		Asset mockAsset = Instancio.of(Asset.class)
+			.set(Select.field(Asset::getOriginalCurrency), CURRENT_CURRENCY)
+			.create();
+		Snapshot mockUserRow = buildRow(
+			SnapshotSource.USER,
+			USER_AMOUNT,
+			REFERENCE_DATE,
+			CHANGED_CURRENCY
+		);
 		Snapshot mockScheduledRow = buildRow(
 			SnapshotSource.SCHEDULER,
 			SCHEDULED_AMOUNT,
-			SCHEDULED_REFERENCE_DATE
+			SCHEDULED_REFERENCE_DATE,
+			SCHEDULER_CURRENCY
 		);
 		stubMonthLookup(
 			mockAsset,
@@ -155,12 +170,49 @@ class SnapshotServiceTest {
 		);
 		assertThat(expectedSnapshot.getReferenceDate()).isEqualTo(REFERENCE_DATE);
 		assertThat(expectedSnapshot.getExchangeRateToBase()).isEqualByComparingTo(USER_EXCHANGE_RATE);
+		assertThat(expectedSnapshot.getCurrency()).isEqualTo(CURRENT_CURRENCY);
 		switch (monthState) {
 			case NO_ROW -> assertThat(expectedSnapshot).isNotSameAs(mockUserRow);
 			case USER_ROW -> assertThat(expectedSnapshot).isSameAs(mockUserRow);
 			case SCHEDULER_ROW -> assertThat(expectedSnapshot).isNotSameAs(mockScheduledRow);
 		}
-		assertThat(mockScheduledRow.getSource()).isEqualTo(SnapshotSource.SCHEDULER);
+	}
+
+	@Test
+	void saveOrUpdate_restampsTheUserRowAndLeavesTheScheduledRowOnItsOwnCurrency() {
+		// GIVEN
+		Asset mockAsset = Instancio.of(Asset.class)
+			.set(Select.field(Asset::getOriginalCurrency), CURRENT_CURRENCY)
+			.create();
+		Snapshot mockUserRow = buildRow(
+			SnapshotSource.USER,
+			USER_AMOUNT,
+			REFERENCE_DATE,
+			CHANGED_CURRENCY
+		);
+		Snapshot mockScheduledRow = buildRow(
+			SnapshotSource.SCHEDULER,
+			SCHEDULED_AMOUNT,
+			SCHEDULED_REFERENCE_DATE,
+			SCHEDULER_CURRENCY
+		);
+		stubMonthLookup(mockAsset, Optional.of(mockUserRow), Optional.of(mockScheduledRow));
+		when(snapshotRepository.save(notNull())).thenAnswer(invocation ->
+			invocation.<Snapshot>getArgument(0)
+		);
+
+		// WHEN
+		Snapshot expectedSnapshot = testSubject.saveOrUpdate(
+			mockAsset,
+			UPDATED_USER_AMOUNT,
+			REFERENCE_DATE,
+			USER_EXCHANGE_RATE
+		);
+
+		// THEN
+		assertThat(expectedSnapshot).isSameAs(mockUserRow);
+		assertThat(mockUserRow.getCurrency()).isEqualTo(CURRENT_CURRENCY);
+		assertThat(mockScheduledRow.getCurrency()).isEqualTo(SCHEDULER_CURRENCY);
 		assertThat(mockScheduledRow.getAmountOriginalCurrency()).isEqualByComparingTo(SCHEDULED_AMOUNT);
 		assertThat(mockScheduledRow.getReferenceDate()).isEqualTo(SCHEDULED_REFERENCE_DATE);
 	}
@@ -170,11 +222,17 @@ class SnapshotServiceTest {
 	void findExistingForMonth_matchesTheUserRowsOnly(MonthState monthState) {
 		// GIVEN
 		Asset mockAsset = Instancio.create(Asset.class);
-		Snapshot mockUserRow = buildRow(SnapshotSource.USER, USER_AMOUNT, REFERENCE_DATE);
+		Snapshot mockUserRow = buildRow(
+			SnapshotSource.USER,
+			USER_AMOUNT,
+			REFERENCE_DATE,
+			CHANGED_CURRENCY
+		);
 		Snapshot mockScheduledRow = buildRow(
 			SnapshotSource.SCHEDULER,
 			SCHEDULED_AMOUNT,
-			SCHEDULED_REFERENCE_DATE
+			SCHEDULED_REFERENCE_DATE,
+			SCHEDULER_CURRENCY
 		);
 		stubMonthLookup(
 			mockAsset,
@@ -198,7 +256,9 @@ class SnapshotServiceTest {
 	@Test
 	void saveScheduledPayment_insertsASchedulerRowWithTheGivenDueDateAndRate() {
 		// GIVEN
-		Asset mockAsset = Instancio.create(Asset.class);
+		Asset mockAsset = Instancio.of(Asset.class)
+			.set(Select.field(Asset::getOriginalCurrency), CURRENT_CURRENCY)
+			.create();
 		when(snapshotRepository.save(notNull())).thenAnswer(invocation ->
 			invocation.<Snapshot>getArgument(0)
 		);
@@ -219,6 +279,7 @@ class SnapshotServiceTest {
 			SCHEDULED_EXCHANGE_RATE
 		);
 		assertThat(expectedSnapshot.getAmountOriginalCurrency()).isEqualByComparingTo(SCHEDULED_AMOUNT);
+		assertThat(expectedSnapshot.getCurrency()).isEqualTo(CURRENT_CURRENCY);
 	}
 
 	@Test
@@ -326,6 +387,20 @@ class SnapshotServiceTest {
 		);
 	}
 
+	@Test
+	void snapshot_declaresTheOptimisticLockVersion_soAConcurrentMonthRowWriteIsRejected()
+		throws NoSuchFieldException {
+		// GIVEN
+		Field expectedVersionField = Snapshot.class.getDeclaredField(VERSION_FIELD);
+
+		// WHEN
+		boolean expectedVersionAnnotated = expectedVersionField.isAnnotationPresent(Version.class);
+
+		// THEN
+		assertThat(expectedVersionAnnotated).isTrue();
+		assertThat(expectedVersionField.getType()).isEqualTo(Long.class);
+	}
+
 	private void stubMonthLookup(
 		Asset asset,
 		Optional<Snapshot> userRow,
@@ -351,11 +426,17 @@ class SnapshotServiceTest {
 			.thenReturn(scheduledRow);
 	}
 
-	private Snapshot buildRow(SnapshotSource source, BigDecimal amount, LocalDate referenceDate) {
+	private Snapshot buildRow(
+		SnapshotSource source,
+		BigDecimal amount,
+		LocalDate referenceDate,
+		Currency currency
+	) {
 		return Instancio.of(Snapshot.class)
 			.set(Select.field(Snapshot::getSource), source)
 			.set(Select.field(Snapshot::getAmountOriginalCurrency), amount)
 			.set(Select.field(Snapshot::getReferenceDate), referenceDate)
+			.set(Select.field(Snapshot::getCurrency), currency)
 			.create();
 	}
 

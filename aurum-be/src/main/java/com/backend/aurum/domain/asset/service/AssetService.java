@@ -83,6 +83,7 @@ public class AssetService {
 			snapshot.setAsset(savedAsset);
 			snapshot.setAmountOriginalCurrency(initialValue);
 			snapshot.setReferenceDate(referenceDate);
+			snapshot.setCurrency(savedAsset.getOriginalCurrency());
 			snapshot.setExchangeRateToBase(
 				conversionService.rate(
 					savedAsset.getOriginalCurrency(),

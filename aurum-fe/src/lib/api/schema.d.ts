@@ -491,8 +491,76 @@ export interface components {
 			isFavorite: boolean;
 			snapshots: components["schemas"]["SnapshotDTO"][];
 			latestValue: number | null;
+			/** @enum {string|null} */
+			latestValueCurrency?:
+				| "AUD"
+				| "BGN"
+				| "BRL"
+				| "CAD"
+				| "CHF"
+				| "CNY"
+				| "CZK"
+				| "DKK"
+				| "EUR"
+				| "GBP"
+				| "HKD"
+				| "HUF"
+				| "IDR"
+				| "ILS"
+				| "INR"
+				| "ISK"
+				| "JPY"
+				| "KRW"
+				| "MXN"
+				| "MYR"
+				| "NOK"
+				| "NZD"
+				| "PHP"
+				| "PLN"
+				| "RON"
+				| "SEK"
+				| "SGD"
+				| "THB"
+				| "TRY"
+				| "USD"
+				| "ZAR"
+				| null;
 			latestValueBase: number | null;
 			previousValue: number | null;
+			/** @enum {string|null} */
+			previousValueCurrency?:
+				| "AUD"
+				| "BGN"
+				| "BRL"
+				| "CAD"
+				| "CHF"
+				| "CNY"
+				| "CZK"
+				| "DKK"
+				| "EUR"
+				| "GBP"
+				| "HKD"
+				| "HUF"
+				| "IDR"
+				| "ILS"
+				| "INR"
+				| "ISK"
+				| "JPY"
+				| "KRW"
+				| "MXN"
+				| "MYR"
+				| "NOK"
+				| "NZD"
+				| "PHP"
+				| "PLN"
+				| "RON"
+				| "SEK"
+				| "SGD"
+				| "THB"
+				| "TRY"
+				| "USD"
+				| "ZAR"
+				| null;
 			initialValue: number | null;
 			/** Format: date */
 			referenceDate: string | null;
@@ -511,6 +579,39 @@ export interface components {
 			/** Format: date */
 			referenceDate: string;
 			amountOriginalCurrency: number;
+			/** @enum {string} */
+			currency:
+				| "AUD"
+				| "BGN"
+				| "BRL"
+				| "CAD"
+				| "CHF"
+				| "CNY"
+				| "CZK"
+				| "DKK"
+				| "EUR"
+				| "GBP"
+				| "HKD"
+				| "HUF"
+				| "IDR"
+				| "ILS"
+				| "INR"
+				| "ISK"
+				| "JPY"
+				| "KRW"
+				| "MXN"
+				| "MYR"
+				| "NOK"
+				| "NZD"
+				| "PHP"
+				| "PLN"
+				| "RON"
+				| "SEK"
+				| "SGD"
+				| "THB"
+				| "TRY"
+				| "USD"
+				| "ZAR";
 			exchangeRateToBase: number | null;
 			amountBaseCurrency: number | null;
 			/** @enum {string} */
@@ -661,6 +762,41 @@ export interface components {
 			exchangeRateToBase?: number;
 			/** @enum {string} */
 			source?: "USER" | "SCHEDULER";
+			/** @enum {string} */
+			currency?:
+				| "AUD"
+				| "BGN"
+				| "BRL"
+				| "CAD"
+				| "CHF"
+				| "CNY"
+				| "CZK"
+				| "DKK"
+				| "EUR"
+				| "GBP"
+				| "HKD"
+				| "HUF"
+				| "IDR"
+				| "ILS"
+				| "INR"
+				| "ISK"
+				| "JPY"
+				| "KRW"
+				| "MXN"
+				| "MYR"
+				| "NOK"
+				| "NZD"
+				| "PHP"
+				| "PLN"
+				| "RON"
+				| "SEK"
+				| "SGD"
+				| "THB"
+				| "TRY"
+				| "USD"
+				| "ZAR";
+			/** Format: int64 */
+			version?: number;
 			amountInBaseCurrency?: number;
 		};
 		User: {

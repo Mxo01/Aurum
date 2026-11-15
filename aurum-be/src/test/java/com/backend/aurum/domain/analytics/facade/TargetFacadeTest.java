@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.backend.aurum.domain.analytics.dto.AnalyticsSummaryDTO;
 import com.backend.aurum.domain.analytics.dto.CreateTargetDTO;
 import com.backend.aurum.domain.analytics.dto.TargetDTO;
 import com.backend.aurum.domain.analytics.dto.UpdateTargetDTO;
@@ -16,6 +17,7 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 import org.instancio.Instancio;
+import org.instancio.Select;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -39,6 +41,30 @@ class TargetFacadeTest {
 
 	@InjectMocks
 	private TargetFacade testSubject;
+
+	@Test
+	void getAllTargets_mapsEachTargetWithSummaryNetWorth() {
+		// GIVEN
+		UUID mockUserId = UUID.randomUUID();
+		BigDecimal mockNetWorth = BigDecimal.TEN;
+		AnalyticsSummaryDTO stubbedSummary = Instancio.of(AnalyticsSummaryDTO.class)
+			.set(Select.field(AnalyticsSummaryDTO::getTotalNetWorth), mockNetWorth)
+			.create();
+		Target mockTarget1 = Instancio.create(Target.class);
+		Target mockTarget2 = Instancio.create(Target.class);
+		TargetDTO stubbedDto1 = Instancio.create(TargetDTO.class);
+		TargetDTO stubbedDto2 = Instancio.create(TargetDTO.class);
+		when(analyticsService.getSummary(mockUserId)).thenReturn(stubbedSummary);
+		when(targetService.findAll(mockUserId)).thenReturn(List.of(mockTarget1, mockTarget2));
+		when(mapper.toDto(mockTarget1, mockNetWorth)).thenReturn(stubbedDto1);
+		when(mapper.toDto(mockTarget2, mockNetWorth)).thenReturn(stubbedDto2);
+
+		// WHEN
+		List<TargetDTO> expectedDtos = testSubject.getAllTargets(mockUserId);
+
+		// THEN
+		assertThat(expectedDtos).containsExactly(stubbedDto1, stubbedDto2);
+	}
 
 	@Test
 	void createTarget_validatesAndReturnsDto() {

@@ -51,6 +51,7 @@ export function buildSnapshot(overrides: Partial<SnapshotDTO> = {}): SnapshotDTO
 		assetName: faker.commerce.productName(),
 		referenceDate: dateOnly(faker.date.recent()),
 		amountOriginalCurrency: faker.number.float({ min: 1000, max: 50000, fractionDigits: 2 }),
+		currency: "EUR",
 		exchangeRateToBase: 1,
 		amountBaseCurrency: faker.number.float({ min: 1000, max: 50000, fractionDigits: 2 }),
 		source: "USER",

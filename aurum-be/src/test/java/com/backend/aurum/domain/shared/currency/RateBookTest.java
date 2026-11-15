@@ -18,11 +18,18 @@ class RateBookTest {
 	private static final Currency SOURCE_CURRENCY = Currency.EUR;
 	private static final Currency OTHER_SOURCE_CURRENCY = Currency.GBP;
 	private static final LocalDate REFERENCE_DATE = LocalDate.of(2026, 11, 14);
-	private static final LocalDate EARLIER_DATE = LocalDate.of(2026, 10, 1);
+	private static final LocalDate EARLIER_DATE = LocalDate.of(2026, 11, 10);
 	private static final LocalDate LATER_DATE = LocalDate.of(2026, 12, 1);
+	private static final LocalDate OLDEST_ACCEPTED_QUOTE_DATE = REFERENCE_DATE.minusDays(
+		RateBook.MAX_RATE_AGE_DAYS
+	);
+	private static final LocalDate STALE_QUOTE_DATE = REFERENCE_DATE.minusDays(
+		RateBook.MAX_RATE_AGE_DAYS + 1
+	);
 	private static final BigDecimal EARLIER_RATE = new BigDecimal("1.2000");
 	private static final BigDecimal LATER_RATE = new BigDecimal("1.2345");
 	private static final BigDecimal REFERENCE_RATE = new BigDecimal("1.2500");
+	private static final String STALE_QUOTE_MESSAGE = "No exchange rate available from";
 
 	@Test
 	void target_returnsCurrencyOfTheBook() {
@@ -76,6 +83,33 @@ class RateBookTest {
 
 		// THEN
 		assertThat(expectedRate).isEqualByComparingTo(EARLIER_RATE);
+	}
+
+	@Test
+	void rate_reusesAQuoteExactlySevenDaysOld() {
+		// GIVEN
+		RateBook testSubject = bookWithSeries(
+			Map.of(SOURCE_CURRENCY, seriesOf(Map.of(OLDEST_ACCEPTED_QUOTE_DATE, EARLIER_RATE)))
+		);
+
+		// WHEN
+		BigDecimal expectedRate = testSubject.rate(SOURCE_CURRENCY, REFERENCE_DATE);
+
+		// THEN
+		assertThat(expectedRate).isEqualByComparingTo(EARLIER_RATE);
+	}
+
+	@Test
+	void rate_throwsUnavailable_whenTheOnlyQuoteIsEightDaysOld() {
+		// GIVEN
+		RateBook testSubject = bookWithSeries(
+			Map.of(SOURCE_CURRENCY, seriesOf(Map.of(STALE_QUOTE_DATE, EARLIER_RATE)))
+		);
+
+		// WHEN / THEN
+		assertThatThrownBy(() -> testSubject.rate(SOURCE_CURRENCY, REFERENCE_DATE))
+			.isInstanceOf(ExchangeRateUnavailableException.class)
+			.hasMessageContaining(STALE_QUOTE_MESSAGE);
 	}
 
 	@Test
