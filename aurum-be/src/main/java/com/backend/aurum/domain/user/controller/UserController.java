@@ -3,6 +3,7 @@ package com.backend.aurum.domain.user.controller;
 import com.backend.aurum.domain.user.dto.UpdateCurrencyDTO;
 import com.backend.aurum.domain.user.dto.UpdateLocaleDTO;
 import com.backend.aurum.domain.user.dto.UpdateNameDTO;
+import com.backend.aurum.domain.user.dto.UserDTO;
 import com.backend.aurum.domain.user.dto.UserExportDTO;
 import com.backend.aurum.domain.user.model.User;
 import com.backend.aurum.domain.user.model.UserPrincipal;
@@ -30,11 +31,11 @@ public class UserController {
 	private final UserService userService;
 
 	@GetMapping
-	public ResponseEntity<User> getUser(@AuthenticationPrincipal UserPrincipal principal) {
+	public ResponseEntity<UserDTO> getUser(@AuthenticationPrincipal UserPrincipal principal) {
 		UUID userId = principal.user().getId();
 		log.debug("UserController#getUser - Request to fetch user profile for userId={}", userId);
 		User user = userService.getUserById(userId);
-		return ResponseEntity.ok(user);
+		return ResponseEntity.ok(toDto(user));
 	}
 
 	@GetMapping("/export")
@@ -64,11 +65,13 @@ public class UserController {
 		@AuthenticationPrincipal UserPrincipal principal,
 		@RequestBody UpdateNameDTO dto
 	) {
+		UUID userId = principal.user().getId();
 		String jwtId = principal.jwt().getSubject();
-		log.info("UserController#updateName - Request to update name for jwtId={}", jwtId);
+		log.info("UserController#updateName - Request to update name for userId={}", userId);
+		log.debug("UserController#updateName - Auth0 subject={}", jwtId);
 
 		userService.updateAuth0Name(jwtId, dto);
-		log.info("UserController#updateName - Name updated successfully for jwtId={}", jwtId);
+		log.info("UserController#updateName - Name updated successfully for userId={}", userId);
 
 		return ResponseEntity.ok().build();
 	}
@@ -148,5 +151,14 @@ public class UserController {
 		userService.deletePicture(userId);
 
 		return ResponseEntity.ok().build();
+	}
+
+	private UserDTO toDto(User user) {
+		UserDTO dto = new UserDTO();
+		dto.setId(user.getId());
+		dto.setCurrency(user.getCurrency());
+		dto.setLocale(user.getLocale());
+		dto.setPicture(user.getPicture());
+		return dto;
 	}
 }

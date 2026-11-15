@@ -9,6 +9,7 @@ import com.backend.aurum.domain.auth.service.Auth0ManagementService;
 import com.backend.aurum.domain.cashflow.repository.CashFlowRepository;
 import com.backend.aurum.domain.shared.exception.NotFoundException;
 import com.backend.aurum.domain.shared.exception.ValidationException;
+import com.backend.aurum.domain.shared.logging.LogSafe;
 import com.backend.aurum.domain.user.dto.UpdateCurrencyDTO;
 import com.backend.aurum.domain.user.dto.UpdateLocaleDTO;
 import com.backend.aurum.domain.user.dto.UpdateNameDTO;
@@ -24,7 +25,6 @@ import com.drew.metadata.Metadata;
 import com.drew.metadata.exif.ExifIFD0Directory;
 import java.awt.*;
 import java.awt.geom.AffineTransform;
-import java.awt.image.AffineTransformOp;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -64,10 +64,7 @@ public class UserService {
 		return userRepository
 			.findByJwtId(jwtId)
 			.orElseGet(() -> {
-				log.info(
-					"UserService#findOrCreate - No existing user found, creating new user for jwtId={}",
-					jwtId
-				);
+				log.info("UserService#findOrCreate - No existing user found, creating a new user");
 				try {
 					User newUser = new User();
 					newUser.setJwtId(jwtId);
@@ -77,10 +74,8 @@ public class UserService {
 					log.info("UserService#findOrCreate - New user created: userId={}", created.getId());
 					return created;
 				} catch (DataIntegrityViolationException e) {
-					log.warn(
-						"UserService#findOrCreate - Concurrent insert detected for jwtId={}, retrying lookup",
-						jwtId
-					);
+					log.warn("UserService#findOrCreate - Concurrent insert detected, retrying the lookup");
+					log.debug("UserService#findOrCreate - Concurrent insert for jwtId={}", jwtId);
 					return userRepository
 						.findByJwtId(jwtId)
 						.orElseThrow(() -> new RuntimeException("Failed to find or create user", e));
@@ -98,7 +93,8 @@ public class UserService {
 
 	@Transactional
 	public void deleteUser(UUID userId, String jwtId) {
-		log.info("UserService#deleteUser - Deleting user: userId={}, jwtId={}", userId, jwtId);
+		log.info("UserService#deleteUser - Deleting user: userId={}", userId);
+		log.debug("UserService#deleteUser - Auth0 subject={}", jwtId);
 		userRepository.deleteById(Objects.requireNonNull(userId));
 		log.debug(
 			"UserService#deleteUser - Local user record deleted, proceeding to delete Auth0 user"
@@ -107,9 +103,9 @@ public class UserService {
 		try {
 			ManagementAPI managementApi = auth0ManagementService.getManagementAPI();
 			managementApi.users().delete(jwtId).execute();
-			log.info("UserService#deleteUser - Auth0 user deleted successfully: jwtId={}", jwtId);
+			log.info("UserService#deleteUser - Auth0 user deleted successfully: userId={}", userId);
 		} catch (Auth0Exception e) {
-			log.error("UserService#deleteUser - Failed to delete Auth0 user: jwtId={}", jwtId, e);
+			log.error("UserService#deleteUser - Failed to delete the Auth0 user: userId={}", userId, e);
 			throw new RuntimeException("Error during Auth0 user deletion", e);
 		}
 	}
@@ -128,9 +124,9 @@ public class UserService {
 			com.auth0.json.mgmt.users.User auth0User = new com.auth0.json.mgmt.users.User();
 			auth0User.setName(dto.name());
 			mgmt.users().update(jwtId, auth0User).execute();
-			log.info("UserService#updateAuth0Name - Name updated in Auth0 for jwtId={}", jwtId);
+			log.info("UserService#updateAuth0Name - Name updated in Auth0");
 		} catch (Auth0Exception e) {
-			log.error("UserService#updateAuth0Name - Failed to update name in Auth0: jwtId={}", jwtId, e);
+			log.error("UserService#updateAuth0Name - Failed to update the name in Auth0", e);
 			throw new RuntimeException("Error during Auth0 name update: " + e.getMessage());
 		}
 	}
@@ -142,6 +138,9 @@ public class UserService {
 			userId,
 			dto.currency()
 		);
+		if (dto.currency() == null) {
+			throw new ValidationException("currency", "Select a currency");
+		}
 		User user = userRepository
 			.findById(Objects.requireNonNull(userId))
 			.orElseThrow(() -> new NotFoundException("User not found"));
@@ -161,6 +160,9 @@ public class UserService {
 			userId,
 			dto.locale()
 		);
+		if (dto.locale() == null) {
+			throw new ValidationException("locale", "Select a language");
+		}
 		User user = userRepository
 			.findById(Objects.requireNonNull(userId))
 			.orElseThrow(() -> new NotFoundException("User not found"));
@@ -178,19 +180,33 @@ public class UserService {
 		log.debug(
 			"UserService#updatePicture - Processing picture upload for userId={}, fileName={}",
 			userId,
-			file.getOriginalFilename()
+			LogSafe.text(file.getOriginalFilename())
 		);
+		String encoded = encodePicture(userId, file);
+		User user = userRepository
+			.findById(Objects.requireNonNull(userId))
+			.orElseThrow(() -> new NotFoundException("User not found"));
+		user.setPicture(encoded);
+		userRepository.save(user);
+		log.info("UserService#updatePicture - Profile picture updated for userId={}", userId);
+	}
+
+	/**
+	 * Any decoding, orientation or encoding failure is the caller's input being unprocessable, never
+	 * a server fault: the pipeline answers 400 with a sentence instead of a 500 and a stack trace.
+	 */
+	private String encodePicture(UUID userId, MultipartFile file) {
 		try {
-			String encoded = processImage(file);
-			User user = userRepository
-				.findById(Objects.requireNonNull(userId))
-				.orElseThrow(() -> new NotFoundException("User not found"));
-			user.setPicture(encoded);
-			userRepository.save(user);
-			log.info("UserService#updatePicture - Profile picture updated for userId={}", userId);
-		} catch (IOException e) {
-			log.error("UserService#updatePicture - Failed to process image for userId={}", userId, e);
-			throw new RuntimeException("Failed to process image", e);
+			return processImage(file);
+		} catch (ValidationException e) {
+			throw e;
+		} catch (RuntimeException | IOException e) {
+			log.warn(
+				"UserService#encodePicture - Picture could not be processed for userId={}",
+				userId,
+				e
+			);
+			throw new ValidationException("file", "The picture could not be processed");
 		}
 	}
 
@@ -285,7 +301,7 @@ public class UserService {
 	private String processImage(MultipartFile file) throws IOException {
 		log.debug(
 			"UserService#processImage - Reading image bytes, originalName={}",
-			file.getOriginalFilename()
+			LogSafe.text(file.getOriginalFilename())
 		);
 		byte[] bytes = file.getBytes();
 
@@ -367,55 +383,51 @@ public class UserService {
 		return Base64.getEncoder().encodeToString(baos.toByteArray());
 	}
 
+	/**
+	 * Maps the EXIF orientation onto the transform that places the source rectangle in the destination
+	 * one. Drawing through Graphics2D accepts every type ImageIO decodes; an AffineTransformOp only
+	 * filters a subset, and a JPEG or PNG source (TYPE_3BYTE_BGR) made it throw for 2..8.
+	 */
 	private BufferedImage applyOrientation(BufferedImage image, int orientation) {
-		if (orientation == 1) return image;
+		if (orientation < 2 || orientation > 8) return image;
 
 		int w = image.getWidth();
 		int h = image.getHeight();
 		boolean swapDimensions = orientation >= 5;
-		int outW = swapDimensions ? h : w;
-		int outH = swapDimensions ? w : h;
-
-		AffineTransform t = new AffineTransform();
-		switch (orientation) {
-			case 2 -> {
-				t.scale(-1, 1);
-				t.translate(-w, 0);
-			}
-			case 3 -> {
-				t.translate(w, h);
-				t.rotate(Math.PI);
-			}
-			case 4 -> {
-				t.scale(1, -1);
-				t.translate(0, -h);
-			}
-			case 5 -> {
-				t.rotate(-Math.PI / 2);
-				t.scale(-1, 1);
-			}
-			case 6 -> {
-				t.translate(h, 0);
-				t.rotate(Math.PI / 2);
-			}
-			case 7 -> {
-				t.scale(-1, 1);
-				t.translate(-h, 0);
-				t.translate(0, w);
-				t.rotate((3 * Math.PI) / 2);
-			}
-			case 8 -> {
-				t.translate(0, w);
-				t.rotate(-Math.PI / 2);
-			}
-			default -> {
-				return image;
-			}
-		}
-
-		BufferedImage result = new BufferedImage(outW, outH, BufferedImage.TYPE_INT_RGB);
-		new AffineTransformOp(t, AffineTransformOp.TYPE_BICUBIC).filter(image, result);
+		BufferedImage result = new BufferedImage(
+			swapDimensions ? h : w,
+			swapDimensions ? w : h,
+			BufferedImage.TYPE_INT_RGB
+		);
+		Graphics2D g = result.createGraphics();
+		g.setRenderingHint(
+			RenderingHints.KEY_INTERPOLATION,
+			RenderingHints.VALUE_INTERPOLATION_BILINEAR
+		);
+		g.transform(orientationTransform(orientation, w, h));
+		g.drawImage(image, 0, 0, w, h, null);
+		g.dispose();
 		return result;
+	}
+
+	private AffineTransform orientationTransform(int orientation, int w, int h) {
+		return switch (orientation) {
+			// mirror horizontally
+			case 2 -> new AffineTransform(-1, 0, 0, 1, w, 0);
+			// rotate 180
+			case 3 -> new AffineTransform(-1, 0, 0, -1, w, h);
+			// mirror vertically
+			case 4 -> new AffineTransform(1, 0, 0, -1, 0, h);
+			// transpose: the pixel at (x, y) lands on (y, x)
+			case 5 -> new AffineTransform(0, 1, 1, 0, 0, 0);
+			// rotate 90 clockwise
+			case 6 -> new AffineTransform(0, 1, -1, 0, h, 0);
+			// transverse: the pixel at (x, y) lands on (h - y, w - x)
+			case 7 -> new AffineTransform(0, -1, -1, 0, h, w);
+			// rotate 90 counter-clockwise
+			case 8 -> new AffineTransform(0, -1, 1, 0, 0, w);
+			default -> new AffineTransform();
+		};
 	}
 
 	@Transactional(readOnly = true)

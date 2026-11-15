@@ -3,9 +3,10 @@ import { renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { http, HttpResponse, type RequestHandler } from "msw";
 import { toast } from "sonner";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, expectTypeOf, it, vi } from "vitest";
 import { ApiError } from "@/lib/api/client";
 import { queryKeys } from "@/lib/api/keys";
+import type { UserExportDTO } from "@/lib/api/types";
 import { env } from "@/lib/env";
 import { buildProfile } from "@/test/fixtures/portfolio";
 import { server } from "@/test/msw/server";
@@ -18,12 +19,48 @@ import {
 	useUpdateCurrency,
 	useUpdateLocale,
 	useUpdateName,
-	useUploadPicture
+	useUploadPicture,
+	type ExportPayload
 } from "./api";
 
 beforeEach(() => {
 	vi.restoreAllMocks();
 });
+
+const STORED_PICTURE = "ZmFrZV9qcGVn";
+const STORED_PROFILE_CURRENCY = "EUR";
+const STORED_PROFILE_LOCALE = "en-US";
+const EXPORT_PROFILE_ID = "3f8a1d2c-5b6e-4a7f-9c1d-2e3f4a5b6c7d";
+const EXPORT_PROFILE_EMAIL = "mario@example.com";
+
+// Shaped from the generated export schema, so a contract change fails the typecheck.
+const EXPORT_PAYLOAD = {
+	profile: {
+		id: EXPORT_PROFILE_ID,
+		email: EXPORT_PROFILE_EMAIL,
+		currency: STORED_PROFILE_CURRENCY,
+		locale: STORED_PROFILE_LOCALE
+	},
+	categories: [],
+	assets: [],
+	targets: [],
+	cashFlows: []
+} satisfies ExportPayload;
+
+interface ProfilePictureCase {
+	label: string;
+	picture: string | null;
+	expectedPicture: string | null;
+}
+
+const PROFILE_PICTURE_CASES: ProfilePictureCase[] = [
+	{
+		label: "should expose the stored picture",
+		picture: STORED_PICTURE,
+		expectedPicture: STORED_PICTURE
+	},
+	{ label: "should keep a missing picture null", picture: null, expectedPicture: null }
+];
 
 describe("useProfile", () => {
 	it("should expose the profile on success", async () => {
@@ -36,6 +73,25 @@ describe("useProfile", () => {
 		// THEN
 		await waitFor(() => expect(result.current.isSuccess).toBe(true));
 		expect(result.current.data?.id).toBeTruthy();
+	});
+
+	it.each(PROFILE_PICTURE_CASES)("$label", async testCase => {
+		// GIVEN
+		server.use(
+			http.get(`${env.apiUrl}/users`, () =>
+				HttpResponse.json(buildProfile({ picture: testCase.picture }))
+			)
+		);
+		const testSubject = () => useProfile();
+
+		// WHEN
+		const { result } = renderHook(testSubject, { wrapper: TestProviders });
+
+		// THEN
+		await waitFor(() => expect(result.current.isSuccess).toBe(true));
+		expect(result.current.data?.picture).toBe(testCase.expectedPicture);
+		expect(result.current.data?.currency).toBe(STORED_PROFILE_CURRENCY);
+		expect(result.current.data?.locale).toBe(STORED_PROFILE_LOCALE);
 	});
 
 	it("should expose an ApiError on failure", async () => {
@@ -51,6 +107,17 @@ describe("useProfile", () => {
 		// THEN
 		await waitFor(() => expect(result.current.isError).toBe(true));
 		expect(result.current.error).toBeInstanceOf(ApiError);
+	});
+});
+
+describe("ExportPayload", () => {
+	it("should be the export schema", () => {
+		// GIVEN
+		const testSubject = EXPORT_PAYLOAD;
+
+		// THEN
+		expectTypeOf<ExportPayload>().toEqualTypeOf<UserExportDTO>();
+		expect(testSubject.profile.email).toBe(EXPORT_PROFILE_EMAIL);
 	});
 });
 
@@ -348,7 +415,7 @@ describe("profile mutations", () => {
 
 	it("should export the data", async () => {
 		// GIVEN
-		server.use(http.get(`${env.apiUrl}/users/export`, () => HttpResponse.json(buildProfile())));
+		server.use(http.get(`${env.apiUrl}/users/export`, () => HttpResponse.json(EXPORT_PAYLOAD)));
 		const { wrapper } = setup();
 		const testSubject = () => useExportData();
 		const { result } = renderHook(testSubject, { wrapper });
@@ -358,7 +425,8 @@ describe("profile mutations", () => {
 
 		// THEN
 		await waitFor(() => expect(result.current.isSuccess).toBe(true));
-		expect(result.current.data).toBeDefined();
+		expect(result.current.data).toEqual(EXPORT_PAYLOAD);
+		expectTypeOf(result.current.data).toEqualTypeOf<ExportPayload | undefined>();
 	});
 
 	it("should report a failed export", async () => {

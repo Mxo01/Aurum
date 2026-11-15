@@ -687,124 +687,11 @@ export interface components {
 			paymentFrequency?: "WEEKLY" | "MONTHLY" | "YEARLY";
 			paymentAmount?: number;
 		};
-		Asset: {
+		UserDTO: {
 			/** Format: uuid */
-			id?: string;
-			user?: components["schemas"]["User"];
-			name?: string;
-			category?: components["schemas"]["AssetCategory"];
+			id: string;
 			/** @enum {string} */
-			originalCurrency?:
-				| "AUD"
-				| "BGN"
-				| "BRL"
-				| "CAD"
-				| "CHF"
-				| "CNY"
-				| "CZK"
-				| "DKK"
-				| "EUR"
-				| "GBP"
-				| "HKD"
-				| "HUF"
-				| "IDR"
-				| "ILS"
-				| "INR"
-				| "ISK"
-				| "JPY"
-				| "KRW"
-				| "MXN"
-				| "MYR"
-				| "NOK"
-				| "NZD"
-				| "PHP"
-				| "PLN"
-				| "RON"
-				| "SEK"
-				| "SGD"
-				| "THB"
-				| "TRY"
-				| "USD"
-				| "ZAR";
-			isFavorite?: boolean;
-			/** @enum {string} */
-			liabilityType?: "MANUAL" | "AUTOMATIC";
-			/** @enum {string} */
-			paymentFrequency?: "WEEKLY" | "MONTHLY" | "YEARLY";
-			paymentAmount?: number;
-			/** Format: date */
-			nextDueDate?: string;
-			/** Format: int32 */
-			paymentAnchorDay?: number;
-			/** Format: date-time */
-			settledAt?: string;
-			/** Format: date-time */
-			createdAt?: string;
-			snapshots?: components["schemas"]["Snapshot"][];
-		};
-		AssetCategory: {
-			/** Format: uuid */
-			id?: string;
-			user?: components["schemas"]["User"];
-			name?: string;
-			/** @enum {string} */
-			type?: "ASSET" | "LIABILITY";
-			icon?: string;
-			assets?: components["schemas"]["Asset"][];
-		};
-		Snapshot: {
-			/** Format: uuid */
-			id?: string;
-			asset?: components["schemas"]["Asset"];
-			/** Format: date */
-			referenceDate?: string;
-			amountOriginalCurrency?: number;
-			exchangeRateToBase?: number;
-			/** @enum {string} */
-			source?: "USER" | "SCHEDULER";
-			/** @enum {string} */
-			currency?:
-				| "AUD"
-				| "BGN"
-				| "BRL"
-				| "CAD"
-				| "CHF"
-				| "CNY"
-				| "CZK"
-				| "DKK"
-				| "EUR"
-				| "GBP"
-				| "HKD"
-				| "HUF"
-				| "IDR"
-				| "ILS"
-				| "INR"
-				| "ISK"
-				| "JPY"
-				| "KRW"
-				| "MXN"
-				| "MYR"
-				| "NOK"
-				| "NZD"
-				| "PHP"
-				| "PLN"
-				| "RON"
-				| "SEK"
-				| "SGD"
-				| "THB"
-				| "TRY"
-				| "USD"
-				| "ZAR";
-			/** Format: int64 */
-			version?: number;
-			amountInBaseCurrency?: number;
-		};
-		User: {
-			/** Format: uuid */
-			id?: string;
-			jwtId?: string;
-			/** @enum {string} */
-			currency?:
+			currency:
 				| "AUD"
 				| "BGN"
 				| "BRL"
@@ -837,10 +724,9 @@ export interface components {
 				| "USD"
 				| "ZAR";
 			/** @enum {string} */
-			locale?: "en-US" | "fr-FR" | "it-IT";
-			picture?: string;
-			assets?: components["schemas"]["Asset"][];
-			categories?: components["schemas"]["AssetCategory"][];
+			locale: "en-US" | "fr-FR" | "it-IT";
+			/** @description Base64-encoded JPEG, absent when the user has no picture */
+			picture?: string | null;
 		};
 		AssetExport: {
 			/** Format: uuid */
@@ -982,7 +868,7 @@ export interface operations {
 					[name: string]: unknown;
 				};
 				content: {
-					"*/*": components["schemas"]["User"];
+					"*/*": components["schemas"]["UserDTO"];
 				};
 			};
 		};
