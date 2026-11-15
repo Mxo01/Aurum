@@ -45,9 +45,9 @@ class GlobalExceptionHandlerTest {
 	private static final String STALE_ROW_DETAIL =
 		"Row was updated or deleted by another transaction";
 	private static final String CONFLICT_REASON =
-		"Category still holds 2 asset(s); move or delete them first";
+		"This category still has assets, move or delete them first";
 	private static final String DEFAULT_CATEGORY_FORBIDDEN_REASON =
-		"Default categories cannot be deleted";
+		"A default category cannot be deleted";
 	private static final String UNRECOGNIZED_STATUS_REASON = "Request failed";
 	private static final int UNRECOGNIZED_STATUS_CODE = 599;
 	private static final String INVALID_BODY_REASON = "Request body is invalid";

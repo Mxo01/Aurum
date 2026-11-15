@@ -8,6 +8,7 @@ import com.backend.aurum.domain.asset.repository.AssetRepository;
 import com.backend.aurum.domain.auth.service.Auth0ManagementService;
 import com.backend.aurum.domain.cashflow.repository.CashFlowRepository;
 import com.backend.aurum.domain.shared.exception.NotFoundException;
+import com.backend.aurum.domain.shared.exception.ValidationException;
 import com.backend.aurum.domain.user.dto.UpdateCurrencyDTO;
 import com.backend.aurum.domain.user.dto.UpdateLocaleDTO;
 import com.backend.aurum.domain.user.dto.UpdateNameDTO;
@@ -117,10 +118,10 @@ public class UserService {
 	public void updateAuth0Name(String jwtId, UpdateNameDTO dto) {
 		log.debug("UserService#updateAuth0Name - Updating name for jwtId={}", jwtId);
 		if (dto.name() == null || dto.name().isBlank()) {
-			throw new IllegalArgumentException("Name is required");
+			throw new ValidationException("name", "Name is required");
 		}
 		if (dto.name().length() > 100) {
-			throw new IllegalArgumentException("Name must not exceed 100 characters");
+			throw new ValidationException("name", "Name cannot exceed 100 characters");
 		}
 		try {
 			ManagementAPI mgmt = auth0ManagementService.getManagementAPI();
@@ -248,12 +249,18 @@ public class UserService {
 	private void assertImageDimensionsWithinLimit(byte[] bytes) throws IOException {
 		try (ImageInputStream input = ImageIO.createImageInputStream(new ByteArrayInputStream(bytes))) {
 			if (input == null) {
-				throw new IllegalArgumentException("Invalid or unsupported image format");
+				throw new ValidationException(
+					"file",
+					"The picture must be a JPEG, PNG, GIF, BMP, or WebP image"
+				);
 			}
 
 			Iterator<ImageReader> readers = ImageIO.getImageReaders(input);
 			if (!readers.hasNext()) {
-				throw new IllegalArgumentException("Invalid or unsupported image format");
+				throw new ValidationException(
+					"file",
+					"The picture must be a JPEG, PNG, GIF, BMP, or WebP image"
+				);
 			}
 
 			ImageReader reader = readers.next();
@@ -267,7 +274,7 @@ public class UserService {
 						width,
 						height
 					);
-					throw new IllegalArgumentException("Image dimensions exceed the allowed limit");
+					throw new ValidationException("file", "The picture is too large, choose a smaller one");
 				}
 			} finally {
 				reader.dispose();
@@ -284,8 +291,9 @@ public class UserService {
 
 		if (!isValidImageBytes(bytes)) {
 			log.warn("UserService#processImage - Rejected file with invalid magic bytes");
-			throw new IllegalArgumentException(
-				"Unsupported file type: only JPEG, PNG, GIF, BMP, and WebP are allowed"
+			throw new ValidationException(
+				"file",
+				"The picture must be a JPEG, PNG, GIF, BMP, or WebP image"
 			);
 		}
 
@@ -306,7 +314,10 @@ public class UserService {
 		BufferedImage original = ImageIO.read(new ByteArrayInputStream(bytes));
 		if (original == null) {
 			log.warn("UserService#processImage - Could not decode image, unsupported format");
-			throw new IllegalArgumentException("Invalid or unsupported image format");
+			throw new ValidationException(
+				"file",
+				"The picture must be a JPEG, PNG, GIF, BMP, or WebP image"
+			);
 		}
 
 		log.debug(

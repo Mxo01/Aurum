@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useApi } from "@/lib/api/api-context";
 import { unwrap } from "@/lib/api/client";
+import { getApiErrorMessage } from "@/lib/api/errors";
 import { queryKeys } from "@/lib/api/keys";
 import type { Currency, Locale, UserDTO } from "@/lib/api/types";
 
@@ -44,7 +45,7 @@ export function useUpdateCurrency() {
 			Promise.all(
 				CURRENCY_SCOPED_KEYS.map(queryKey => queryClient.invalidateQueries({ queryKey }))
 			),
-		onError: () => toast.error("Could not update the currency")
+		onError: error => toast.error(getApiErrorMessage(error, "Could not update the currency"))
 	});
 }
 
@@ -56,7 +57,7 @@ export function useUpdateLocale() {
 		mutationFn: async (locale: Locale) =>
 			unwrap(await api.PUT("/users/locale", { body: { locale } })),
 		onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.profile }),
-		onError: () => toast.error("Could not update the locale")
+		onError: error => toast.error(getApiErrorMessage(error, "Could not update the locale"))
 	});
 }
 
@@ -67,7 +68,7 @@ export function useUpdateName() {
 	return useMutation({
 		mutationFn: async (name: string) => unwrap(await api.PUT("/users", { body: { name } })),
 		onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.profile }),
-		onError: () => toast.error("Could not update the name")
+		onError: error => toast.error(getApiErrorMessage(error, "Could not update the name"))
 	});
 }
 
@@ -87,7 +88,7 @@ export function useUploadPicture() {
 			);
 		},
 		onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.profile }),
-		onError: () => toast.error("Could not upload the picture")
+		onError: error => toast.error(getApiErrorMessage(error, "Could not upload the picture"))
 	});
 }
 
@@ -98,7 +99,7 @@ export function useDeletePicture() {
 	return useMutation({
 		mutationFn: async () => unwrap(await api.DELETE("/users/picture")),
 		onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.profile }),
-		onError: () => toast.error("Could not remove the picture")
+		onError: error => toast.error(getApiErrorMessage(error, "Could not remove the picture"))
 	});
 }
 
@@ -107,7 +108,7 @@ export function useDeleteProfile() {
 
 	return useMutation({
 		mutationFn: async () => unwrap(await api.DELETE("/users")),
-		onError: () => toast.error("Could not delete the account")
+		onError: error => toast.error(getApiErrorMessage(error, "Could not delete the account"))
 	});
 }
 
@@ -116,7 +117,7 @@ export function useExportData() {
 
 	return useMutation({
 		mutationFn: async () => unwrap(await api.GET("/users/export")),
-		onError: () => toast.error("Could not export your data")
+		onError: error => toast.error(getApiErrorMessage(error, "Could not export your data"))
 	});
 }
 

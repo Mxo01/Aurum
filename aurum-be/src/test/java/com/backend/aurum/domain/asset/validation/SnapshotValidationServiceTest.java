@@ -1,5 +1,6 @@
 package com.backend.aurum.domain.asset.validation;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
@@ -9,6 +10,8 @@ import com.backend.aurum.domain.asset.dto.SnapshotDTO;
 import com.backend.aurum.domain.asset.model.Asset;
 import com.backend.aurum.domain.asset.model.LiabilityType;
 import com.backend.aurum.domain.asset.repository.AssetRepository;
+import com.backend.aurum.domain.shared.exception.AccessDeniedException;
+import com.backend.aurum.domain.shared.exception.ValidationException;
 import com.backend.aurum.domain.user.model.User;
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -60,8 +63,33 @@ class SnapshotValidationServiceTest {
 
 	private static final BigDecimal NEGATIVE_RATE = new BigDecimal("-0.5");
 
+	private static final String ASSET_ID_FIELD = "assetId";
+
+	private static final String REFERENCE_DATE_FIELD = "referenceDate";
+
+	private static final String AMOUNT_FIELD = "amountOriginalCurrency";
+
+	private static final String EXCHANGE_RATE_FIELD = "exchangeRateToBase";
+
+	private static final String NO_DATA_MESSAGE = "Snapshot data is required";
+
+	private static final String MISSING_ASSET_MESSAGE = "Asset is required";
+
+	private static final String MISSING_REFERENCE_DATE_MESSAGE = "Value date is required";
+
+	private static final String MISSING_AMOUNT_MESSAGE = "Amount is required";
+
+	private static final String NEGATIVE_AMOUNT_MESSAGE = "Amount cannot be negative";
+
+	private static final String NON_POSITIVE_EXCHANGE_RATE_MESSAGE =
+		"Exchange rate must be greater than zero";
+
+	private static final String ASSET_NOT_FOUND_MESSAGE = "Asset not found";
+
 	private static final String FUTURE_REFERENCE_DATE_MESSAGE =
-		"Reference date cannot be in the future for an automatic liability";
+		"Value date cannot be in the future for an automatic liability";
+
+	private static final String FOREIGN_ASSET_MESSAGE = "This asset does not belong to you";
 
 	@Mock
 	private AssetRepository assetRepository;
@@ -72,54 +100,224 @@ class SnapshotValidationServiceTest {
 	@InjectMocks
 	private SnapshotValidationService testSubject;
 
-	@Test
-	void validate_createDto_throwsWhenDtoIsNull() {
-		// GIVEN / WHEN / THEN
-		assertThatThrownBy(() ->
-			testSubject.validate((CreateSnapshotDTO) null, REQUESTING_USER_ID)
-		).isInstanceOf(IllegalArgumentException.class);
-	}
-
 	@ParameterizedTest(name = "create: {0}")
-	@MethodSource("rejectedCreatePayloads")
-	void validate_createDto_rejectsInvalidPayload(
-		String scenario,
-		Consumer<CreateSnapshotDTO> mutation
-	) {
+	@MethodSource("createRejections")
+	void validate_createDto_answersThePinnedFieldAndMessage(CreateRejection createRejection) {
 		// GIVEN
-		CreateSnapshotDTO mockDto = buildCreateDto(UUID.randomUUID());
-		mutation.accept(mockDto);
+		CreateSnapshotDTO mockDto = createRejection.dto();
 
 		// WHEN / THEN
-		assertThatThrownBy(() -> testSubject.validate(mockDto, REQUESTING_USER_ID)).isInstanceOf(
-			IllegalArgumentException.class
+		assertThatThrownBy(() ->
+			testSubject.validate(mockDto, REQUESTING_USER_ID)
+		).isInstanceOfSatisfying(ValidationException.class, expectedException -> {
+			assertThat(expectedException.getField()).isEqualTo(createRejection.expectedField());
+			assertThat(expectedException.getMessage()).isEqualTo(createRejection.expectedMessage());
+		});
+	}
+
+	static Stream<CreateRejection> createRejections() {
+		return Stream.of(
+			new CreateRejection(
+				"400 without a field when the snapshot data is missing",
+				null,
+				null,
+				NO_DATA_MESSAGE
+			),
+			new CreateRejection(
+				"400 on the asset when it is missing",
+				createDtoWith(dto -> dto.setAssetId(null)),
+				ASSET_ID_FIELD,
+				MISSING_ASSET_MESSAGE
+			),
+			new CreateRejection(
+				"400 on the value date when it is missing",
+				createDtoWith(dto -> dto.setReferenceDate(null)),
+				REFERENCE_DATE_FIELD,
+				MISSING_REFERENCE_DATE_MESSAGE
+			),
+			new CreateRejection(
+				"400 on the amount when it is missing",
+				createDtoWith(dto -> dto.setAmountOriginalCurrency(null)),
+				AMOUNT_FIELD,
+				MISSING_AMOUNT_MESSAGE
+			),
+			new CreateRejection(
+				"400 on the amount when it is negative",
+				createDtoWith(dto -> dto.setAmountOriginalCurrency(NEGATIVE_AMOUNT)),
+				AMOUNT_FIELD,
+				NEGATIVE_AMOUNT_MESSAGE
+			),
+			new CreateRejection(
+				"400 on the exchange rate when it is zero",
+				createDtoWith(dto -> dto.setExchangeRateToBase(ZERO_RATE)),
+				EXCHANGE_RATE_FIELD,
+				NON_POSITIVE_EXCHANGE_RATE_MESSAGE
+			),
+			new CreateRejection(
+				"400 on the exchange rate when it is negative",
+				createDtoWith(dto -> dto.setExchangeRateToBase(NEGATIVE_RATE)),
+				EXCHANGE_RATE_FIELD,
+				NON_POSITIVE_EXCHANGE_RATE_MESSAGE
+			)
 		);
 	}
 
-	static Stream<Arguments> rejectedCreatePayloads() {
+	@ParameterizedTest(name = "update: {0}")
+	@MethodSource("snapshotRejections")
+	void validate_snapshotDto_answersThePinnedFieldAndMessage(SnapshotRejection snapshotRejection) {
+		// GIVEN
+		SnapshotDTO mockDto = snapshotRejection.dto();
+
+		// WHEN / THEN
+		assertThatThrownBy(() ->
+			testSubject.validate(mockDto, REQUESTING_USER_ID)
+		).isInstanceOfSatisfying(ValidationException.class, expectedException -> {
+			assertThat(expectedException.getField()).isEqualTo(snapshotRejection.expectedField());
+			assertThat(expectedException.getMessage()).isEqualTo(snapshotRejection.expectedMessage());
+		});
+	}
+
+	static Stream<SnapshotRejection> snapshotRejections() {
 		return Stream.of(
-			Arguments.of("null asset id", (Consumer<CreateSnapshotDTO>) dto -> dto.setAssetId(null)),
-			Arguments.of(
-				"null reference date",
-				(Consumer<CreateSnapshotDTO>) dto -> dto.setReferenceDate(null)
+			new SnapshotRejection(
+				"400 without a field when the snapshot data is missing",
+				null,
+				null,
+				NO_DATA_MESSAGE
 			),
-			Arguments.of(
-				"null amount",
-				(Consumer<CreateSnapshotDTO>) dto -> dto.setAmountOriginalCurrency(null)
+			new SnapshotRejection(
+				"400 on the asset when it is missing",
+				snapshotDtoWith(dto -> dto.setAssetId(null)),
+				ASSET_ID_FIELD,
+				MISSING_ASSET_MESSAGE
 			),
-			Arguments.of(
-				"negative amount",
-				(Consumer<CreateSnapshotDTO>) dto -> dto.setAmountOriginalCurrency(NEGATIVE_AMOUNT)
+			new SnapshotRejection(
+				"400 on the value date when it is missing",
+				snapshotDtoWith(dto -> dto.setReferenceDate(null)),
+				REFERENCE_DATE_FIELD,
+				MISSING_REFERENCE_DATE_MESSAGE
 			),
-			Arguments.of(
-				"zero exchange rate",
-				(Consumer<CreateSnapshotDTO>) dto -> dto.setExchangeRateToBase(ZERO_RATE)
+			new SnapshotRejection(
+				"400 on the amount when it is missing",
+				snapshotDtoWith(dto -> dto.setAmountOriginalCurrency(null)),
+				AMOUNT_FIELD,
+				MISSING_AMOUNT_MESSAGE
 			),
-			Arguments.of(
-				"negative exchange rate",
-				(Consumer<CreateSnapshotDTO>) dto -> dto.setExchangeRateToBase(NEGATIVE_RATE)
+			new SnapshotRejection(
+				"400 on the amount when it is negative",
+				snapshotDtoWith(dto -> dto.setAmountOriginalCurrency(NEGATIVE_AMOUNT)),
+				AMOUNT_FIELD,
+				NEGATIVE_AMOUNT_MESSAGE
+			),
+			new SnapshotRejection(
+				"400 on the exchange rate when it is zero",
+				snapshotDtoWith(dto -> dto.setExchangeRateToBase(ZERO_RATE)),
+				EXCHANGE_RATE_FIELD,
+				NON_POSITIVE_EXCHANGE_RATE_MESSAGE
+			),
+			new SnapshotRejection(
+				"400 on the exchange rate when it is negative",
+				snapshotDtoWith(dto -> dto.setExchangeRateToBase(NEGATIVE_RATE)),
+				EXCHANGE_RATE_FIELD,
+				NON_POSITIVE_EXCHANGE_RATE_MESSAGE
 			)
 		);
+	}
+
+	@Test
+	void validate_createDto_answersThePinnedFieldAndMessage_whenTheAssetDoesNotExist() {
+		// GIVEN
+		CreateSnapshotDTO mockDto = buildCreateDto(UUID.randomUUID());
+		when(assetRepository.findById(mockDto.getAssetId())).thenReturn(Optional.empty());
+
+		// WHEN / THEN
+		assertThatThrownBy(() ->
+			testSubject.validate(mockDto, REQUESTING_USER_ID)
+		).isInstanceOfSatisfying(ValidationException.class, expectedException -> {
+			assertThat(expectedException.getField()).isEqualTo(ASSET_ID_FIELD);
+			assertThat(expectedException.getMessage()).isEqualTo(ASSET_NOT_FOUND_MESSAGE);
+		});
+	}
+
+	@Test
+	void validate_snapshotDto_answersThePinnedFieldAndMessage_whenTheAssetDoesNotExist() {
+		// GIVEN
+		SnapshotDTO mockDto = buildSnapshotDto(UUID.randomUUID());
+		when(assetRepository.findById(mockDto.getAssetId())).thenReturn(Optional.empty());
+
+		// WHEN / THEN
+		assertThatThrownBy(() ->
+			testSubject.validate(mockDto, REQUESTING_USER_ID)
+		).isInstanceOfSatisfying(ValidationException.class, expectedException -> {
+			assertThat(expectedException.getField()).isEqualTo(ASSET_ID_FIELD);
+			assertThat(expectedException.getMessage()).isEqualTo(ASSET_NOT_FOUND_MESSAGE);
+		});
+	}
+
+	@Test
+	void validate_createDto_answersAFieldless403_whenTheAssetBelongsToAnotherUser() {
+		// GIVEN
+		Asset mockAsset = buildAsset(OTHER_USER_ID, null);
+		CreateSnapshotDTO mockDto = buildCreateDto(mockAsset.getId());
+		when(assetRepository.findById(mockAsset.getId())).thenReturn(Optional.of(mockAsset));
+
+		// WHEN / THEN
+		assertThatThrownBy(() ->
+			testSubject.validate(mockDto, REQUESTING_USER_ID)
+		).isInstanceOfSatisfying(AccessDeniedException.class, expectedException ->
+			assertThat(expectedException.getMessage()).isEqualTo(FOREIGN_ASSET_MESSAGE)
+		);
+	}
+
+	@Test
+	void validate_snapshotDto_answersAFieldless403_whenTheAssetBelongsToAnotherUser() {
+		// GIVEN
+		Asset mockAsset = buildAsset(OTHER_USER_ID, null);
+		SnapshotDTO mockDto = buildSnapshotDto(mockAsset.getId());
+		when(assetRepository.findById(mockAsset.getId())).thenReturn(Optional.of(mockAsset));
+
+		// WHEN / THEN
+		assertThatThrownBy(() ->
+			testSubject.validate(mockDto, REQUESTING_USER_ID)
+		).isInstanceOfSatisfying(AccessDeniedException.class, expectedException ->
+			assertThat(expectedException.getMessage()).isEqualTo(FOREIGN_ASSET_MESSAGE)
+		);
+	}
+
+	@Test
+	void validate_createDto_rejectsAReferenceDateBeyondTheTimezoneSkew() {
+		// GIVEN
+		stubFixedToday();
+		Asset mockAsset = buildAsset(REQUESTING_USER_ID, LiabilityType.AUTOMATIC);
+		CreateSnapshotDTO mockDto = buildCreateDto(mockAsset.getId());
+		mockDto.setReferenceDate(BEYOND_TIMEZONE_SKEW);
+		when(assetRepository.findById(mockAsset.getId())).thenReturn(Optional.of(mockAsset));
+
+		// WHEN / THEN
+		assertThatThrownBy(() ->
+			testSubject.validate(mockDto, REQUESTING_USER_ID)
+		).isInstanceOfSatisfying(ValidationException.class, expectedException -> {
+			assertThat(expectedException.getField()).isEqualTo(REFERENCE_DATE_FIELD);
+			assertThat(expectedException.getMessage()).isEqualTo(FUTURE_REFERENCE_DATE_MESSAGE);
+		});
+	}
+
+	@Test
+	void validate_snapshotDto_rejectsAReferenceDateBeyondTheTimezoneSkew() {
+		// GIVEN
+		stubFixedToday();
+		Asset mockAsset = buildAsset(REQUESTING_USER_ID, LiabilityType.AUTOMATIC);
+		SnapshotDTO mockDto = buildSnapshotDto(mockAsset.getId());
+		mockDto.setReferenceDate(BEYOND_TIMEZONE_SKEW);
+		when(assetRepository.findById(mockAsset.getId())).thenReturn(Optional.of(mockAsset));
+
+		// WHEN / THEN
+		assertThatThrownBy(() ->
+			testSubject.validate(mockDto, REQUESTING_USER_ID)
+		).isInstanceOfSatisfying(ValidationException.class, expectedException -> {
+			assertThat(expectedException.getField()).isEqualTo(REFERENCE_DATE_FIELD);
+			assertThat(expectedException.getMessage()).isEqualTo(FUTURE_REFERENCE_DATE_MESSAGE);
+		});
 	}
 
 	@Test
@@ -127,6 +325,20 @@ class SnapshotValidationServiceTest {
 		// GIVEN
 		Asset mockAsset = buildAsset(REQUESTING_USER_ID, null);
 		CreateSnapshotDTO mockDto = buildCreateDto(mockAsset.getId());
+		mockDto.setAmountOriginalCurrency(ZERO_AMOUNT);
+		when(assetRepository.findById(mockAsset.getId())).thenReturn(Optional.of(mockAsset));
+
+		// WHEN / THEN
+		assertThatCode(() ->
+			testSubject.validate(mockDto, REQUESTING_USER_ID)
+		).doesNotThrowAnyException();
+	}
+
+	@Test
+	void validate_snapshotDto_acceptsAZeroAmount() {
+		// GIVEN
+		Asset mockAsset = buildAsset(REQUESTING_USER_ID, null);
+		SnapshotDTO mockDto = buildSnapshotDto(mockAsset.getId());
 		mockDto.setAmountOriginalCurrency(ZERO_AMOUNT);
 		when(assetRepository.findById(mockAsset.getId())).thenReturn(Optional.of(mockAsset));
 
@@ -151,28 +363,17 @@ class SnapshotValidationServiceTest {
 	}
 
 	@Test
-	void validate_createDto_throwsWhenAssetNotFound() {
+	void validate_snapshotDto_acceptsAMissingExchangeRate() {
 		// GIVEN
-		CreateSnapshotDTO mockDto = buildCreateDto(UUID.randomUUID());
-		when(assetRepository.findById(mockDto.getAssetId())).thenReturn(Optional.empty());
-
-		// WHEN / THEN
-		assertThatThrownBy(() -> testSubject.validate(mockDto, REQUESTING_USER_ID)).isInstanceOf(
-			IllegalArgumentException.class
-		);
-	}
-
-	@Test
-	void validate_createDto_throwsWhenAssetBelongsToDifferentUser() {
-		// GIVEN
-		Asset mockAsset = buildAsset(OTHER_USER_ID, null);
-		CreateSnapshotDTO mockDto = buildCreateDto(mockAsset.getId());
+		Asset mockAsset = buildAsset(REQUESTING_USER_ID, null);
+		SnapshotDTO mockDto = buildSnapshotDto(mockAsset.getId());
+		mockDto.setExchangeRateToBase(null);
 		when(assetRepository.findById(mockAsset.getId())).thenReturn(Optional.of(mockAsset));
 
 		// WHEN / THEN
-		assertThatThrownBy(() -> testSubject.validate(mockDto, REQUESTING_USER_ID)).isInstanceOf(
-			IllegalArgumentException.class
-		);
+		assertThatCode(() ->
+			testSubject.validate(mockDto, REQUESTING_USER_ID)
+		).doesNotThrowAnyException();
 	}
 
 	@ParameterizedTest(name = "create: an automatic liability snapshot dated {0} is accepted")
@@ -191,19 +392,20 @@ class SnapshotValidationServiceTest {
 		).doesNotThrowAnyException();
 	}
 
-	@Test
-	void validate_createDto_rejectsAReferenceDateBeyondTheTimezoneSkew() {
+	@ParameterizedTest(name = "update: an automatic liability snapshot dated {0} is accepted")
+	@MethodSource("toleratedReferenceDates")
+	void validate_snapshotDto_acceptsAReferenceDateWithinTheTimezoneSkew(LocalDate referenceDate) {
 		// GIVEN
 		stubFixedToday();
 		Asset mockAsset = buildAsset(REQUESTING_USER_ID, LiabilityType.AUTOMATIC);
-		CreateSnapshotDTO mockDto = buildCreateDto(mockAsset.getId());
-		mockDto.setReferenceDate(BEYOND_TIMEZONE_SKEW);
+		SnapshotDTO mockDto = buildSnapshotDto(mockAsset.getId());
+		mockDto.setReferenceDate(referenceDate);
 		when(assetRepository.findById(mockAsset.getId())).thenReturn(Optional.of(mockAsset));
 
 		// WHEN / THEN
-		assertThatThrownBy(() -> testSubject.validate(mockDto, REQUESTING_USER_ID))
-			.isInstanceOf(IllegalArgumentException.class)
-			.hasMessageContaining(FUTURE_REFERENCE_DATE_MESSAGE);
+		assertThatCode(() ->
+			testSubject.validate(mockDto, REQUESTING_USER_ID)
+		).doesNotThrowAnyException();
 	}
 
 	@Test
@@ -211,6 +413,20 @@ class SnapshotValidationServiceTest {
 		// GIVEN
 		Asset mockAsset = buildAsset(REQUESTING_USER_ID, LiabilityType.MANUAL);
 		CreateSnapshotDTO mockDto = buildCreateDto(mockAsset.getId());
+		mockDto.setReferenceDate(BEYOND_TIMEZONE_SKEW);
+		when(assetRepository.findById(mockAsset.getId())).thenReturn(Optional.of(mockAsset));
+
+		// WHEN / THEN
+		assertThatCode(() ->
+			testSubject.validate(mockDto, REQUESTING_USER_ID)
+		).doesNotThrowAnyException();
+	}
+
+	@Test
+	void validate_snapshotDto_acceptsAFutureReferenceDateForAManualLiability() {
+		// GIVEN
+		Asset mockAsset = buildAsset(REQUESTING_USER_ID, LiabilityType.MANUAL);
+		SnapshotDTO mockDto = buildSnapshotDto(mockAsset.getId());
 		mockDto.setReferenceDate(BEYOND_TIMEZONE_SKEW);
 		when(assetRepository.findById(mockAsset.getId())).thenReturn(Optional.of(mockAsset));
 
@@ -235,152 +451,7 @@ class SnapshotValidationServiceTest {
 	}
 
 	@Test
-	void validate_snapshotDto_throwsWhenDtoIsNull() {
-		// GIVEN / WHEN / THEN
-		assertThatThrownBy(() ->
-			testSubject.validate((SnapshotDTO) null, REQUESTING_USER_ID)
-		).isInstanceOf(IllegalArgumentException.class);
-	}
-
-	@ParameterizedTest(name = "update: {0}")
-	@MethodSource("rejectedSnapshotPayloads")
-	void validate_snapshotDto_rejectsInvalidPayload(String scenario, Consumer<SnapshotDTO> mutation) {
-		// GIVEN
-		SnapshotDTO mockDto = buildSnapshotDto(UUID.randomUUID());
-		mutation.accept(mockDto);
-
-		// WHEN / THEN
-		assertThatThrownBy(() -> testSubject.validate(mockDto, REQUESTING_USER_ID)).isInstanceOf(
-			IllegalArgumentException.class
-		);
-	}
-
-	static Stream<Arguments> rejectedSnapshotPayloads() {
-		return Stream.of(
-			Arguments.of("null asset id", (Consumer<SnapshotDTO>) dto -> dto.setAssetId(null)),
-			Arguments.of(
-				"null reference date",
-				(Consumer<SnapshotDTO>) dto -> dto.setReferenceDate(null)
-			),
-			Arguments.of(
-				"null amount",
-				(Consumer<SnapshotDTO>) dto -> dto.setAmountOriginalCurrency(null)
-			),
-			Arguments.of(
-				"negative amount",
-				(Consumer<SnapshotDTO>) dto -> dto.setAmountOriginalCurrency(NEGATIVE_AMOUNT)
-			),
-			Arguments.of(
-				"zero exchange rate",
-				(Consumer<SnapshotDTO>) dto -> dto.setExchangeRateToBase(ZERO_RATE)
-			),
-			Arguments.of(
-				"negative exchange rate",
-				(Consumer<SnapshotDTO>) dto -> dto.setExchangeRateToBase(NEGATIVE_RATE)
-			)
-		);
-	}
-
-	@Test
-	void validate_snapshotDto_acceptsAZeroAmount() {
-		// GIVEN
-		Asset mockAsset = buildAsset(REQUESTING_USER_ID, null);
-		SnapshotDTO mockDto = buildSnapshotDto(mockAsset.getId());
-		mockDto.setAmountOriginalCurrency(ZERO_AMOUNT);
-		when(assetRepository.findById(mockAsset.getId())).thenReturn(Optional.of(mockAsset));
-
-		// WHEN / THEN
-		assertThatCode(() ->
-			testSubject.validate(mockDto, REQUESTING_USER_ID)
-		).doesNotThrowAnyException();
-	}
-
-	@Test
-	void validate_snapshotDto_acceptsAMissingExchangeRate() {
-		// GIVEN
-		Asset mockAsset = buildAsset(REQUESTING_USER_ID, null);
-		SnapshotDTO mockDto = buildSnapshotDto(mockAsset.getId());
-		mockDto.setExchangeRateToBase(null);
-		when(assetRepository.findById(mockAsset.getId())).thenReturn(Optional.of(mockAsset));
-
-		// WHEN / THEN
-		assertThatCode(() ->
-			testSubject.validate(mockDto, REQUESTING_USER_ID)
-		).doesNotThrowAnyException();
-	}
-
-	@Test
-	void validate_snapshotDto_throwsWhenAssetNotFound() {
-		// GIVEN
-		SnapshotDTO mockDto = buildSnapshotDto(UUID.randomUUID());
-		when(assetRepository.findById(mockDto.getAssetId())).thenReturn(Optional.empty());
-
-		// WHEN / THEN
-		assertThatThrownBy(() -> testSubject.validate(mockDto, REQUESTING_USER_ID)).isInstanceOf(
-			IllegalArgumentException.class
-		);
-	}
-
-	@Test
-	void validate_snapshotDto_throwsWhenAssetBelongsToDifferentUser() {
-		// GIVEN
-		Asset mockAsset = buildAsset(OTHER_USER_ID, null);
-		SnapshotDTO mockDto = buildSnapshotDto(mockAsset.getId());
-		when(assetRepository.findById(mockAsset.getId())).thenReturn(Optional.of(mockAsset));
-
-		// WHEN / THEN
-		assertThatThrownBy(() -> testSubject.validate(mockDto, REQUESTING_USER_ID)).isInstanceOf(
-			IllegalArgumentException.class
-		);
-	}
-
-	@ParameterizedTest(name = "update: an automatic liability snapshot dated {0} is accepted")
-	@MethodSource("toleratedReferenceDates")
-	void validate_snapshotDto_acceptsAReferenceDateWithinTheTimezoneSkew(LocalDate referenceDate) {
-		// GIVEN
-		stubFixedToday();
-		Asset mockAsset = buildAsset(REQUESTING_USER_ID, LiabilityType.AUTOMATIC);
-		SnapshotDTO mockDto = buildSnapshotDto(mockAsset.getId());
-		mockDto.setReferenceDate(referenceDate);
-		when(assetRepository.findById(mockAsset.getId())).thenReturn(Optional.of(mockAsset));
-
-		// WHEN / THEN
-		assertThatCode(() ->
-			testSubject.validate(mockDto, REQUESTING_USER_ID)
-		).doesNotThrowAnyException();
-	}
-
-	@Test
-	void validate_snapshotDto_rejectsAReferenceDateBeyondTheTimezoneSkew() {
-		// GIVEN
-		stubFixedToday();
-		Asset mockAsset = buildAsset(REQUESTING_USER_ID, LiabilityType.AUTOMATIC);
-		SnapshotDTO mockDto = buildSnapshotDto(mockAsset.getId());
-		mockDto.setReferenceDate(BEYOND_TIMEZONE_SKEW);
-		when(assetRepository.findById(mockAsset.getId())).thenReturn(Optional.of(mockAsset));
-
-		// WHEN / THEN
-		assertThatThrownBy(() -> testSubject.validate(mockDto, REQUESTING_USER_ID))
-			.isInstanceOf(IllegalArgumentException.class)
-			.hasMessageContaining(FUTURE_REFERENCE_DATE_MESSAGE);
-	}
-
-	@Test
-	void validate_snapshotDto_acceptsAFutureReferenceDateForAManualLiability() {
-		// GIVEN
-		Asset mockAsset = buildAsset(REQUESTING_USER_ID, LiabilityType.MANUAL);
-		SnapshotDTO mockDto = buildSnapshotDto(mockAsset.getId());
-		mockDto.setReferenceDate(BEYOND_TIMEZONE_SKEW);
-		when(assetRepository.findById(mockAsset.getId())).thenReturn(Optional.of(mockAsset));
-
-		// WHEN / THEN
-		assertThatCode(() ->
-			testSubject.validate(mockDto, REQUESTING_USER_ID)
-		).doesNotThrowAnyException();
-	}
-
-	@Test
-	void validate_snapshotDto_doesNotThrowForValidDto() {
+	void validate_snapshotDto_acceptsAValidDto() {
 		// GIVEN
 		Asset mockAsset = buildAsset(REQUESTING_USER_ID, null);
 		SnapshotDTO mockDto = buildSnapshotDto(mockAsset.getId());
@@ -392,8 +463,8 @@ class SnapshotValidationServiceTest {
 		).doesNotThrowAnyException();
 	}
 
-	static Stream<LocalDate> toleratedReferenceDates() {
-		return Stream.of(FIXED_TODAY, TOMORROW);
+	static Stream<Arguments> toleratedReferenceDates() {
+		return Stream.of(Arguments.of(FIXED_TODAY), Arguments.of(TOMORROW));
 	}
 
 	private void stubFixedToday() {
@@ -408,6 +479,18 @@ class SnapshotValidationServiceTest {
 		mockAsset.setUser(mockOwner);
 		mockAsset.setLiabilityType(liabilityType);
 		return mockAsset;
+	}
+
+	private static CreateSnapshotDTO createDtoWith(Consumer<CreateSnapshotDTO> mutation) {
+		CreateSnapshotDTO dto = buildCreateDto(UUID.randomUUID());
+		mutation.accept(dto);
+		return dto;
+	}
+
+	private static SnapshotDTO snapshotDtoWith(Consumer<SnapshotDTO> mutation) {
+		SnapshotDTO dto = buildSnapshotDto(UUID.randomUUID());
+		mutation.accept(dto);
+		return dto;
 	}
 
 	private static CreateSnapshotDTO buildCreateDto(UUID assetId) {
@@ -427,4 +510,18 @@ class SnapshotValidationServiceTest {
 		dto.setExchangeRateToBase(POSITIVE_RATE);
 		return dto;
 	}
+
+	private record CreateRejection(
+		String scenario,
+		CreateSnapshotDTO dto,
+		String expectedField,
+		String expectedMessage
+	) {}
+
+	private record SnapshotRejection(
+		String scenario,
+		SnapshotDTO dto,
+		String expectedField,
+		String expectedMessage
+	) {}
 }

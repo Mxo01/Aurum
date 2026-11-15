@@ -23,6 +23,7 @@ import com.backend.aurum.domain.auth.service.Auth0ManagementService;
 import com.backend.aurum.domain.cashflow.model.CashFlow;
 import com.backend.aurum.domain.cashflow.repository.CashFlowRepository;
 import com.backend.aurum.domain.shared.exception.NotFoundException;
+import com.backend.aurum.domain.shared.exception.ValidationException;
 import com.backend.aurum.domain.user.dto.UpdateCurrencyDTO;
 import com.backend.aurum.domain.user.dto.UpdateLocaleDTO;
 import com.backend.aurum.domain.user.dto.UpdateNameDTO;
@@ -32,20 +33,139 @@ import com.backend.aurum.domain.user.enums.Locale;
 import com.backend.aurum.domain.user.model.User;
 import com.backend.aurum.domain.user.model.UserPrincipal;
 import com.backend.aurum.domain.user.repository.UserRepository;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Stream;
+import java.util.zip.CRC32;
+import javax.imageio.ImageIO;
 import org.instancio.Instancio;
 import org.instancio.Select;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.web.multipart.MultipartFile;
 
 @ExtendWith(MockitoExtension.class)
 class UserServiceTest {
+
+	private static final String NAME_FIELD = "name";
+
+	private static final String FILE_FIELD = "file";
+
+	private static final String MISSING_NAME_MESSAGE = "Name is required";
+
+	private static final String NAME_TOO_LONG_MESSAGE = "Name cannot exceed 100 characters";
+
+	private static final String NOT_AN_IMAGE_MESSAGE =
+		"The picture must be a JPEG, PNG, GIF, BMP, or WebP image";
+
+	private static final String PICTURE_TOO_LARGE_MESSAGE =
+		"The picture is too large, choose a smaller one";
+
+	private static final int MAX_NAME_LENGTH = 100;
+
+	private static final String BLANK_NAME = "   ";
+
+	private static final String VALID_NAME = "Ada Lovelace";
+
+	private static final byte[] PNG_SIGNATURE = {
+		(byte) 0x89,
+		0x50,
+		0x4E,
+		0x47,
+		0x0D,
+		0x0A,
+		0x1A,
+		0x0A
+	};
+
+	private static final int PNG_MAGIC_BYTES = 4;
+
+	private static final int TRUNCATED_PNG_LENGTH = 64;
+
+	private static final int OVERSIZED_DIMENSION = 10_000;
+
+	private static final int PROFILE_PICTURE_SIZE = 200;
+
+	private static final int SOURCE_PICTURE_WIDTH = 300;
+
+	private static final int SOURCE_PICTURE_HEIGHT = 200;
+
+	private static final int PNG_BIT_DEPTH = 8;
+
+	private static final int PNG_COLOR_TYPE_RGBA = 6;
+
+	private static final int PNG_COMPRESSION_DEFLATE = 0;
+
+	private static final int PNG_FILTER_ADAPTIVE = 0;
+
+	private static final int PNG_INTERLACE_NONE = 0;
+
+	private static final int TINY_PICTURE_WIDTH = 64;
+
+	private static final int TINY_PICTURE_HEIGHT = 48;
+
+	private static final String GIF_FORMAT = "gif";
+
+	private static final String BMP_FORMAT = "bmp";
+
+	private static final int WEBP_HEADER_LENGTH = 32;
+
+	private static final byte[] WEBP_RIFF_HEADER = {
+		'R',
+		'I',
+		'F',
+		'F',
+		0,
+		0,
+		0,
+		0,
+		'W',
+		'E',
+		'B',
+		'P'
+	};
+
+	private static final int ORIENTATION_UNKNOWN = 9;
+
+	private static final byte[] EXIF_PREFIX = { 'E', 'x', 'i', 'f', 0, 0 };
+
+	private static final byte[] TIFF_LITTLE_ENDIAN_HEADER = { 'I', 'I', 42, 0, 8, 0, 0, 0 };
+
+	private static final byte[] EXIF_SEGMENT_MARKER = { (byte) 0xFF, (byte) 0xE1 };
+
+	private static final byte[] NO_NEXT_IFD = { 0, 0, 0, 0 };
+
+	private static final int EXIF_ORIENTATION_TAG = 0x0112;
+
+	private static final int EXIF_FOREIGN_TAG = 0x010F;
+
+	private static final int TIFF_TYPE_ASCII = 2;
+
+	private static final int TIFF_TYPE_SHORT = 3;
+
+	private static final int ONE_EXIF_ENTRY = 1;
+
+	private static final int NO_EXIF_ENTRY = 0;
+
+	private static final int EXIF_VALUE_LENGTH = 4;
+
+	private static final int EXIF_SEGMENT_LENGTH_BYTES = 2;
 
 	@Mock
 	private UserRepository userRepository;
@@ -119,6 +239,21 @@ class UserServiceTest {
 	}
 
 	@Test
+	void findOrCreate_throwsRuntimeException_whenTheRetryFindsNoUser() {
+		// GIVEN
+		String mockJwtId = "auth0|orphaned";
+		when(userRepository.findByJwtId(mockJwtId)).thenReturn(Optional.empty());
+		when(userRepository.saveAndFlush(org.mockito.ArgumentMatchers.notNull())).thenThrow(
+			new org.springframework.dao.DataIntegrityViolationException("duplicate key")
+		);
+
+		// WHEN / THEN
+		assertThatThrownBy(() -> testSubject.findOrCreate(mockJwtId)).isInstanceOf(
+			RuntimeException.class
+		);
+	}
+
+	@Test
 	void getUserById_returnsUser() {
 		// GIVEN
 		UUID mockUserId = UUID.randomUUID();
@@ -130,6 +265,18 @@ class UserServiceTest {
 
 		// THEN
 		assertThat(expectedUser).isEqualTo(mockUser);
+	}
+
+	@Test
+	void getUserById_throwsNotFoundException_whenTheUserIsMissing() {
+		// GIVEN
+		UUID mockUserId = UUID.randomUUID();
+		when(userRepository.findById(mockUserId)).thenReturn(Optional.empty());
+
+		// WHEN / THEN
+		assertThatThrownBy(() -> testSubject.getUserById(mockUserId)).isInstanceOf(
+			NotFoundException.class
+		);
 	}
 
 	@Test
@@ -188,6 +335,19 @@ class UserServiceTest {
 	}
 
 	@Test
+	void updateCurrency_throwsNotFoundException_whenTheUserIsMissing() {
+		// GIVEN
+		UUID mockUserId = UUID.randomUUID();
+		UpdateCurrencyDTO mockDto = new UpdateCurrencyDTO(Currency.USD);
+		when(userRepository.findById(mockUserId)).thenReturn(Optional.empty());
+
+		// WHEN / THEN
+		assertThatThrownBy(() -> testSubject.updateCurrency(mockUserId, mockDto)).isInstanceOf(
+			NotFoundException.class
+		);
+	}
+
+	@Test
 	void updateLocale_savesLocaleToUser() {
 		// GIVEN
 		UUID mockUserId = UUID.randomUUID();
@@ -201,6 +361,19 @@ class UserServiceTest {
 		// THEN
 		assertThat(mockUser.getLocale()).isEqualTo(Locale.EN_US);
 		verify(userRepository).save(mockUser);
+	}
+
+	@Test
+	void updateLocale_throwsNotFoundException_whenTheUserIsMissing() {
+		// GIVEN
+		UUID mockUserId = UUID.randomUUID();
+		UpdateLocaleDTO mockDto = new UpdateLocaleDTO(Locale.EN_US);
+		when(userRepository.findById(mockUserId)).thenReturn(Optional.empty());
+
+		// WHEN / THEN
+		assertThatThrownBy(() -> testSubject.updateLocale(mockUserId, mockDto)).isInstanceOf(
+			NotFoundException.class
+		);
 	}
 
 	@Test
@@ -218,6 +391,18 @@ class UserServiceTest {
 		// THEN
 		assertThat(mockUser.getPicture()).isNull();
 		verify(userRepository).save(mockUser);
+	}
+
+	@Test
+	void deletePicture_throwsNotFoundException_whenTheUserIsMissing() {
+		// GIVEN
+		UUID mockUserId = UUID.randomUUID();
+		when(userRepository.findById(mockUserId)).thenReturn(Optional.empty());
+
+		// WHEN / THEN
+		assertThatThrownBy(() -> testSubject.deletePicture(mockUserId)).isInstanceOf(
+			NotFoundException.class
+		);
 	}
 
 	@Test
@@ -451,6 +636,64 @@ class UserServiceTest {
 		);
 	}
 
+	@ParameterizedTest(name = "{0}")
+	@MethodSource("missingNameDtos")
+	void updateAuth0Name_answersThePinned400_whenNameIsMissing(UpdateNameDTO mockDto) {
+		// WHEN / THEN
+		assertThatThrownBy(() ->
+			testSubject.updateAuth0Name("auth0|user", mockDto)
+		).isInstanceOfSatisfying(ValidationException.class, expectedException -> {
+			assertThat(expectedException.getField()).isEqualTo(NAME_FIELD);
+			assertThat(expectedException.getMessage()).isEqualTo(MISSING_NAME_MESSAGE);
+		});
+	}
+
+	private static Stream<UpdateNameDTO> missingNameDtos() {
+		return Stream.of(new UpdateNameDTO(null), new UpdateNameDTO(BLANK_NAME));
+	}
+
+	@Test
+	void updateAuth0Name_answersThePinned400_whenNameIsTooLong() {
+		// GIVEN
+		UpdateNameDTO mockDto = new UpdateNameDTO("a".repeat(MAX_NAME_LENGTH + 1));
+
+		// WHEN / THEN
+		assertThatThrownBy(() ->
+			testSubject.updateAuth0Name("auth0|user", mockDto)
+		).isInstanceOfSatisfying(ValidationException.class, expectedException -> {
+			assertThat(expectedException.getField()).isEqualTo(NAME_FIELD);
+			assertThat(expectedException.getMessage()).isEqualTo(NAME_TOO_LONG_MESSAGE);
+		});
+	}
+
+	@Test
+	void updateAuth0Name_sendsTheNameToAuth0_whenValid() throws Auth0Exception {
+		// GIVEN
+		String mockJwtId = "auth0|user";
+		UpdateNameDTO mockDto = new UpdateNameDTO(VALID_NAME);
+		ManagementAPI mockMgmt = org.mockito.Mockito.mock(ManagementAPI.class);
+		UsersEntity mockUsers = org.mockito.Mockito.mock(UsersEntity.class);
+		Request<com.auth0.json.mgmt.users.User> mockRequest = org.mockito.Mockito.mock(Request.class);
+		AtomicReference<com.auth0.json.mgmt.users.User> stubbedSentUser = new AtomicReference<>();
+		when(auth0ManagementService.getManagementAPI()).thenReturn(mockMgmt);
+		when(mockMgmt.users()).thenReturn(mockUsers);
+		when(
+			mockUsers.update(
+				org.mockito.ArgumentMatchers.eq(mockJwtId),
+				org.mockito.ArgumentMatchers.notNull()
+			)
+		).thenAnswer(invocation -> {
+			stubbedSentUser.set(invocation.getArgument(1));
+			return mockRequest;
+		});
+
+		// WHEN
+		testSubject.updateAuth0Name(mockJwtId, mockDto);
+
+		// THEN
+		assertThat(stubbedSentUser.get().getName()).isEqualTo(VALID_NAME);
+	}
+
 	@Test
 	void exceedsPixelLimit_isFalseWithinTheLimit() {
 		assertThat(UserService.exceedsPixelLimit(2_000, 2_000)).isFalse();
@@ -465,5 +708,322 @@ class UserServiceTest {
 	void exceedsPixelLimit_isTrueForNonPositiveDimensions() {
 		assertThat(UserService.exceedsPixelLimit(0, 100)).isTrue();
 		assertThat(UserService.exceedsPixelLimit(100, -1)).isTrue();
+	}
+
+	@Test
+	void updatePicture_answersThePinned400_whenTheMagicBytesAreNotAnImage() {
+		// GIVEN
+		MultipartFile mockFile = buildPictureFile(unknownFormatBytes());
+		UUID mockUserId = UUID.randomUUID();
+
+		// WHEN / THEN
+		assertThatThrownBy(() ->
+			testSubject.updatePicture(mockUserId, mockFile)
+		).isInstanceOfSatisfying(ValidationException.class, expectedException -> {
+			assertThat(expectedException.getField()).isEqualTo(FILE_FIELD);
+			assertThat(expectedException.getMessage()).isEqualTo(NOT_AN_IMAGE_MESSAGE);
+		});
+	}
+
+	@Test
+	void updatePicture_answersThePinned400_whenNoReaderClaimsTheImage() {
+		// GIVEN
+		MultipartFile mockFile = buildPictureFile(truncatedPng());
+		UUID mockUserId = UUID.randomUUID();
+
+		// WHEN / THEN
+		assertThatThrownBy(() ->
+			testSubject.updatePicture(mockUserId, mockFile)
+		).isInstanceOfSatisfying(ValidationException.class, expectedException -> {
+			assertThat(expectedException.getField()).isEqualTo(FILE_FIELD);
+			assertThat(expectedException.getMessage()).isEqualTo(NOT_AN_IMAGE_MESSAGE);
+		});
+	}
+
+	@Test
+	void updatePicture_answersThePinned400_whenTheImageExceedsThePixelLimit() {
+		// GIVEN
+		MultipartFile mockFile = buildPictureFile(oversizedPng());
+		UUID mockUserId = UUID.randomUUID();
+
+		// WHEN / THEN
+		assertThatThrownBy(() ->
+			testSubject.updatePicture(mockUserId, mockFile)
+		).isInstanceOfSatisfying(ValidationException.class, expectedException -> {
+			assertThat(expectedException.getField()).isEqualTo(FILE_FIELD);
+			assertThat(expectedException.getMessage()).isEqualTo(PICTURE_TOO_LARGE_MESSAGE);
+		});
+	}
+
+	@Test
+	void updatePicture_storesASquareProfilePicture_whenTheImageIsValid() throws IOException {
+		// GIVEN
+		UUID mockUserId = UUID.randomUUID();
+		User mockUser = Instancio.of(User.class).set(Select.field(User::getPicture), null).create();
+		MultipartFile mockFile = buildPictureFile(jpegBytes());
+		when(userRepository.findById(mockUserId)).thenReturn(Optional.of(mockUser));
+
+		// WHEN
+		testSubject.updatePicture(mockUserId, mockFile);
+
+		// THEN
+		byte[] expectedPicture = Base64.getDecoder().decode(mockUser.getPicture());
+		BufferedImage expectedImage = ImageIO.read(new ByteArrayInputStream(expectedPicture));
+		assertThat(expectedImage.getWidth()).isEqualTo(PROFILE_PICTURE_SIZE);
+		assertThat(expectedImage.getHeight()).isEqualTo(PROFILE_PICTURE_SIZE);
+	}
+
+	@Test
+	void updatePicture_answersThePinned400_whenTheFileIsShorterThanAnySignature() {
+		// GIVEN
+		MultipartFile mockFile = buildPictureFile(PNG_SIGNATURE);
+		UUID mockUserId = UUID.randomUUID();
+
+		// WHEN / THEN
+		assertThatThrownBy(() ->
+			testSubject.updatePicture(mockUserId, mockFile)
+		).isInstanceOfSatisfying(ValidationException.class, expectedException -> {
+			assertThat(expectedException.getField()).isEqualTo(FILE_FIELD);
+			assertThat(expectedException.getMessage()).isEqualTo(NOT_AN_IMAGE_MESSAGE);
+		});
+	}
+
+	@ParameterizedTest(name = "{0}")
+	@MethodSource("supportedPictureFormats")
+	void updatePicture_storesASquareProfilePicture_whenTheFormatIsSupported(String formatName)
+		throws IOException {
+		// GIVEN
+		UUID mockUserId = UUID.randomUUID();
+		User mockUser = userWithoutPicture();
+		MultipartFile mockFile = buildPictureFile(encodedPicture(formatName));
+		when(userRepository.findById(mockUserId)).thenReturn(Optional.of(mockUser));
+
+		// WHEN
+		testSubject.updatePicture(mockUserId, mockFile);
+
+		// THEN
+		assertStoredProfilePictureIsSquare(mockUser);
+	}
+
+	@Test
+	void updatePicture_answersThePinned400_whenTheWebpHeaderHasNoReader() {
+		// GIVEN
+		MultipartFile mockFile = buildPictureFile(webpHeader());
+		UUID mockUserId = UUID.randomUUID();
+
+		// WHEN / THEN
+		assertThatThrownBy(() ->
+			testSubject.updatePicture(mockUserId, mockFile)
+		).isInstanceOfSatisfying(ValidationException.class, expectedException -> {
+			assertThat(expectedException.getField()).isEqualTo(FILE_FIELD);
+			assertThat(expectedException.getMessage()).isEqualTo(NOT_AN_IMAGE_MESSAGE);
+		});
+	}
+
+	@Test
+	void updatePicture_storesThePicture_whenTheExifOrientationIsUnknown() throws IOException {
+		// GIVEN
+		UUID mockUserId = UUID.randomUUID();
+		User mockUser = userWithoutPicture();
+		MultipartFile mockFile = buildPictureFile(jpegWithExifOrientation(ORIENTATION_UNKNOWN));
+		when(userRepository.findById(mockUserId)).thenReturn(Optional.of(mockUser));
+
+		// WHEN
+		testSubject.updatePicture(mockUserId, mockFile);
+
+		// THEN
+		assertStoredProfilePictureIsSquare(mockUser);
+	}
+
+	@Test
+	void updatePicture_storesThePicture_whenTheExifIfd0CarriesNoOrientationTag() throws IOException {
+		// GIVEN
+		UUID mockUserId = UUID.randomUUID();
+		User mockUser = userWithoutPicture();
+		MultipartFile mockFile = buildPictureFile(jpegWithForeignExifTag());
+		when(userRepository.findById(mockUserId)).thenReturn(Optional.of(mockUser));
+
+		// WHEN
+		testSubject.updatePicture(mockUserId, mockFile);
+
+		// THEN
+		assertStoredProfilePictureIsSquare(mockUser);
+	}
+
+	@Test
+	void updatePicture_storesThePicture_whenTheExifOrientationTagHasNoValue() throws IOException {
+		// GIVEN
+		UUID mockUserId = UUID.randomUUID();
+		User mockUser = userWithoutPicture();
+		MultipartFile mockFile = buildPictureFile(jpegWithValuelessExifOrientation());
+		when(userRepository.findById(mockUserId)).thenReturn(Optional.of(mockUser));
+
+		// WHEN
+		testSubject.updatePicture(mockUserId, mockFile);
+
+		// THEN
+		assertStoredProfilePictureIsSquare(mockUser);
+	}
+
+	@Test
+	void updatePicture_throwsNotFoundException_whenTheUserIsMissing() throws IOException {
+		// GIVEN
+		UUID mockUserId = UUID.randomUUID();
+		MultipartFile mockFile = buildPictureFile(jpegBytes());
+		when(userRepository.findById(mockUserId)).thenReturn(Optional.empty());
+
+		// WHEN / THEN
+		assertThatThrownBy(() -> testSubject.updatePicture(mockUserId, mockFile)).isInstanceOf(
+			NotFoundException.class
+		);
+	}
+
+	private static Stream<Arguments> supportedPictureFormats() {
+		return Stream.of(Arguments.of(GIF_FORMAT), Arguments.of(BMP_FORMAT));
+	}
+
+	private static User userWithoutPicture() {
+		return Instancio.of(User.class).set(Select.field(User::getPicture), null).create();
+	}
+
+	private static void assertStoredProfilePictureIsSquare(User mockUser) throws IOException {
+		byte[] expectedPicture = Base64.getDecoder().decode(mockUser.getPicture());
+		BufferedImage expectedImage = ImageIO.read(new ByteArrayInputStream(expectedPicture));
+		assertThat(expectedImage.getWidth()).isEqualTo(PROFILE_PICTURE_SIZE);
+		assertThat(expectedImage.getHeight()).isEqualTo(PROFILE_PICTURE_SIZE);
+	}
+
+	private static byte[] encodedPicture(String formatName) throws IOException {
+		BufferedImage image = new BufferedImage(
+			TINY_PICTURE_WIDTH,
+			TINY_PICTURE_HEIGHT,
+			BufferedImage.TYPE_INT_RGB
+		);
+		ByteArrayOutputStream encoded = new ByteArrayOutputStream();
+		ImageIO.write(image, formatName, encoded);
+		return encoded.toByteArray();
+	}
+
+	private static byte[] webpHeader() {
+		return Arrays.copyOf(WEBP_RIFF_HEADER, WEBP_HEADER_LENGTH);
+	}
+
+	private static byte[] jpegWithExifOrientation(int orientation) throws IOException {
+		return jpegWithExifSegment(
+			exifSegment(
+				EXIF_ORIENTATION_TAG,
+				TIFF_TYPE_SHORT,
+				ONE_EXIF_ENTRY,
+				new byte[] { (byte) orientation }
+			)
+		);
+	}
+
+	private static byte[] jpegWithForeignExifTag() throws IOException {
+		return jpegWithExifSegment(
+			exifSegment(EXIF_FOREIGN_TAG, TIFF_TYPE_ASCII, ONE_EXIF_ENTRY, new byte[] { 'A', 'u' })
+		);
+	}
+
+	private static byte[] jpegWithValuelessExifOrientation() throws IOException {
+		return jpegWithExifSegment(
+			exifSegment(EXIF_ORIENTATION_TAG, TIFF_TYPE_SHORT, NO_EXIF_ENTRY, new byte[0])
+		);
+	}
+
+	private static byte[] jpegWithExifSegment(byte[] exifSegment) throws IOException {
+		byte[] plainJpeg = jpegBytes();
+		byte[] framed = new byte[plainJpeg.length + exifSegment.length];
+		framed[0] = plainJpeg[0];
+		framed[1] = plainJpeg[1];
+		System.arraycopy(exifSegment, 0, framed, 2, exifSegment.length);
+		System.arraycopy(plainJpeg, 2, framed, 2 + exifSegment.length, plainJpeg.length - 2);
+		return framed;
+	}
+
+	private static byte[] exifSegment(int tag, int type, int count, byte[] value) {
+		ByteArrayOutputStream payload = new ByteArrayOutputStream();
+		payload.writeBytes(EXIF_PREFIX);
+		payload.writeBytes(TIFF_LITTLE_ENDIAN_HEADER);
+		payload.writeBytes(new byte[] { (byte) ONE_EXIF_ENTRY, 0 });
+		payload.write(tag & 0xFF);
+		payload.write((tag >> 8) & 0xFF);
+		payload.write(type);
+		payload.write(0);
+		writeLittleEndianInt(payload, count);
+		byte[] paddedValue = new byte[EXIF_VALUE_LENGTH];
+		System.arraycopy(value, 0, paddedValue, 0, Math.min(value.length, EXIF_VALUE_LENGTH));
+		payload.writeBytes(paddedValue);
+		payload.writeBytes(NO_NEXT_IFD);
+		byte[] body = payload.toByteArray();
+		int length = body.length + EXIF_SEGMENT_LENGTH_BYTES;
+		ByteArrayOutputStream segment = new ByteArrayOutputStream();
+		segment.writeBytes(EXIF_SEGMENT_MARKER);
+		segment.write((length >> 8) & 0xFF);
+		segment.write(length & 0xFF);
+		segment.writeBytes(body);
+		return segment.toByteArray();
+	}
+
+	private static void writeLittleEndianInt(ByteArrayOutputStream out, int value) {
+		out.write(value & 0xFF);
+		out.write((value >> 8) & 0xFF);
+		out.write((value >> 16) & 0xFF);
+		out.write((value >> 24) & 0xFF);
+	}
+
+	private static byte[] jpegBytes() throws IOException {
+		BufferedImage image = new BufferedImage(
+			SOURCE_PICTURE_WIDTH,
+			SOURCE_PICTURE_HEIGHT,
+			BufferedImage.TYPE_INT_RGB
+		);
+		ByteArrayOutputStream jpeg = new ByteArrayOutputStream();
+		ImageIO.write(image, "jpeg", jpeg);
+		return jpeg.toByteArray();
+	}
+
+	private MultipartFile buildPictureFile(byte[] bytes) {
+		return new MockMultipartFile("file", "avatar", "application/octet-stream", bytes);
+	}
+
+	private static byte[] unknownFormatBytes() {
+		return new byte[] { 'R', 'I', 'F', 'F', 0, 0, 0, 0, 'W', 'A', 'V', 'E', 0, 0, 0, 0 };
+	}
+
+	private static byte[] truncatedPng() {
+		byte[] bytes = new byte[TRUNCATED_PNG_LENGTH];
+		System.arraycopy(PNG_SIGNATURE, 0, bytes, 0, PNG_MAGIC_BYTES);
+		return bytes;
+	}
+
+	private static byte[] oversizedPng() {
+		ByteArrayOutputStream png = new ByteArrayOutputStream();
+		png.writeBytes(PNG_SIGNATURE);
+		byte[] chunkType = { 'I', 'H', 'D', 'R' };
+		ByteArrayOutputStream chunkData = new ByteArrayOutputStream();
+		writeBigEndianInt(chunkData, OVERSIZED_DIMENSION);
+		writeBigEndianInt(chunkData, OVERSIZED_DIMENSION);
+		chunkData.write(PNG_BIT_DEPTH);
+		chunkData.write(PNG_COLOR_TYPE_RGBA);
+		chunkData.write(PNG_COMPRESSION_DEFLATE);
+		chunkData.write(PNG_FILTER_ADAPTIVE);
+		chunkData.write(PNG_INTERLACE_NONE);
+		byte[] data = chunkData.toByteArray();
+		writeBigEndianInt(png, data.length);
+		png.writeBytes(chunkType);
+		png.writeBytes(data);
+		CRC32 crc = new CRC32();
+		crc.update(chunkType);
+		crc.update(data);
+		writeBigEndianInt(png, (int) crc.getValue());
+		return png.toByteArray();
+	}
+
+	private static void writeBigEndianInt(ByteArrayOutputStream out, int value) {
+		out.write((value >> 24) & 0xFF);
+		out.write((value >> 16) & 0xFF);
+		out.write((value >> 8) & 0xFF);
+		out.write(value & 0xFF);
 	}
 }

@@ -1,9 +1,9 @@
 import { QueryClient, type QueryKey } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { http, HttpResponse } from "msw";
+import { http, HttpResponse, type RequestHandler } from "msw";
 import { toast } from "sonner";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/lib/api/client";
 import { queryKeys } from "@/lib/api/keys";
 import { env } from "@/lib/env";
@@ -20,6 +20,10 @@ import {
 	useUpdateName,
 	useUploadPicture
 } from "./api";
+
+beforeEach(() => {
+	vi.restoreAllMocks();
+});
 
 describe("useProfile", () => {
 	it("should expose the profile on success", async () => {
@@ -374,4 +378,148 @@ describe("profile mutations", () => {
 		await waitFor(() => expect(result.current.isError).toBe(true));
 		expect(errorSpy).toHaveBeenCalledWith("Could not export your data");
 	});
+});
+
+const VALIDATION_STATUS = 422;
+const STORED_CURRENCY = "USD";
+const STORED_LOCALE = "it-IT";
+const STORED_NAME = "Mario";
+const AVATAR = new File(["avatar"], "avatar.png", { type: "image/png" });
+
+const CURRENCY_MESSAGE = "That currency is no longer supported";
+const LOCALE_MESSAGE = "That locale is not available";
+const NAME_MESSAGE = "The name must be at least two characters";
+const PICTURE_UPLOAD_MESSAGE = "The picture must be smaller than 5 MB";
+const PICTURE_REMOVAL_MESSAGE = "There is no picture to remove";
+const ACCOUNT_DELETION_MESSAGE = "The account still owns assets";
+const EXPORT_MESSAGE = "Your data is not ready to export yet";
+
+interface ProfileErrorDetail {
+	field?: string;
+	message: string;
+}
+
+interface ProfileEndpoint {
+	method: "get" | "post" | "put" | "delete";
+	path: string;
+}
+
+function buildErrorEnvelope(detail: ProfileErrorDetail) {
+	return { status: VALIDATION_STATUS, error: "Unprocessable Entity", errors: [detail] };
+}
+
+function failingHandler(endpoint: ProfileEndpoint, detail: ProfileErrorDetail): RequestHandler {
+	const url = `${env.apiUrl}${endpoint.path}`;
+	const respond = () =>
+		HttpResponse.json(buildErrorEnvelope(detail), { status: VALIDATION_STATUS });
+
+	switch (endpoint.method) {
+		case "get":
+			return http.get(url, respond);
+		case "post":
+			return http.post(url, respond);
+		case "put":
+			return http.put(url, respond);
+		case "delete":
+			return http.delete(url, respond);
+	}
+}
+
+interface MutationProbe {
+	isError: boolean;
+	run: () => void;
+}
+
+function probeMutation<TVariables>(
+	useMutation: () => { isError: boolean; mutate: (variables: TVariables) => void },
+	variables: TVariables
+): () => MutationProbe {
+	return () => {
+		const mutation = useMutation();
+		return { isError: mutation.isError, run: () => mutation.mutate(variables) };
+	};
+}
+
+function renderMutation(probe: () => MutationProbe) {
+	const queryClient = new QueryClient({
+		defaultOptions: {
+			queries: { retry: false, gcTime: Infinity },
+			mutations: { retry: false }
+		}
+	});
+	const wrapper = ({ children }: { children: ReactNode }) => (
+		<TestProviders queryClient={queryClient}>{children}</TestProviders>
+	);
+	return renderHook(probe, { wrapper });
+}
+
+interface MutationErrorMessageCase {
+	label: string;
+	detail: ProfileErrorDetail;
+	endpoint: ProfileEndpoint;
+	probe: () => MutationProbe;
+}
+
+const MUTATION_ERROR_CASES: MutationErrorMessageCase[] = [
+	{
+		label: "currency update",
+		detail: { field: "currency", message: CURRENCY_MESSAGE },
+		endpoint: { method: "put", path: "/users/currency" },
+		probe: probeMutation(useUpdateCurrency, STORED_CURRENCY)
+	},
+	{
+		label: "locale update",
+		detail: { message: LOCALE_MESSAGE },
+		endpoint: { method: "put", path: "/users/locale" },
+		probe: probeMutation(useUpdateLocale, STORED_LOCALE)
+	},
+	{
+		label: "name update",
+		detail: { field: "name", message: NAME_MESSAGE },
+		endpoint: { method: "put", path: "/users" },
+		probe: probeMutation(useUpdateName, STORED_NAME)
+	},
+	{
+		label: "picture upload",
+		detail: { message: PICTURE_UPLOAD_MESSAGE },
+		endpoint: { method: "post", path: "/users/picture" },
+		probe: probeMutation(useUploadPicture, AVATAR)
+	},
+	{
+		label: "picture removal",
+		detail: { message: PICTURE_REMOVAL_MESSAGE },
+		endpoint: { method: "delete", path: "/users/picture" },
+		probe: probeMutation(useDeletePicture, undefined)
+	},
+	{
+		label: "account deletion",
+		detail: { message: ACCOUNT_DELETION_MESSAGE },
+		endpoint: { method: "delete", path: "/users" },
+		probe: probeMutation(useDeleteProfile, undefined)
+	},
+	{
+		label: "data export",
+		detail: { message: EXPORT_MESSAGE },
+		endpoint: { method: "get", path: "/users/export" },
+		probe: probeMutation(useExportData, undefined)
+	}
+];
+
+describe("profile mutation error messages", () => {
+	it.each(MUTATION_ERROR_CASES)(
+		"should toast the backend sentence for a failed $label",
+		async testCase => {
+			// GIVEN
+			const errorSpy = vi.spyOn(toast, "error");
+			server.use(failingHandler(testCase.endpoint, testCase.detail));
+			const { result } = renderMutation(testCase.probe);
+
+			// WHEN
+			result.current.run();
+
+			// THEN
+			await waitFor(() => expect(result.current.isError).toBe(true));
+			expect(errorSpy).toHaveBeenCalledWith(testCase.detail.message);
+		}
+	);
 });

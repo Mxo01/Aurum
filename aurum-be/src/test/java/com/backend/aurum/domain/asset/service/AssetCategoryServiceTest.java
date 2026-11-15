@@ -29,8 +29,12 @@ class AssetCategoryServiceTest {
 
 	private static final long NO_ASSETS = 0L;
 	private static final long ASSET_COUNT_IN_CATEGORY = 2L;
-	private static final String EXPECTED_CONFLICT_REASON =
-		"Category still holds " + ASSET_COUNT_IN_CATEGORY + " asset(s); move or delete them first";
+	private static final String DEFAULT_UPDATE_REASON = "A default category cannot be changed";
+	private static final String FOREIGN_UPDATE_REASON = "You can only change your own categories";
+	private static final String DEFAULT_DELETE_REASON = "A default category cannot be deleted";
+	private static final String FOREIGN_DELETE_REASON = "You can only delete your own categories";
+	private static final String CATEGORY_IN_USE_REASON =
+		"This category still has assets, move or delete them first";
 
 	@Mock
 	private AssetCategoryRepository categoryRepository;
@@ -129,7 +133,10 @@ class AssetCategoryServiceTest {
 		// WHEN / THEN
 		assertThatThrownBy(() ->
 			testSubject.update(mockCategory.getId(), mockDetails, mockUserId)
-		).isInstanceOf(ResponseStatusException.class);
+		).isInstanceOfSatisfying(ResponseStatusException.class, expectedException -> {
+			assertThat(expectedException.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+			assertThat(expectedException.getReason()).isEqualTo(DEFAULT_UPDATE_REASON);
+		});
 	}
 
 	@Test
@@ -149,7 +156,10 @@ class AssetCategoryServiceTest {
 		// WHEN / THEN
 		assertThatThrownBy(() ->
 			testSubject.update(mockCategory.getId(), mockDetails, mockUserId)
-		).isInstanceOf(ResponseStatusException.class);
+		).isInstanceOfSatisfying(ResponseStatusException.class, expectedException -> {
+			assertThat(expectedException.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+			assertThat(expectedException.getReason()).isEqualTo(FOREIGN_UPDATE_REASON);
+		});
 	}
 
 	@Test
@@ -188,7 +198,7 @@ class AssetCategoryServiceTest {
 			testSubject.delete(mockCategory.getId(), mockUserId)
 		).isInstanceOfSatisfying(ResponseStatusException.class, expectedException -> {
 			assertThat(expectedException.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
-			assertThat(expectedException.getReason()).isEqualTo(EXPECTED_CONFLICT_REASON);
+			assertThat(expectedException.getReason()).isEqualTo(CATEGORY_IN_USE_REASON);
 		});
 		verify(categoryRepository, never()).deleteById(mockCategory.getId());
 	}
@@ -205,9 +215,10 @@ class AssetCategoryServiceTest {
 		// WHEN / THEN
 		assertThatThrownBy(() ->
 			testSubject.delete(mockCategory.getId(), mockUserId)
-		).isInstanceOfSatisfying(ResponseStatusException.class, expectedException ->
-			assertThat(expectedException.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN)
-		);
+		).isInstanceOfSatisfying(ResponseStatusException.class, expectedException -> {
+			assertThat(expectedException.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+			assertThat(expectedException.getReason()).isEqualTo(DEFAULT_DELETE_REASON);
+		});
 		verifyNoInteractions(assetRepository);
 	}
 
@@ -227,9 +238,10 @@ class AssetCategoryServiceTest {
 		// WHEN / THEN
 		assertThatThrownBy(() ->
 			testSubject.delete(mockCategory.getId(), mockUserId)
-		).isInstanceOfSatisfying(ResponseStatusException.class, expectedException ->
-			assertThat(expectedException.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN)
-		);
+		).isInstanceOfSatisfying(ResponseStatusException.class, expectedException -> {
+			assertThat(expectedException.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+			assertThat(expectedException.getReason()).isEqualTo(FOREIGN_DELETE_REASON);
+		});
 		verifyNoInteractions(assetRepository);
 	}
 }

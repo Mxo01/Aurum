@@ -69,7 +69,7 @@ public class AssetCategoryService {
 			);
 			throw new ResponseStatusException(
 				HttpStatus.FORBIDDEN,
-				"Default categories cannot be modified"
+				"A default category cannot be changed"
 			);
 		}
 		if (!category.getUser().getId().equals(requestingUserId)) {
@@ -81,7 +81,7 @@ public class AssetCategoryService {
 			);
 			throw new ResponseStatusException(
 				HttpStatus.FORBIDDEN,
-				"Cannot modify another user's category"
+				"You can only change your own categories"
 			);
 		}
 		category.setName(categoryDetails.getName());
@@ -111,7 +111,7 @@ public class AssetCategoryService {
 			);
 			throw new ResponseStatusException(
 				HttpStatus.FORBIDDEN,
-				"Default categories cannot be deleted"
+				"A default category cannot be deleted"
 			);
 		}
 		if (!category.getUser().getId().equals(requestingUserId)) {
@@ -123,7 +123,7 @@ public class AssetCategoryService {
 			);
 			throw new ResponseStatusException(
 				HttpStatus.FORBIDDEN,
-				"Cannot delete another user's category"
+				"You can only delete your own categories"
 			);
 		}
 		long assetCount = assetRepository.countByCategoryId(id);
@@ -135,7 +135,7 @@ public class AssetCategoryService {
 			);
 			throw new ResponseStatusException(
 				HttpStatus.CONFLICT,
-				"Category still holds " + assetCount + " asset(s); move or delete them first"
+				"This category still has assets, move or delete them first"
 			);
 		}
 		categoryRepository.deleteById(Objects.requireNonNull(id));

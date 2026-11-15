@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useApi } from "@/lib/api/api-context";
 import { unwrap } from "@/lib/api/client";
+import { getApiErrorMessage } from "@/lib/api/errors";
 import { queryKeys } from "@/lib/api/keys";
 import type { CreateTargetDTO, UpdateTargetDTO } from "@/lib/api/types";
 
@@ -24,7 +25,7 @@ export function useCreateTarget() {
 			void queryClient.invalidateQueries({ queryKey: queryKeys.targets });
 			toast.success("Target created");
 		},
-		onError: () => toast.error("Could not create the target")
+		onError: error => toast.error(getApiErrorMessage(error, "Could not create the target"))
 	});
 }
 
@@ -39,7 +40,7 @@ export function useUpdateTarget() {
 			void queryClient.invalidateQueries({ queryKey: queryKeys.targets });
 			toast.success("Target updated");
 		},
-		onError: () => toast.error("Could not update the target")
+		onError: error => toast.error(getApiErrorMessage(error, "Could not update the target"))
 	});
 }
 
@@ -54,6 +55,6 @@ export function useDeleteTarget() {
 			void queryClient.invalidateQueries({ queryKey: queryKeys.targets });
 			toast.success("Target deleted");
 		},
-		onError: () => toast.error("Could not delete the target")
+		onError: error => toast.error(getApiErrorMessage(error, "Could not delete the target"))
 	});
 }

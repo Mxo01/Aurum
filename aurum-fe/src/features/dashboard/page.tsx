@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/app/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { getApiErrorMessage } from "@/lib/api/errors";
 import { usePreferences } from "@/lib/format/use-preferences";
 import { useTargets } from "@/features/targets/api";
 import { useChart, useProjections, useSummary } from "./api";
@@ -57,7 +58,11 @@ export function DashboardPage() {
 	const growth = projectedGrowth(projected, summary.data?.totalGrossAssets);
 	const assetVariation = summary.data?.assetVariations.oneYear;
 	const isLoadingSummary = summary.isLoading;
-	const hasError = summary.isError || chart.isError || targets.isError || projections.isError;
+	// The banner reports the first failure in reading order, so the reader sees the reason of the tile
+	// above the fold instead of a later query's.
+	const failures = [summary, chart, targets, projections].filter(query => query.isError);
+	const hasError = failures.length > 0;
+	const dashboardError = failures[0]?.error;
 
 	return (
 		<div className="flex flex-col gap-5">
@@ -79,7 +84,10 @@ export function DashboardPage() {
 					className="border-border flex flex-wrap items-center justify-between gap-3 rounded-xl border p-4"
 				>
 					<p className="text-sm">
-						Could not load your dashboard. Check your connection and try again.
+						{getApiErrorMessage(
+							dashboardError,
+							"Could not load your dashboard. Check your connection and try again."
+						)}
 					</p>
 					<Button
 						size="sm"

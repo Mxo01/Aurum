@@ -2,6 +2,7 @@ import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { createElement } from "react";
 import { http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
+import type { ApiErrorBody } from "@/lib/api/types";
 import { env } from "@/lib/env";
 import { buildCashflowYear } from "@/test/fixtures/portfolio";
 import { server } from "@/test/msw/server";
@@ -9,6 +10,41 @@ import { renderWithProviders } from "@/test/render";
 import { CashFlowPage } from "./page";
 
 const mockYear = buildCashflowYear({ year: 2026 });
+const rejectionStatus = 400;
+const rejectionError = "Bad Request";
+const loadFallback = "Could not load the cash flow. Try again.";
+const loadServerMessage = "The previous year is no longer available";
+
+function rejectionEnvelope(message: string): ApiErrorBody {
+	return { status: rejectionStatus, error: rejectionError, errors: [{ message }] };
+}
+
+function serverAnswer(body?: ApiErrorBody) {
+	return body === undefined
+		? new HttpResponse(null, { status: rejectionStatus })
+		: HttpResponse.json(body, { status: rejectionStatus });
+}
+
+interface LoadFailureCase {
+	readonly label: string;
+	readonly body?: ApiErrorBody;
+	readonly expectedMessage: string;
+	readonly unexpectedMessage: string;
+}
+
+const LOAD_FAILURE_CASES: LoadFailureCase[] = [
+	{
+		label: "the backend message",
+		body: rejectionEnvelope(loadServerMessage),
+		expectedMessage: loadServerMessage,
+		unexpectedMessage: loadFallback
+	},
+	{
+		label: "the frontend fallback",
+		expectedMessage: loadFallback,
+		unexpectedMessage: loadServerMessage
+	}
+];
 
 describe("CashFlowPage", () => {
 	it("should render the summary and the table", async () => {
@@ -89,21 +125,22 @@ describe("CashFlowPage", () => {
 		await waitFor(() => expect(requestedYear).toBe("2025"));
 	});
 
-	it("should show an alert when the year fails to load", async () => {
-		// GIVEN
-		server.use(
-			http.get(`${env.apiUrl}/cashflows/:year`, () =>
-				HttpResponse.json({ message: "boom" }, { status: 500 })
-			)
-		);
-		const testSubject = CashFlowPage;
+	it.each(LOAD_FAILURE_CASES)(
+		"should show $label in the alert",
+		async ({ body, expectedMessage, unexpectedMessage }) => {
+			// GIVEN
+			server.use(http.get(`${env.apiUrl}/cashflows/:year`, () => serverAnswer(body)));
+			const testSubject = CashFlowPage;
 
-		// WHEN
-		renderWithProviders(createElement(testSubject), { route: "/cashflow" });
+			// WHEN
+			renderWithProviders(createElement(testSubject), { route: "/cashflow" });
 
-		// THEN
-		expect(await screen.findByRole("alert")).toHaveTextContent("Could not load the cash flow");
-	});
+			// THEN
+			const alert = await screen.findByRole("alert");
+			expect(alert).toHaveTextContent(expectedMessage);
+			expect(alert).not.toHaveTextContent(unexpectedMessage);
+		}
+	);
 });
 
 it("should navigate to the previous year", async () => {

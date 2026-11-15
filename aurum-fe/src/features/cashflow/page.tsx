@@ -4,6 +4,7 @@ import { Delta } from "@/components/app/delta";
 import { EditableValue } from "@/components/app/editable-value";
 import { PageHeader } from "@/components/app/page-header";
 import { Button } from "@/components/ui/button";
+import { getApiErrorMessage } from "@/lib/api/errors";
 import { usePreferences } from "@/lib/format/use-preferences";
 import type { CashFlowRow } from "./utils";
 import { buildCashflowRows, cashflowTotals } from "./utils";
@@ -89,7 +90,9 @@ export function CashFlowPage() {
 					role="alert"
 					className="border-border flex flex-wrap items-center justify-between gap-3 rounded-xl border p-4"
 				>
-					<p className="text-sm">Could not load the cash flow. Try again.</p>
+					<p className="text-sm">
+						{getApiErrorMessage(query.error, "Could not load the cash flow. Try again.")}
+					</p>
 					<Button
 						size="sm"
 						variant="outline"

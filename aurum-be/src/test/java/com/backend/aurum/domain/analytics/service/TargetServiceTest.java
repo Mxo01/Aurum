@@ -27,6 +27,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class TargetServiceTest {
 
+	private static final String FOREIGN_TARGET_MESSAGE = "This target does not belong to you";
+
 	@Mock
 	private TargetRepository targetRepository;
 
@@ -278,7 +280,7 @@ class TargetServiceTest {
 	}
 
 	@Test
-	void update_throwsAccessDenied_whenTargetHasNoOwner() {
+	void update_answersThePinned403_whenTargetHasNoOwner() {
 		// GIVEN
 		UUID mockUserId = UUID.randomUUID();
 		Target mockTarget = Instancio.of(Target.class)
@@ -290,12 +292,14 @@ class TargetServiceTest {
 		// WHEN / THEN
 		assertThatThrownBy(() ->
 			testSubject.update(mockTarget.getId(), mockDetails, mockUserId, BigDecimal.TEN)
-		).isInstanceOf(AccessDeniedException.class);
+		)
+			.isExactlyInstanceOf(AccessDeniedException.class)
+			.hasMessage(FOREIGN_TARGET_MESSAGE);
 		verify(targetRepository, never()).save(any());
 	}
 
 	@Test
-	void update_throwsAccessDenied_whenTargetBelongsToAnotherUser() {
+	void update_answersThePinned403_whenTargetBelongsToAnotherUser() {
 		// GIVEN
 		UUID mockUserId = UUID.randomUUID();
 		UUID mockOtherUserId = UUID.randomUUID();
@@ -311,7 +315,9 @@ class TargetServiceTest {
 		// WHEN / THEN
 		assertThatThrownBy(() ->
 			testSubject.update(mockTarget.getId(), mockDetails, mockUserId, BigDecimal.TEN)
-		).isInstanceOf(AccessDeniedException.class);
+		)
+			.isExactlyInstanceOf(AccessDeniedException.class)
+			.hasMessage(FOREIGN_TARGET_MESSAGE);
 		verify(targetRepository, never()).save(any());
 	}
 
@@ -348,7 +354,7 @@ class TargetServiceTest {
 	}
 
 	@Test
-	void delete_throwsException_whenUserDoesNotOwnTarget() {
+	void delete_answersThePinned403_whenUserDoesNotOwnTarget() {
 		// GIVEN
 		UUID mockUserId = UUID.randomUUID();
 		UUID mockOtherUserId = UUID.randomUUID();
@@ -361,8 +367,9 @@ class TargetServiceTest {
 		when(targetRepository.findById(mockTarget.getId())).thenReturn(Optional.of(mockTarget));
 
 		// WHEN / THEN
-		assertThatThrownBy(() -> testSubject.delete(mockTarget.getId(), mockUserId)).isInstanceOf(
-			AccessDeniedException.class
-		);
+		assertThatThrownBy(() -> testSubject.delete(mockTarget.getId(), mockUserId))
+			.isExactlyInstanceOf(AccessDeniedException.class)
+			.hasMessage(FOREIGN_TARGET_MESSAGE);
+		verify(targetRepository, never()).delete(mockTarget);
 	}
 }
