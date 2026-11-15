@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { buildLiabilityClassificationIncident } from "@/test/fixtures/portfolio";
 import type { ChartDataDTO } from "@/lib/api/types";
 import {
 	buildChartRows,
@@ -146,6 +147,18 @@ describe("liabilitiesSparkline", () => {
 
 		// THEN
 		expect(expectedResult).toEqual([100, 120]);
+	});
+
+	it("should report zero liabilities for the incident shape", () => {
+		// GIVEN
+		const mockChart = buildLiabilityClassificationIncident().chart;
+		const testSubject = liabilitiesSparkline;
+
+		// WHEN
+		const expectedResult = testSubject(mockChart);
+
+		// THEN
+		expect(expectedResult).toEqual([0]);
 	});
 });
 

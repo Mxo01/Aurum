@@ -3,7 +3,11 @@ import userEvent from "@testing-library/user-event";
 import { cloneElement, createElement, type ReactElement } from "react";
 import type * as rechartsTypes from "recharts";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { buildChart, buildSummary } from "@/test/fixtures/portfolio";
+import {
+	buildChart,
+	buildLiabilityClassificationIncident,
+	buildSummary
+} from "@/test/fixtures/portfolio";
 import { renderWithProviders } from "@/test/render";
 import { useChartTypeStore } from "@/stores/chart-type";
 import { NetWorthChart } from "./net-worth-chart";
@@ -150,14 +154,45 @@ describe("NetWorthChart", () => {
 		expect(screen.getByText("Not enough data yet")).toBeInTheDocument();
 	});
 
-	it("should mark a liability favorite in the legend", () => {
+	it("should mark only the liability favorite in the legend", () => {
 		// GIVEN
 		renderChart({
-			chart: buildChart({ favoriteAssetsTypes: { "Apartment Berlin": "LIABILITY" } })
+			chart: buildChart({
+				favoriteAssetsValues: {
+					"Apartment Berlin": [400000, 410000, 430000],
+					"Fondo pensione": [11000, 11700, 12340]
+				},
+				favoriteAssetsTypes: { "Apartment Berlin": "LIABILITY", "Fondo pensione": "ASSET" }
+			})
 		});
 
 		// THEN
-		expect(screen.getByText(/Apartment Berlin \(liability\)/)).toBeInTheDocument();
+		expect(screen.getByText("Apartment Berlin (liability)")).toBeInTheDocument();
+		expect(screen.getByText("Fondo pensione")).toBeInTheDocument();
+	});
+
+	it("should render the incident favorites without a liability suffix", () => {
+		// GIVEN
+		const incident = buildLiabilityClassificationIncident();
+
+		// WHEN
+		renderChart({ summary: incident.summary, chart: incident.chart });
+
+		// THEN
+		expect(screen.getByText("VWCE")).toBeInTheDocument();
+		expect(screen.getByText("Fondo pensione")).toBeInTheDocument();
+		expect(screen.queryByText(/\(liability\)/)).not.toBeInTheDocument();
+	});
+
+	it("should render the incident net worth as the sum of the latest values", () => {
+		// GIVEN
+		const incident = buildLiabilityClassificationIncident();
+
+		// WHEN
+		renderChart({ summary: incident.summary, chart: incident.chart });
+
+		// THEN
+		expect(screen.getByText("€47,979.66")).toBeInTheDocument();
 	});
 
 	it("should show a negative variation and a negative average percent", () => {

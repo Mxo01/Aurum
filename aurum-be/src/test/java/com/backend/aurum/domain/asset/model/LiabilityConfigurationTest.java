@@ -20,6 +20,10 @@ class LiabilityConfigurationTest {
 
 	private static final LiabilityType AUTOMATIC = LiabilityType.AUTOMATIC;
 
+	private static final AssetType ASSET_CATEGORY = AssetType.ASSET;
+
+	private static final AssetType LIABILITY_CATEGORY = AssetType.LIABILITY;
+
 	private static final PaymentFrequency MONTHLY = PaymentFrequency.MONTHLY;
 
 	private static final PaymentFrequency YEARLY = PaymentFrequency.YEARLY;
@@ -55,6 +59,9 @@ class LiabilityConfigurationTest {
 
 	private static final String POSITIVE_MANUAL_AMOUNT_MESSAGE =
 		"A MANUAL liability cannot carry a positive paymentAmount";
+
+	private static final String LIABILITY_OUTSIDE_LIABILITY_CATEGORY_MESSAGE =
+		"liabilityType is only allowed when the asset category is a liability";
 
 	@ParameterizedTest(name = "{0}")
 	@MethodSource("rejectedConfigurations")
@@ -194,6 +201,103 @@ class LiabilityConfigurationTest {
 				AUTOMATIC,
 				MONTHLY,
 				PADDED_PAYMENT
+			)
+		);
+	}
+
+	@ParameterizedTest(name = "{0}")
+	@MethodSource("rejectedCategoryMismatches")
+	void validateForCategory_rejectsALiabilityTypeOutsideALiabilityCategory(
+		String scenario,
+		LiabilityType type,
+		PaymentFrequency frequency,
+		BigDecimal amount
+	) {
+		// GIVEN
+		LiabilityConfiguration testSubject = new LiabilityConfiguration(type, frequency, amount);
+
+		// WHEN / THEN
+		assertThatThrownBy(() -> testSubject.validateForCategory(ASSET_CATEGORY))
+			.isInstanceOf(ValidationException.class)
+			.hasMessage(LIABILITY_OUTSIDE_LIABILITY_CATEGORY_MESSAGE);
+	}
+
+	static Stream<Arguments> rejectedCategoryMismatches() {
+		return Stream.of(
+			Arguments.of(
+				"the legacy manual liability filed under an asset category",
+				MANUAL,
+				MONTHLY,
+				LEGACY_ZERO_PAYMENT
+			),
+			Arguments.of(
+				"an automatic liability filed under an asset category",
+				AUTOMATIC,
+				MONTHLY,
+				MONTHLY_PAYMENT
+			),
+			Arguments.of(
+				"a manual liability without payment details filed under an asset category",
+				MANUAL,
+				null,
+				null
+			)
+		);
+	}
+
+	@ParameterizedTest(name = "{0}")
+	@MethodSource("toleratedCategoryCombinations")
+	void validateForCategory_acceptsEveryConsistentCombination(
+		String scenario,
+		LiabilityType type,
+		PaymentFrequency frequency,
+		BigDecimal amount,
+		AssetType categoryType
+	) {
+		// GIVEN
+		LiabilityConfiguration testSubject = new LiabilityConfiguration(type, frequency, amount);
+
+		// WHEN / THEN
+		assertThatCode(() -> testSubject.validateForCategory(categoryType)).doesNotThrowAnyException();
+	}
+
+	static Stream<Arguments> toleratedCategoryCombinations() {
+		return Stream.of(
+			Arguments.of(
+				"a manual liability in a liability category",
+				MANUAL,
+				MONTHLY,
+				LEGACY_ZERO_PAYMENT,
+				LIABILITY_CATEGORY
+			),
+			Arguments.of(
+				"an automatic liability in a liability category",
+				AUTOMATIC,
+				MONTHLY,
+				MONTHLY_PAYMENT,
+				LIABILITY_CATEGORY
+			),
+			Arguments.of("no liability type in an asset category", null, null, null, ASSET_CATEGORY),
+			Arguments.of(
+				"no liability type in a liability category",
+				null,
+				null,
+				null,
+				LIABILITY_CATEGORY
+			),
+			Arguments.of(
+				"a manual liability without a category",
+				MANUAL,
+				MONTHLY,
+				LEGACY_ZERO_PAYMENT,
+				(AssetType) null
+			),
+			Arguments.of(
+				"an automatic liability without a category",
+				AUTOMATIC,
+				MONTHLY,
+				MONTHLY_PAYMENT,
+				(AssetType) null
 			)
 		);
 	}

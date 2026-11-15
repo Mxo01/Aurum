@@ -97,11 +97,19 @@ public class Asset {
 	}
 
 	/**
-	 * A debt is what the scheduler selects on: `liability_type`. `category.type` is user-mutable, so
-	 * it cannot decide this. Ignored by Jackson to keep the entity's JSON shape unchanged.
+	 * A liability is an asset that sits in a category the user declared as {@code LIABILITY}; the
+	 * category is the user's intent, and it is what the dashboard, the totals and the analytics
+	 * classify on. `liability_type` and `payment_amount` describe payment behaviour attached to
+	 * that choice, so they never decide it: a legacy `liability_type = 'MANUAL'` on a row in an
+	 * `ASSET` category turned twelve real assets into liabilities overnight.
+	 *
+	 * <p>Null-safe because {@code category} is a lazy {@code @ManyToOne} and an entity built in
+	 * memory (mapper output, Instancio tests) may carry no category; reload paths must fetch it via
+	 * {@code @EntityGraph} to stay inside the persistence context. Ignored by Jackson to keep the
+	 * entity's JSON shape unchanged.
 	 */
 	@JsonIgnore
 	public boolean isLiability() {
-		return liabilityType != null;
+		return category != null && category.getType() == AssetType.LIABILITY;
 	}
 }

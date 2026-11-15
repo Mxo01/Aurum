@@ -14,6 +14,7 @@ import com.backend.aurum.domain.asset.mapper.AssetMapper;
 import com.backend.aurum.domain.asset.mapper.SnapshotMapper;
 import com.backend.aurum.domain.asset.model.Asset;
 import com.backend.aurum.domain.asset.model.AssetCategory;
+import com.backend.aurum.domain.asset.model.AssetType;
 import com.backend.aurum.domain.asset.model.AssetUpdate;
 import com.backend.aurum.domain.asset.model.LiabilityType;
 import com.backend.aurum.domain.asset.model.PaymentFrequency;
@@ -319,6 +320,7 @@ class AssetFacadeTest {
 			.create();
 		AssetCategory mockStoredCategory = Instancio.of(AssetCategory.class)
 			.set(Select.field(AssetCategory::getUser), mockUser)
+			.set(Select.field(AssetCategory::getType), AssetType.LIABILITY)
 			.create();
 		Asset mockStoredAsset = Instancio.of(Asset.class)
 			.set(Select.field(Asset::getId), mockAssetId)

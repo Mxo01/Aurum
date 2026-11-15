@@ -56,6 +56,20 @@ public record LiabilityConfiguration(
 	}
 
 	/**
+	 * The dashboard classifies an asset by its category's type, so a liability filed under an ASSET
+	 * category is summed as wealth and the debt disappears. The category lives on the parent entity,
+	 * which only the service layer holds inside its transaction, so its type arrives as an argument.
+	 */
+	public void validateForCategory(AssetType categoryType) {
+		if (type == null || categoryType == null || categoryType == AssetType.LIABILITY) {
+			return;
+		}
+		throw new ValidationException(
+			"liabilityType is only allowed when the asset category is a liability"
+		);
+	}
+
+	/**
 	 * Compared by value, not by scale: 200 and 200.00 are the same payment and must not re-derive a
 	 * schedule that is still valid.
 	 */
