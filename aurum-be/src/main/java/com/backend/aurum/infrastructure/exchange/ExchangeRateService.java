@@ -1,5 +1,6 @@
 package com.backend.aurum.infrastructure.exchange;
 
+import com.backend.aurum.domain.shared.currency.RateBook;
 import com.backend.aurum.domain.shared.exception.ExchangeRateUnavailableException;
 import com.backend.aurum.domain.shared.port.ExchangeRateProvider;
 import java.math.BigDecimal;
@@ -28,7 +29,6 @@ public class ExchangeRateService implements ExchangeRateProvider {
 
 	private static final String RATES_FIELD = "rates";
 	private static final String DATE_RANGE_SEPARATOR = "..";
-	private static final int SEARCH_BACK_DAYS = 7;
 
 	private final RestClient restClient;
 
@@ -99,6 +99,18 @@ public class ExchangeRateService implements ExchangeRateProvider {
 					"Exchange rate not available for " + from + "/" + to + " on " + date
 				);
 			}
+			if (!RateBook.isWithinMaxAge(entry.getKey(), date)) {
+				throw new ExchangeRateUnavailableException(
+					"Exchange rate for " +
+						from +
+						"/" +
+						to +
+						" on " +
+						date +
+						" is stale: latest quote is from " +
+						entry.getKey()
+				);
+			}
 			resolved.put(date, entry.getValue());
 		}
 		return resolved;
@@ -110,7 +122,7 @@ public class ExchangeRateService implements ExchangeRateProvider {
 		LocalDate first,
 		LocalDate last
 	) {
-		String range = first.minusDays(SEARCH_BACK_DAYS) + DATE_RANGE_SEPARATOR + last;
+		String range = first.minusDays(RateBook.MAX_RATE_AGE_DAYS) + DATE_RANGE_SEPARATOR + last;
 		log.debug(
 			"ExchangeRateService#fetchSeries - Fetching exchange rates from={} to={} range={}",
 			from,

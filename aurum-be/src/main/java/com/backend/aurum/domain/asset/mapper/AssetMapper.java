@@ -15,13 +15,11 @@ import com.backend.aurum.domain.shared.exception.NotFoundException;
 import com.backend.aurum.domain.user.enums.Currency;
 import com.backend.aurum.domain.user.model.User;
 import com.backend.aurum.domain.user.repository.UserRepository;
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.function.BiFunction;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -130,6 +128,8 @@ public class AssetMapper {
 	/**
 	 * Light DTO for list responses — no snapshots array. Accepts the latest 2 snapshots
 	 * (ordered desc by referenceDate) to compute latestValue, latestValueBase, previousValue.
+	 * Every amount is converted from the currency its own snapshot was written in, so an asset
+	 * whose currency changed since does not restate the past.
 	 */
 	public AssetDTO toDtoLight(
 		Asset entity,
@@ -137,25 +137,21 @@ public class AssetMapper {
 		RateBook book,
 		LocalDate asOf
 	) {
-		return toDtoLight(entity, latestTwo, (asset, latest) ->
-			book.convert(latest.getAmountOriginalCurrency(), currencyOf(asset, book), asOf)
-		);
-	}
-
-	private AssetDTO toDtoLight(
-		Asset entity,
-		List<Snapshot> latestTwo,
-		BiFunction<Asset, Snapshot, BigDecimal> latestValueBase
-	) {
 		if (entity == null) return null;
 		AssetDTO dto = buildDto(entity);
 
 		if (!latestTwo.isEmpty()) {
 			Snapshot latest = latestTwo.get(0);
+			Currency latestCurrency = currencyOf(latest, book);
 			dto.setLatestValue(latest.getAmountOriginalCurrency());
-			dto.setLatestValueBase(latestValueBase.apply(entity, latest));
+			dto.setLatestValueCurrency(latestCurrency);
+			dto.setLatestValueBase(
+				book.convert(latest.getAmountOriginalCurrency(), latestCurrency, asOf)
+			);
 			if (latestTwo.size() > 1) {
-				dto.setPreviousValue(latestTwo.get(1).getAmountOriginalCurrency());
+				Snapshot previous = latestTwo.get(1);
+				dto.setPreviousValue(previous.getAmountOriginalCurrency());
+				dto.setPreviousValueCurrency(currencyOf(previous, book));
 			}
 		}
 
@@ -184,10 +180,11 @@ public class AssetMapper {
 	}
 
 	/**
-	 * Legacy rows can carry no currency: they were written in the user's currency,
-	 * which is the book's target.
+	 * The row's own currency, never the asset's current one. The book target is the last resort of a
+	 * row built in memory with no asset at all.
 	 */
-	private Currency currencyOf(Asset asset, RateBook book) {
-		return asset.getOriginalCurrency() != null ? asset.getOriginalCurrency() : book.target();
+	private Currency currencyOf(Snapshot snapshot, RateBook book) {
+		Currency currency = snapshot.resolveCurrency();
+		return currency != null ? currency : book.target();
 	}
 }

@@ -86,6 +86,10 @@ function groupTotalTitle(currency: string) {
 	return `Group total in ${currency}, your base currency. Row values are shown in each asset's own currency.`;
 }
 
+function valueCurrencyNote(valueCurrency: string, assetCurrency: string) {
+	return `Shown in ${valueCurrency}. A new value is saved in ${assetCurrency}, the asset's current currency.`;
+}
+
 function ScheduledValue({
 	value,
 	currency,
@@ -108,6 +112,30 @@ function ScheduledValue({
 				className="text-muted-foreground size-3.5 shrink-0"
 			/>
 			<span className="sr-only">Follows the automatic payment schedule</span>
+		</span>
+	);
+}
+
+function LockedValue({
+	value,
+	currency,
+	note,
+	className
+}: {
+	value: number;
+	currency: string;
+	note: string;
+	className?: string;
+}) {
+	const { locale, isPrivacy } = usePreferences();
+
+	return (
+		<span
+			className={cn("num inline-flex items-center", className)}
+			title={note}
+		>
+			{formatCurrency(value, { currency, locale, privacy: isPrivacy })}
+			<span className="sr-only">{note}</span>
 		</span>
 	);
 }
@@ -174,6 +202,8 @@ export function AssetList({
 										const trend = assetTrend(asset);
 										const isLiability = asset.type === ASSET_TYPE.LIABILITY;
 										const isAutomaticLiability = asset.liabilityType === LIABILITY_TYPE.AUTOMATIC;
+										const valueCurrency = asset.latestValueCurrency ?? asset.originalCurrency;
+										const isValueLocked = valueCurrency !== asset.originalCurrency;
 
 										return (
 											<div
@@ -207,12 +237,18 @@ export function AssetList({
 													{isAutomaticLiability ? (
 														<ScheduledValue
 															value={asset.latestValue ?? 0}
-															currency={asset.originalCurrency}
+															currency={valueCurrency}
+														/>
+													) : isValueLocked ? (
+														<LockedValue
+															value={asset.latestValue ?? 0}
+															currency={valueCurrency}
+															note={valueCurrencyNote(valueCurrency, asset.originalCurrency)}
 														/>
 													) : (
 														<EditableValue
 															value={asset.latestValue ?? 0}
-															currency={asset.originalCurrency}
+															currency={valueCurrency}
 															label={asset.name}
 															onSave={value => onValueSave(asset, value)}
 														/>
@@ -281,6 +317,8 @@ export function AssetList({
 										const trend = assetTrend(asset);
 										const isLiability = asset.type === ASSET_TYPE.LIABILITY;
 										const isAutomaticLiability = asset.liabilityType === LIABILITY_TYPE.AUTOMATIC;
+										const valueCurrency = asset.latestValueCurrency ?? asset.originalCurrency;
+										const isValueLocked = valueCurrency !== asset.originalCurrency;
 
 										return (
 											<div
@@ -316,13 +354,20 @@ export function AssetList({
 													{isAutomaticLiability ? (
 														<ScheduledValue
 															value={asset.latestValue ?? 0}
-															currency={asset.originalCurrency}
+															currency={valueCurrency}
+															className="text-sm"
+														/>
+													) : isValueLocked ? (
+														<LockedValue
+															value={asset.latestValue ?? 0}
+															currency={valueCurrency}
+															note={valueCurrencyNote(valueCurrency, asset.originalCurrency)}
 															className="text-sm"
 														/>
 													) : (
 														<EditableValue
 															value={asset.latestValue ?? 0}
-															currency={asset.originalCurrency}
+															currency={valueCurrency}
 															label={asset.name}
 															onSave={value => onValueSave(asset, value)}
 															className="text-sm"

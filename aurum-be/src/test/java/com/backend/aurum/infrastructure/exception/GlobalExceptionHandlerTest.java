@@ -19,6 +19,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.InjectMocks;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.core.MethodParameter;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
@@ -32,6 +33,10 @@ class GlobalExceptionHandlerTest {
 
 	private static final String EXCHANGE_RATE_UNAVAILABLE_MESSAGE =
 		"Exchange rates are temporarily unavailable, please retry later";
+	private static final String CONCURRENT_WRITE_MESSAGE =
+		"This record was changed by another request, reload it and retry";
+	private static final String STALE_ROW_DETAIL =
+		"Row was updated or deleted by another transaction";
 	private static final String CONFLICT_REASON =
 		"Category still holds 2 asset(s); move or delete them first";
 	private static final String DEFAULT_CATEGORY_FORBIDDEN_REASON =
@@ -173,6 +178,29 @@ class GlobalExceptionHandlerTest {
 			EXCHANGE_RATE_UNAVAILABLE_MESSAGE
 		);
 		assertThat(expectedResponse.getBody()).containsOnlyKeys(RESPONSE_FIELDS);
+	}
+
+	@Test
+	void handleOptimisticLock_returns409_withTheRetryMessage() {
+		// GIVEN
+		OptimisticLockingFailureException mockException = new OptimisticLockingFailureException(
+			STALE_ROW_DETAIL
+		);
+
+		// WHEN
+		ResponseEntity<Map<String, Object>> expectedResponse = testSubject.handleOptimisticLock(
+			mockException
+		);
+
+		// THEN
+		assertThat(expectedResponse.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+		assertThat(expectedResponse.getBody()).containsOnlyKeys(RESPONSE_FIELDS);
+		assertThat(expectedResponse.getBody()).containsEntry("status", HttpStatus.CONFLICT.value());
+		assertThat(expectedResponse.getBody()).containsEntry(
+			"error",
+			HttpStatus.CONFLICT.getReasonPhrase()
+		);
+		assertThat(expectedResponse.getBody()).containsEntry("message", CONCURRENT_WRITE_MESSAGE);
 	}
 
 	@Test

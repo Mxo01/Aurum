@@ -42,6 +42,7 @@ public class SnapshotMapper {
 				throw new AccessDeniedException("Asset does not belong to the user");
 			}
 			snapshot.setAsset(asset);
+			snapshot.setCurrency(asset.getOriginalCurrency());
 		}
 
 		return snapshot;
@@ -49,10 +50,11 @@ public class SnapshotMapper {
 
 	public SnapshotDTO toDto(Snapshot entity, RateBook book) {
 		if (entity == null) return null;
-		Currency currency = currencyOf(entity.getAsset(), book);
+		Currency currency = currencyOf(entity, book);
 		LocalDate referenceDate = entity.getReferenceDate();
 		return buildDto(
 			entity,
+			currency,
 			book.rate(currency, referenceDate),
 			book.convert(entity.getAmountOriginalCurrency(), currency, referenceDate)
 		);
@@ -60,6 +62,7 @@ public class SnapshotMapper {
 
 	private SnapshotDTO buildDto(
 		Snapshot entity,
+		Currency currency,
 		BigDecimal exchangeRateToBase,
 		BigDecimal amountBaseCurrency
 	) {
@@ -67,6 +70,7 @@ public class SnapshotMapper {
 		dto.setId(entity.getId());
 		dto.setReferenceDate(entity.getReferenceDate());
 		dto.setAmountOriginalCurrency(entity.getAmountOriginalCurrency());
+		dto.setCurrency(currency);
 		dto.setExchangeRateToBase(exchangeRateToBase);
 		dto.setAmountBaseCurrency(amountBaseCurrency);
 		dto.setSource(entity.getSource());
@@ -80,10 +84,11 @@ public class SnapshotMapper {
 	}
 
 	/**
-	 * Legacy rows can carry no currency: they were written in the user's currency,
-	 * which is the book's target.
+	 * The row's own currency, never the asset's current one: a currency change must not restate the
+	 * history. The book target is the last resort of a row built in memory with no asset at all.
 	 */
-	private Currency currencyOf(Asset asset, RateBook book) {
-		return asset.getOriginalCurrency() != null ? asset.getOriginalCurrency() : book.target();
+	private Currency currencyOf(Snapshot entity, RateBook book) {
+		Currency currency = entity.resolveCurrency();
+		return currency != null ? currency : book.target();
 	}
 }

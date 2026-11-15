@@ -37,7 +37,6 @@ class TargetServiceTest {
 	void findAll_returnsTargetsFromRepository() {
 		// GIVEN
 		UUID mockUserId = UUID.randomUUID();
-		BigDecimal mockNetWorth = BigDecimal.TEN;
 		List<Target> stubbedTargets = Instancio.ofList(Target.class)
 			.size(2)
 			.set(Select.field(Target::getIsCompleted), false)
@@ -47,7 +46,7 @@ class TargetServiceTest {
 		when(targetRepository.findByUserId(mockUserId)).thenReturn(stubbedTargets);
 
 		// WHEN
-		List<Target> expectedTargets = testSubject.findAll(mockUserId, mockNetWorth);
+		List<Target> expectedTargets = testSubject.findAll(mockUserId);
 
 		// THEN
 		assertThat(expectedTargets).isEqualTo(stubbedTargets);
@@ -56,7 +55,6 @@ class TargetServiceTest {
 	@Test
 	void findById_returnsTarget_whenFound() {
 		// GIVEN
-		BigDecimal mockNetWorth = BigDecimal.TEN;
 		Target mockTarget = Instancio.of(Target.class)
 			.set(Select.field(Target::getIsCompleted), false)
 			.set(Select.field(Target::getTargetAmount), new BigDecimal("1000"))
@@ -65,7 +63,7 @@ class TargetServiceTest {
 		when(targetRepository.findById(mockTarget.getId())).thenReturn(Optional.of(mockTarget));
 
 		// WHEN
-		Target expectedTarget = testSubject.findById(mockTarget.getId(), mockNetWorth);
+		Target expectedTarget = testSubject.findById(mockTarget.getId());
 
 		// THEN
 		assertThat(expectedTarget).isEqualTo(mockTarget);
@@ -75,13 +73,10 @@ class TargetServiceTest {
 	void findById_throwsRuntimeException_whenNotFound() {
 		// GIVEN
 		UUID mockId = UUID.randomUUID();
-		BigDecimal mockNetWorth = BigDecimal.TEN;
 		when(targetRepository.findById(mockId)).thenReturn(Optional.empty());
 
 		// WHEN / THEN
-		assertThatThrownBy(() -> testSubject.findById(mockId, mockNetWorth)).isInstanceOf(
-			RuntimeException.class
-		);
+		assertThatThrownBy(() -> testSubject.findById(mockId)).isInstanceOf(RuntimeException.class);
 	}
 
 	@Test
@@ -171,6 +166,135 @@ class TargetServiceTest {
 	}
 
 	@Test
+	void findAll_returnsTheStoredCompletionFlag_soReadsDoNotSyncIt() {
+		// GIVEN
+		UUID mockUserId = UUID.randomUUID();
+		Target mockTarget = Instancio.of(Target.class)
+			.set(Select.field(Target::getIsCompleted), false)
+			.set(Select.field(Target::getTargetAmount), new BigDecimal("500"))
+			.set(Select.field(Target::getCurrentAmount), new BigDecimal("1000"))
+			.set(Select.field(Target::getType), TargetType.NET_WORTH)
+			.create();
+		when(targetRepository.findByUserId(mockUserId)).thenReturn(List.of(mockTarget));
+
+		// WHEN
+		List<Target> expectedTargets = testSubject.findAll(mockUserId);
+
+		// THEN
+		assertThat(expectedTargets).containsExactly(mockTarget);
+		assertThat(mockTarget.getIsCompleted()).isFalse();
+	}
+
+	@Test
+	void findById_returnsTheStoredCompletionFlag_soReadsDoNotSyncIt() {
+		// GIVEN
+		Target mockTarget = Instancio.of(Target.class)
+			.set(Select.field(Target::getIsCompleted), false)
+			.set(Select.field(Target::getTargetAmount), new BigDecimal("500"))
+			.set(Select.field(Target::getCurrentAmount), new BigDecimal("1000"))
+			.set(Select.field(Target::getType), TargetType.NET_WORTH)
+			.create();
+		when(targetRepository.findById(mockTarget.getId())).thenReturn(Optional.of(mockTarget));
+
+		// WHEN
+		Target expectedTarget = testSubject.findById(mockTarget.getId());
+
+		// THEN
+		assertThat(expectedTarget.getIsCompleted()).isFalse();
+	}
+
+	@Test
+	void save_returnsSavedTarget_whenTargetIsAlreadyCompleted() {
+		// GIVEN
+		Target mockTarget = Instancio.of(Target.class)
+			.set(Select.field(Target::getIsCompleted), true)
+			.set(Select.field(Target::getTargetAmount), new BigDecimal("1000"))
+			.create();
+		when(targetRepository.save(mockTarget)).thenReturn(mockTarget);
+
+		// WHEN
+		Target expectedTarget = testSubject.save(mockTarget, BigDecimal.ZERO);
+
+		// THEN
+		assertThat(expectedTarget).isEqualTo(mockTarget);
+		assertThat(mockTarget.getIsCompleted()).isTrue();
+	}
+
+	@Test
+	void save_doesNotCompleteTarget_whenTargetAmountIsMissing() {
+		// GIVEN
+		Target mockTarget = Instancio.of(Target.class)
+			.set(Select.field(Target::getIsCompleted), false)
+			.set(Select.field(Target::getTargetAmount), null)
+			.set(Select.field(Target::getCurrentAmount), new BigDecimal("500"))
+			.set(Select.field(Target::getType), TargetType.MANUAL)
+			.create();
+		when(targetRepository.save(mockTarget)).thenReturn(mockTarget);
+
+		// WHEN
+		Target expectedTarget = testSubject.save(mockTarget, BigDecimal.ZERO);
+
+		// THEN
+		assertThat(expectedTarget).isEqualTo(mockTarget);
+		assertThat(mockTarget.getIsCompleted()).isFalse();
+	}
+
+	@Test
+	void save_doesNotCompleteTarget_whenTargetAmountIsZero() {
+		// GIVEN
+		Target mockTarget = Instancio.of(Target.class)
+			.set(Select.field(Target::getIsCompleted), false)
+			.set(Select.field(Target::getTargetAmount), BigDecimal.ZERO)
+			.set(Select.field(Target::getCurrentAmount), new BigDecimal("500"))
+			.set(Select.field(Target::getType), TargetType.MANUAL)
+			.create();
+		when(targetRepository.save(mockTarget)).thenReturn(mockTarget);
+
+		// WHEN
+		Target expectedTarget = testSubject.save(mockTarget, BigDecimal.ZERO);
+
+		// THEN
+		assertThat(expectedTarget).isEqualTo(mockTarget);
+		assertThat(mockTarget.getIsCompleted()).isFalse();
+	}
+
+	@Test
+	void save_measuresManualProgressFromZero_whenCurrentAmountIsMissing() {
+		// GIVEN
+		Target mockTarget = Instancio.of(Target.class)
+			.set(Select.field(Target::getIsCompleted), false)
+			.set(Select.field(Target::getTargetAmount), new BigDecimal("1000"))
+			.set(Select.field(Target::getCurrentAmount), null)
+			.set(Select.field(Target::getType), TargetType.MANUAL)
+			.create();
+		when(targetRepository.save(mockTarget)).thenReturn(mockTarget);
+
+		// WHEN
+		Target expectedTarget = testSubject.save(mockTarget, new BigDecimal("5000"));
+
+		// THEN
+		assertThat(expectedTarget).isEqualTo(mockTarget);
+		assertThat(mockTarget.getIsCompleted()).isFalse();
+	}
+
+	@Test
+	void update_throwsAccessDenied_whenTargetHasNoOwner() {
+		// GIVEN
+		UUID mockUserId = UUID.randomUUID();
+		Target mockTarget = Instancio.of(Target.class)
+			.set(Select.field(Target::getUser), null)
+			.create();
+		Target mockDetails = Instancio.create(Target.class);
+		when(targetRepository.findById(mockTarget.getId())).thenReturn(Optional.of(mockTarget));
+
+		// WHEN / THEN
+		assertThatThrownBy(() ->
+			testSubject.update(mockTarget.getId(), mockDetails, mockUserId, BigDecimal.TEN)
+		).isInstanceOf(AccessDeniedException.class);
+		verify(targetRepository, never()).save(any());
+	}
+
+	@Test
 	void update_throwsAccessDenied_whenTargetBelongsToAnotherUser() {
 		// GIVEN
 		UUID mockUserId = UUID.randomUUID();
@@ -188,6 +312,21 @@ class TargetServiceTest {
 		assertThatThrownBy(() ->
 			testSubject.update(mockTarget.getId(), mockDetails, mockUserId, BigDecimal.TEN)
 		).isInstanceOf(AccessDeniedException.class);
+		verify(targetRepository, never()).save(any());
+	}
+
+	@Test
+	void update_throwsException_whenTargetIsMissing() {
+		// GIVEN
+		UUID mockTargetId = UUID.randomUUID();
+		UUID mockUserId = UUID.randomUUID();
+		Target mockDetails = Instancio.create(Target.class);
+		when(targetRepository.findById(mockTargetId)).thenReturn(Optional.empty());
+
+		// WHEN / THEN
+		assertThatThrownBy(() ->
+			testSubject.update(mockTargetId, mockDetails, mockUserId, BigDecimal.TEN)
+		).isInstanceOf(RuntimeException.class);
 		verify(targetRepository, never()).save(any());
 	}
 

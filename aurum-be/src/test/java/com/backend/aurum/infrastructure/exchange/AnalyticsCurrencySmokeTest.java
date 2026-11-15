@@ -54,23 +54,35 @@ class AnalyticsCurrencySmokeTest {
 	private static final Instant FIXED_INSTANT = Instant.parse("2026-11-14T10:00:00Z");
 	private static final ZoneId FIXED_ZONE = ZoneOffset.UTC;
 	private static final LocalDate TODAY = LocalDate.of(2026, 11, 14);
+	private static final LocalDate IMPACT_WINDOW_START = TODAY.minusMonths(1);
+	private static final LocalDate START_SNAPSHOT_DATE = IMPACT_WINDOW_START.minusDays(1);
 	private static final LocalDate SNAPSHOT_DATE = TODAY.minusDays(10);
 	private static final BigDecimal SNAPSHOT_AMOUNT = new BigDecimal("1000");
 	private static final BigDecimal OLD_RATE = new BigDecimal("1.2");
 	private static final BigDecimal CURRENT_RATE = new BigDecimal("1.25");
 	private static final BigDecimal EXPECTED_TOTAL = new BigDecimal("1250.0000");
 	private static final BigDecimal EXPECTED_ALLOCATION = new BigDecimal("100.0000");
+	private static final BigDecimal EXPECTED_CURRENCY_IMPACT = new BigDecimal("50");
 	private static final String ASSET_NAME = "Etf";
 	private static final String CATEGORY_NAME = "Investments";
 	private static final String RATES_FIELD = "rates";
-	private static final String STUBBED_OLD_QUOTE_DATE = "2025-11-01";
-	private static final String STUBBED_CURRENT_QUOTE_DATE = "2026-11-01";
+	private static final String OLDEST_QUOTE_DATE = "2025-11-03";
+	private static final String OLD_QUOTE_DATE = "2026-05-03";
+	private static final String MID_QUOTE_DATE = "2026-10-03";
+	private static final String IMPACT_START_QUOTE_DATE = "2026-10-13";
+	private static final String CURRENT_QUOTE_DATE = "2026-11-13";
 	private static final Map<String, Object> STUBBED_RESPONSE = Map.of(
 		RATES_FIELD,
 		Map.of(
-			STUBBED_OLD_QUOTE_DATE,
+			OLDEST_QUOTE_DATE,
 			Map.of(Currency.USD.getValue(), OLD_RATE),
-			STUBBED_CURRENT_QUOTE_DATE,
+			OLD_QUOTE_DATE,
+			Map.of(Currency.USD.getValue(), OLD_RATE),
+			MID_QUOTE_DATE,
+			Map.of(Currency.USD.getValue(), OLD_RATE),
+			IMPACT_START_QUOTE_DATE,
+			Map.of(Currency.USD.getValue(), OLD_RATE),
+			CURRENT_QUOTE_DATE,
 			Map.of(Currency.USD.getValue(), CURRENT_RATE)
 		)
 	);
@@ -86,6 +98,7 @@ class AnalyticsCurrencySmokeTest {
 
 	private UUID mockUserId;
 	private Asset mockAsset;
+	private Snapshot mockStartSnapshot;
 	private Snapshot mockSnapshot;
 	private AssetDTO mockAssetDto;
 
@@ -93,7 +106,8 @@ class AnalyticsCurrencySmokeTest {
 	void setUp() {
 		mockUserId = UUID.randomUUID();
 		mockAsset = buildMockAsset();
-		mockSnapshot = buildMockSnapshot();
+		mockStartSnapshot = buildMockSnapshot(START_SNAPSHOT_DATE);
+		mockSnapshot = buildMockSnapshot(SNAPSHOT_DATE);
 		mockAssetDto = mock(AssetDTO.class);
 
 		when(config.mockClock.instant()).thenReturn(FIXED_INSTANT);
@@ -107,11 +121,11 @@ class AnalyticsCurrencySmokeTest {
 				mockUserId,
 				TODAY.minusYears(1).minusMonths(2)
 			)
-		).thenReturn(List.of(mockSnapshot));
+		).thenReturn(List.of(mockStartSnapshot, mockSnapshot));
 		when(
 			config.mockAssetMapper.toDtoLight(
 				eq(mockAsset),
-				eq(List.of(mockSnapshot)),
+				eq(List.of(mockSnapshot, mockStartSnapshot)),
 				any(RateBook.class),
 				eq(TODAY)
 			)
@@ -138,6 +152,7 @@ class AnalyticsCurrencySmokeTest {
 		assertThat(expectedSummary.getTotalNetWorth()).isEqualByComparingTo(EXPECTED_TOTAL);
 		assertThat(expectedSummary.getTotalGrossAssets()).isEqualByComparingTo(EXPECTED_TOTAL);
 		assertThat(expectedSummary.getTotalLiabilities()).isZero();
+		assertThat(expectedSummary.getCurrencyImpact()).isEqualByComparingTo(EXPECTED_CURRENCY_IMPACT);
 		assertThat(expectedSummary.getAssetAllocation()).containsEntry(
 			CATEGORY_NAME,
 			EXPECTED_ALLOCATION
@@ -165,16 +180,17 @@ class AnalyticsCurrencySmokeTest {
 		asset.setId(UUID.randomUUID());
 		asset.setName(ASSET_NAME);
 		asset.setCategory(mockCategory);
-		asset.setOriginalCurrency(Currency.EUR);
+		asset.setOriginalCurrency(Currency.GBP);
 		return asset;
 	}
 
-	private Snapshot buildMockSnapshot() {
+	private Snapshot buildMockSnapshot(LocalDate referenceDate) {
 		Snapshot snapshot = new Snapshot();
 		snapshot.setId(UUID.randomUUID());
 		snapshot.setAsset(mockAsset);
-		snapshot.setReferenceDate(SNAPSHOT_DATE);
+		snapshot.setReferenceDate(referenceDate);
 		snapshot.setAmountOriginalCurrency(SNAPSHOT_AMOUNT);
+		snapshot.setCurrency(Currency.EUR);
 		return snapshot;
 	}
 

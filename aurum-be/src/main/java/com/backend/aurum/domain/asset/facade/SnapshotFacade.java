@@ -101,7 +101,8 @@ public class SnapshotFacade {
 			target,
 			snapshots
 				.stream()
-				.map(snapshot -> snapshot.getAsset().getOriginalCurrency())
+				.map(Snapshot::resolveCurrency)
+				.filter(Objects::nonNull)
 				.distinct()
 				.toList(),
 			snapshots.stream().map(Snapshot::getReferenceDate).toList()

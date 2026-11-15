@@ -2,7 +2,6 @@ package com.backend.aurum.domain.asset.mapper;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.backend.aurum.domain.asset.dto.CreateSnapshotDTO;
@@ -26,12 +25,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Stream;
 import org.instancio.Instancio;
 import org.instancio.Select;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -41,11 +43,15 @@ class SnapshotMapperTest {
 
 	private static final Currency USER_CURRENCY = Currency.USD;
 	private static final Currency ASSET_CURRENCY = Currency.EUR;
+	private static final Currency ROW_CURRENCY = Currency.GBP;
+	private static final Currency CHANGED_ASSET_CURRENCY = Currency.CHF;
 	private static final LocalDate REFERENCE_DATE = LocalDate.of(2026, 1, 31);
 	private static final BigDecimal RATE_TO_USER_CURRENCY = new BigDecimal("1.5");
 	private static final BigDecimal ORIGINAL_AMOUNT = new BigDecimal("100");
 	private static final BigDecimal CONVERTED_AMOUNT = new BigDecimal("150");
 	private static final BigDecimal STORED_RATE = new BigDecimal("2.0000");
+	private static final BigDecimal AMOUNT_IN_BASE_CURRENCY = new BigDecimal("200");
+	private static final int BASE_AMOUNT_SCALE = 4;
 
 	@Mock
 	private AssetRepository assetRepository;
@@ -88,6 +94,7 @@ class SnapshotMapperTest {
 		assertThat(result.getExchangeRateToBase()).isEqualTo(mockDto.getExchangeRateToBase());
 		assertThat(result.getAsset()).isEqualTo(mockAsset);
 		assertThat(result.getSource()).isEqualTo(SnapshotSource.USER);
+		assertThat(result.getCurrency()).isEqualTo(mockAsset.getOriginalCurrency());
 	}
 
 	@Test
@@ -197,7 +204,7 @@ class SnapshotMapperTest {
 		Asset mockAsset = Instancio.of(Asset.class)
 			.set(Select.field(Asset::getOriginalCurrency), ASSET_CURRENCY)
 			.create();
-		Snapshot mockSnapshot = buildSnapshot(mockAsset);
+		Snapshot mockSnapshot = buildSnapshot(mockAsset, ASSET_CURRENCY);
 		RateBook mockBook = stubBook(ASSET_CURRENCY, USER_CURRENCY, REFERENCE_DATE);
 
 		// WHEN
@@ -207,10 +214,46 @@ class SnapshotMapperTest {
 		assertThat(result.getId()).isEqualTo(mockSnapshot.getId());
 		assertThat(result.getReferenceDate()).isEqualTo(REFERENCE_DATE);
 		assertThat(result.getAmountOriginalCurrency()).isEqualByComparingTo(ORIGINAL_AMOUNT);
+		assertThat(result.getCurrency()).isEqualTo(ASSET_CURRENCY);
 		assertThat(result.getExchangeRateToBase()).isEqualByComparingTo(RATE_TO_USER_CURRENCY);
 		assertThat(result.getAmountBaseCurrency()).isEqualByComparingTo(CONVERTED_AMOUNT);
 		assertThat(result.getAssetId()).isEqualTo(mockAsset.getId());
 		assertThat(result.getAssetName()).isEqualTo(mockAsset.getName());
+	}
+
+	@Test
+	void toDto_readsThroughTheRowsOwnCurrency_whenTheAssetCurrencyChangedSince() {
+		// GIVEN
+		Asset mockAsset = Instancio.of(Asset.class)
+			.set(Select.field(Asset::getOriginalCurrency), CHANGED_ASSET_CURRENCY)
+			.create();
+		Snapshot mockSnapshot = buildSnapshot(mockAsset, ROW_CURRENCY);
+		RateBook mockBook = stubBook(ROW_CURRENCY, USER_CURRENCY, REFERENCE_DATE);
+
+		// WHEN
+		SnapshotDTO result = testSubject.toDto(mockSnapshot, mockBook);
+
+		// THEN
+		assertThat(result.getCurrency()).isEqualTo(ROW_CURRENCY);
+		assertThat(result.getExchangeRateToBase()).isEqualByComparingTo(RATE_TO_USER_CURRENCY);
+		assertThat(result.getAmountBaseCurrency()).isEqualByComparingTo(CONVERTED_AMOUNT);
+	}
+
+	@Test
+	void toDto_convertsThroughTheAssetCurrency_whenALegacyRowCarriesNone() {
+		// GIVEN
+		Asset mockAsset = Instancio.of(Asset.class)
+			.set(Select.field(Asset::getOriginalCurrency), ASSET_CURRENCY)
+			.create();
+		Snapshot mockSnapshot = buildSnapshot(mockAsset, null);
+		RateBook mockBook = stubBook(ASSET_CURRENCY, USER_CURRENCY, REFERENCE_DATE);
+
+		// WHEN
+		SnapshotDTO result = testSubject.toDto(mockSnapshot, mockBook);
+
+		// THEN
+		assertThat(result.getCurrency()).isEqualTo(ASSET_CURRENCY);
+		assertThat(result.getAmountBaseCurrency()).isEqualByComparingTo(CONVERTED_AMOUNT);
 	}
 
 	@ParameterizedTest(name = "toDto of a {0} row")
@@ -223,6 +266,7 @@ class SnapshotMapperTest {
 			.create();
 		Snapshot mockSnapshot = Instancio.of(Snapshot.class)
 			.set(Select.field(Snapshot::getAsset), mockAsset)
+			.set(Select.field(Snapshot::getCurrency), USER_CURRENCY)
 			.set(Select.field(Snapshot::getSource), source)
 			.set(Select.field(Snapshot::getReferenceDate), REFERENCE_DATE)
 			.set(Select.field(Snapshot::getAmountOriginalCurrency), ORIGINAL_AMOUNT)
@@ -240,29 +284,30 @@ class SnapshotMapperTest {
 	}
 
 	@Test
-	void toDto_isIdentity_whenAssetUsesTheUserCurrency() {
+	void toDto_isIdentity_whenTheRowUsesTheUserCurrency() {
 		// GIVEN
 		Asset mockAsset = Instancio.of(Asset.class)
-			.set(Select.field(Asset::getOriginalCurrency), USER_CURRENCY)
+			.set(Select.field(Asset::getOriginalCurrency), ASSET_CURRENCY)
 			.create();
-		Snapshot mockSnapshot = buildSnapshot(mockAsset);
+		Snapshot mockSnapshot = buildSnapshot(mockAsset, USER_CURRENCY);
 		RateBook mockBook = book(USER_CURRENCY, List.of(USER_CURRENCY), List.of(REFERENCE_DATE));
 
 		// WHEN
 		SnapshotDTO result = testSubject.toDto(mockSnapshot, mockBook);
 
 		// THEN
+		assertThat(result.getCurrency()).isEqualTo(USER_CURRENCY);
 		assertThat(result.getExchangeRateToBase()).isEqualByComparingTo(BigDecimal.ONE);
 		assertThat(result.getAmountBaseCurrency()).isEqualByComparingTo(ORIGINAL_AMOUNT);
 	}
 
 	@Test
-	void toDto_convertsInTheBookTarget_whenTheAssetHasNoCurrency() {
+	void toDto_convertsInTheBookTarget_whenNeitherTheRowNorTheAssetCarriesACurrency() {
 		// GIVEN
 		Asset mockAsset = Instancio.of(Asset.class)
 			.set(Select.field(Asset::getOriginalCurrency), null)
 			.create();
-		Snapshot mockSnapshot = buildSnapshot(mockAsset);
+		Snapshot mockSnapshot = buildSnapshot(mockAsset, null);
 		RateBook mockBook = book(USER_CURRENCY, List.of(), List.of());
 		BigDecimal expectedAnalyticsBase = mockBook.convert(
 			ORIGINAL_AMOUNT,
@@ -274,6 +319,7 @@ class SnapshotMapperTest {
 		SnapshotDTO result = testSubject.toDto(mockSnapshot, mockBook);
 
 		// THEN
+		assertThat(result.getCurrency()).isEqualTo(mockBook.target());
 		assertThat(result.getExchangeRateToBase()).isEqualByComparingTo(BigDecimal.ONE);
 		assertThat(result.getAmountBaseCurrency()).isEqualByComparingTo(expectedAnalyticsBase);
 		assertThat(result.getAmountBaseCurrency()).isEqualByComparingTo(ORIGINAL_AMOUNT);
@@ -282,16 +328,10 @@ class SnapshotMapperTest {
 	}
 
 	@Test
-	void toDto_omitsAssetDetails_whenTheSnapshotResolvesWithoutAnAsset() {
+	void toDto_omitsAssetDetails_whenTheRowHasNoAsset() {
 		// GIVEN
-		Asset mockAsset = Instancio.of(Asset.class)
-			.set(Select.field(Asset::getOriginalCurrency), USER_CURRENCY)
-			.create();
-		Snapshot mockSnapshot = mock(Snapshot.class);
-		when(mockSnapshot.getAsset()).thenReturn(mockAsset, null);
-		when(mockSnapshot.getReferenceDate()).thenReturn(REFERENCE_DATE);
-		when(mockSnapshot.getAmountOriginalCurrency()).thenReturn(ORIGINAL_AMOUNT);
-		RateBook mockBook = book(USER_CURRENCY, List.of(USER_CURRENCY), List.of(REFERENCE_DATE));
+		Snapshot mockSnapshot = buildSnapshot(null, ROW_CURRENCY);
+		RateBook mockBook = stubBook(ROW_CURRENCY, USER_CURRENCY, REFERENCE_DATE);
 
 		// WHEN
 		SnapshotDTO result = testSubject.toDto(mockSnapshot, mockBook);
@@ -299,12 +339,55 @@ class SnapshotMapperTest {
 		// THEN
 		assertThat(result.getAssetId()).isNull();
 		assertThat(result.getAssetName()).isNull();
-		assertThat(result.getAmountBaseCurrency()).isEqualByComparingTo(ORIGINAL_AMOUNT);
+		assertThat(result.getCurrency()).isEqualTo(ROW_CURRENCY);
+		assertThat(result.getAmountBaseCurrency()).isEqualByComparingTo(CONVERTED_AMOUNT);
 	}
 
-	private Snapshot buildSnapshot(Asset asset) {
+	@Test
+	void getAmountInBaseCurrency_convertsTheAmountAtTheStoredRate() {
+		// GIVEN
+		Snapshot testSubject = buildSnapshot(null, ROW_CURRENCY);
+
+		// WHEN
+		BigDecimal expectedAmount = testSubject.getAmountInBaseCurrency();
+
+		// THEN
+		assertThat(expectedAmount).isEqualByComparingTo(AMOUNT_IN_BASE_CURRENCY);
+		assertThat(expectedAmount.scale()).isEqualTo(BASE_AMOUNT_SCALE);
+	}
+
+	@ParameterizedTest(name = "{0}")
+	@MethodSource("incompleteAmounts")
+	void getAmountInBaseCurrency_returnsZero_whenTheRowCannotBeConverted(
+		String scenario,
+		BigDecimal amountOriginalCurrency,
+		BigDecimal exchangeRateToBase
+	) {
+		// GIVEN
+		Snapshot testSubject = Instancio.of(Snapshot.class)
+			.set(Select.field(Snapshot::getAmountOriginalCurrency), amountOriginalCurrency)
+			.set(Select.field(Snapshot::getExchangeRateToBase), exchangeRateToBase)
+			.create();
+
+		// WHEN
+		BigDecimal expectedAmount = testSubject.getAmountInBaseCurrency();
+
+		// THEN
+		assertThat(expectedAmount).isEqualByComparingTo(BigDecimal.ZERO);
+	}
+
+	static Stream<Arguments> incompleteAmounts() {
+		return Stream.of(
+			Arguments.of("a row without amount", null, STORED_RATE),
+			Arguments.of("a row without exchange rate", ORIGINAL_AMOUNT, null),
+			Arguments.of("a row without amount and rate", null, null)
+		);
+	}
+
+	private Snapshot buildSnapshot(Asset asset, Currency rowCurrency) {
 		return Instancio.of(Snapshot.class)
 			.set(Select.field(Snapshot::getAsset), asset)
+			.set(Select.field(Snapshot::getCurrency), rowCurrency)
 			.set(Select.field(Snapshot::getAmountOriginalCurrency), ORIGINAL_AMOUNT)
 			.set(Select.field(Snapshot::getReferenceDate), REFERENCE_DATE)
 			.set(Select.field(Snapshot::getExchangeRateToBase), STORED_RATE)

@@ -3,8 +3,9 @@ import { cloneElement, createElement, type ReactElement } from "react";
 import type * as rechartsTypes from "recharts";
 import { http, HttpResponse } from "msw";
 import { describe, expect, it, vi } from "vitest";
+import type { SnapshotDTO } from "@/lib/api/types";
 import { env } from "@/lib/env";
-import { buildAsset } from "@/test/fixtures/portfolio";
+import { buildAsset, buildSnapshot } from "@/test/fixtures/portfolio";
 import { server } from "@/test/msw/server";
 import { renderWithProviders } from "@/test/render";
 import { SnapshotsSheet } from "./snapshots-sheet";
@@ -54,25 +55,51 @@ const mockAsset = buildAsset({
 	liabilityType: "MANUAL"
 });
 
+const EUR_SNAPSHOT_DISPLAY = "€430,000.00";
+const USD_SNAPSHOT_DISPLAY = "$18,400.00";
+const FALLBACK_SNAPSHOT_DISPLAY = "€18,400.00";
+const USD_SNAPSHOT_DATE = "Sep 1, 2026";
+
+function buildUsdSnapshot(overrides: Partial<SnapshotDTO> = {}): SnapshotDTO {
+	return buildSnapshot({
+		id: "s3",
+		assetId: mockAsset.id,
+		assetName: mockAsset.name,
+		referenceDate: "2026-09-01",
+		amountOriginalCurrency: 18_400,
+		currency: "USD",
+		exchangeRateToBase: 0.92,
+		amountBaseCurrency: 16_928,
+		...overrides
+	});
+}
+
+function buildSnapshotWithoutCurrency(): Omit<SnapshotDTO, "currency"> {
+	const { currency: _currency, ...snapshot } = buildUsdSnapshot();
+	return snapshot;
+}
+
 const mockSnapshots = [
-	{
+	buildSnapshot({
 		id: "s1",
-		assetId: "a1",
-		assetName: "Apartment Berlin",
+		assetId: mockAsset.id,
+		assetName: mockAsset.name,
 		referenceDate: "2026-11-01",
-		amountOriginalCurrency: 430000,
+		amountOriginalCurrency: 430_000,
+		currency: "EUR",
 		exchangeRateToBase: 1,
-		amountBaseCurrency: 430000
-	},
-	{
+		amountBaseCurrency: 430_000
+	}),
+	buildSnapshot({
 		id: "s2",
-		assetId: "a1",
-		assetName: "Apartment Berlin",
+		assetId: mockAsset.id,
+		assetName: mockAsset.name,
 		referenceDate: "2026-10-01",
-		amountOriginalCurrency: 420000,
+		amountOriginalCurrency: 420_000,
+		currency: "EUR",
 		exchangeRateToBase: 1,
-		amountBaseCurrency: 420000
-	}
+		amountBaseCurrency: 420_000
+	})
 ];
 
 function useSnapshotsFixture() {
@@ -93,7 +120,7 @@ describe("SnapshotsSheet", () => {
 		// THEN
 		expect(await screen.findByText("History · Apartment Berlin")).toBeInTheDocument();
 		expect(await screen.findByText("Nov 1, 2026")).toBeInTheDocument();
-		expect(screen.getAllByText("€430,000.00").length).toBeGreaterThan(0);
+		expect(screen.getAllByText(EUR_SNAPSHOT_DISPLAY).length).toBeGreaterThan(0);
 	});
 
 	it("should add a snapshot", async () => {
@@ -203,15 +230,16 @@ describe("SnapshotsSheet", () => {
 		server.use(
 			http.get(`${env.apiUrl}/snapshots`, () =>
 				HttpResponse.json([
-					{
+					buildSnapshot({
 						id: null,
-						assetId: "a1",
-						assetName: "Apartment Berlin",
+						assetId: mockAsset.id,
+						assetName: mockAsset.name,
 						referenceDate: "2026-11-01",
-						amountOriginalCurrency: 430000,
+						amountOriginalCurrency: 430_000,
+						currency: "EUR",
 						exchangeRateToBase: 1,
 						amountBaseCurrency: null
-					}
+					})
 				])
 			)
 		);
@@ -304,5 +332,43 @@ describe("SnapshotsSheet", () => {
 
 		// THEN
 		expect(await screen.findByText("No snapshots yet")).toBeInTheDocument();
+	});
+
+	it("should format each history row in the currency it was recorded in", async () => {
+		// GIVEN
+		server.use(
+			http.get(`${env.apiUrl}/snapshots`, () =>
+				HttpResponse.json([buildUsdSnapshot(), ...mockSnapshots])
+			)
+		);
+		const testSubject = SnapshotsSheet;
+		renderWithProviders(
+			createElement(testSubject, { open: true, onOpenChange: () => undefined, asset: mockAsset })
+		);
+
+		// WHEN
+		const usdRow = await screen.findByText(USD_SNAPSHOT_DISPLAY);
+
+		// THEN
+		expect(usdRow.closest("tr")).toHaveTextContent(USD_SNAPSHOT_DATE);
+		expect(screen.getAllByText(EUR_SNAPSHOT_DISPLAY).length).toBeGreaterThan(0);
+	});
+
+	it("should fall back to the asset currency when a snapshot has no currency", async () => {
+		// GIVEN
+		server.use(
+			http.get(`${env.apiUrl}/snapshots`, () => HttpResponse.json([buildSnapshotWithoutCurrency()]))
+		);
+		const testSubject = SnapshotsSheet;
+		renderWithProviders(
+			createElement(testSubject, { open: true, onOpenChange: () => undefined, asset: mockAsset })
+		);
+
+		// WHEN
+		const fallbackRow = await screen.findByText(FALLBACK_SNAPSHOT_DISPLAY);
+
+		// THEN
+		expect(fallbackRow).toBeInTheDocument();
+		expect(screen.queryByText(USD_SNAPSHOT_DISPLAY)).not.toBeInTheDocument();
 	});
 });

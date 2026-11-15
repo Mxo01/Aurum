@@ -26,7 +26,7 @@ public class TargetFacade {
 	public List<TargetDTO> getAllTargets(UUID userId) {
 		BigDecimal netWorth = analyticsService.getSummary(userId).getTotalNetWorth();
 		return targetService
-			.findAll(userId, netWorth)
+			.findAll(userId)
 			.stream()
 			.map(t -> mapper.toDto(t, netWorth))
 			.toList();

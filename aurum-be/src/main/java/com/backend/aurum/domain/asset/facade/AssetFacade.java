@@ -47,7 +47,7 @@ public class AssetFacade {
 		LocalDate today = LocalDate.now(clock);
 		RateBook book = conversionService.book(
 			currencyOf(userId),
-			assets.stream().map(Asset::getOriginalCurrency).distinct().toList(),
+			currenciesOf(latestTwoByAsset.values().stream().flatMap(List::stream).toList()),
 			List.of(today)
 		);
 
@@ -88,7 +88,7 @@ public class AssetFacade {
 		LocalDate today = LocalDate.now(clock);
 		RateBook book = conversionService.book(
 			currencyOf(userId),
-			List.of(updated.getOriginalCurrency()),
+			currenciesOf(latestTwo),
 			List.of(today)
 		);
 		return mapper.toDtoLight(updated, latestTwo, book, today);
@@ -109,15 +109,29 @@ public class AssetFacade {
 	}
 
 	private RateBook bookFor(UUID userId, List<Asset> assets) {
+		List<Snapshot> snapshots = assets
+			.stream()
+			.flatMap(a -> a.getSnapshots() == null ? Stream.empty() : a.getSnapshots().stream())
+			.toList();
 		return conversionService.book(
 			currencyOf(userId),
-			assets.stream().map(Asset::getOriginalCurrency).distinct().toList(),
-			assets
-				.stream()
-				.flatMap(a -> a.getSnapshots() == null ? Stream.empty() : a.getSnapshots().stream())
-				.map(Snapshot::getReferenceDate)
-				.toList()
+			currenciesOf(snapshots),
+			snapshots.stream().map(Snapshot::getReferenceDate).toList()
 		);
+	}
+
+	/**
+	 * The book must hold a rate for every currency the response converts from, and that is the
+	 * currency each snapshot was written in: an asset whose currency changed since does not
+	 * describe its own history.
+	 */
+	private List<Currency> currenciesOf(List<Snapshot> snapshots) {
+		return snapshots
+			.stream()
+			.map(Snapshot::resolveCurrency)
+			.filter(Objects::nonNull)
+			.distinct()
+			.toList();
 	}
 
 	private Currency currencyOf(UUID userId) {

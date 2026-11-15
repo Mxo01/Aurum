@@ -87,7 +87,7 @@ public class AnalyticsService {
 			oneYearAgoDate,
 			currencyImpactStart
 		);
-		RateBook book = rateBook(userId, assets, dates);
+		RateBook book = rateBook(userId, snapshotsByAsset, dates);
 
 		Map<LocalDate, BigDecimal> netWorthByDate = calculateNetWorthAtDates(
 			assets,
@@ -153,7 +153,7 @@ public class AnalyticsService {
 		List<Asset> assets = assetRepository.findByUserIdOrderByCreatedAtDesc(userId);
 		Map<UUID, List<Snapshot>> snapshotsByAsset = loadSnapshotsByAsset(userId);
 		LocalDate today = LocalDate.now(clock);
-		RateBook book = rateBook(userId, assets, List.of(today));
+		RateBook book = rateBook(userId, snapshotsByAsset, List.of(today));
 		return calculateNetWorthAt(assets, snapshotsByAsset, book, today);
 	}
 
@@ -199,7 +199,7 @@ public class AnalyticsService {
 			.toList();
 
 		List<LocalDate> datePoints = monthEndDates(start, end);
-		RateBook book = rateBook(userId, allAssets, datePoints);
+		RateBook book = rateBook(userId, snapshotsByAsset, datePoints);
 
 		Map<UUID, String> seriesKeys = favoriteSeriesKeys(favoriteAssets);
 		List<String> labels = new ArrayList<>();
@@ -219,7 +219,7 @@ public class AnalyticsService {
 			assetsOnlySeries.add(calculateGrossAssetsAt(allAssets, snapshotsByAsset, book, datePoint));
 			for (Asset asset : favoriteAssets) {
 				List<Snapshot> snapshots = snapshotsByAsset.getOrDefault(asset.getId(), List.of());
-				BigDecimal value = calculateAssetValueAt(asset, snapshots, book, datePoint);
+				BigDecimal value = calculateAssetValueAt(snapshots, book, datePoint);
 				if (asset.isLiability()) {
 					value = value.negate();
 				}
@@ -268,7 +268,7 @@ public class AnalyticsService {
 
 		LocalDate today = LocalDate.now(clock);
 		LocalDate oneYearAgoDate = today.minusYears(1);
-		RateBook book = rateBook(userId, assets, List.of(today, oneYearAgoDate));
+		RateBook book = rateBook(userId, snapshotsByAsset, List.of(today, oneYearAgoDate));
 
 		BigDecimal current = assetsOnly
 			? calculateGrossAssetsAt(assets, snapshotsByAsset, book, today)
@@ -297,10 +297,25 @@ public class AnalyticsService {
 
 	// --- Private helpers ---
 
-	private RateBook rateBook(UUID userId, List<Asset> assets, Collection<LocalDate> dates) {
+	/**
+	 * The book covers the currencies the snapshots are actually written in: an asset may have
+	 * changed currency since, and its current one must not decide how the past is converted.
+	 */
+	private RateBook rateBook(
+		UUID userId,
+		Map<UUID, List<Snapshot>> snapshotsByAsset,
+		Collection<LocalDate> dates
+	) {
 		return conversionService.book(
 			currencyOf(userId),
-			assets.stream().map(Asset::getOriginalCurrency).distinct().toList(),
+			snapshotsByAsset
+				.values()
+				.stream()
+				.flatMap(List::stream)
+				.map(Snapshot::resolveCurrency)
+				.filter(Objects::nonNull)
+				.distinct()
+				.toList(),
 			dates
 		);
 	}
@@ -313,15 +328,17 @@ public class AnalyticsService {
 	}
 
 	/**
-	 * Legacy rows can carry no currency: they were written in the user's currency,
-	 * which is the book's target.
+	 * A snapshot is converted from the currency it was written in, and {@code resolveCurrency}
+	 * already falls back to the asset's own for a row built before persistence. A row that carries
+	 * no currency at all was written in the user's currency, which is the book's target.
 	 */
-	private Currency currencyOf(Asset asset, RateBook book) {
-		return asset.getOriginalCurrency() != null ? asset.getOriginalCurrency() : book.target();
+	private Currency currencyOf(Snapshot snapshot, RateBook book) {
+		Currency currency = snapshot.resolveCurrency();
+		return currency != null ? currency : book.target();
 	}
 
-	private BigDecimal convert(Snapshot snapshot, Asset asset, RateBook book, LocalDate date) {
-		return book.convert(snapshot.getAmountOriginalCurrency(), currencyOf(asset, book), date);
+	private BigDecimal convert(Snapshot snapshot, RateBook book, LocalDate date) {
+		return book.convert(snapshot.getAmountOriginalCurrency(), currencyOf(snapshot, book), date);
 	}
 
 	private Map<UUID, List<Snapshot>> loadSnapshotsByAsset(UUID userId) {
@@ -380,7 +397,6 @@ public class AnalyticsService {
 		BigDecimal total = BigDecimal.ZERO;
 		for (Asset asset : assets) {
 			BigDecimal value = calculateAssetValueAt(
-				asset,
 				snapshotsByAsset.getOrDefault(asset.getId(), List.of()),
 				book,
 				date
@@ -400,12 +416,7 @@ public class AnalyticsService {
 		for (Asset asset : assets) {
 			if (asset.isLiability()) continue;
 			total = total.add(
-				calculateAssetValueAt(
-					asset,
-					snapshotsByAsset.getOrDefault(asset.getId(), List.of()),
-					book,
-					date
-				)
+				calculateAssetValueAt(snapshotsByAsset.getOrDefault(asset.getId(), List.of()), book, date)
 			);
 		}
 		return total;
@@ -421,19 +432,13 @@ public class AnalyticsService {
 		for (Asset asset : assets) {
 			if (!asset.isLiability()) continue;
 			total = total.add(
-				calculateAssetValueAt(
-					asset,
-					snapshotsByAsset.getOrDefault(asset.getId(), List.of()),
-					book,
-					date
-				)
+				calculateAssetValueAt(snapshotsByAsset.getOrDefault(asset.getId(), List.of()), book, date)
 			);
 		}
 		return total;
 	}
 
 	private BigDecimal calculateAssetValueAt(
-		Asset asset,
 		List<Snapshot> snapshots,
 		RateBook book,
 		LocalDate date
@@ -442,7 +447,7 @@ public class AnalyticsService {
 			.stream()
 			.filter(s -> !s.getReferenceDate().isAfter(date))
 			.max(LATEST_AT_DATE)
-			.map(snapshot -> convert(snapshot, asset, book, date))
+			.map(snapshot -> convert(snapshot, book, date))
 			.orElse(BigDecimal.ZERO);
 	}
 
@@ -474,10 +479,13 @@ public class AnalyticsService {
 		for (Asset asset : assets) {
 			if (asset.isLiability()) continue;
 			List<Snapshot> snapshots = snapshotsByAsset.getOrDefault(asset.getId(), List.of());
-			Optional<Snapshot> latest = snapshots.stream().max(LATEST_AT_DATE);
+			Optional<Snapshot> latest = snapshots
+				.stream()
+				.filter(s -> !s.getReferenceDate().isAfter(asOf))
+				.max(LATEST_AT_DATE);
 			if (latest.isPresent()) {
 				String category = asset.getCategory() != null ? asset.getCategory().getName() : "Other";
-				BigDecimal value = convert(latest.get(), asset, book, asOf).abs();
+				BigDecimal value = convert(latest.get(), book, asOf).abs();
 				categoryValues.merge(category, value, BigDecimal::add);
 				totalAbsoluteValue = totalAbsoluteValue.add(value);
 			}
@@ -519,7 +527,9 @@ public class AnalyticsService {
 				.max(LATEST_AT_DATE);
 
 			if (snapshotEnd.isPresent() && snapshotStart.isPresent()) {
-				Currency currency = currencyOf(asset, book);
+				// Both the amount and the rate delta come from the start row's own currency: mixing
+				// the asset's current currency into this term measures nothing.
+				Currency currency = currencyOf(snapshotStart.get(), book);
 				BigDecimal startAmount = snapshotStart.get().getAmountOriginalCurrency();
 				BigDecimal rateDelta = book.rate(currency, end).subtract(book.rate(currency, start));
 				// A debt whose currency appreciates is a loss, so its term carries the opposite sign.
@@ -537,11 +547,14 @@ public class AnalyticsService {
 		RateBook book,
 		LocalDate asOf
 	) {
+		// Only rows at or before the as-of date can describe today, so a future-dated valuation
+		// never becomes the current value or the previous one the trend is computed against.
 		Map<UUID, List<Snapshot>> latestTwoByAsset = new HashMap<>();
 		for (Map.Entry<UUID, List<Snapshot>> entry : snapshotsByAsset.entrySet()) {
 			List<Snapshot> sorted = entry
 				.getValue()
 				.stream()
+				.filter(s -> !s.getReferenceDate().isAfter(asOf))
 				.sorted(LATEST_AT_DATE.reversed())
 				.limit(2)
 				.toList();
@@ -553,14 +566,12 @@ public class AnalyticsService {
 			.filter(a -> !a.isLiability())
 			.sorted((a, b) -> {
 				BigDecimal valA = latestValue(
-					a,
-					snapshotsByAsset.getOrDefault(a.getId(), List.of()),
+					latestTwoByAsset.getOrDefault(a.getId(), List.of()),
 					book,
 					asOf
 				).abs();
 				BigDecimal valB = latestValue(
-					b,
-					snapshotsByAsset.getOrDefault(b.getId(), List.of()),
+					latestTwoByAsset.getOrDefault(b.getId(), List.of()),
 					book,
 					asOf
 				).abs();
@@ -573,16 +584,15 @@ public class AnalyticsService {
 			.toList();
 	}
 
-	private BigDecimal latestValue(
-		Asset asset,
-		List<Snapshot> snapshots,
-		RateBook book,
-		LocalDate date
-	) {
+	/**
+	 * The caller hands over rows already filtered at or before the date, so this only picks the
+	 * latest one — the same rule {@code LATEST_AT_DATE} already encodes.
+	 */
+	private BigDecimal latestValue(List<Snapshot> snapshots, RateBook book, LocalDate date) {
 		return snapshots
 			.stream()
 			.max(LATEST_AT_DATE)
-			.map(snapshot -> convert(snapshot, asset, book, date))
+			.map(snapshot -> convert(snapshot, book, date))
 			.orElse(BigDecimal.ZERO);
 	}
 

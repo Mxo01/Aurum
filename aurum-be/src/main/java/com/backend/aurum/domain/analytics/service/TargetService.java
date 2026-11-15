@@ -21,19 +21,14 @@ public class TargetService {
 
 	private final TargetRepository targetRepository;
 
-	public List<Target> findAll(UUID userId, BigDecimal netWorth) {
-		log.debug(
-			"TargetService#findAll - Fetching targets for userId={}, currentNetWorth={}",
-			userId,
-			netWorth
-		);
+	public List<Target> findAll(UUID userId) {
+		log.debug("TargetService#findAll - Fetching targets for userId={}", userId);
 		List<Target> targets = targetRepository.findByUserId(userId);
 		log.debug("TargetService#findAll - Found {} target(s) for userId={}", targets.size(), userId);
-		targets.forEach(t -> checkAndSyncCompletion(t, netWorth));
 		return targets;
 	}
 
-	public Target findById(UUID id, BigDecimal netWorth) {
+	public Target findById(UUID id) {
 		log.debug("TargetService#findById - Looking up targetId={}", id);
 		Target target = targetRepository
 			.findById(Objects.requireNonNull(id))
@@ -41,7 +36,6 @@ public class TargetService {
 				log.warn("TargetService#findById - Target not found: targetId={}", id);
 				return new RuntimeException("Target not found");
 			});
-		checkAndSyncCompletion(target, netWorth);
 		return target;
 	}
 

@@ -52,8 +52,10 @@ class AssetFacadeTest {
 
 	private static final Currency USER_CURRENCY = Currency.USD;
 	private static final Currency ASSET_CURRENCY = Currency.EUR;
+	private static final Currency CHANGED_ASSET_CURRENCY = Currency.CHF;
 	private static final LocalDate TODAY = LocalDate.of(2026, 6, 15);
 	private static final LocalDate SNAPSHOT_DATE = LocalDate.of(2026, 5, 31);
+	private static final LocalDate PREVIOUS_SNAPSHOT_DATE = LocalDate.of(2026, 4, 30);
 	private static final BigDecimal RATE_TO_USER_CURRENCY = new BigDecimal("1.5");
 	private static final BigDecimal AMOUNT = new BigDecimal("100");
 	private static final String STORED_NAME = "Persisted asset";
@@ -101,7 +103,7 @@ class AssetFacadeTest {
 		// GIVEN
 		UUID mockAssetId = UUID.randomUUID();
 		UUID mockUserId = UUID.randomUUID();
-		Asset mockAsset = buildAsset(List.of(buildSnapshot(SNAPSHOT_DATE)));
+		Asset mockAsset = buildAsset(List.of(buildSnapshot(SNAPSHOT_DATE, ASSET_CURRENCY)));
 		AssetDTO stubbedDto = Instancio.create(AssetDTO.class);
 		RateBook book = stubBook(ASSET_CURRENCY, USER_CURRENCY, List.of(SNAPSHOT_DATE));
 		stubUserCurrency(mockUserId, USER_CURRENCY);
@@ -123,7 +125,10 @@ class AssetFacadeTest {
 		// GIVEN
 		UUID mockAssetId = UUID.randomUUID();
 		UUID mockUserId = UUID.randomUUID();
-		Asset mockAsset = buildAsset(List.of(buildSnapshot(SNAPSHOT_DATE)), USER_CURRENCY);
+		Asset mockAsset = buildAsset(
+			List.of(buildSnapshot(SNAPSHOT_DATE, USER_CURRENCY)),
+			USER_CURRENCY
+		);
 		AssetDTO stubbedDto = Instancio.create(AssetDTO.class);
 		RateBook book = stubBook(USER_CURRENCY, USER_CURRENCY, List.of(SNAPSHOT_DATE));
 		stubUserCurrency(mockUserId, USER_CURRENCY);
@@ -148,7 +153,57 @@ class AssetFacadeTest {
 			.set(Select.field(Asset::getSnapshots), null)
 			.create();
 		AssetDTO stubbedDto = Instancio.create(AssetDTO.class);
-		RateBook book = bookWithoutRates(ASSET_CURRENCY, USER_CURRENCY, List.of());
+		RateBook book = emptyBook(USER_CURRENCY, List.of());
+		stubUserCurrency(mockUserId, USER_CURRENCY);
+		when(assetService.findById(mockAssetId, mockUserId)).thenReturn(mockAsset);
+		when(mapper.toDto(mockAsset, book)).thenReturn(stubbedDto);
+
+		// WHEN
+		AssetDTO expectedDto = testSubject.getAsset(mockAssetId, mockUserId);
+
+		// THEN
+		assertThat(expectedDto).isEqualTo(stubbedDto);
+	}
+
+	@Test
+	void getAsset_booksTheRowCurrency_whenTheAssetCurrencyChangedSince() {
+		// GIVEN
+		UUID mockAssetId = UUID.randomUUID();
+		UUID mockUserId = UUID.randomUUID();
+		Snapshot mockSnapshot = buildSnapshot(SNAPSHOT_DATE, ASSET_CURRENCY);
+		Asset mockAsset = buildAsset(List.of(mockSnapshot), CHANGED_ASSET_CURRENCY);
+		AssetDTO stubbedDto = Instancio.create(AssetDTO.class);
+		RateBook book = stubBook(ASSET_CURRENCY, USER_CURRENCY, List.of(SNAPSHOT_DATE));
+		stubUserCurrency(mockUserId, USER_CURRENCY);
+		when(assetService.findById(mockAssetId, mockUserId)).thenReturn(mockAsset);
+		when(mapper.toDto(mockAsset, book)).thenReturn(stubbedDto);
+
+		// WHEN
+		AssetDTO expectedDto = testSubject.getAsset(mockAssetId, mockUserId);
+
+		// THEN
+		assertThat(expectedDto).isEqualTo(stubbedDto);
+		assertThat(mockAsset.getOriginalCurrency()).isEqualTo(CHANGED_ASSET_CURRENCY);
+		assertThat(mockSnapshot.getCurrency()).isEqualTo(ASSET_CURRENCY);
+		assertThat(book.convert(AMOUNT, ASSET_CURRENCY, SNAPSHOT_DATE)).isEqualByComparingTo(
+			AMOUNT.multiply(RATE_TO_USER_CURRENCY)
+		);
+	}
+
+	@Test
+	void getAsset_skipsRowsThatResolveNoCurrency_whenTheBookIsBuilt() {
+		// GIVEN
+		UUID mockAssetId = UUID.randomUUID();
+		UUID mockUserId = UUID.randomUUID();
+		Asset mockAsset = Instancio.of(Asset.class)
+			.set(Select.field(Asset::getOriginalCurrency), ASSET_CURRENCY)
+			.set(
+				Select.field(Asset::getSnapshots),
+				new ArrayList<>(List.of(buildSnapshotWithoutCurrency(SNAPSHOT_DATE)))
+			)
+			.create();
+		AssetDTO stubbedDto = Instancio.create(AssetDTO.class);
+		RateBook book = emptyBook(USER_CURRENCY, List.of(SNAPSHOT_DATE));
 		stubUserCurrency(mockUserId, USER_CURRENCY);
 		when(assetService.findById(mockAssetId, mockUserId)).thenReturn(mockAsset);
 		when(mapper.toDto(mockAsset, book)).thenReturn(stubbedDto);
@@ -181,7 +236,7 @@ class AssetFacadeTest {
 		UUID mockUserId = UUID.randomUUID();
 		CreateAssetDTO mockDto = Instancio.create(CreateAssetDTO.class);
 		Asset mockAsset = buildAsset(List.of());
-		Asset mockSaved = buildAsset(List.of(buildSnapshot(SNAPSHOT_DATE)));
+		Asset mockSaved = buildAsset(List.of(buildSnapshot(SNAPSHOT_DATE, ASSET_CURRENCY)));
 		AssetDTO stubbedDto = Instancio.create(AssetDTO.class);
 		RateBook book = stubBook(ASSET_CURRENCY, USER_CURRENCY, List.of(SNAPSHOT_DATE));
 		stubUserCurrency(mockUserId, USER_CURRENCY);
@@ -206,7 +261,7 @@ class AssetFacadeTest {
 		UUID mockUserId = UUID.randomUUID();
 		UpdateAssetDTO mockDto = Instancio.create(UpdateAssetDTO.class);
 		AssetUpdate mockUpdate = buildUpdate();
-		Asset mockUpdated = buildAsset(List.of(buildSnapshot(SNAPSHOT_DATE)));
+		Asset mockUpdated = buildAsset(List.of(buildSnapshot(SNAPSHOT_DATE, ASSET_CURRENCY)));
 		AssetDTO stubbedDto = Instancio.create(AssetDTO.class);
 		RateBook book = stubBook(ASSET_CURRENCY, USER_CURRENCY, List.of(SNAPSHOT_DATE));
 		stubUserCurrency(mockUserId, USER_CURRENCY);
@@ -230,7 +285,10 @@ class AssetFacadeTest {
 		UpdateAssetDTO mockDto = Instancio.create(UpdateAssetDTO.class);
 		AssetUpdate mockUpdate = buildUpdate();
 		Asset mockUpdated = buildAsset(List.of());
-		List<Snapshot> stubbedSnapshots = Instancio.ofList(Snapshot.class).size(2).create();
+		List<Snapshot> stubbedSnapshots = List.of(
+			buildSnapshot(SNAPSHOT_DATE, ASSET_CURRENCY),
+			buildSnapshot(PREVIOUS_SNAPSHOT_DATE, ASSET_CURRENCY)
+		);
 		AssetDTO stubbedDto = Instancio.create(AssetDTO.class);
 		RateBook book = stubBook(ASSET_CURRENCY, USER_CURRENCY, List.of(TODAY));
 		stubToday();
@@ -277,7 +335,7 @@ class AssetFacadeTest {
 			.create();
 		UpdateAssetDTO mockDto = new UpdateAssetDTO();
 		mockDto.setName(UPDATED_NAME);
-		RateBook book = bookWithoutRates(ASSET_CURRENCY, USER_CURRENCY, List.of());
+		RateBook book = emptyBook(USER_CURRENCY, List.of());
 		when(userRepository.findById(mockUserId)).thenReturn(Optional.of(mockUser));
 		when(assetRepository.findById(mockAssetId)).thenReturn(Optional.of(mockStoredAsset));
 		when(snapshotRepository.existsByAssetId(mockAssetId)).thenReturn(true);
@@ -303,7 +361,7 @@ class AssetFacadeTest {
 		UUID mockUserId = UUID.randomUUID();
 		Asset mockFirstAsset = buildAsset(List.of());
 		Asset mockSecondAsset = buildAsset(List.of());
-		Snapshot mockFirstSnapshot = buildSnapshot(SNAPSHOT_DATE, mockFirstAsset);
+		Snapshot mockFirstSnapshot = buildSnapshot(SNAPSHOT_DATE, mockFirstAsset, ASSET_CURRENCY);
 		AssetDTO stubbedFirstDto = Instancio.create(AssetDTO.class);
 		AssetDTO stubbedSecondDto = Instancio.create(AssetDTO.class);
 		RateBook book = stubBook(ASSET_CURRENCY, USER_CURRENCY, List.of(TODAY));
@@ -327,6 +385,36 @@ class AssetFacadeTest {
 			USER_CURRENCY,
 			List.of(ASSET_CURRENCY),
 			List.of(TODAY)
+		);
+	}
+
+	@Test
+	void getAllAssets_booksTheRowCurrencies_whenTheAssetCurrencyChangedSince() {
+		// GIVEN
+		UUID mockUserId = UUID.randomUUID();
+		Asset mockAsset = buildAsset(List.of(), CHANGED_ASSET_CURRENCY);
+		Snapshot mockLatestSnapshot = buildSnapshot(SNAPSHOT_DATE, mockAsset, ASSET_CURRENCY);
+		AssetDTO stubbedDto = Instancio.create(AssetDTO.class);
+		RateBook book = stubBook(ASSET_CURRENCY, USER_CURRENCY, List.of(TODAY));
+		stubToday();
+		stubUserCurrency(mockUserId, USER_CURRENCY);
+		when(assetService.findAll(mockUserId)).thenReturn(List.of(mockAsset));
+		when(snapshotRepository.findByAssetUserIdOrderByReferenceDateDesc(mockUserId)).thenReturn(
+			List.of(mockLatestSnapshot)
+		);
+		when(mapper.toDtoLight(mockAsset, List.of(mockLatestSnapshot), book, TODAY)).thenReturn(
+			stubbedDto
+		);
+
+		// WHEN
+		List<AssetDTO> expectedDtos = testSubject.getAllAssets(mockUserId);
+
+		// THEN
+		assertThat(expectedDtos).containsExactly(stubbedDto);
+		assertThat(mockAsset.getOriginalCurrency()).isEqualTo(CHANGED_ASSET_CURRENCY);
+		assertThat(mockLatestSnapshot.getCurrency()).isEqualTo(ASSET_CURRENCY);
+		assertThat(book.convert(AMOUNT, ASSET_CURRENCY, TODAY)).isEqualByComparingTo(
+			AMOUNT.multiply(RATE_TO_USER_CURRENCY)
 		);
 	}
 
@@ -377,30 +465,26 @@ class AssetFacadeTest {
 	}
 
 	private RateBook stubBook(Currency source, Currency target, List<LocalDate> dates) {
-		if (source != target) {
-			when(bookRateProvider.getRates(source.getValue(), target.getValue(), dates)).thenReturn(
-				Map.of(dates.get(0), RATE_TO_USER_CURRENCY)
+		return stubBook(List.of(source), target, dates);
+	}
+
+	private RateBook stubBook(List<Currency> sources, Currency target, List<LocalDate> dates) {
+		sources
+			.stream()
+			.filter(source -> source != target)
+			.forEach(source ->
+				when(bookRateProvider.getRates(source.getValue(), target.getValue(), dates)).thenReturn(
+					Map.of(dates.get(0), RATE_TO_USER_CURRENCY)
+				)
 			);
-		}
-		RateBook book = new CurrencyConversionService(bookRateProvider).book(
-			target,
-			List.of(source),
-			dates
-		);
-		when(conversionService.book(target, List.of(source), dates)).thenReturn(book);
+		RateBook book = new CurrencyConversionService(bookRateProvider).book(target, sources, dates);
+		when(conversionService.book(target, sources, dates)).thenReturn(book);
 		return book;
 	}
 
-	private RateBook bookWithoutRates(Currency source, Currency target, List<LocalDate> dates) {
-		when(bookRateProvider.getRates(source.getValue(), target.getValue(), dates)).thenReturn(
-			Map.of()
-		);
-		RateBook book = new CurrencyConversionService(bookRateProvider).book(
-			target,
-			List.of(source),
-			dates
-		);
-		when(conversionService.book(target, List.of(source), dates)).thenReturn(book);
+	private RateBook emptyBook(Currency target, List<LocalDate> dates) {
+		RateBook book = new CurrencyConversionService(bookRateProvider).book(target, List.of(), dates);
+		when(conversionService.book(target, List.of(), dates)).thenReturn(book);
 		return book;
 	}
 
@@ -428,16 +512,19 @@ class AssetFacadeTest {
 			.create();
 	}
 
-	private Snapshot buildSnapshot(LocalDate referenceDate) {
-		return Instancio.of(Snapshot.class)
-			.set(Select.field(Snapshot::getReferenceDate), referenceDate)
-			.create();
+	private Snapshot buildSnapshot(LocalDate referenceDate, Currency rowCurrency) {
+		return buildSnapshot(referenceDate, null, rowCurrency);
 	}
 
-	private Snapshot buildSnapshot(LocalDate referenceDate, Asset asset) {
+	private Snapshot buildSnapshot(LocalDate referenceDate, Asset asset, Currency rowCurrency) {
 		return Instancio.of(Snapshot.class)
 			.set(Select.field(Snapshot::getAsset), asset)
 			.set(Select.field(Snapshot::getReferenceDate), referenceDate)
+			.set(Select.field(Snapshot::getCurrency), rowCurrency)
 			.create();
+	}
+
+	private Snapshot buildSnapshotWithoutCurrency(LocalDate referenceDate) {
+		return buildSnapshot(referenceDate, null, null);
 	}
 }

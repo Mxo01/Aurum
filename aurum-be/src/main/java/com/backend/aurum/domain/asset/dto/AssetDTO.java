@@ -52,10 +52,16 @@ public class AssetDTO {
 	private BigDecimal latestValue;
 
 	@Schema(nullable = true)
+	private Currency latestValueCurrency;
+
+	@Schema(nullable = true)
 	private BigDecimal latestValueBase;
 
 	@Schema(nullable = true)
 	private BigDecimal previousValue;
+
+	@Schema(nullable = true)
+	private Currency previousValueCurrency;
 
 	@Schema(nullable = true)
 	private BigDecimal initialValue;

@@ -9,6 +9,7 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
 
+import com.backend.aurum.domain.shared.currency.RateBook;
 import com.backend.aurum.domain.shared.exception.ExchangeRateUnavailableException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -30,6 +31,13 @@ class ExchangeRateServiceTest {
 	private static final LocalDate REQUESTED_DATE = LocalDate.of(2026, 11, 14);
 	private static final LocalDate QUOTED_DATE = LocalDate.of(2026, 11, 10);
 	private static final LocalDate LATER_QUOTED_DATE = LocalDate.of(2026, 11, 20);
+	private static final LocalDate OLDEST_ACCEPTED_QUOTE_DATE = REQUESTED_DATE.minusDays(
+		RateBook.MAX_RATE_AGE_DAYS
+	);
+	private static final LocalDate STALE_QUOTE_DATE = REQUESTED_DATE.minusDays(
+		RateBook.MAX_RATE_AGE_DAYS + 1
+	);
+	private static final String STALE_QUOTE_MESSAGE = "is stale";
 	private static final BigDecimal EARLIER_RATE = new BigDecimal("1.1900");
 	private static final BigDecimal REQUESTED_RATE = new BigDecimal("1.1968");
 	private static final String RATES_FIELD = "rates";
@@ -116,6 +124,17 @@ class ExchangeRateServiceTest {
 		assertThatThrownBy(() ->
 			testSubject.getRate(FROM_CURRENCY, TO_CURRENCY, REQUESTED_DATE)
 		).isInstanceOf(ExchangeRateUnavailableException.class);
+	}
+
+	@Test
+	void getRate_throwsUnavailable_whenTheOnlyQuoteIsStale() {
+		// GIVEN
+		stubProviderResponse(stubbedResponse(STALE_QUOTE_DATE, EARLIER_RATE));
+
+		// WHEN / THEN
+		assertThatThrownBy(() -> testSubject.getRate(FROM_CURRENCY, TO_CURRENCY, REQUESTED_DATE))
+			.isInstanceOf(ExchangeRateUnavailableException.class)
+			.hasMessageContaining(STALE_QUOTE_MESSAGE);
 	}
 
 	@Test
@@ -262,6 +281,35 @@ class ExchangeRateServiceTest {
 		assertThatThrownBy(() ->
 			testSubject.getRates(FROM_CURRENCY, TO_CURRENCY, List.of(REQUESTED_DATE))
 		).isInstanceOf(ExchangeRateUnavailableException.class);
+	}
+
+	@Test
+	void getRates_acceptsAQuoteExactlySevenDaysOlder() {
+		// GIVEN
+		stubProviderResponse(stubbedResponse(OLDEST_ACCEPTED_QUOTE_DATE, EARLIER_RATE));
+
+		// WHEN
+		Map<LocalDate, BigDecimal> expectedRates = testSubject.getRates(
+			FROM_CURRENCY,
+			TO_CURRENCY,
+			List.of(REQUESTED_DATE)
+		);
+
+		// THEN
+		assertThat(expectedRates.get(REQUESTED_DATE)).isEqualByComparingTo(EARLIER_RATE);
+	}
+
+	@Test
+	void getRates_throwsUnavailable_whenAQuoteIsEightDaysOlder() {
+		// GIVEN
+		stubProviderResponse(stubbedResponse(STALE_QUOTE_DATE, EARLIER_RATE));
+
+		// WHEN / THEN
+		assertThatThrownBy(() ->
+			testSubject.getRates(FROM_CURRENCY, TO_CURRENCY, List.of(REQUESTED_DATE))
+		)
+			.isInstanceOf(ExchangeRateUnavailableException.class)
+			.hasMessageContaining(STALE_QUOTE_MESSAGE);
 	}
 
 	@Test

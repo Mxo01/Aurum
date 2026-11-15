@@ -15,6 +15,13 @@ import java.util.NavigableMap;
  */
 public final class RateBook {
 
+	/**
+	 * How far before the requested date a quote may be reused. Past this window
+	 * the quote is stale and the request fails instead of returning a number
+	 * nobody can trust.
+	 */
+	public static final int MAX_RATE_AGE_DAYS = 7;
+
 	private static final int AMOUNT_SCALE = 4;
 
 	private final Currency target;
@@ -33,8 +40,16 @@ public final class RateBook {
 		if (from == target) return BigDecimal.ONE;
 		NavigableMap<LocalDate, BigDecimal> series = ratesBySource.get(from);
 		Map.Entry<LocalDate, BigDecimal> entry = series == null ? null : series.floorEntry(date);
-		if (entry == null) throw unavailable(from, date);
+		if (entry == null || !isWithinMaxAge(entry.getKey(), date)) throw unavailable(from, date);
 		return entry.getValue();
+	}
+
+	/**
+	 * The single definition of the staleness rule: a quote may serve a requested
+	 * date at most {@link #MAX_RATE_AGE_DAYS} days later.
+	 */
+	public static boolean isWithinMaxAge(LocalDate quoteDate, LocalDate requestedDate) {
+		return !quoteDate.isBefore(requestedDate.minusDays(MAX_RATE_AGE_DAYS));
 	}
 
 	public BigDecimal convert(BigDecimal amount, Currency from, LocalDate date) {
