@@ -68,16 +68,12 @@ jobs:
             ${{ env.IMAGE }}:latest
             ${{ env.IMAGE }}:${{ github.sha }}
 
-      # The fingerprint is the public RSA host key, not a secret: the Go SSH
-      # client prefers rsa-sha2-*, so the RSA key is the one it verifies.
-      # Re-derive before changing: ssh-keyscan -t rsa <host> | ssh-keygen -lf -
       - name: Copy compose file to server
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.HETZNER_HOST }}
           username: ${{ secrets.HETZNER_USER }}
           key: ${{ secrets.HETZNER_SSH_KEY }}
-          fingerprint: SHA256:VJhnXvd0pZ6gY7SIlJRZVUYCPmGXZjQ5z7h6hcHp4ew
           source: docker-compose.prod.yml
           target: /opt/aurum
 
@@ -96,7 +92,6 @@ jobs:
           host: ${{ secrets.HETZNER_HOST }}
           username: ${{ secrets.HETZNER_USER }}
           key: ${{ secrets.HETZNER_SSH_KEY }}
-          fingerprint: SHA256:VJhnXvd0pZ6gY7SIlJRZVUYCPmGXZjQ5z7h6hcHp4ew
           envs: GHCR_TOKEN,GITHUB_OWNER,DEPLOYED_IMAGE,MCP_RESOURCE_URL,MCP_AUDIENCE,MCP_READ_SCOPES,MCP_WRITE_SCOPES,MCP_ALLOWED_ORIGINS
           script: |
             echo "$GHCR_TOKEN" | docker login ghcr.io -u "$(echo $GITHUB_OWNER | tr '[:upper:]' '[:lower:]')" --password-stdin

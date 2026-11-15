@@ -199,7 +199,7 @@ findings, none Critical.
 | AUD-06-3  | No `.dockerignore`: the local PostgreSQL data directory shipped as context   | Medium   | fixed in this batch                   |
 | AUD-06-4  | Deploy was neither verified nor reversible                                  | Medium   | fixed in this batch                   |
 | AUD-06-5  | Actions pinned to mutable tags; no provenance, SBOM or signature            | Medium   | open #100                             |
-| AUD-06-6  | SSH deploy without host-key verification, plus a long-lived PAT on the host  | Medium   | host key fixed in this batch; PAT #102 |
+| AUD-06-6  | SSH deploy without host-key verification, plus a long-lived PAT on the host  | Medium   | open #133 (host key); PAT #102 |
 | AUD-06-7  | The frontend had no security headers, and Caddy does not cover that origin    | Medium   | fixed in this batch + #97             |
 | AUD-06-8  | The application connects to PostgreSQL as the superuser                      | Medium   | open #99                              |
 | AUD-06-9  | Branch protection requires neither E2E nor a pull request                    | Medium   | open #101                             |

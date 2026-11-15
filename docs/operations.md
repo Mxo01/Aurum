@@ -12,7 +12,7 @@ flowchart LR
     C -->|127.0.0.1:8080| B[aurum-be<br/>Spring Boot + MCP]
     B -->|postgres:5432<br/>Docker network| D[(aurum-db<br/>PostgreSQL 17)]
     G[GitHub Actions] -->|build & push| R[(GHCR<br/>aurum-be:sha<br/>+ :latest)]
-    G -->|SSH: scp compose<br/>pin host key<br/>write .env<br/>pull + up --wait| V[Hetzner VPS]
+    G -->|SSH: scp compose<br/>write .env<br/>pull + up --wait| V[Hetzner VPS]
     V --- C
     V --- B
     V --- D
@@ -45,22 +45,17 @@ Guards on the workflow:
 - **Serialised.** Workflow-level `concurrency: deploy-production` with
   `cancel-in-progress: false`: a second deploy queues behind the running one and
   never cancels an `up` halfway.
-- **Pinned host key.** Both SSH steps pass
-  `fingerprint: SHA256:VJhnXvd0pZ6gY7SIlJRZVUYCPmGXZjQ5z7h6hcHp4ew`, so a
-  `known_hosts`-less runner still refuses a host whose key changed. That
-  fingerprint is the public RSA host key, not a secret; it is the same on the IP
-  and on the API hostname. The RSA key is the one the action actually
-  negotiates: the Go SSH client prefers `rsa-sha2-*` over ECDSA and ED25519, so a
-  fingerprint taken from another key type fails with `host key fingerprint
-  mismatch`. Re-derive it before ever changing it:
-
-  ```bash
-  ssh-keyscan -t rsa <host> | ssh-keygen -lf -
-  ```
-
-  The host also publishes ECDSA and ED25519 keys (`ssh-keyscan <host>` lists
-  them); their fingerprints are informational only and are not what the deploy
-  verifies.
+- **Host key not verified.** Both SSH steps accept whatever host key port 22
+  presents: `known_hosts` is empty on the runner and no `fingerprint:` pin is
+  set, so a host with a changed key is not refused. This is tracked in
+  [#133](https://github.com/Mxo01/Aurum/issues/133) and is a known open gap, not
+  a guarantee. A `SHA256:` pin derived with `ssh-keyscan` — from the RSA,
+  ECDSA or ED25519 key alike — could not be made to work from the GitHub
+  runner: the action failed with `host key fingerprint mismatch` on pins that
+  a probe workflow read from the very same host. Verification needs an
+  out-of-band source of truth (the Hetzner console, or a provider-published
+  `known_hosts`), not a key fetched over the connection it is meant to
+  authenticate.
 
 The workflow builds the image, pushes `:latest` and `:<sha>`, copies
 `docker-compose.prod.yml` to `/opt/aurum`, writes `GHCR_IMAGE` (the SHA tag) and
