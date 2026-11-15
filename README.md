@@ -192,10 +192,11 @@ make start    # Postgres in Docker, backend on :8080, frontend on :4200
 make stop
 ```
 
-The backend reads secrets from
-`aurum-be/src/main/resources/application-local.properties` (gitignored, loaded
-by the `local` profile). Copy
-`application-local.properties.example` and fill in the Auth0 values.
+The backend reads secrets from `aurum-be/config/application-local.properties`
+(gitignored, loaded by the `local` profile). `spring-boot:run` reads `config/`
+from the module root when the working directory is `aurum-be`, and the file is
+never packaged into the jar. Copy `application-local.properties.example` there
+and fill in the Auth0 values.
 
 Useful commands:
 

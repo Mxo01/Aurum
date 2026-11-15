@@ -1,0 +1,21 @@
+# Local secrets — never part of the build context
+src/main/resources/application-local.properties
+config/
+.env
+.env.*
+*.pem
+*.key
+
+# Build output and version control
+target/
+.git
+.gitignore
+
+# Local data and tooling
+postgres_data/
+node_modules/
+
+# Editor and OS noise
+.idea/
+.vscode/
+.DS_Store
