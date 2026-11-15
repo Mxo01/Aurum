@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/lib/api/client";
 import { queryKeys } from "@/lib/api/keys";
+import type { ApiErrorBody } from "@/lib/api/types";
 import { env } from "@/lib/env";
 import { buildSnapshot } from "@/test/fixtures/portfolio";
 import { server } from "@/test/msw/server";
@@ -13,11 +14,70 @@ import { useCreateSnapshot, useDeleteSnapshots, useSnapshots } from "./api";
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 const mockAssetId = "a1";
-const mockSnapshot = buildSnapshot({ assetId: mockAssetId });
+const mockSnapshotId = "s1";
+const mockSnapshot = buildSnapshot({ id: mockSnapshotId, assetId: mockAssetId });
+const mockReferenceDate = "2026-11-01";
+const rejectionStatus = 400;
+const rejectionError = "Bad Request";
+const rejectedField = "referenceDate";
+const saveFallback = "Could not save the snapshot";
+const deleteFallback = "Could not delete the snapshots";
 
 function snapshotsUrl() {
 	return `${env.apiUrl}/snapshots`;
 }
+
+function rejectionEnvelope(message: string): ApiErrorBody {
+	return {
+		status: rejectionStatus,
+		error: rejectionError,
+		errors: [{ field: rejectedField, message }]
+	};
+}
+
+function serverAnswer(body?: unknown) {
+	return body === undefined
+		? new HttpResponse(null, { status: rejectionStatus })
+		: HttpResponse.json(body, { status: rejectionStatus });
+}
+
+interface MutationCase {
+	readonly label: string;
+	readonly serverMessage: string;
+	readonly fallback: string;
+	readonly respond: (body?: unknown) => void;
+	readonly mount: () => { trigger: () => void; isError: () => boolean };
+}
+
+const MUTATION_CASES: MutationCase[] = [
+	{
+		label: "save",
+		serverMessage: "The snapshot date cannot be in the future",
+		fallback: saveFallback,
+		respond: body => server.use(http.post(snapshotsUrl(), () => serverAnswer(body))),
+		mount: () => {
+			const { result } = renderHook(() => useCreateSnapshot(), { wrapper: TestProviders });
+			return {
+				trigger: () =>
+					result.current.mutate({ assetId: mockAssetId, referenceDate: mockReferenceDate }),
+				isError: () => result.current.isError
+			};
+		}
+	},
+	{
+		label: "delete",
+		serverMessage: "Keep at least one snapshot for the asset",
+		fallback: deleteFallback,
+		respond: body => server.use(http.delete(`${snapshotsUrl()}/bulk`, () => serverAnswer(body))),
+		mount: () => {
+			const { result } = renderHook(() => useDeleteSnapshots(), { wrapper: TestProviders });
+			return {
+				trigger: () => result.current.mutate({ assetId: mockAssetId, ids: [mockSnapshotId] }),
+				isError: () => result.current.isError
+			};
+		}
+	}
+];
 
 beforeEach(() => {
 	vi.mocked(toast.success).mockClear();
@@ -109,23 +169,6 @@ describe("useCreateSnapshot", () => {
 		});
 		expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: queryKeys.assets });
 	});
-
-	it("should report the failure when the snapshot cannot be saved", async () => {
-		// GIVEN
-		server.use(
-			http.post(snapshotsUrl(), () => HttpResponse.json({ message: "boom" }, { status: 500 }))
-		);
-		const testSubject = () => useCreateSnapshot();
-		const { result } = renderHook(testSubject, { wrapper: TestProviders });
-
-		// WHEN
-		result.current.mutate({ assetId: mockAssetId });
-
-		// THEN
-		await waitFor(() => expect(result.current.isError).toBe(true));
-		expect(toast.error).toHaveBeenCalledWith("Could not save the snapshot");
-		expect(toast.success).not.toHaveBeenCalled();
-	});
 });
 
 describe("useDeleteSnapshots", () => {
@@ -139,7 +182,7 @@ describe("useDeleteSnapshots", () => {
 		});
 
 		// WHEN
-		result.current.mutate({ assetId: mockAssetId, ids: ["s1"] });
+		result.current.mutate({ assetId: mockAssetId, ids: [mockSnapshotId] });
 
 		// THEN
 		await waitFor(() => expect(result.current.isSuccess).toBe(true));
@@ -148,22 +191,39 @@ describe("useDeleteSnapshots", () => {
 		expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["analytics"] });
 		expect(toast.success).toHaveBeenCalledWith("Snapshots deleted");
 	});
+});
 
-	it("should report the failure when the snapshots cannot be deleted", async () => {
-		// GIVEN
-		server.use(
-			http.delete(`${snapshotsUrl()}/bulk`, () =>
-				HttpResponse.json({ message: "boom" }, { status: 500 })
-			)
-		);
-		const testSubject = () => useDeleteSnapshots();
-		const { result } = renderHook(testSubject, { wrapper: TestProviders });
+describe("snapshot mutation toasts", () => {
+	it.each(MUTATION_CASES)(
+		"should show the backend message in the $label toast",
+		async ({ serverMessage, respond, mount }) => {
+			// GIVEN
+			respond(rejectionEnvelope(serverMessage));
+			const mutation = mount();
 
-		// WHEN
-		result.current.mutate({ assetId: mockAssetId, ids: ["s1"] });
+			// WHEN
+			mutation.trigger();
 
-		// THEN
-		await waitFor(() => expect(result.current.isError).toBe(true));
-		expect(toast.error).toHaveBeenCalledWith("Could not delete the snapshots");
-	});
+			// THEN
+			await waitFor(() => expect(mutation.isError()).toBe(true));
+			expect(toast.error).toHaveBeenCalledWith(serverMessage);
+			expect(toast.success).not.toHaveBeenCalled();
+		}
+	);
+
+	it.each(MUTATION_CASES)(
+		"should keep the $label fallback when the response carries no message",
+		async ({ fallback, respond, mount }) => {
+			// GIVEN
+			respond();
+			const mutation = mount();
+
+			// WHEN
+			mutation.trigger();
+
+			// THEN
+			await waitFor(() => expect(mutation.isError()).toBe(true));
+			expect(toast.error).toHaveBeenCalledWith(fallback);
+		}
+	);
 });

@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useApi } from "@/lib/api/api-context";
 import { unwrap } from "@/lib/api/client";
+import { getApiErrorMessage } from "@/lib/api/errors";
 import { queryKeys } from "@/lib/api/keys";
 import type { CreateSnapshotDTO } from "@/lib/api/types";
 
@@ -30,7 +31,7 @@ export function useCreateSnapshot() {
 			void queryClient.invalidateQueries({ queryKey: ["analytics"] });
 			toast.success("Snapshot saved");
 		},
-		onError: () => toast.error("Could not save the snapshot")
+		onError: error => toast.error(getApiErrorMessage(error, "Could not save the snapshot"))
 	});
 }
 
@@ -52,6 +53,6 @@ export function useDeleteSnapshots() {
 			void queryClient.invalidateQueries({ queryKey: ["analytics"] });
 			toast.success("Snapshots deleted");
 		},
-		onError: () => toast.error("Could not delete the snapshots")
+		onError: error => toast.error(getApiErrorMessage(error, "Could not delete the snapshots"))
 	});
 }

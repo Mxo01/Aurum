@@ -4,7 +4,12 @@ import { toast } from "sonner";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/lib/api/client";
 import { queryKeys } from "@/lib/api/keys";
-import type { CreateTargetDTO, UpdateTargetDTO } from "@/lib/api/types";
+import type {
+	ApiErrorBody,
+	ApiErrorDetail,
+	CreateTargetDTO,
+	UpdateTargetDTO
+} from "@/lib/api/types";
 import { env } from "@/lib/env";
 import { buildTarget } from "@/test/fixtures/portfolio";
 import { server } from "@/test/msw/server";
@@ -12,6 +17,11 @@ import { createTestQueryClient, TestProviders } from "@/test/render";
 import { useCreateTarget, useDeleteTarget, useTargets, useUpdateTarget } from "./api";
 
 const TARGET_ID = "11111111-1111-1111-1111-111111111111";
+
+const REJECTION_STATUS = 400;
+const REJECTION_ERROR = "Bad Request";
+const SERVER_MESSAGE = "A target named House already exists";
+const SILENT_FAILURE_STATUS = 500;
 
 function renderWithClient<T>(hook: () => T) {
 	const queryClient = createTestQueryClient();
@@ -24,6 +34,74 @@ function renderWithClient<T>(hook: () => T) {
 		})
 	};
 }
+
+function buildEnvelope(detail: ApiErrorDetail): ApiErrorBody {
+	return { status: REJECTION_STATUS, error: REJECTION_ERROR, errors: [detail] };
+}
+
+interface TargetMutationProbe {
+	readonly mutate: () => void;
+	readonly isError: boolean;
+}
+
+interface TargetMutationCase {
+	readonly label: string;
+	readonly fallback: string;
+	readonly reject: (status: number, body: ApiErrorBody) => void;
+	readonly probe: () => TargetMutationProbe;
+}
+
+function useCreateTargetProbe(): TargetMutationProbe {
+	const mutation = useCreateTarget();
+	const body: CreateTargetDTO = { name: "House", targetAmount: 400000, type: "MANUAL" };
+	return {
+		mutate: () => mutation.mutate(body),
+		isError: mutation.isError
+	};
+}
+
+function useUpdateTargetProbe(): TargetMutationProbe {
+	const mutation = useUpdateTarget();
+	const body: UpdateTargetDTO = { id: TARGET_ID, name: "House", targetAmount: 420000 };
+	return {
+		mutate: () => mutation.mutate({ id: TARGET_ID, body }),
+		isError: mutation.isError
+	};
+}
+
+function useDeleteTargetProbe(): TargetMutationProbe {
+	const mutation = useDeleteTarget();
+	return {
+		mutate: () => mutation.mutate(TARGET_ID),
+		isError: mutation.isError
+	};
+}
+
+const TARGET_MUTATION_CASES: readonly TargetMutationCase[] = [
+	{
+		label: "create",
+		fallback: "Could not create the target",
+		reject: (status, body) =>
+			server.use(http.post(`${env.apiUrl}/targets`, () => HttpResponse.json(body, { status }))),
+		probe: useCreateTargetProbe
+	},
+	{
+		label: "update",
+		fallback: "Could not update the target",
+		reject: (status, body) =>
+			server.use(http.put(`${env.apiUrl}/targets/:id`, () => HttpResponse.json(body, { status }))),
+		probe: useUpdateTargetProbe
+	},
+	{
+		label: "delete",
+		fallback: "Could not delete the target",
+		reject: (status, body) =>
+			server.use(
+				http.delete(`${env.apiUrl}/targets/:id`, () => HttpResponse.json(body, { status }))
+			),
+		probe: useDeleteTargetProbe
+	}
+];
 
 describe("useTargets", () => {
 	it("should expose the targets on success", async () => {
@@ -81,24 +159,6 @@ describe("useCreateTarget", () => {
 		expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: queryKeys.targets });
 		expect(successSpy).toHaveBeenCalledWith("Target created");
 	});
-
-	it("should report the failure", async () => {
-		// GIVEN
-		server.use(
-			http.post(`${env.apiUrl}/targets`, () =>
-				HttpResponse.json({ message: "boom" }, { status: 500 })
-			)
-		);
-		const errorSpy = vi.spyOn(toast, "error");
-		const { result } = renderWithClient(() => useCreateTarget());
-
-		// WHEN
-		result.current.mutate({ name: "House" });
-
-		// THEN
-		await waitFor(() => expect(result.current.isError).toBe(true));
-		expect(errorSpy).toHaveBeenCalledWith("Could not create the target");
-	});
 });
 
 describe("useUpdateTarget", () => {
@@ -129,24 +189,6 @@ describe("useUpdateTarget", () => {
 		expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: queryKeys.targets });
 		expect(successSpy).toHaveBeenCalledWith("Target updated");
 	});
-
-	it("should report the failure", async () => {
-		// GIVEN
-		server.use(
-			http.put(`${env.apiUrl}/targets/:id`, () =>
-				HttpResponse.json({ message: "boom" }, { status: 500 })
-			)
-		);
-		const errorSpy = vi.spyOn(toast, "error");
-		const { result } = renderWithClient(() => useUpdateTarget());
-
-		// WHEN
-		result.current.mutate({ id: TARGET_ID, body: { name: "House" } });
-
-		// THEN
-		await waitFor(() => expect(result.current.isError).toBe(true));
-		expect(errorSpy).toHaveBeenCalledWith("Could not update the target");
-	});
 });
 
 describe("useDeleteTarget", () => {
@@ -173,22 +215,44 @@ describe("useDeleteTarget", () => {
 		expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: queryKeys.targets });
 		expect(successSpy).toHaveBeenCalledWith("Target deleted");
 	});
+});
 
-	it("should report the failure", async () => {
-		// GIVEN
-		server.use(
-			http.delete(`${env.apiUrl}/targets/:id`, () =>
-				HttpResponse.json({ message: "boom" }, { status: 500 })
-			)
-		);
-		const errorSpy = vi.spyOn(toast, "error");
-		const { result } = renderWithClient(() => useDeleteTarget());
+describe("target mutation failures", () => {
+	afterEach(() => vi.restoreAllMocks());
 
-		// WHEN
-		result.current.mutate(TARGET_ID);
+	it.each(TARGET_MUTATION_CASES)(
+		"should show the server sentence on a failed $label",
+		async ({ reject, probe }) => {
+			// GIVEN
+			const errorSpy = vi.spyOn(toast, "error");
+			reject(REJECTION_STATUS, buildEnvelope({ field: "name", message: SERVER_MESSAGE }));
+			const testSubject = probe;
+			const { result } = renderWithClient(testSubject);
 
-		// THEN
-		await waitFor(() => expect(result.current.isError).toBe(true));
-		expect(errorSpy).toHaveBeenCalledWith("Could not delete the target");
-	});
+			// WHEN
+			result.current.mutate();
+
+			// THEN
+			await waitFor(() => expect(result.current.isError).toBe(true));
+			expect(errorSpy).toHaveBeenCalledWith(SERVER_MESSAGE);
+		}
+	);
+
+	it.each(TARGET_MUTATION_CASES)(
+		"should fall back to its own text on a $label without an envelope",
+		async ({ reject, probe, fallback }) => {
+			// GIVEN
+			const errorSpy = vi.spyOn(toast, "error");
+			reject(SILENT_FAILURE_STATUS, {});
+			const testSubject = probe;
+			const { result } = renderWithClient(testSubject);
+
+			// WHEN
+			result.current.mutate();
+
+			// THEN
+			await waitFor(() => expect(result.current.isError).toBe(true));
+			expect(errorSpy).toHaveBeenCalledWith(fallback);
+		}
+	);
 });

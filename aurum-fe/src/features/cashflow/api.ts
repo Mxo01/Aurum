@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useApi } from "@/lib/api/api-context";
 import { unwrap } from "@/lib/api/client";
+import { getApiErrorMessage } from "@/lib/api/errors";
 import { queryKeys } from "@/lib/api/keys";
 import type { CashFlowYearDTO, UpdateCashFlowEntryDTO } from "@/lib/api/types";
 
@@ -51,9 +52,9 @@ export function useUpdateCashflowEntry() {
 
 			return { previous, key };
 		},
-		onError: (_error, _variables, context) => {
+		onError: (error, _variables, context) => {
 			if (context?.previous) queryClient.setQueryData(context.key, context.previous);
-			toast.error("Could not save the entry");
+			toast.error(getApiErrorMessage(error, "Could not save the entry"));
 		},
 		onSettled: (_data, _error, { year }) => {
 			void queryClient.invalidateQueries({ queryKey: queryKeys.cashflow(year) });

@@ -96,7 +96,7 @@ public class TargetService {
 				id,
 				userId
 			);
-			throw new AccessDeniedException("Access denied: Target does not belong to user");
+			throw new AccessDeniedException("This target does not belong to you");
 		}
 
 		return target;

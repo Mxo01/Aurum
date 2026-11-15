@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useApi } from "@/lib/api/api-context";
 import { unwrap } from "@/lib/api/client";
+import { getApiErrorMessage } from "@/lib/api/errors";
 import { queryKeys } from "@/lib/api/keys";
 import type { CreateAssetCategoryDTO, UpdateAssetCategoryDTO } from "@/lib/api/types";
 
@@ -35,7 +36,7 @@ export function useCreateCategory() {
 			invalidate();
 			toast.success("Category created");
 		},
-		onError: () => toast.error("Could not create the category")
+		onError: error => toast.error(getApiErrorMessage(error, "Could not create the category"))
 	});
 }
 
@@ -50,7 +51,7 @@ export function useUpdateCategory() {
 			invalidate();
 			toast.success("Category updated");
 		},
-		onError: () => toast.error("Could not update the category")
+		onError: error => toast.error(getApiErrorMessage(error, "Could not update the category"))
 	});
 }
 
@@ -65,6 +66,6 @@ export function useDeleteCategory() {
 			invalidate();
 			toast.success("Category deleted");
 		},
-		onError: () => toast.error("Could not delete the category")
+		onError: error => toast.error(getApiErrorMessage(error, "Could not delete the category"))
 	});
 }
