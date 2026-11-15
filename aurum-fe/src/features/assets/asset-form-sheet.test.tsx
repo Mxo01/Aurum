@@ -173,8 +173,158 @@ describe("AssetFormSheet", () => {
 
 		// THEN
 		await waitFor(() => expect(updatedBody).toBeDefined());
-		expect(updatedBody).toMatchObject({ name: "Apartment Berlin", categoryId: "c1" });
+		expect(updatedBody).toMatchObject({
+			name: "Apartment Berlin",
+			categoryId: "c1",
+			liabilityType: null
+		});
 	});
+
+	it("should keep the liability block when editing an automatic liability", async () => {
+		// GIVEN
+		let updatedBody: unknown;
+		server.use(
+			http.put(`${env.apiUrl}/assets/:id`, async ({ request }) => {
+				updatedBody = await request.json();
+				return HttpResponse.json(buildAsset());
+			})
+		);
+		const mockLiability = buildAsset({
+			id: "a2",
+			name: "Mortgage",
+			categoryId: "c2",
+			categoryName: "Mortgage",
+			type: "LIABILITY",
+			liabilityType: "AUTOMATIC",
+			paymentFrequency: "MONTHLY",
+			paymentAmount: 500
+		});
+		const testSubject = AssetFormSheet;
+		const Subject = testSubject;
+		renderWithProviders(
+			<Subject
+				open
+				onOpenChange={() => undefined}
+				asset={mockLiability}
+				categories={mockCategories}
+			/>
+		);
+
+		// WHEN
+		await waitFor(() => expect(screen.getByRole("button", { name: "Save changes" })).toBeEnabled());
+		fireEvent.submit(
+			screen.getByRole("button", { name: "Save changes" }).closest("form") as HTMLFormElement
+		);
+
+		// THEN
+		await waitFor(() => expect(updatedBody).toBeDefined());
+		expect(updatedBody).toMatchObject({
+			categoryId: "c2",
+			liabilityType: "AUTOMATIC",
+			paymentFrequency: "MONTHLY",
+			paymentAmount: 500
+		});
+	});
+
+	it("should not clear the liability block when creating an asset", async () => {
+		// GIVEN
+		let postedBody: unknown;
+		server.use(
+			http.post(`${env.apiUrl}/assets`, async ({ request }) => {
+				postedBody = await request.json();
+				return HttpResponse.json(buildAsset());
+			})
+		);
+		const testSubject = AssetFormSheet;
+		const Subject = testSubject;
+		renderWithProviders(
+			<Subject
+				open
+				onOpenChange={() => undefined}
+				asset={null}
+				categories={mockCategories}
+			/>
+		);
+
+		// WHEN
+		const user = userEvent.setup();
+		fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Apartment" } });
+		await user.click(screen.getByLabelText("Category"));
+		await user.click(await screen.findByRole("option", { name: "Investments" }));
+		await waitFor(() => expect(screen.getByRole("button", { name: "Add asset" })).toBeEnabled());
+		fireEvent.submit(
+			screen.getByRole("button", { name: "Add asset" }).closest("form") as HTMLFormElement
+		);
+
+		// THEN
+		await waitFor(() => expect(postedBody).toBeDefined());
+		expect(postedBody).not.toHaveProperty("liabilityType");
+		expect(postedBody).not.toHaveProperty("paymentFrequency");
+		expect(postedBody).not.toHaveProperty("paymentAmount");
+	});
+
+	it("should render nothing while the sheet is closed", () => {
+		// GIVEN
+		const testSubject = AssetFormSheet;
+		const Subject = testSubject;
+
+		// WHEN
+		renderWithProviders(
+			<Subject
+				open={false}
+				onOpenChange={() => undefined}
+				asset={null}
+				categories={mockCategories}
+			/>
+		);
+
+		// THEN
+		expect(screen.queryByRole("heading", { name: "New asset" })).not.toBeInTheDocument();
+	});
+});
+
+describe("AssetFormSheet category groups", () => {
+	const cases = [
+		{
+			description: "only asset categories",
+			categories: [buildCategory({ id: "c1", name: "Investments", type: "ASSET" })],
+			categoryName: "Investments",
+			shownGroup: "Assets",
+			hiddenGroup: "Liabilities"
+		},
+		{
+			description: "only liability categories",
+			categories: [buildCategory({ id: "c2", name: "Mortgage", type: "LIABILITY" })],
+			categoryName: "Mortgage",
+			shownGroup: "Liabilities",
+			hiddenGroup: "Assets"
+		}
+	];
+
+	it.each(cases)(
+		"should list $shownGroup and drop $hiddenGroup with $description",
+		async ({ categories, categoryName, shownGroup, hiddenGroup }) => {
+			// GIVEN
+			const testSubject = AssetFormSheet;
+			const Subject = testSubject;
+			renderWithProviders(
+				<Subject
+					open
+					onOpenChange={() => undefined}
+					asset={null}
+					categories={categories}
+				/>
+			);
+
+			// WHEN
+			await userEvent.click(screen.getByLabelText("Category"));
+			await screen.findByRole("option", { name: categoryName });
+
+			// THEN
+			expect(screen.getByText(shownGroup)).toBeInTheDocument();
+			expect(screen.queryByText(hiddenGroup)).not.toBeInTheDocument();
+		}
+	);
 });
 
 describe("AssetFormSheet details", () => {

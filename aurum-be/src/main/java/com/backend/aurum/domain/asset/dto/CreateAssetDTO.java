@@ -3,6 +3,7 @@ package com.backend.aurum.domain.asset.dto;
 import com.backend.aurum.domain.asset.model.LiabilityType;
 import com.backend.aurum.domain.asset.model.PaymentFrequency;
 import com.backend.aurum.domain.user.enums.Currency;
+import jakarta.validation.constraints.PositiveOrZero;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.UUID;
@@ -19,5 +20,7 @@ public class CreateAssetDTO {
 	private LocalDate referenceDate;
 	private LiabilityType liabilityType;
 	private PaymentFrequency paymentFrequency;
+
+	@PositiveOrZero
 	private BigDecimal paymentAmount;
 }

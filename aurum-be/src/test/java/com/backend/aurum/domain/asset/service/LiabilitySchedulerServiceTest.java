@@ -71,6 +71,14 @@ class LiabilitySchedulerServiceTest {
 	private static final String SUMMARY_LOG_PREFIX =
 		"Automatic liability payment processor completed: ";
 
+	private static final String CLAMPED_LOG_MARKER = "configured per period over";
+
+	private static final String WARN_LEVEL = "WARN";
+
+	private static final BigDecimal LOW_BALANCE = new BigDecimal("100");
+
+	private static final BigDecimal PAYMENT_ABOVE_BALANCE = new BigDecimal("720");
+
 	@Mock
 	private AssetRepository assetRepository;
 
@@ -274,6 +282,14 @@ class LiabilitySchedulerServiceTest {
 	}
 
 	private record ExpectedPayment(LocalDate dueDate, BigDecimal amount) {}
+
+	private static List<String> linesContaining(CapturedOutput output, String marker) {
+		return output
+			.getAll()
+			.lines()
+			.filter(line -> line.contains(marker))
+			.toList();
+	}
 
 	private record PaymentScenario(
 		PaymentFrequency frequency,
@@ -560,6 +576,61 @@ class LiabilitySchedulerServiceTest {
 		);
 		verify(schedulerRunRecorder).fail(stubbedRunId);
 		verify(schedulerRunRecorder, never()).complete(any());
+	}
+
+	@Test
+	void processAutomaticLiabilityPayments_logsTheClampedPaymentAsAWarning(CapturedOutput output) {
+		// GIVEN
+		Asset mockAsset = givenValuatedLiability(
+			PaymentFrequency.MONTHLY,
+			PAYMENT_ABOVE_BALANCE,
+			LOW_BALANCE,
+			LocalDate.of(2026, 3, 20)
+		);
+		givenAutomaticLiabilities(mockAsset);
+
+		// WHEN
+		testSubject.processAutomaticLiabilityPayments();
+
+		// THEN
+		List<String> clampedLines = linesContaining(output, CLAMPED_LOG_MARKER);
+		assertThat(clampedLines).hasSize(1);
+		assertThat(clampedLines.get(0))
+			.contains(WARN_LEVEL)
+			.contains("Automatic liability " + mockAsset.getId() + " applied 100 of the 720");
+		assertThat(output).contains(
+			"Automatic liability " + mockAsset.getId() + " paid 1 period(s) and is settled"
+		);
+		assertThat(output).contains(
+			SUMMARY_LOG_PREFIX + "1 paid, 0 skipped, 0 not due, 0 failed out of 1 total"
+		);
+		assertThat(mockAsset.getSettledAt()).isNotNull();
+	}
+
+	@Test
+	void processAutomaticLiabilityPayments_logsNoWarning_whenThePaymentIsNotClamped(
+		CapturedOutput output
+	) {
+		// GIVEN
+		Asset mockAsset = givenValuatedLiability(
+			PaymentFrequency.MONTHLY,
+			MONTHLY_PAYMENT,
+			LocalDate.of(2026, 3, 20)
+		);
+		givenAutomaticLiabilities(mockAsset);
+
+		// WHEN
+		testSubject.processAutomaticLiabilityPayments();
+
+		// THEN
+		assertThat(linesContaining(output, CLAMPED_LOG_MARKER)).isEmpty();
+		assertThat(linesContaining(output, WARN_LEVEL)).isEmpty();
+		assertThat(output).contains(
+			"Automatic liability " + mockAsset.getId() + " paid 1 period(s); balance 800"
+		);
+		assertThat(output).contains(
+			SUMMARY_LOG_PREFIX + "1 paid, 0 skipped, 0 not due, 0 failed out of 1 total"
+		);
 	}
 
 	@Test

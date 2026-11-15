@@ -1,12 +1,15 @@
 package com.backend.aurum.domain.asset.service;
 
 import com.backend.aurum.domain.asset.model.Asset;
+import com.backend.aurum.domain.asset.model.AssetUpdate;
+import com.backend.aurum.domain.asset.model.LiabilityConfiguration;
 import com.backend.aurum.domain.asset.model.Snapshot;
 import com.backend.aurum.domain.asset.repository.AssetRepository;
 import com.backend.aurum.domain.asset.repository.SnapshotRepository;
 import com.backend.aurum.domain.shared.currency.CurrencyConversionService;
 import com.backend.aurum.domain.shared.exception.AccessDeniedException;
 import com.backend.aurum.domain.shared.exception.NotFoundException;
+import com.backend.aurum.domain.shared.exception.ValidationException;
 import com.backend.aurum.domain.user.enums.Currency;
 import com.backend.aurum.domain.user.model.User;
 import java.math.BigDecimal;
@@ -96,24 +99,35 @@ public class AssetService {
 	}
 
 	@Transactional
-	public Asset update(UUID id, Asset assetDetails, UUID userId) {
+	public Asset update(UUID id, AssetUpdate details, UUID userId) {
 		log.debug("AssetService#update - Updating assetId={} for userId={}", id, userId);
 		Asset asset = findById(id, userId);
-		boolean paymentScheduleChanged = paymentScheduleChanged(asset, assetDetails);
 
-		asset.setName(assetDetails.getName());
-		if (assetDetails.getCategory() != null) {
-			asset.setCategory(assetDetails.getCategory());
-		}
-		asset.setOriginalCurrency(assetDetails.getOriginalCurrency());
-		asset.setUser(assetDetails.getUser());
-		asset.setLiabilityType(assetDetails.getLiabilityType());
-		asset.setPaymentFrequency(assetDetails.getPaymentFrequency());
-		asset.setPaymentAmount(assetDetails.getPaymentAmount());
-		asset.setIsFavorite(Boolean.TRUE.equals(assetDetails.getIsFavorite()));
+		LiabilityConfiguration currentLiability = LiabilityConfiguration.of(asset);
+		LiabilityConfiguration liability = details.liability().orElse(currentLiability);
+		liability.validate();
+		requireSnapshotWhenAutomatic(asset.getId(), liability);
 
 		// A changed payment rule invalidates the persisted schedule: the next run derives it again
 		// instead of paying the old one. A settled liability stays settled.
+		boolean paymentScheduleChanged = !currentLiability.equals(liability);
+
+		if (details.name() != null) {
+			asset.setName(details.name());
+		}
+		details.category().ifPresent(asset::setCategory);
+		if (details.originalCurrency() != null) {
+			asset.setOriginalCurrency(details.originalCurrency());
+		}
+		if (details.isFavorite() != null) {
+			asset.setIsFavorite(details.isFavorite());
+		}
+		if (details.liability().isPresent()) {
+			asset.setLiabilityType(liability.type());
+			asset.setPaymentFrequency(liability.frequency());
+			asset.setPaymentAmount(liability.amount());
+		}
+
 		if (paymentScheduleChanged) {
 			asset.setNextDueDate(null);
 			asset.setPaymentAnchorDay(null);
@@ -141,22 +155,12 @@ public class AssetService {
 		return user != null ? user.getCurrency() : asset.getOriginalCurrency();
 	}
 
-	private boolean paymentScheduleChanged(Asset asset, Asset assetDetails) {
-		return (
-			!Objects.equals(asset.getLiabilityType(), assetDetails.getLiabilityType()) ||
-			!Objects.equals(asset.getPaymentFrequency(), assetDetails.getPaymentFrequency()) ||
-			paymentAmountChanged(asset.getPaymentAmount(), assetDetails.getPaymentAmount())
-		);
-	}
-
-	/**
-	 * Compared by value, not by scale: 200 and 200.00 are the same payment and must not re-derive a
-	 * schedule that is still valid.
-	 */
-	private boolean paymentAmountChanged(BigDecimal current, BigDecimal updated) {
-		if (current == null || updated == null) {
-			return current != updated;
+	private void requireSnapshotWhenAutomatic(UUID assetId, LiabilityConfiguration liability) {
+		if (!liability.isAutomatic() || snapshotRepository.existsByAssetId(assetId)) {
+			return;
 		}
-		return current.compareTo(updated) != 0;
+		throw new ValidationException(
+			"An AUTOMATIC liability requires at least one snapshot before it can be updated"
+		);
 	}
 }

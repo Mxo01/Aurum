@@ -2,6 +2,7 @@ package com.backend.aurum.domain.asset.mapper;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.backend.aurum.domain.asset.dto.AssetDTO;
@@ -10,6 +11,10 @@ import com.backend.aurum.domain.asset.dto.SnapshotDTO;
 import com.backend.aurum.domain.asset.dto.UpdateAssetDTO;
 import com.backend.aurum.domain.asset.model.Asset;
 import com.backend.aurum.domain.asset.model.AssetCategory;
+import com.backend.aurum.domain.asset.model.AssetUpdate;
+import com.backend.aurum.domain.asset.model.LiabilityConfiguration;
+import com.backend.aurum.domain.asset.model.LiabilityType;
+import com.backend.aurum.domain.asset.model.PaymentFrequency;
 import com.backend.aurum.domain.asset.model.Snapshot;
 import com.backend.aurum.domain.asset.repository.AssetCategoryRepository;
 import com.backend.aurum.domain.shared.currency.CurrencyConversionService;
@@ -27,10 +32,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Stream;
 import org.instancio.Instancio;
 import org.instancio.Select;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -45,6 +54,7 @@ class AssetMapperTest {
 	private static final BigDecimal LATEST_AMOUNT = new BigDecimal("500");
 	private static final BigDecimal PREVIOUS_AMOUNT = new BigDecimal("400");
 	private static final BigDecimal CONVERTED_LATEST_AMOUNT = new BigDecimal("750");
+	private static final String UPDATED_ASSET_NAME = "Renamed asset";
 
 	@Mock
 	private AssetCategoryRepository categoryRepository;
@@ -205,145 +215,197 @@ class AssetMapperTest {
 	}
 
 	@Test
-	void toEntity_updateDto_returnsNull_whenDtoIsNull() {
+	void toUpdate_returnsNull_whenDtoIsNull() {
 		// GIVEN / WHEN
-		Asset result = testSubject.toEntity((UpdateAssetDTO) null, UUID.randomUUID());
+		AssetUpdate result = testSubject.toUpdate(null, UUID.randomUUID());
 
 		// THEN
 		assertThat(result).isNull();
 	}
 
 	@Test
-	void toEntity_updateDto_mapsFieldsResolvesUserAndCategory() {
+	void toUpdate_mapsTheBodyYieldingAnEmptyCategoryAndLiabilityIntent() {
+		// GIVEN
+		UpdateAssetDTO mockDto = buildUpdateDto();
+
+		// WHEN
+		AssetUpdate expectedUpdate = testSubject.toUpdate(mockDto, UUID.randomUUID());
+
+		// THEN
+		assertThat(expectedUpdate.name()).isEqualTo(UPDATED_ASSET_NAME);
+		assertThat(expectedUpdate.originalCurrency()).isEqualTo(ASSET_CURRENCY);
+		assertThat(expectedUpdate.isFavorite()).isTrue();
+		assertThat(expectedUpdate.category()).isEmpty();
+		assertThat(expectedUpdate.liability()).isEmpty();
+	}
+
+	@Test
+	void toUpdate_leavesTheCategoryEmpty_withoutTouchingTheRepository_whenTheBodyCarriesNoCategoryId() {
+		// GIVEN
+		UpdateAssetDTO mockDto = buildUpdateDto();
+
+		// WHEN
+		AssetUpdate expectedUpdate = testSubject.toUpdate(mockDto, UUID.randomUUID());
+
+		// THEN
+		assertThat(expectedUpdate.category()).isEmpty();
+		verifyNoInteractions(categoryRepository);
+	}
+
+	@Test
+	void toUpdate_doesNotLookUpTheUser_becauseOwnershipComesFromTheCategory() {
+		// GIVEN
+		UpdateAssetDTO mockDto = buildUpdateDto();
+
+		// WHEN
+		testSubject.toUpdate(mockDto, UUID.randomUUID());
+
+		// THEN
+		verifyNoInteractions(userRepository);
+	}
+
+	@Test
+	void toUpdate_carriesTheCategory_whenItBelongsToTheUser() {
 		// GIVEN
 		UUID mockUserId = UUID.randomUUID();
-		User mockUser = Instancio.of(User.class).set(Select.field(User::getId), mockUserId).create();
+		User mockUser = userWithId(mockUserId);
 		AssetCategory mockCategory = Instancio.of(AssetCategory.class)
-			.set(Select.field(AssetCategory::getUser), null)
+			.set(Select.field(AssetCategory::getUser), mockUser)
 			.create();
-		UpdateAssetDTO mockDto = Instancio.of(UpdateAssetDTO.class)
-			.set(Select.field(UpdateAssetDTO::getCategoryId), mockCategory.getId())
-			.set(Select.field(UpdateAssetDTO::getOriginalCurrency), Currency.USD)
-			.create();
-		when(userRepository.findById(mockUserId)).thenReturn(Optional.of(mockUser));
+		UpdateAssetDTO mockDto = buildUpdateDto();
+		mockDto.setCategoryId(mockCategory.getId());
 		when(categoryRepository.findById(mockCategory.getId())).thenReturn(Optional.of(mockCategory));
 
 		// WHEN
-		Asset result = testSubject.toEntity(mockDto, mockUserId);
+		AssetUpdate expectedUpdate = testSubject.toUpdate(mockDto, mockUserId);
 
 		// THEN
-		assertThat(result.getName()).isEqualTo(mockDto.getName());
-		assertThat(result.getOriginalCurrency()).isEqualTo(Currency.USD);
-		assertThat(result.getUser()).isEqualTo(mockUser);
-		assertThat(result.getCategory()).isEqualTo(mockCategory);
+		assertThat(expectedUpdate.category()).contains(mockCategory);
 	}
 
 	@Test
-	void toEntity_updateDto_appliesDefaults_whenOptionalFieldsAreAbsent() {
+	void toUpdate_acceptsACategoryWithoutAnOwner_whenNoUserIsGiven() {
 		// GIVEN
-		UpdateAssetDTO mockDto = Instancio.of(UpdateAssetDTO.class)
-			.set(Select.field(UpdateAssetDTO::getIsFavorite), null)
-			.set(Select.field(UpdateAssetDTO::getOriginalCurrency), null)
-			.set(Select.field(UpdateAssetDTO::getCategoryId), null)
+		AssetCategory mockCategory = Instancio.of(AssetCategory.class)
+			.set(Select.field(AssetCategory::getUser), null)
 			.create();
+		UpdateAssetDTO mockDto = buildUpdateDto();
+		mockDto.setCategoryId(mockCategory.getId());
+		when(categoryRepository.findById(mockCategory.getId())).thenReturn(Optional.of(mockCategory));
 
 		// WHEN
-		Asset result = testSubject.toEntity(mockDto, null);
+		AssetUpdate expectedUpdate = testSubject.toUpdate(mockDto, null);
 
 		// THEN
-		assertThat(result.getIsFavorite()).isFalse();
-		assertThat(result.getOriginalCurrency()).isEqualTo(Currency.EUR);
-		assertThat(result.getUser()).isNull();
-		assertThat(result.getCategory()).isNull();
+		assertThat(expectedUpdate.category()).contains(mockCategory);
 	}
 
 	@Test
-	void toEntity_updateDto_throwsAccessDeniedException_whenCategoryIsOwned_andNoUserIsGiven() {
+	void toUpdate_throwsNotFoundException_whenTheCategoryDoesNotExist() {
+		// GIVEN
+		UUID mockUserId = UUID.randomUUID();
+		UpdateAssetDTO mockDto = buildUpdateDto();
+		mockDto.setCategoryId(UUID.randomUUID());
+		when(categoryRepository.findById(mockDto.getCategoryId())).thenReturn(Optional.empty());
+
+		// WHEN / THEN
+		assertThatThrownBy(() -> testSubject.toUpdate(mockDto, mockUserId)).isInstanceOf(
+			NotFoundException.class
+		);
+	}
+
+	@Test
+	void toUpdate_throwsAccessDeniedException_whenTheCategoryBelongsToAnotherUser() {
+		// GIVEN
+		UUID mockUserId = UUID.randomUUID();
+		AssetCategory mockCategory = Instancio.of(AssetCategory.class)
+			.set(Select.field(AssetCategory::getUser), userWithId(UUID.randomUUID()))
+			.create();
+		UpdateAssetDTO mockDto = buildUpdateDto();
+		mockDto.setCategoryId(mockCategory.getId());
+		when(categoryRepository.findById(mockCategory.getId())).thenReturn(Optional.of(mockCategory));
+
+		// WHEN / THEN
+		assertThatThrownBy(() -> testSubject.toUpdate(mockDto, mockUserId)).isInstanceOf(
+			AccessDeniedException.class
+		);
+	}
+
+	@Test
+	void toUpdate_throwsAccessDeniedException_whenTheCategoryIsOwned_andNoUserIsGiven() {
 		// GIVEN
 		AssetCategory mockCategory = Instancio.of(AssetCategory.class)
 			.set(Select.field(AssetCategory::getUser), Instancio.create(User.class))
 			.create();
-		UpdateAssetDTO mockDto = Instancio.of(UpdateAssetDTO.class)
-			.set(Select.field(UpdateAssetDTO::getCategoryId), mockCategory.getId())
-			.create();
+		UpdateAssetDTO mockDto = buildUpdateDto();
+		mockDto.setCategoryId(mockCategory.getId());
 		when(categoryRepository.findById(mockCategory.getId())).thenReturn(Optional.of(mockCategory));
 
 		// WHEN / THEN
-		assertThatThrownBy(() -> testSubject.toEntity(mockDto, null)).isInstanceOf(
+		assertThatThrownBy(() -> testSubject.toUpdate(mockDto, null)).isInstanceOf(
 			AccessDeniedException.class
 		);
 	}
 
-	@Test
-	void toEntity_updateDto_acceptsTheCategory_whenItBelongsToTheUser() {
+	@ParameterizedTest(name = "{0}")
+	@MethodSource("liabilityIntentInputs")
+	void toUpdate_mapsTheLiabilityFieldPresenceToTheIntent(
+		String scenario,
+		LiabilityType mockLiabilityType,
+		PaymentFrequency mockPaymentFrequency,
+		BigDecimal mockPaymentAmount,
+		boolean liabilityTypeProvided,
+		boolean expectedLiabilityPresent
+	) {
 		// GIVEN
-		UUID mockUserId = UUID.randomUUID();
-		User mockUser = Instancio.of(User.class).set(Select.field(User::getId), mockUserId).create();
-		AssetCategory mockCategory = Instancio.of(AssetCategory.class)
-			.set(Select.field(AssetCategory::getUser), mockUser)
-			.create();
-		UpdateAssetDTO mockDto = Instancio.of(UpdateAssetDTO.class)
-			.set(Select.field(UpdateAssetDTO::getCategoryId), mockCategory.getId())
-			.create();
-		when(userRepository.findById(mockUserId)).thenReturn(Optional.of(mockUser));
-		when(categoryRepository.findById(mockCategory.getId())).thenReturn(Optional.of(mockCategory));
+		UpdateAssetDTO mockDto = buildUpdateDto();
+		mockDto.setPaymentFrequency(mockPaymentFrequency);
+		mockDto.setPaymentAmount(mockPaymentAmount);
+		if (liabilityTypeProvided) {
+			mockDto.setLiabilityType(mockLiabilityType);
+		}
 
 		// WHEN
-		Asset result = testSubject.toEntity(mockDto, mockUserId);
+		AssetUpdate expectedUpdate = testSubject.toUpdate(mockDto, UUID.randomUUID());
 
 		// THEN
-		assertThat(result.getCategory()).isEqualTo(mockCategory);
+		if (expectedLiabilityPresent) {
+			assertThat(expectedUpdate.liability()).contains(
+				new LiabilityConfiguration(mockLiabilityType, mockPaymentFrequency, mockPaymentAmount)
+			);
+		} else {
+			assertThat(expectedUpdate.liability()).isEmpty();
+		}
 	}
 
-	@Test
-	void toEntity_updateDto_throwsNotFoundException_whenUserNotFound() {
-		// GIVEN
-		UUID mockUserId = UUID.randomUUID();
-		UpdateAssetDTO mockDto = Instancio.create(UpdateAssetDTO.class);
-		when(userRepository.findById(mockUserId)).thenReturn(Optional.empty());
-
-		// WHEN / THEN
-		assertThatThrownBy(() -> testSubject.toEntity(mockDto, mockUserId)).isInstanceOf(
-			NotFoundException.class
-		);
-	}
-
-	@Test
-	void toEntity_updateDto_throwsNotFoundException_whenCategoryNotFound() {
-		// GIVEN
-		UUID mockUserId = UUID.randomUUID();
-		User mockUser = Instancio.create(User.class);
-		UpdateAssetDTO mockDto = Instancio.create(UpdateAssetDTO.class);
-		when(userRepository.findById(mockUserId)).thenReturn(Optional.of(mockUser));
-		when(categoryRepository.findById(mockDto.getCategoryId())).thenReturn(Optional.empty());
-
-		// WHEN / THEN
-		assertThatThrownBy(() -> testSubject.toEntity(mockDto, mockUserId)).isInstanceOf(
-			NotFoundException.class
-		);
-	}
-
-	@Test
-	void toEntity_updateDto_throwsAccessDeniedException_whenCategoryBelongsToDifferentUser() {
-		// GIVEN
-		UUID mockUserId = UUID.randomUUID();
-		UUID otherUserId = UUID.randomUUID();
-		User mockUser = Instancio.of(User.class).set(Select.field(User::getId), mockUserId).create();
-		User mockOtherUser = Instancio.of(User.class)
-			.set(Select.field(User::getId), otherUserId)
-			.create();
-		AssetCategory mockCategory = Instancio.of(AssetCategory.class)
-			.set(Select.field(AssetCategory::getUser), mockOtherUser)
-			.create();
-		UpdateAssetDTO mockDto = Instancio.of(UpdateAssetDTO.class)
-			.set(Select.field(UpdateAssetDTO::getCategoryId), mockCategory.getId())
-			.create();
-		when(userRepository.findById(mockUserId)).thenReturn(Optional.of(mockUser));
-		when(categoryRepository.findById(mockCategory.getId())).thenReturn(Optional.of(mockCategory));
-
-		// WHEN / THEN
-		assertThatThrownBy(() -> testSubject.toEntity(mockDto, mockUserId)).isInstanceOf(
-			AccessDeniedException.class
+	static Stream<Arguments> liabilityIntentInputs() {
+		return Stream.of(
+			Arguments.of("no liability field yields an empty intent", null, null, null, false, false),
+			Arguments.of("an explicit null type yields a present intent", null, null, null, true, true),
+			Arguments.of(
+				"a frequency without a type yields a present intent",
+				null,
+				PaymentFrequency.MONTHLY,
+				null,
+				false,
+				true
+			),
+			Arguments.of(
+				"an amount without a type yields a present intent",
+				null,
+				null,
+				new BigDecimal("250.0000"),
+				false,
+				true
+			),
+			Arguments.of(
+				"a full block yields a present intent",
+				LiabilityType.AUTOMATIC,
+				PaymentFrequency.MONTHLY,
+				new BigDecimal("250.0000"),
+				true,
+				true
+			)
 		);
 	}
 
@@ -525,6 +587,18 @@ class AssetMapperTest {
 
 		// THEN
 		assertThat(result).isNull();
+	}
+
+	private UpdateAssetDTO buildUpdateDto() {
+		UpdateAssetDTO dto = new UpdateAssetDTO();
+		dto.setName(UPDATED_ASSET_NAME);
+		dto.setOriginalCurrency(ASSET_CURRENCY);
+		dto.setIsFavorite(true);
+		return dto;
+	}
+
+	private User userWithId(UUID userId) {
+		return Instancio.of(User.class).set(Select.field(User::getId), userId).create();
 	}
 
 	private RateBook stubBook(Currency source, Currency target, LocalDate date) {

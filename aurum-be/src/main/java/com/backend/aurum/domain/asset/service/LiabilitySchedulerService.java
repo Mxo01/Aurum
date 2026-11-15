@@ -117,6 +117,15 @@ public class LiabilitySchedulerService {
 	}
 
 	private void logPayment(UUID assetId, LiabilityPaymentResult result) {
+		if (result.isClamped()) {
+			log.warn(
+				"Automatic liability {} applied {} of the {} configured per period over {} period(s): the configured payment exceeded the outstanding balance and the closing period was clamped",
+				assetId,
+				result.appliedAmount(),
+				result.configuredPaymentAmount(),
+				result.paymentsApplied()
+			);
+		}
 		if (result.outstandingBalance().signum() == 0) {
 			log.info(
 				"Automatic liability {} paid {} period(s) and is settled",

@@ -73,6 +73,18 @@ class LiabilityPaymentServiceTest {
 
 	private static final LocalDate MONTH_AGO = LocalDate.of(2026, 3, 20);
 
+	private static final LocalDate FUTURE_VALUATION = LocalDate.of(2026, 5, 1);
+
+	private static final LocalDate FUTURE_PERSISTED_DUE_DATE = LocalDate.of(2026, 6, 1);
+
+	private static final BigDecimal LOW_BALANCE = new BigDecimal("100");
+
+	private static final BigDecimal BALANCE_OF_TWO_PERIODS = new BigDecimal("400");
+
+	private static final BigDecimal PAYMENT_ABOVE_BALANCE = new BigDecimal("720");
+
+	private static final BigDecimal CLAMPING_PAYMENT = new BigDecimal("400");
+
 	@Mock
 	private AssetRepository assetRepository;
 
@@ -610,5 +622,187 @@ class LiabilityPaymentServiceTest {
 		assertThat(expectedResult.status()).isEqualTo(LiabilityPaymentStatus.PAID);
 		verifyNoInteractions(exchangeRateProvider);
 		assertScheduledPayments(List.of(payment("2026-04-20", "800")));
+	}
+
+	@Test
+	void pay_reportsTheAppliedAndConfiguredAmount_whenThePeriodIsPaidInFull() {
+		// GIVEN
+		Asset mockAsset = buildLiability(PaymentFrequency.MONTHLY, MONTHLY_PAYMENT);
+		givenLiability(mockAsset);
+		givenPersistedAsset();
+		snapshotTable.seed(buildSnapshot(mockAsset, OUTSTANDING_BALANCE, MONTH_AGO));
+
+		// WHEN
+		LiabilityPaymentResult expectedResult = payQuietly(mockAsset);
+
+		// THEN
+		assertThat(expectedResult.status()).isEqualTo(LiabilityPaymentStatus.PAID);
+		assertThat(expectedResult.appliedAmount()).isEqualByComparingTo(MONTHLY_PAYMENT);
+		assertThat(expectedResult.configuredPaymentAmount()).isEqualByComparingTo(MONTHLY_PAYMENT);
+		assertThat(expectedResult.isClamped()).isFalse();
+	}
+
+	@Test
+	void pay_appliesOnlyTheBalanceAndReportsItClamped_whenThePaymentExceedsIt() {
+		// GIVEN
+		Asset mockAsset = buildLiability(PaymentFrequency.MONTHLY, PAYMENT_ABOVE_BALANCE);
+		givenLiability(mockAsset);
+		givenPersistedAsset();
+		snapshotTable.seed(buildSnapshot(mockAsset, LOW_BALANCE, MONTH_AGO));
+
+		// WHEN
+		LiabilityPaymentResult expectedResult = payQuietly(mockAsset);
+
+		// THEN
+		assertThat(expectedResult.status()).isEqualTo(LiabilityPaymentStatus.PAID);
+		assertThat(expectedResult.paymentsApplied()).isEqualTo(1);
+		assertThat(expectedResult.appliedAmount()).isEqualByComparingTo(LOW_BALANCE);
+		assertThat(expectedResult.configuredPaymentAmount()).isEqualByComparingTo(
+			PAYMENT_ABOVE_BALANCE
+		);
+		assertThat(expectedResult.isClamped()).isTrue();
+		assertThat(expectedResult.outstandingBalance()).isEqualByComparingTo(BigDecimal.ZERO);
+		assertThat(expectedResult.nextDueDate()).isNull();
+		assertScheduledPayments(List.of(payment("2026-04-20", "0")));
+		assertThat(mockAsset.getSettledAt()).isEqualTo(FIXED_NOW);
+		assertThat(mockAsset.getNextDueDate()).isNull();
+		verify(assetRepository).save(mockAsset);
+	}
+
+	@Test
+	void pay_reportsNoClamp_whenTheConfiguredPaymentsClearTheBalanceExactly() {
+		// GIVEN
+		Asset mockAsset = buildLiability(PaymentFrequency.MONTHLY, MONTHLY_PAYMENT);
+		givenLiability(mockAsset);
+		givenPersistedAsset();
+		snapshotTable.seed(buildSnapshot(mockAsset, BALANCE_OF_TWO_PERIODS, THREE_MONTHS_AGO));
+
+		// WHEN
+		LiabilityPaymentResult expectedResult = payQuietly(mockAsset);
+
+		// THEN
+		assertThat(expectedResult.status()).isEqualTo(LiabilityPaymentStatus.PAID);
+		assertThat(expectedResult.paymentsApplied()).isEqualTo(2);
+		assertThat(expectedResult.appliedAmount()).isEqualByComparingTo(BALANCE_OF_TWO_PERIODS);
+		assertThat(expectedResult.configuredPaymentAmount()).isEqualByComparingTo(MONTHLY_PAYMENT);
+		assertThat(expectedResult.isClamped()).isFalse();
+		assertThat(expectedResult.outstandingBalance()).isEqualByComparingTo(BigDecimal.ZERO);
+		assertScheduledPayments(List.of(payment("2026-02-20", "200"), payment("2026-03-20", "0")));
+	}
+
+	@Test
+	void pay_appliesTheConfiguredAmountEachPeriodAndClampsOnlyTheLast_whenSeveralPeriodsAreMissed() {
+		// GIVEN
+		Asset mockAsset = buildLiability(PaymentFrequency.MONTHLY, CLAMPING_PAYMENT);
+		givenLiability(mockAsset);
+		givenPersistedAsset();
+		snapshotTable.seed(buildSnapshot(mockAsset, OUTSTANDING_BALANCE, THREE_MONTHS_AGO));
+
+		// WHEN
+		LiabilityPaymentResult expectedResult = payQuietly(mockAsset);
+
+		// THEN
+		assertThat(expectedResult.status()).isEqualTo(LiabilityPaymentStatus.PAID);
+		assertThat(expectedResult.paymentsApplied()).isEqualTo(3);
+		assertThat(expectedResult.appliedAmount()).isEqualByComparingTo(OUTSTANDING_BALANCE);
+		assertThat(expectedResult.configuredPaymentAmount()).isEqualByComparingTo(CLAMPING_PAYMENT);
+		assertThat(expectedResult.isClamped()).isTrue();
+		assertThat(expectedResult.outstandingBalance()).isEqualByComparingTo(BigDecimal.ZERO);
+		assertScheduledPayments(
+			List.of(
+				payment("2026-02-20", "600"),
+				payment("2026-03-20", "200"),
+				payment("2026-04-20", "0")
+			)
+		);
+	}
+
+	@Test
+	void pay_anchorsTheScheduleOnTheRunDate_whenTheValuationIsDatedAfterIt() {
+		// GIVEN
+		Asset mockAsset = buildLiability(PaymentFrequency.MONTHLY, MONTHLY_PAYMENT);
+		givenLiability(mockAsset);
+		givenPersistedAsset();
+		snapshotTable.seed(buildSnapshot(mockAsset, OUTSTANDING_BALANCE, FUTURE_VALUATION));
+
+		// WHEN
+		LiabilityPaymentResult expectedResult = payQuietly(mockAsset);
+
+		// THEN
+		assertThat(expectedResult.status()).isEqualTo(LiabilityPaymentStatus.PAID);
+		assertThat(expectedResult.paymentsApplied()).isEqualTo(1);
+		assertThat(expectedResult.appliedAmount()).isEqualByComparingTo(MONTHLY_PAYMENT);
+		assertThat(expectedResult.outstandingBalance()).isEqualByComparingTo("800");
+		assertThat(expectedResult.nextDueDate()).isEqualTo(LocalDate.of(2026, 5, 20));
+		assertScheduledPayments(List.of(payment("2026-04-20", "800")));
+		assertThat(mockAsset.getPaymentAnchorDay()).isEqualTo((short) FIXED_TODAY.getDayOfMonth());
+		verify(assetRepository).save(mockAsset);
+	}
+
+	@Test
+	void pay_keepsThePersistedDueDate_whenTheValuationIsDatedAfterIt() {
+		// GIVEN
+		Asset mockAsset = buildLiability(PaymentFrequency.MONTHLY, MONTHLY_PAYMENT);
+		mockAsset.setNextDueDate(LocalDate.of(2026, 4, 10));
+		mockAsset.setPaymentAnchorDay((short) 10);
+		givenLiability(mockAsset);
+		givenPersistedAsset();
+		snapshotTable.seed(buildSnapshot(mockAsset, OUTSTANDING_BALANCE, FUTURE_VALUATION));
+
+		// WHEN
+		LiabilityPaymentResult expectedResult = payQuietly(mockAsset);
+
+		// THEN
+		assertThat(expectedResult.status()).isEqualTo(LiabilityPaymentStatus.PAID);
+		assertThat(expectedResult.paymentsApplied()).isEqualTo(1);
+		assertThat(expectedResult.nextDueDate()).isEqualTo(LocalDate.of(2026, 5, 10));
+		assertScheduledPayments(List.of(payment("2026-04-10", "800")));
+		verify(assetRepository).save(mockAsset);
+	}
+
+	@Test
+	void pay_reAnchorsTheScheduleOnTheRunDate_whenThePersistedDueDateCameFromAFutureValuation() {
+		// GIVEN
+		Asset mockAsset = buildLiability(PaymentFrequency.MONTHLY, MONTHLY_PAYMENT);
+		mockAsset.setNextDueDate(FUTURE_PERSISTED_DUE_DATE);
+		mockAsset.setPaymentAnchorDay((short) FUTURE_PERSISTED_DUE_DATE.getDayOfMonth());
+		givenLiability(mockAsset);
+		givenPersistedAsset();
+		snapshotTable.seed(buildSnapshot(mockAsset, OUTSTANDING_BALANCE, FUTURE_VALUATION));
+
+		// WHEN
+		LiabilityPaymentResult expectedResult = payQuietly(mockAsset);
+
+		// THEN
+		LocalDate expectedNextDueDate = LocalDate.of(2026, 5, 1);
+		assertThat(expectedResult.status()).isEqualTo(LiabilityPaymentStatus.PAID);
+		assertThat(expectedResult.paymentsApplied()).isEqualTo(1);
+		assertThat(expectedResult.appliedAmount()).isEqualByComparingTo(MONTHLY_PAYMENT);
+		assertThat(expectedResult.outstandingBalance()).isEqualByComparingTo("800");
+		assertThat(expectedResult.nextDueDate()).isAfter(FIXED_TODAY);
+		assertThat(expectedResult.nextDueDate()).isEqualTo(expectedNextDueDate);
+		assertThat(mockAsset.getNextDueDate()).isEqualTo(expectedNextDueDate);
+		assertScheduledPayments(List.of(payment("2026-04-20", "800")));
+		verify(assetRepository).save(mockAsset);
+	}
+
+	@Test
+	void pay_keepsThePersistedDueDate_whenTheValuationIsNotInTheFuture() {
+		// GIVEN
+		Asset mockAsset = buildLiability(PaymentFrequency.MONTHLY, MONTHLY_PAYMENT);
+		mockAsset.setNextDueDate(FUTURE_PERSISTED_DUE_DATE);
+		mockAsset.setPaymentAnchorDay((short) FUTURE_PERSISTED_DUE_DATE.getDayOfMonth());
+		givenLiability(mockAsset);
+		snapshotTable.seed(buildSnapshot(mockAsset, OUTSTANDING_BALANCE, MONTH_AGO));
+
+		// WHEN
+		LiabilityPaymentResult expectedResult = payQuietly(mockAsset);
+
+		// THEN
+		assertThat(expectedResult.status()).isEqualTo(LiabilityPaymentStatus.NOT_DUE);
+		assertThat(expectedResult.nextDueDate()).isEqualTo(FUTURE_PERSISTED_DUE_DATE);
+		assertThat(mockAsset.getNextDueDate()).isEqualTo(FUTURE_PERSISTED_DUE_DATE);
+		assertThat(snapshotTable.scheduledRows()).isEmpty();
+		verify(assetRepository, never()).save(any(Asset.class));
 	}
 }

@@ -11,8 +11,15 @@ import com.backend.aurum.domain.asset.dto.AssetDTO;
 import com.backend.aurum.domain.asset.dto.CreateAssetDTO;
 import com.backend.aurum.domain.asset.dto.UpdateAssetDTO;
 import com.backend.aurum.domain.asset.mapper.AssetMapper;
+import com.backend.aurum.domain.asset.mapper.SnapshotMapper;
 import com.backend.aurum.domain.asset.model.Asset;
+import com.backend.aurum.domain.asset.model.AssetCategory;
+import com.backend.aurum.domain.asset.model.AssetUpdate;
+import com.backend.aurum.domain.asset.model.LiabilityType;
+import com.backend.aurum.domain.asset.model.PaymentFrequency;
 import com.backend.aurum.domain.asset.model.Snapshot;
+import com.backend.aurum.domain.asset.repository.AssetCategoryRepository;
+import com.backend.aurum.domain.asset.repository.AssetRepository;
 import com.backend.aurum.domain.asset.repository.SnapshotRepository;
 import com.backend.aurum.domain.asset.service.AssetService;
 import com.backend.aurum.domain.asset.validation.AssetValidationService;
@@ -49,12 +56,25 @@ class AssetFacadeTest {
 	private static final LocalDate SNAPSHOT_DATE = LocalDate.of(2026, 5, 31);
 	private static final BigDecimal RATE_TO_USER_CURRENCY = new BigDecimal("1.5");
 	private static final BigDecimal AMOUNT = new BigDecimal("100");
+	private static final String STORED_NAME = "Persisted asset";
+	private static final String UPDATED_NAME = "Renamed asset";
+	private static final PaymentFrequency STORED_PAYMENT_FREQUENCY = PaymentFrequency.MONTHLY;
+	private static final BigDecimal STORED_PAYMENT_AMOUNT = new BigDecimal("200.00");
 
 	@Mock
 	private AssetService assetService;
 
 	@Mock
 	private AssetMapper mapper;
+
+	@Mock
+	private AssetRepository assetRepository;
+
+	@Mock
+	private AssetCategoryRepository categoryRepository;
+
+	@Mock
+	private SnapshotMapper snapshotMapper;
 
 	@Mock
 	private AssetValidationService validationService;
@@ -185,13 +205,13 @@ class AssetFacadeTest {
 		UUID mockId = UUID.randomUUID();
 		UUID mockUserId = UUID.randomUUID();
 		UpdateAssetDTO mockDto = Instancio.create(UpdateAssetDTO.class);
-		Asset mockDetails = buildAsset(List.of());
+		AssetUpdate mockUpdate = buildUpdate();
 		Asset mockUpdated = buildAsset(List.of(buildSnapshot(SNAPSHOT_DATE)));
 		AssetDTO stubbedDto = Instancio.create(AssetDTO.class);
 		RateBook book = stubBook(ASSET_CURRENCY, USER_CURRENCY, List.of(SNAPSHOT_DATE));
 		stubUserCurrency(mockUserId, USER_CURRENCY);
-		when(mapper.toEntity(mockDto, mockUserId)).thenReturn(mockDetails);
-		when(assetService.update(mockId, mockDetails, mockUserId)).thenReturn(mockUpdated);
+		when(mapper.toUpdate(mockDto, mockUserId)).thenReturn(mockUpdate);
+		when(assetService.update(mockId, mockUpdate, mockUserId)).thenReturn(mockUpdated);
 		when(mapper.toDto(mockUpdated, book)).thenReturn(stubbedDto);
 
 		// WHEN
@@ -208,15 +228,15 @@ class AssetFacadeTest {
 		UUID mockId = UUID.randomUUID();
 		UUID mockUserId = UUID.randomUUID();
 		UpdateAssetDTO mockDto = Instancio.create(UpdateAssetDTO.class);
-		Asset mockDetails = buildAsset(List.of());
+		AssetUpdate mockUpdate = buildUpdate();
 		Asset mockUpdated = buildAsset(List.of());
 		List<Snapshot> stubbedSnapshots = Instancio.ofList(Snapshot.class).size(2).create();
 		AssetDTO stubbedDto = Instancio.create(AssetDTO.class);
 		RateBook book = stubBook(ASSET_CURRENCY, USER_CURRENCY, List.of(TODAY));
 		stubToday();
 		stubUserCurrency(mockUserId, USER_CURRENCY);
-		when(mapper.toEntity(mockDto, mockUserId)).thenReturn(mockDetails);
-		when(assetService.update(mockId, mockDetails, mockUserId)).thenReturn(mockUpdated);
+		when(mapper.toUpdate(mockDto, mockUserId)).thenReturn(mockUpdate);
+		when(assetService.update(mockId, mockUpdate, mockUserId)).thenReturn(mockUpdated);
 		when(snapshotRepository.findTop2ByAssetIdOrderByReferenceDateDesc(mockId)).thenReturn(
 			stubbedSnapshots
 		);
@@ -228,6 +248,53 @@ class AssetFacadeTest {
 		// THEN
 		assertThat(expectedDto).isEqualTo(stubbedDto);
 		verify(validationService).validate(mockDto);
+	}
+
+	@Test
+	void updateAsset_keepsTheWholeLiabilityBlock_whenTheBodyCarriesOnlyAName() {
+		// GIVEN
+		UUID mockAssetId = UUID.randomUUID();
+		UUID mockUserId = UUID.randomUUID();
+		User mockUser = Instancio.of(User.class)
+			.set(Select.field(User::getId), mockUserId)
+			.set(Select.field(User::getCurrency), USER_CURRENCY)
+			.create();
+		AssetCategory mockStoredCategory = Instancio.of(AssetCategory.class)
+			.set(Select.field(AssetCategory::getUser), mockUser)
+			.create();
+		Asset mockStoredAsset = Instancio.of(Asset.class)
+			.set(Select.field(Asset::getId), mockAssetId)
+			.set(Select.field(Asset::getUser), mockUser)
+			.set(Select.field(Asset::getCategory), mockStoredCategory)
+			.set(Select.field(Asset::getName), STORED_NAME)
+			.set(Select.field(Asset::getOriginalCurrency), ASSET_CURRENCY)
+			.set(Select.field(Asset::getIsFavorite), true)
+			.set(Select.field(Asset::getLiabilityType), LiabilityType.AUTOMATIC)
+			.set(Select.field(Asset::getPaymentFrequency), STORED_PAYMENT_FREQUENCY)
+			.set(Select.field(Asset::getPaymentAmount), STORED_PAYMENT_AMOUNT)
+			.set(Select.field(Asset::getSettledAt), null)
+			.set(Select.field(Asset::getSnapshots), new ArrayList<>())
+			.create();
+		UpdateAssetDTO mockDto = new UpdateAssetDTO();
+		mockDto.setName(UPDATED_NAME);
+		RateBook book = bookWithoutRates(ASSET_CURRENCY, USER_CURRENCY, List.of());
+		when(userRepository.findById(mockUserId)).thenReturn(Optional.of(mockUser));
+		when(assetRepository.findById(mockAssetId)).thenReturn(Optional.of(mockStoredAsset));
+		when(snapshotRepository.existsByAssetId(mockAssetId)).thenReturn(true);
+		when(assetRepository.save(mockStoredAsset)).thenReturn(mockStoredAsset);
+		testSubject = buildFacadeWithRealMapperAndService();
+
+		// WHEN
+		testSubject.updateAsset(mockAssetId, mockDto, mockUserId);
+
+		// THEN
+		assertThat(mockStoredAsset.getName()).isEqualTo(UPDATED_NAME);
+		assertThat(mockStoredAsset.getCategory()).isSameAs(mockStoredCategory);
+		assertThat(mockStoredAsset.getOriginalCurrency()).isEqualTo(ASSET_CURRENCY);
+		assertThat(mockStoredAsset.getIsFavorite()).isTrue();
+		assertThat(mockStoredAsset.getLiabilityType()).isEqualTo(LiabilityType.AUTOMATIC);
+		assertThat(mockStoredAsset.getPaymentFrequency()).isEqualTo(STORED_PAYMENT_FREQUENCY);
+		assertThat(mockStoredAsset.getPaymentAmount()).isEqualByComparingTo(STORED_PAYMENT_AMOUNT);
 	}
 
 	@Test
@@ -287,6 +354,26 @@ class AssetFacadeTest {
 
 		// THEN
 		verify(assetService).delete(mockId, mockUserId);
+	}
+
+	private AssetUpdate buildUpdate() {
+		return new AssetUpdate(UPDATED_NAME, Optional.empty(), ASSET_CURRENCY, true, Optional.empty());
+	}
+
+	/**
+	 * The update invariant lives across the mapper and the service, so this one case wires both for
+	 * real: a mocked pair cannot show that a rename reaches the repository with the block intact.
+	 */
+	private AssetFacade buildFacadeWithRealMapperAndService() {
+		return new AssetFacade(
+			new AssetService(assetRepository, snapshotRepository, conversionService),
+			new AssetMapper(categoryRepository, userRepository, snapshotMapper),
+			validationService,
+			snapshotRepository,
+			userRepository,
+			conversionService,
+			clock
+		);
 	}
 
 	private RateBook stubBook(Currency source, Currency target, List<LocalDate> dates) {

@@ -6,10 +6,12 @@ import com.backend.aurum.domain.shared.exception.NotFoundException;
 import com.backend.aurum.domain.shared.exception.ValidationException;
 import java.time.Instant;
 import java.util.Map;
+import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.server.ResponseStatusException;
@@ -19,6 +21,7 @@ import org.springframework.web.server.ResponseStatusException;
 public class GlobalExceptionHandler {
 
 	private static final String UNRECOGNIZED_STATUS_REASON = "Request failed";
+	private static final String INVALID_BODY_REASON = "Request body is invalid";
 
 	@ExceptionHandler(NotFoundException.class)
 	public ResponseEntity<Map<String, Object>> handleNotFound(NotFoundException ex) {
@@ -47,6 +50,19 @@ public class GlobalExceptionHandler {
 			HttpStatus.SERVICE_UNAVAILABLE,
 			"Exchange rates are temporarily unavailable, please retry later"
 		);
+	}
+
+	@ExceptionHandler(MethodArgumentNotValidException.class)
+	public ResponseEntity<Map<String, Object>> handleInvalidBody(MethodArgumentNotValidException ex) {
+		String message = ex
+			.getBindingResult()
+			.getFieldErrors()
+			.stream()
+			.map(error -> error.getField() + " " + error.getDefaultMessage())
+			.collect(Collectors.joining("; "));
+		String reason = message.isBlank() ? INVALID_BODY_REASON : message;
+		log.warn("Invalid request body: {}", reason);
+		return buildResponse(HttpStatus.BAD_REQUEST, reason);
 	}
 
 	@ExceptionHandler(IllegalArgumentException.class)

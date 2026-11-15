@@ -160,7 +160,12 @@ export function AssetFormSheet({ open, onOpenChange, asset, categories }: AssetF
 		const onSuccess = () => onOpenChange(false);
 
 		if (asset?.id) {
-			updateAsset.mutate({ id: asset.id, body }, { onSuccess });
+			// The PUT reads the presence of liabilityType, not only its value: null is how the form
+			// clears the liability block when the asset moves out of a liability category.
+			updateAsset.mutate(
+				{ id: asset.id, body: { ...body, liabilityType: body.liabilityType ?? null } },
+				{ onSuccess }
+			);
 			return;
 		}
 
