@@ -15,6 +15,8 @@ import com.backend.aurum.domain.asset.model.Asset;
 import com.backend.aurum.domain.asset.model.AssetCategory;
 import com.backend.aurum.domain.asset.model.AssetType;
 import com.backend.aurum.domain.asset.model.LiabilityType;
+import com.backend.aurum.domain.asset.model.ProductionShapeFixture;
+import com.backend.aurum.domain.asset.model.ProductionShapeFixture.ProductionShape;
 import com.backend.aurum.domain.asset.model.Snapshot;
 import com.backend.aurum.domain.asset.repository.AssetRepository;
 import com.backend.aurum.domain.asset.repository.SnapshotRepository;
@@ -84,6 +86,8 @@ class AnalyticsServiceTest {
 	private static final BigDecimal STORED_RATE = new BigDecimal("2.0000");
 	private static final BigDecimal SNAPSHOT_CURRENCY_RATE = new BigDecimal("1.50");
 	private static final String OTHER_CATEGORY_LABEL = "Other";
+	private static final String ASSET_TYPE_LABEL = "ASSET";
+	private static final String LIABILITY_TYPE_LABEL = "LIABILITY";
 	private static final String EXCHANGE_RATE_OUTAGE_MESSAGE =
 		"Exchange rate provider is unavailable";
 
@@ -240,50 +244,54 @@ class AnalyticsServiceTest {
 	}
 
 	@Test
-	void getSummary_followsTheLiabilityType_notTheCategory() {
+	void getSummary_classifiesByTheCategory_notByTheLiabilityType() {
 		// GIVEN
 		UUID mockUserId = UUID.randomUUID();
 		stubClockAt(TODAY);
 		stubUserCurrency(mockUserId, EUR);
 		Asset mockAsset = buildAsset(buildCategory(AssetType.ASSET, "Equities"), EUR, "Fund", false);
-		Asset mockDebtInAssetCategory = buildLiability(
+		Asset mockLegacyDebtInAssetCategory = buildLiability(
 			buildCategory(AssetType.ASSET, "Equities"),
 			EUR,
-			"Retyped debt",
+			"Legacy debt",
 			false
 		);
-		Asset mockAssetInLiabilityCategory = buildAsset(
+		Asset mockAssetWithoutLiabilityType = buildAsset(
 			buildCategory(AssetType.LIABILITY, "Debts"),
 			EUR,
-			"Retyped asset",
+			"Mortgage",
 			false
 		);
 		Snapshot mockAssetSnapshot = buildSnapshot(mockAsset, "1000", LATEST_DATA_DATE);
-		Snapshot mockDebtSnapshot = buildSnapshot(mockDebtInAssetCategory, "700", LATEST_DATA_DATE);
+		Snapshot mockLegacyDebtSnapshot = buildSnapshot(
+			mockLegacyDebtInAssetCategory,
+			"700",
+			LATEST_DATA_DATE
+		);
 		Snapshot mockRetypedSnapshot = buildSnapshot(
-			mockAssetInLiabilityCategory,
+			mockAssetWithoutLiabilityType,
 			"400",
 			LATEST_DATA_DATE
 		);
 		List<LocalDate> expectedDates = summaryDates(LATEST_DATA_DATE);
 		RateBook mockBook = stubBook(EUR, List.of(EUR), expectedDates);
 		AssetDTO stubbedTopAsset = Instancio.create(AssetDTO.class);
-		AssetDTO stubbedRetypedAsset = Instancio.create(AssetDTO.class);
+		AssetDTO stubbedLegacyDebt = Instancio.create(AssetDTO.class);
 		when(
 			assetMapper.toDtoLight(eq(mockAsset), eq(List.of(mockAssetSnapshot)), eq(mockBook), eq(TODAY))
 		).thenReturn(stubbedTopAsset);
 		when(
 			assetMapper.toDtoLight(
-				eq(mockAssetInLiabilityCategory),
-				eq(List.of(mockRetypedSnapshot)),
+				eq(mockLegacyDebtInAssetCategory),
+				eq(List.of(mockLegacyDebtSnapshot)),
 				eq(mockBook),
 				eq(TODAY)
 			)
-		).thenReturn(stubbedRetypedAsset);
-		stubAssets(mockUserId, mockAsset, mockDebtInAssetCategory, mockAssetInLiabilityCategory);
+		).thenReturn(stubbedLegacyDebt);
+		stubAssets(mockUserId, mockAsset, mockLegacyDebtInAssetCategory, mockAssetWithoutLiabilityType);
 		stubSummarySnapshots(
 			mockUserId,
-			List.of(mockAssetSnapshot, mockDebtSnapshot, mockRetypedSnapshot),
+			List.of(mockAssetSnapshot, mockLegacyDebtSnapshot, mockRetypedSnapshot),
 			List.of(),
 			LATEST_DATA_DATE
 		);
@@ -292,70 +300,137 @@ class AnalyticsServiceTest {
 		AnalyticsSummaryDTO expectedSummary = testSubject.getSummary(mockUserId);
 
 		// THEN
-		assertThat(expectedSummary.getTotalGrossAssets()).isEqualByComparingTo(new BigDecimal("1400"));
-		assertThat(expectedSummary.getTotalLiabilities()).isEqualByComparingTo(new BigDecimal("700"));
-		assertThat(expectedSummary.getTotalNetWorth()).isEqualByComparingTo(new BigDecimal("700"));
-		assertThat(expectedSummary.getDebtToAssetRatio()).isEqualByComparingTo(new BigDecimal("50"));
-		assertThat(expectedSummary.getAssetAllocation()).containsOnlyKeys("Equities", "Debts");
+		BigDecimal expectedGrossAssets = expectedSummary.getTotalGrossAssets();
+		BigDecimal expectedLiabilities = expectedSummary.getTotalLiabilities();
+		assertThat(expectedGrossAssets).isEqualByComparingTo(new BigDecimal("1700"));
+		assertThat(expectedLiabilities).isEqualByComparingTo(new BigDecimal("400"));
+		assertThat(expectedSummary.getTotalNetWorth()).isEqualByComparingTo(new BigDecimal("1300"));
+		assertThat(expectedSummary.getDebtToAssetRatio()).isEqualByComparingTo(new BigDecimal("23.53"));
+		assertThat(expectedSummary.getAssetAllocation()).containsOnlyKeys("Equities");
 		assertThat(expectedSummary.getAssetAllocation().get("Equities")).isEqualByComparingTo(
-			new BigDecimal("71.43")
+			new BigDecimal("100")
 		);
-		assertThat(expectedSummary.getAssetAllocation().get("Debts")).isEqualByComparingTo(
-			new BigDecimal("28.57")
-		);
-		assertThat(expectedSummary.getTopAssets()).containsExactly(
-			stubbedTopAsset,
-			stubbedRetypedAsset
-		);
+		assertThat(expectedSummary.getTopAssets()).containsExactly(stubbedTopAsset, stubbedLegacyDebt);
 	}
 
 	@Test
-	void getChartData_followsTheLiabilityType_whenBuildingFavouriteSeries() {
+	void getSummary_classifiesTheWholeProductionShapeAsAssets() {
 		// GIVEN
 		UUID mockUserId = UUID.randomUUID();
 		stubClockAt(TODAY);
 		stubUserCurrency(mockUserId, EUR);
-		Asset mockDebtInAssetCategory = buildLiability(
-			buildCategory(AssetType.ASSET, "Property"),
-			EUR,
-			"Mortgage",
-			true
+		ProductionShape mockProductionShape = ProductionShapeFixture.create();
+		List<Snapshot> mockSnapshots = mockProductionShape.snapshotsAt(LATEST_DATA_DATE);
+		List<LocalDate> expectedDates = summaryDates(LATEST_DATA_DATE);
+		stubBook(EUR, List.of(EUR), expectedDates);
+		stubAssets(mockUserId, mockProductionShape.assets());
+		stubSummarySnapshots(mockUserId, mockSnapshots, List.of(), LATEST_DATA_DATE);
+
+		// WHEN
+		AnalyticsSummaryDTO expectedSummary = testSubject.getSummary(mockUserId);
+
+		// THEN
+		assertThat(mockProductionShape.totalLatestValue()).isEqualByComparingTo(
+			ProductionShapeFixture.TOTAL_LATEST_VALUE
 		);
-		Asset mockAssetInLiabilityCategory = buildAsset(
-			buildCategory(AssetType.LIABILITY, "Debts"),
-			EUR,
-			"Savings",
-			true
+		assertThat(expectedSummary.getTotalGrossAssets()).isEqualByComparingTo(
+			ProductionShapeFixture.TOTAL_LATEST_VALUE
 		);
-		Snapshot mockDebtSnapshot = buildSnapshot(mockDebtInAssetCategory, "500", CHART_SNAPSHOT_DATE);
-		Snapshot mockAssetSnapshot = buildSnapshot(
-			mockAssetInLiabilityCategory,
-			"300",
-			CHART_SNAPSHOT_DATE
+		assertThat(expectedSummary.getTotalLiabilities()).isEqualByComparingTo(BigDecimal.ZERO);
+		assertThat(expectedSummary.getTotalNetWorth()).isEqualByComparingTo(
+			ProductionShapeFixture.TOTAL_LATEST_VALUE
 		);
+		assertThat(expectedSummary.getDebtToAssetRatio()).isEqualByComparingTo(BigDecimal.ZERO);
+		assertThat(expectedSummary.getAssetAllocation()).containsOnlyKeys(
+			ProductionShapeFixture.CASH_CATEGORY,
+			ProductionShapeFixture.INVESTMENT_CATEGORY,
+			ProductionShapeFixture.PROPERTY_CATEGORY
+		);
+	}
+
+	@Test
+	void getChartData_classifiesTheWholeProductionShapeAsAssets() {
+		// GIVEN
+		UUID mockUserId = UUID.randomUUID();
+		stubClockAt(TODAY);
+		stubUserCurrency(mockUserId, EUR);
+		ProductionShape mockProductionShape = ProductionShapeFixture.create();
 		stubBook(EUR, List.of(EUR), ONE_YEAR_CHART_DATES);
-		stubAssets(mockUserId, mockDebtInAssetCategory, mockAssetInLiabilityCategory);
-		stubSnapshots(mockUserId, mockDebtSnapshot, mockAssetSnapshot);
+		stubAssets(mockUserId, mockProductionShape.assets());
+		stubSnapshots(mockUserId, mockProductionShape.snapshotsAt(CHART_SNAPSHOT_DATE));
 
 		// WHEN
 		ChartDataDTO expectedChart = testSubject.getChartData(mockUserId);
 
 		// THEN
 		int lastPoint = ONE_YEAR_CHART_DATES.size() - 1;
-		assertThat(expectedChart.getFavoriteAssetsValues()).containsOnlyKeys("Mortgage", "Savings");
-		assertThat(expectedChart.getFavoriteAssetsTypes()).containsEntry("Mortgage", "LIABILITY");
-		assertThat(expectedChart.getFavoriteAssetsTypes()).containsEntry("Savings", "ASSET");
-		assertThat(
-			expectedChart.getFavoriteAssetsValues().get("Mortgage").get(lastPoint)
-		).isEqualByComparingTo(new BigDecimal("-500"));
-		assertThat(
-			expectedChart.getFavoriteAssetsValues().get("Savings").get(lastPoint)
-		).isEqualByComparingTo(new BigDecimal("300"));
+		assertThat(expectedChart.getFavoriteAssetsTypes()).hasSize(ProductionShapeFixture.ASSET_COUNT);
+		assertThat(expectedChart.getFavoriteAssetsTypes().values()).containsOnly(ASSET_TYPE_LABEL);
 		assertThat(expectedChart.getTotalNetWorth().get(lastPoint)).isEqualByComparingTo(
-			new BigDecimal("-200")
+			ProductionShapeFixture.TOTAL_LATEST_VALUE
 		);
 		assertThat(expectedChart.getTotalAssetsOnly().get(lastPoint)).isEqualByComparingTo(
-			new BigDecimal("300")
+			ProductionShapeFixture.TOTAL_LATEST_VALUE
+		);
+	}
+
+	@Test
+	void getChartData_classifiesByTheCategory_whenBuildingFavouriteSeries() {
+		// GIVEN
+		UUID mockUserId = UUID.randomUUID();
+		stubClockAt(TODAY);
+		stubUserCurrency(mockUserId, EUR);
+		Asset mockLegacyDebtInAssetCategory = buildLiability(
+			buildCategory(AssetType.ASSET, "Property"),
+			EUR,
+			"Legacy debt",
+			true
+		);
+		Asset mockDebtInLiabilityCategory = buildAsset(
+			buildCategory(AssetType.LIABILITY, "Debts"),
+			EUR,
+			"Mortgage",
+			true
+		);
+		Snapshot mockLegacyDebtSnapshot = buildSnapshot(
+			mockLegacyDebtInAssetCategory,
+			"500",
+			CHART_SNAPSHOT_DATE
+		);
+		Snapshot mockMortgageSnapshot = buildSnapshot(
+			mockDebtInLiabilityCategory,
+			"300",
+			CHART_SNAPSHOT_DATE
+		);
+		stubBook(EUR, List.of(EUR), ONE_YEAR_CHART_DATES);
+		stubAssets(mockUserId, mockLegacyDebtInAssetCategory, mockDebtInLiabilityCategory);
+		stubSnapshots(mockUserId, mockLegacyDebtSnapshot, mockMortgageSnapshot);
+
+		// WHEN
+		ChartDataDTO expectedChart = testSubject.getChartData(mockUserId);
+
+		// THEN
+		int lastPoint = ONE_YEAR_CHART_DATES.size() - 1;
+		assertThat(expectedChart.getFavoriteAssetsValues()).containsOnlyKeys("Legacy debt", "Mortgage");
+		assertThat(expectedChart.getFavoriteAssetsTypes()).containsEntry(
+			"Legacy debt",
+			ASSET_TYPE_LABEL
+		);
+		assertThat(expectedChart.getFavoriteAssetsTypes()).containsEntry(
+			"Mortgage",
+			LIABILITY_TYPE_LABEL
+		);
+		assertThat(
+			expectedChart.getFavoriteAssetsValues().get("Legacy debt").get(lastPoint)
+		).isEqualByComparingTo(new BigDecimal("500"));
+		assertThat(
+			expectedChart.getFavoriteAssetsValues().get("Mortgage").get(lastPoint)
+		).isEqualByComparingTo(new BigDecimal("-300"));
+		assertThat(expectedChart.getTotalNetWorth().get(lastPoint)).isEqualByComparingTo(
+			new BigDecimal("200")
+		);
+		assertThat(expectedChart.getTotalAssetsOnly().get(lastPoint)).isEqualByComparingTo(
+			new BigDecimal("500")
 		);
 	}
 
@@ -909,6 +984,40 @@ class AnalyticsServiceTest {
 	}
 
 	@Test
+	void getSummary_countsAnAssetWithoutCategoryAsAnAsset_evenWithALegacyLiabilityType() {
+		// GIVEN
+		UUID mockUserId = UUID.randomUUID();
+		stubClockAt(TODAY);
+		stubUserCurrency(mockUserId, EUR);
+		Asset mockUncategorisedAsset = buildAsset(null, EUR, "Imported", false, LiabilityType.MANUAL);
+		Snapshot mockSnapshot = buildSnapshot(mockUncategorisedAsset, "900", LATEST_DATA_DATE);
+		List<LocalDate> expectedDates = summaryDates(LATEST_DATA_DATE);
+		RateBook mockBook = stubBook(EUR, List.of(EUR), expectedDates);
+		AssetDTO stubbedTopAsset = Instancio.create(AssetDTO.class);
+		when(
+			assetMapper.toDtoLight(
+				eq(mockUncategorisedAsset),
+				eq(List.of(mockSnapshot)),
+				eq(mockBook),
+				eq(TODAY)
+			)
+		).thenReturn(stubbedTopAsset);
+		stubAssets(mockUserId, mockUncategorisedAsset);
+		stubSummarySnapshots(mockUserId, List.of(mockSnapshot), List.of(), LATEST_DATA_DATE);
+
+		// WHEN
+		AnalyticsSummaryDTO expectedSummary = testSubject.getSummary(mockUserId);
+
+		// THEN
+		assertThat(expectedSummary.getTotalGrossAssets()).isEqualByComparingTo(new BigDecimal("900"));
+		assertThat(expectedSummary.getTotalLiabilities()).isEqualByComparingTo(BigDecimal.ZERO);
+		assertThat(expectedSummary.getTotalNetWorth()).isEqualByComparingTo(new BigDecimal("900"));
+		assertThat(expectedSummary.getDebtToAssetRatio()).isEqualByComparingTo(BigDecimal.ZERO);
+		assertThat(expectedSummary.getAssetAllocation()).containsOnlyKeys(OTHER_CATEGORY_LABEL);
+		assertThat(expectedSummary.getTopAssets()).containsExactly(stubbedTopAsset);
+	}
+
+	@Test
 	void getSummary_readsOldestSnapshotYearFromTheRepository() {
 		// GIVEN
 		UUID mockUserId = UUID.randomUUID();
@@ -1377,8 +1486,16 @@ class AnalyticsServiceTest {
 		when(assetRepository.findByUserIdOrderByCreatedAtDesc(userId)).thenReturn(List.of(assets));
 	}
 
+	private void stubAssets(UUID userId, List<Asset> assets) {
+		when(assetRepository.findByUserIdOrderByCreatedAtDesc(userId)).thenReturn(assets);
+	}
+
 	private void stubSnapshots(UUID userId, Snapshot... snapshots) {
 		when(snapshotRepository.findByAssetUserId(userId)).thenReturn(List.of(snapshots));
+	}
+
+	private void stubSnapshots(UUID userId, List<Snapshot> snapshots) {
+		when(snapshotRepository.findByAssetUserId(userId)).thenReturn(snapshots);
 	}
 
 	private void stubSummarySnapshots(

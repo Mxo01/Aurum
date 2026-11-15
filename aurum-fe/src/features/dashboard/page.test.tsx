@@ -4,7 +4,12 @@ import { createElement } from "react";
 import { http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
 import { env } from "@/lib/env";
-import { buildChart, buildSummary, buildTarget } from "@/test/fixtures/portfolio";
+import {
+	buildChart,
+	buildLiabilityClassificationIncident,
+	buildSummary,
+	buildTarget
+} from "@/test/fixtures/portfolio";
 import { server } from "@/test/msw/server";
 import { renderWithProviders } from "@/test/render";
 import { DashboardPage } from "./page";
@@ -233,4 +238,23 @@ it("should tolerate a null summary", async () => {
 		expect(within(liabilities as HTMLElement).getByText("€0")).toBeInTheDocument()
 	);
 	expect(within(fx as HTMLElement).getByText("€0")).toBeInTheDocument();
+});
+
+it("should report zero liabilities and the real net worth for the liability classification incident", async () => {
+	// GIVEN
+	const incident = buildLiabilityClassificationIncident();
+	server.use(
+		http.get(`${env.apiUrl}/analytics/summary`, () => HttpResponse.json(incident.summary))
+	);
+	const testSubject = DashboardPage;
+
+	// WHEN
+	renderWithProviders(createElement(testSubject), { route: "/dashboard" });
+
+	// THEN
+	const liabilities = (await screen.findByText("Total liabilities")).closest(".bg-card");
+	expect(await within(liabilities as HTMLElement).findByText("€0")).toBeInTheDocument();
+	expect(within(liabilities as HTMLElement).getByText("Debt ratio: 0.0%")).toBeInTheDocument();
+	const netWorthCard = screen.getAllByText("Net worth")[0]?.closest(".bg-card");
+	expect(await within(netWorthCard as HTMLElement).findByText("€47,979.66")).toBeInTheDocument();
 });

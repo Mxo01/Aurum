@@ -18,9 +18,16 @@ public interface AssetRepository extends JpaRepository<Asset, UUID> {
 	/**
 	 * Ids only: the scheduler pays each asset in its own transaction, and a settled liability is not
 	 * selected again.
+	 *
+	 * <p>Classification is {@code category.type}, not {@code liability_type}: a row filed under an
+	 * ASSET category is never a payment target, whatever its liability_type says.
 	 */
 	@Query(
-		"SELECT a.id FROM Asset a WHERE a.liabilityType = :type AND a.settledAt IS NULL ORDER BY a.id"
+		"SELECT a.id FROM Asset a" +
+			" WHERE a.liabilityType = :type" +
+			" AND a.category.type = com.backend.aurum.domain.asset.model.AssetType.LIABILITY" +
+			" AND a.settledAt IS NULL" +
+			" ORDER BY a.id"
 	)
 	List<UUID> findIdsByLiabilityTypeAndSettledAtIsNull(@Param("type") LiabilityType type);
 

@@ -2,14 +2,17 @@ package com.backend.aurum.domain.asset.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.notNull;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.backend.aurum.domain.asset.model.Asset;
 import com.backend.aurum.domain.asset.model.AssetCategory;
+import com.backend.aurum.domain.asset.model.AssetType;
 import com.backend.aurum.domain.asset.model.AssetUpdate;
 import com.backend.aurum.domain.asset.model.LiabilityConfiguration;
 import com.backend.aurum.domain.asset.model.LiabilityType;
@@ -69,6 +72,11 @@ class AssetServiceTest {
 	private static final BigDecimal NO_PAYMENT_AMOUNT = BigDecimal.ZERO;
 	private static final LocalDate STORED_NEXT_DUE_DATE = LocalDate.of(2026, 1, 30);
 	private static final short STORED_PAYMENT_ANCHOR_DAY = 30;
+	private static final AssetType ASSET_CATEGORY_TYPE = AssetType.ASSET;
+	private static final AssetType LIABILITY_CATEGORY_TYPE = AssetType.LIABILITY;
+	private static final LocalDate REFERENCE_DATE = LocalDate.of(2025, 6, 15);
+	private static final String LIABILITY_OUTSIDE_LIABILITY_CATEGORY_MESSAGE =
+		"liabilityType is only allowed when the asset category is a liability";
 
 	@Test
 	void findAll_returnsAssetsFromRepository() {
@@ -141,7 +149,7 @@ class AssetServiceTest {
 		LocalDate mockReferenceDate
 	) {
 		// GIVEN
-		Asset mockAsset = Instancio.create(Asset.class);
+		Asset mockAsset = newAsset(noLiability(), ASSET_CATEGORY_TYPE);
 		Asset stubbedSaved = Instancio.of(Asset.class)
 			.set(Select.field(Asset::getSnapshots), new ArrayList<>())
 			.create();
@@ -173,10 +181,12 @@ class AssetServiceTest {
 		User mockUser = Instancio.of(User.class)
 			.set(Select.field(User::getCurrency), mockUserCurrency)
 			.create();
-		Asset mockAsset = Instancio.of(Asset.class)
-			.set(Select.field(Asset::getUser), mockUser)
-			.set(Select.field(Asset::getOriginalCurrency), mockAssetCurrency)
-			.create();
+		Asset mockAsset = newAsset(
+			automaticLiability(STORED_PAYMENT_FREQUENCY, STORED_PAYMENT_AMOUNT),
+			LIABILITY_CATEGORY_TYPE
+		);
+		mockAsset.setUser(mockUser);
+		mockAsset.setOriginalCurrency(mockAssetCurrency);
 		Asset stubbedSaved = Instancio.of(Asset.class)
 			.set(Select.field(Asset::getUser), mockUser)
 			.set(Select.field(Asset::getOriginalCurrency), mockAssetCurrency)
@@ -212,10 +222,12 @@ class AssetServiceTest {
 		User mockUser = Instancio.of(User.class)
 			.set(Select.field(User::getCurrency), mockCurrency)
 			.create();
-		Asset mockAsset = Instancio.of(Asset.class)
-			.set(Select.field(Asset::getUser), mockUser)
-			.set(Select.field(Asset::getOriginalCurrency), mockCurrency)
-			.create();
+		Asset mockAsset = newAsset(
+			automaticLiability(STORED_PAYMENT_FREQUENCY, STORED_PAYMENT_AMOUNT),
+			LIABILITY_CATEGORY_TYPE
+		);
+		mockAsset.setUser(mockUser);
+		mockAsset.setOriginalCurrency(mockCurrency);
 		Asset stubbedSaved = Instancio.of(Asset.class)
 			.set(Select.field(Asset::getUser), mockUser)
 			.set(Select.field(Asset::getOriginalCurrency), mockCurrency)
@@ -242,10 +254,12 @@ class AssetServiceTest {
 		Currency mockAssetCurrency = Currency.GBP;
 		LocalDate mockReferenceDate = LocalDate.of(2025, 6, 15);
 		BigDecimal stubbedRate = new BigDecimal("0.860000");
-		Asset mockAsset = Instancio.of(Asset.class)
-			.set(Select.field(Asset::getUser), null)
-			.set(Select.field(Asset::getOriginalCurrency), mockAssetCurrency)
-			.create();
+		Asset mockAsset = newAsset(
+			automaticLiability(STORED_PAYMENT_FREQUENCY, STORED_PAYMENT_AMOUNT),
+			LIABILITY_CATEGORY_TYPE
+		);
+		mockAsset.setUser(null);
+		mockAsset.setOriginalCurrency(mockAssetCurrency);
 		Asset stubbedSaved = Instancio.of(Asset.class)
 			.set(Select.field(Asset::getUser), null)
 			.set(Select.field(Asset::getOriginalCurrency), mockAssetCurrency)
@@ -264,6 +278,67 @@ class AssetServiceTest {
 		assertThat(stubbedSaved.getSnapshots()).hasSize(1);
 		Snapshot expectedSnapshot = stubbedSaved.getSnapshots().get(0);
 		assertThat(expectedSnapshot.getExchangeRateToBase()).isEqualTo(stubbedRate);
+	}
+
+	@Test
+	void save_throwsValidationException_whenALiabilityTypeSitsInAnAssetCategory() {
+		// GIVEN
+		Asset mockAsset = newAsset(
+			automaticLiability(STORED_PAYMENT_FREQUENCY, STORED_PAYMENT_AMOUNT),
+			ASSET_CATEGORY_TYPE
+		);
+
+		// WHEN / THEN
+		assertThatThrownBy(() -> testSubject.save(mockAsset, BigDecimal.TEN, REFERENCE_DATE))
+			.isInstanceOf(ValidationException.class)
+			.hasMessage(LIABILITY_OUTSIDE_LIABILITY_CATEGORY_MESSAGE);
+		verifyNoInteractions(assetRepository, snapshotRepository);
+	}
+
+	@ParameterizedTest(name = "{0}")
+	@MethodSource("acceptedNewAssetInputs")
+	void save_storesTheAsset_whenTheLiabilityBlockMatchesTheCategory(
+		String scenario,
+		LiabilityConfiguration mockLiability,
+		AssetType mockCategoryType
+	) {
+		// GIVEN
+		Asset mockAsset = newAsset(mockLiability, mockCategoryType);
+		Asset stubbedSaved = Instancio.of(Asset.class)
+			.set(Select.field(Asset::getSnapshots), new ArrayList<>())
+			.create();
+		when(assetRepository.save(mockAsset)).thenReturn(stubbedSaved);
+
+		// WHEN
+		Asset expectedAsset = testSubject.save(mockAsset, null, null);
+
+		// THEN
+		assertThat(expectedAsset).isEqualTo(stubbedSaved);
+	}
+
+	static Stream<Arguments> acceptedNewAssetInputs() {
+		return Stream.of(
+			Arguments.of(
+				"a manual liability in a liability category",
+				manualLiability(),
+				LIABILITY_CATEGORY_TYPE
+			),
+			Arguments.of(
+				"an automatic liability in a liability category",
+				new LiabilityConfiguration(
+					LiabilityType.AUTOMATIC,
+					STORED_PAYMENT_FREQUENCY,
+					STORED_PAYMENT_AMOUNT
+				),
+				LIABILITY_CATEGORY_TYPE
+			),
+			Arguments.of("no liability block in an asset category", noLiability(), ASSET_CATEGORY_TYPE),
+			Arguments.of(
+				"no liability block in a liability category",
+				noLiability(),
+				LIABILITY_CATEGORY_TYPE
+			)
+		);
 	}
 
 	@Test
@@ -349,7 +424,7 @@ class AssetServiceTest {
 		// GIVEN
 		UUID mockUserId = UUID.randomUUID();
 		Asset mockStoredAsset = buildStoredAsset(userWithId(mockUserId));
-		AssetCategory mockUpdatedCategory = Instancio.create(AssetCategory.class);
+		AssetCategory mockUpdatedCategory = categoryOf(LIABILITY_CATEGORY_TYPE);
 		when(assetRepository.findById(mockStoredAsset.getId())).thenReturn(
 			Optional.of(mockStoredAsset)
 		);
@@ -641,6 +716,95 @@ class AssetServiceTest {
 		assertThat(expectedAsset.getPaymentAnchorDay()).isNull();
 	}
 
+	@ParameterizedTest(name = "{0}")
+	@MethodSource("liabilityCategoryMismatchUpdates")
+	void update_throwsValidationException_whenTheResultingStateLeavesALiabilityInAnAssetCategory(
+		String scenario,
+		LiabilityConfiguration mockStoredLiability,
+		AssetType mockStoredCategoryType,
+		AssetUpdate mockUpdate
+	) {
+		// GIVEN
+		UUID mockUserId = UUID.randomUUID();
+		Asset mockStoredAsset = buildStoredAsset(
+			userWithId(mockUserId),
+			mockStoredLiability,
+			mockStoredCategoryType
+		);
+		AssetCategory mockStoredCategory = mockStoredAsset.getCategory();
+		when(assetRepository.findById(mockStoredAsset.getId())).thenReturn(
+			Optional.of(mockStoredAsset)
+		);
+
+		// WHEN / THEN
+		assertThatThrownBy(() -> testSubject.update(mockStoredAsset.getId(), mockUpdate, mockUserId))
+			.isInstanceOf(ValidationException.class)
+			.hasMessage(LIABILITY_OUTSIDE_LIABILITY_CATEGORY_MESSAGE);
+		verify(assetRepository, never()).save(any(Asset.class));
+		assertThat(mockStoredAsset.getName()).isEqualTo(STORED_NAME);
+		assertThat(mockStoredAsset.getCategory()).isSameAs(mockStoredCategory);
+	}
+
+	static Stream<Arguments> liabilityCategoryMismatchUpdates() {
+		return Stream.of(
+			Arguments.of(
+				"a liability block added to an asset category",
+				noLiability(),
+				ASSET_CATEGORY_TYPE,
+				updateOf(
+					null,
+					Optional.empty(),
+					null,
+					null,
+					liabilityOf(LiabilityType.AUTOMATIC, STORED_PAYMENT_FREQUENCY, STORED_PAYMENT_AMOUNT)
+				)
+			),
+			Arguments.of(
+				"a rename on a row that already carries a liability in an asset category",
+				automaticLiability(STORED_PAYMENT_FREQUENCY, STORED_PAYMENT_AMOUNT),
+				ASSET_CATEGORY_TYPE,
+				renameOnlyUpdate()
+			),
+			Arguments.of(
+				"a category switch to an asset category that keeps the automatic liability",
+				automaticLiability(STORED_PAYMENT_FREQUENCY, STORED_PAYMENT_AMOUNT),
+				LIABILITY_CATEGORY_TYPE,
+				updateOf(null, Optional.of(categoryOf(ASSET_CATEGORY_TYPE)), null, null, Optional.empty())
+			)
+		);
+	}
+
+	@Test
+	void update_acceptsACategorySwitchToALiabilityCategory() {
+		// GIVEN
+		UUID mockUserId = UUID.randomUUID();
+		Asset mockStoredAsset = buildStoredAsset(
+			userWithId(mockUserId),
+			noLiability(),
+			ASSET_CATEGORY_TYPE
+		);
+		AssetCategory mockLiabilityCategory = categoryOf(LIABILITY_CATEGORY_TYPE);
+		when(assetRepository.findById(mockStoredAsset.getId())).thenReturn(
+			Optional.of(mockStoredAsset)
+		);
+		when(assetRepository.save(mockStoredAsset)).thenReturn(mockStoredAsset);
+		AssetUpdate mockUpdate = updateOf(
+			null,
+			Optional.of(mockLiabilityCategory),
+			null,
+			null,
+			liabilityOf(LiabilityType.MANUAL, STORED_PAYMENT_FREQUENCY, NO_PAYMENT_AMOUNT)
+		);
+
+		// WHEN
+		testSubject.update(mockStoredAsset.getId(), mockUpdate, mockUserId);
+
+		// THEN
+		assertThat(mockStoredAsset.getCategory()).isSameAs(mockLiabilityCategory);
+		assertThat(mockStoredAsset.getLiabilityType()).isEqualTo(LiabilityType.MANUAL);
+		assertThat(mockStoredAsset.getPaymentAmount()).isEqualByComparingTo(NO_PAYMENT_AMOUNT);
+	}
+
 	@Test
 	void delete_delegatesToRepository() {
 		// GIVEN
@@ -661,15 +825,24 @@ class AssetServiceTest {
 	private Asset buildStoredAsset(User user) {
 		return buildStoredAsset(
 			user,
-			automaticLiability(STORED_PAYMENT_FREQUENCY, STORED_PAYMENT_AMOUNT)
+			automaticLiability(STORED_PAYMENT_FREQUENCY, STORED_PAYMENT_AMOUNT),
+			LIABILITY_CATEGORY_TYPE
 		);
 	}
 
 	private Asset buildStoredAsset(User user, LiabilityConfiguration liability) {
+		return buildStoredAsset(user, liability, LIABILITY_CATEGORY_TYPE);
+	}
+
+	private Asset buildStoredAsset(
+		User user,
+		LiabilityConfiguration liability,
+		AssetType categoryType
+	) {
 		return Instancio.of(Asset.class)
 			.set(Select.field(Asset::getUser), user)
 			.set(Select.field(Asset::getName), STORED_NAME)
-			.set(Select.field(Asset::getCategory), Instancio.create(AssetCategory.class))
+			.set(Select.field(Asset::getCategory), categoryOf(categoryType))
 			.set(Select.field(Asset::getOriginalCurrency), STORED_CURRENCY)
 			.set(Select.field(Asset::getIsFavorite), true)
 			.set(Select.field(Asset::getLiabilityType), liability.type())
@@ -681,11 +854,26 @@ class AssetServiceTest {
 			.create();
 	}
 
-	private AssetUpdate renameOnlyUpdate() {
+	private Asset newAsset(LiabilityConfiguration liability, AssetType categoryType) {
+		return Instancio.of(Asset.class)
+			.set(Select.field(Asset::getCategory), categoryOf(categoryType))
+			.set(Select.field(Asset::getLiabilityType), liability.type())
+			.set(Select.field(Asset::getPaymentFrequency), liability.frequency())
+			.set(Select.field(Asset::getPaymentAmount), liability.amount())
+			.create();
+	}
+
+	private static AssetCategory categoryOf(AssetType type) {
+		return Instancio.of(AssetCategory.class)
+			.set(Select.field(AssetCategory::getType), type)
+			.create();
+	}
+
+	private static AssetUpdate renameOnlyUpdate() {
 		return updateOf(UPDATED_NAME, Optional.empty(), null, null, Optional.empty());
 	}
 
-	private AssetUpdate updateOf(
+	private static AssetUpdate updateOf(
 		String name,
 		Optional<AssetCategory> category,
 		Currency originalCurrency,
@@ -712,6 +900,14 @@ class AssetServiceTest {
 		BigDecimal amount
 	) {
 		return new LiabilityConfiguration(LiabilityType.AUTOMATIC, frequency, amount);
+	}
+
+	private static LiabilityConfiguration manualLiability() {
+		return new LiabilityConfiguration(
+			LiabilityType.MANUAL,
+			STORED_PAYMENT_FREQUENCY,
+			NO_PAYMENT_AMOUNT
+		);
 	}
 
 	private static LiabilityConfiguration noLiability() {

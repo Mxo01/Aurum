@@ -1,4 +1,5 @@
 import { faker } from "@faker-js/faker";
+import { ASSET_TYPE, LIABILITY_TYPE } from "@/lib/api/types";
 import type {
 	AnalyticsSummaryDTO,
 	AssetCategoryDTO,
@@ -126,6 +127,143 @@ export function buildChart(overrides: Partial<ChartDataDTO> = {}): ChartDataDTO 
 		favoriteAssetsValues: { "Apartment Berlin": [400000, 410000, 430000] },
 		favoriteAssetsTypes: { "Apartment Berlin": "ASSET" },
 		...overrides
+	};
+}
+
+export const LIABILITY_INCIDENT_NET_WORTH = 47979.66;
+
+const LIABILITY_INCIDENT_LIABILITIES = 0;
+const LIABILITY_INCIDENT_LEGACY_PAYMENT_AMOUNT = 0;
+const LIABILITY_INCIDENT_FAVORITE_NAMES = ["VWCE", "Fondo pensione"];
+const LIABILITY_INCIDENT_CHART_LABELS = ["SEP 25", "OCT 25", "NOV 25"];
+const LIABILITY_INCIDENT_SERIES_PROGRESS = [0.94, 0.97, 1];
+
+interface LiabilityIncidentAssetSeed {
+	categoryName: string;
+	hasLegacyLiabilityType: boolean;
+	latestValue: number;
+	name: string;
+}
+
+const LIABILITY_INCIDENT_ASSET_SEEDS: LiabilityIncidentAssetSeed[] = [
+	{
+		name: "VWCE",
+		latestValue: 18420.35,
+		categoryName: "Investments",
+		hasLegacyLiabilityType: true
+	},
+	{
+		name: "Fondo pensione",
+		latestValue: 12340,
+		categoryName: "Retirement",
+		hasLegacyLiabilityType: true
+	},
+	{ name: "Conto deposito", latestValue: 5000, categoryName: "Cash", hasLegacyLiabilityType: true },
+	{ name: "BTP Valore", latestValue: 4219.31, categoryName: "Bonds", hasLegacyLiabilityType: true },
+	{ name: "Liquidità", latestValue: 2500, categoryName: "Cash", hasLegacyLiabilityType: true },
+	{ name: "ETC Oro", latestValue: 1800, categoryName: "Commodities", hasLegacyLiabilityType: true },
+	{ name: "Azioni Enel", latestValue: 1200, categoryName: "Stocks", hasLegacyLiabilityType: true },
+	{
+		name: "Obbligazioni Romania",
+		latestValue: 900,
+		categoryName: "Bonds",
+		hasLegacyLiabilityType: true
+	},
+	{ name: "Bitcoin", latestValue: 700, categoryName: "Crypto", hasLegacyLiabilityType: true },
+	{
+		name: "Fondo obbligazionario",
+		latestValue: 600,
+		categoryName: "Bonds",
+		hasLegacyLiabilityType: true
+	},
+	{
+		name: "ETF Europa",
+		latestValue: 150,
+		categoryName: "Investments",
+		hasLegacyLiabilityType: true
+	},
+	{ name: "Buoni fruttiferi", latestValue: 80, categoryName: "Cash", hasLegacyLiabilityType: true },
+	{
+		name: "Fondo emergenti",
+		latestValue: 50,
+		categoryName: "Investments",
+		hasLegacyLiabilityType: false
+	},
+	{
+		name: "Collezione vini",
+		latestValue: 15,
+		categoryName: "Collectibles",
+		hasLegacyLiabilityType: false
+	},
+	{
+		name: "P2P lending",
+		latestValue: 5,
+		categoryName: "Investments",
+		hasLegacyLiabilityType: false
+	}
+];
+
+function incidentSeries(latestValue: number) {
+	return LIABILITY_INCIDENT_SERIES_PROGRESS.map(progress =>
+		Number((latestValue * progress).toFixed(2))
+	);
+}
+
+function buildIncidentAsset(seed: LiabilityIncidentAssetSeed): AssetDTO {
+	const category = buildCategory({ name: seed.categoryName, type: ASSET_TYPE.ASSET });
+
+	return buildAsset({
+		name: seed.name,
+		categoryId: category.id,
+		categoryName: category.name,
+		categoryIcon: category.icon,
+		type: ASSET_TYPE.ASSET,
+		isFavorite: LIABILITY_INCIDENT_FAVORITE_NAMES.includes(seed.name),
+		latestValue: seed.latestValue,
+		latestValueBase: seed.latestValue,
+		previousValue: seed.latestValue,
+		initialValue: seed.latestValue,
+		// Twelve rows in ASSET categories still carry the legacy liability type: the incident itself.
+		liabilityType: seed.hasLegacyLiabilityType ? LIABILITY_TYPE.MANUAL : null,
+		paymentAmount: seed.hasLegacyLiabilityType ? LIABILITY_INCIDENT_LEGACY_PAYMENT_AMOUNT : null
+	});
+}
+
+export interface LiabilityClassificationIncident {
+	assets: AssetDTO[];
+	chart: ChartDataDTO;
+	summary: AnalyticsSummaryDTO;
+}
+
+export function buildLiabilityClassificationIncident(): LiabilityClassificationIncident {
+	const assets = LIABILITY_INCIDENT_ASSET_SEEDS.map(buildIncidentAsset);
+	const favoriteSeeds = LIABILITY_INCIDENT_ASSET_SEEDS.filter(seed =>
+		LIABILITY_INCIDENT_FAVORITE_NAMES.includes(seed.name)
+	);
+	const netWorthSeries = incidentSeries(LIABILITY_INCIDENT_NET_WORTH);
+
+	return {
+		assets,
+		chart: buildChart({
+			labels: LIABILITY_INCIDENT_CHART_LABELS,
+			totalNetWorth: netWorthSeries,
+			totalAssetsOnly: [...netWorthSeries],
+			favoriteAssetsValues: Object.fromEntries(
+				favoriteSeeds.map(
+					seed => [seed.name, incidentSeries(seed.latestValue)] as [string, number[]]
+				)
+			),
+			favoriteAssetsTypes: Object.fromEntries(
+				favoriteSeeds.map(seed => [seed.name, ASSET_TYPE.ASSET] as [string, string])
+			)
+		}),
+		summary: buildSummary({
+			totalNetWorth: LIABILITY_INCIDENT_NET_WORTH,
+			totalGrossAssets: LIABILITY_INCIDENT_NET_WORTH,
+			totalLiabilities: LIABILITY_INCIDENT_LIABILITIES,
+			debtToAssetRatio: 0,
+			topAssets: assets
+		})
 	};
 }
 

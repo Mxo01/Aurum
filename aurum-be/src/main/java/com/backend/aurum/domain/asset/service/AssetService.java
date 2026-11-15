@@ -1,6 +1,7 @@
 package com.backend.aurum.domain.asset.service;
 
 import com.backend.aurum.domain.asset.model.Asset;
+import com.backend.aurum.domain.asset.model.AssetCategory;
 import com.backend.aurum.domain.asset.model.AssetUpdate;
 import com.backend.aurum.domain.asset.model.LiabilityConfiguration;
 import com.backend.aurum.domain.asset.model.Snapshot;
@@ -65,6 +66,7 @@ public class AssetService {
 	@Transactional
 	public Asset save(Asset asset, BigDecimal initialValue, LocalDate referenceDate) {
 		log.debug("AssetService#save - Persisting new asset: name={}", asset.getName());
+		requireLiabilityCategoryMatch(LiabilityConfiguration.of(asset), asset.getCategory());
 		Asset savedAsset = assetRepository.save(Objects.requireNonNull(asset));
 		log.info(
 			"AssetService#save - Asset created: assetId={}, name={}",
@@ -107,6 +109,10 @@ public class AssetService {
 		LiabilityConfiguration currentLiability = LiabilityConfiguration.of(asset);
 		LiabilityConfiguration liability = details.liability().orElse(currentLiability);
 		liability.validate();
+		// Checked against the state the update produces, not against the request: a rename must not
+		// leave an ASSET category carrying a liabilityType, and a category switch must not smuggle a
+		// debt into it.
+		requireLiabilityCategoryMatch(liability, details.category().orElseGet(asset::getCategory));
 		requireSnapshotWhenAutomatic(asset.getId(), liability);
 
 		// A changed payment rule invalidates the persisted schedule: the next run derives it again
@@ -154,6 +160,17 @@ public class AssetService {
 	private Currency targetCurrencyOf(Asset asset) {
 		User user = asset.getUser();
 		return user != null ? user.getCurrency() : asset.getOriginalCurrency();
+	}
+
+	/**
+	 * Runs before the flush, in the same transaction that writes the row, so a rejection leaves
+	 * nothing persisted: a rule checked after the commit would keep the inconsistent row alive.
+	 */
+	private void requireLiabilityCategoryMatch(
+		LiabilityConfiguration liability,
+		AssetCategory category
+	) {
+		liability.validateForCategory(category != null ? category.getType() : null);
 	}
 
 	private void requireSnapshotWhenAutomatic(UUID assetId, LiabilityConfiguration liability) {
