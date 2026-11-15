@@ -1,169 +1,284 @@
-# Security audit — November 2026
+# Security audit — 15 November 2026
 
-Scope: `aurum-be` (Spring Boot API and MCP server) and `aurum-fe` (Angular
-SPA at the time of the audit; now React). Focus: the MCP authorization layer,
-which was written before the MCP authorization spec was adopted and had grown a
-custom OAuth proxy.
+Audit of `aurum-be` (Spring Boot API and MCP server) and `aurum-fe` (React SPA),
+taken on `main` at `fcb94d3`; batch 1 landed in PR #95 (`f8c1c1e`) and batch 2 in
+PR #117 on `chore/65-harden-deploy-and-report`. Read-only: no shard changed a tracked file,
+started the application, or opened a database. Everything below comes from the
+source, the built artefacts and the repository settings.
 
-> Historical note: the frontend findings were about the Angular app. The React
-> rewrite keeps the same API, auth and hosting boundaries.
+An issue number in a status column is the one that closes that finding; "Open
+issues" says what each issue covers.
 
-Status key: **fixed** in the `fix/mcp-native-auth` branch, **open** as a
-follow-up, **info** for accepted risk or context.
+## Status key
 
-## Critical and high
+| Status                   | Meaning                                                                 |
+| ------------------------ | ----------------------------------------------------------------------- |
+| `fixed in #95 (f8c1c1e)` | landed in PR #95, merged as `f8c1c1e`                                   |
+| `fixed in this batch`    | landed in PR #117 (batch 2: build, deploy, CI, hosting, ops)            |
+| `open #<n>`              | accepted as work, tracked by an issue here                              |
+| `accepted/info`          | accepted risk, by design, or context with no action                     |
 
-### 1. Authorization code theft through the OAuth proxy — fixed
+## Scope and method
 
-`McpOAuthController#authorize` stored the caller's `redirect_uri` keyed by
-`state`, replaced it with the backend callback, and then `#callback` forwarded
-Auth0's authorization code to the stored URI without validating it.
+Six read-only shards, each with its evidence file in
+`.opencode/tasks/aurum-65/audit/` — a gitignored agent workspace, so not in the tree.
+The names below say what backed each claim, not where to open it from a clone.
 
-An unauthenticated attacker could:
+| Shard                         | Area                                                                       | Method                                                                                                          |
+| ----------------------------- | -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `01-authz-idor.md`            | Authentication, authorization, IDOR, tenant isolation, privilege escalation | All 18 operations traced controller → facade → service → repository; every MCP tool traced to its ownership rule. |
+| `02-input-validation.md`      | DTOs, mass assignment, type confusion, uploads, resource exhaustion         | Every request DTO and controller read; one probe on the app's own JDK to reproduce the image failure.             |
+| `03-persistence-injection.md` | Injection, persistence integrity, query-level access control                | All 6 `@Query` and every derived finder, 31 Liquibase changesets, all 33 `@Transactional` boundaries.             |
+| `04-web-xss-leaks.md`         | XSS, CSRF/CORS, headers, token storage, log and error leaks, secrets         | Whole-tree grep for every HTML sink and storage write; 172 `log.*` calls filtered; the built bundle inspected.    |
+| `05-mcp-prompt-injection.md`  | MCP surface, prompt injection, LLM-specific threats                         | 24 tools traced into facades; library behaviour read from the resolved jars with `javap`.                         |
+| `06-deps-infra-ci.md`         | Dependencies, container and infra configuration, CI/CD, deployment          | `dependency:tree`, `npm audit`, `gh api` repository settings, image inspection, `unzip -l` of the built jar.       |
 
-1. call `/oauth/register` (or reuse the public MCP client id) to get a
-   `client_id`;
-2. craft `/oauth/authorize?redirect_uri=https://attacker.example/cb&state=…`
-   with their own PKCE pair and send the link to a victim;
-3. receive the victim's `code` at `attacker.example`;
-4. exchange it at `/oauth/token` and obtain a token for the victim's account.
+### Tested and not found
 
-The proxy was removed. Auth0 is now the authorization server, PKCE and the
-redirect URI are enforced by Auth0, and the backend only validates tokens.
+Two whole classes were tested and are absent — the reason the rest of the list is
+hardening rather than a live breach.
 
-### 2. Open token/DCR proxy — fixed
+- **Cross-tenant access and IDOR.** Identity comes from the validated token principal,
+  never from a body, path, query or header; no endpoint accepts a `userId`; every
+  resource id is ownership-checked downstream; no role tier exists to escalate into.
+  The per-endpoint table of what enforces each call is `01-authz-idor.md` §1.3; the
+  repository methods reachable without a `userId` predicate are enumerated in
+  `03-persistence-injection.md`.
+- **SQL injection.** All JPQL is static with named parameters, every derived finder is
+  a parse-time construct, and no `EntityManager`, `JdbcTemplate`, `CriteriaBuilder`,
+  `Sort`, `Pageable` or `LIKE` exists in `src/main/java`. Full argument:
+  `03-persistence-injection.md`, section "Is SQL injection currently possible?". The
+  answer there is **no**.
 
-`/oauth/token` forwarded any grant type, any `client_id`, and any
-`client_secret` to Auth0; `/oauth/register` echoed arbitrary redirect URIs and
-returned a fixed client id. This was an open proxy to the tenant and allowed
-audience injection for any Auth0 client. Removed with the proxy.
+Also clean, so not re-opened without new evidence: no HTML sink in the SPA, no open
+redirect, no secret in the tracked tree or the production bundle, no PII in logs, no
+entity bound from JSON, no upload filename used as a path.
 
-### 3. Web-app tokens were valid on the MCP endpoint — fixed
+## Corrections to the November 2026 audit
 
-The MCP filter chain validated the same `aud` as the SPA (`AUTH0_AUDIENCE`), so
-any token minted for the web app could call every MCP tool. The MCP chain now
-validates `mcp.audience` (defaulting to the MCP resource URI, which is the
-Auth0 API identifier), per RFC 8707/RFC 9728. A web-app token is rejected.
+The previous audit was treated as claims and re-verified item by item. Most held;
+two did not.
 
-### 4. IDOR on target update — fixed
+### 1. `deleteUser` does not half-delete when Auth0 fails
 
-`TargetService#update` loaded a target by id and never compared its owner with
-the authenticated user. `TargetFacade#updateTarget` and the MCP
-`updateTarget`/`bulkUpdateTargets` tools reached it, so any authenticated user
-who knew a target UUID could rewrite another user's goal.
+The November record said the method "deletes the local row before Auth0, so an Auth0
+failure leaves the account half-deleted". It does not: `deleteUser` is
+`@Transactional` and rethrows the `Auth0Exception` as a `RuntimeException`, so the
+pending delete is never flushed and the local account survives intact. Evidence:
+`03-persistence-injection.md`, the `deleteUser` finding; `01-authz-idor.md` §5, last
+rows.
 
-`TargetService#update` now takes `userId`, and `findOwnedTarget` throws
-`AccessDeniedException` for a mismatch. `delete` uses the same check.
+The real defect is the opposite asymmetry — **deletion is not durable**. The access
+token keeps validating and the next request re-creates the user row through
+`findOrCreate`, so a deleted account silently returns as an empty one. GDPR closure
+needs a tombstone or an `app_metadata` flag checked before creation, plus session
+revocation (#103), which also covers the ghost-account mirror risk.
 
-### 5. Non-compliant discovery documents — fixed
+### 2. HSTS at Caddy protects the API host only, not the SPA
 
-The backend advertised itself as the authorization server
-(`authorization_servers: [resourceUrl]`, `issuer: resourceUrl`) while Auth0
-issued the tokens, and the protected-resource metadata used the host root
-instead of the MCP endpoint. MCP clients that validate `iss` (RFC 9207) or the
-metadata `resource` (RFC 9728) could not use it.
+The November Low table said "HSTS/Referrer-Policy added at Caddy" and read as
+coverage for the application. `docs/operations.md` puts Caddy in front of
+`api.aurum-networth.com` alone; `aurum-networth.com` is served by Vercel, from a
+`vercel.json` whose only header was a `Content-Type` for the web manifest. The origin
+holding the Auth0 refresh token had no CSP, HSTS, frame options or referrer policy.
+Evidence: the SPA-header findings in `04-web-xss-leaks.md` and `06-deps-infra-ci.md`.
 
-The backend now publishes only the resource metadata:
-`resource` is the canonical MCP URI, `authorization_servers` is the Auth0
-issuer, and the document is served at both
-`/.well-known/oauth-protected-resource` and
-`/.well-known/oauth-protected-resource/mcp`. Authorization-server metadata is
-served by Auth0.
+Headers now ship from `vercel.json`; the policy itself — CSP with `connect-src`,
+`frame-ancestors`, a nonce or hash for the inline theme script — is #97. Caddy is
+unchanged and still covers the API host alone.
 
-## Medium
+## Intentional behaviour changes in #95
 
-### 6. MCP CORS allowed every origin with credentials — fixed
+Deliberate, contract-visible; clients and tests moved with them.
 
-`mcpCorsConfigurationSource` used `allowedOriginPatterns("*")` with
-`allowCredentials(true)`, which reflects any `Origin`. `/mcp` is now limited to
-`MCP_ALLOWED_ORIGINS`, credentials are disabled, and a filter rejects requests
-whose `Origin` is not allowlisted (native clients send no `Origin`). An empty
-allowlist blocks all browser origins.
+- `GET /analytics/projections?years=<1` answered `{}`; now `400 Years must be between 1
+  and 50`, checked in the facade so the MCP surface inherits it.
+- Malformed, missing and non-coercible bodies answered `500 An unexpected error
+  occurred`; now `400` in the pinned envelope with the field attached, `413` when
+  oversize, `415`/`405` for media-type and method mistakes.
+- `GET /users` no longer serialises `jwtId`, `assets` or `categories`; the committed
+  contract dropped the entity schemas nothing read.
+- A default or foreign category keeps its sentence and status but now throws
+  `AccessDeniedException`/`ConflictException`; `IllegalArgumentException` and
+  `ResponseStatusException` no longer publish their message.
+- A null owner id in the three ownership mappers throws instead of skipping the check —
+  unreachable from HTTP and MCP, so the change is invisible.
+- MCP list tools return `{items, totalCount, truncated}` instead of a bare array and
+  tool errors are curated; a picture that fails processing answers `400` field `file`.
 
-### 7. Unbounded OAuth state map — fixed by removal
+## Findings
 
-`ConcurrentHashMap<String, PendingCallback>` had no size cap and was only
-pruned every five minutes; an attacker could grow it without bound. The map no
-longer exists.
+Severity is the shard's own rating. Counts: **High 8, Medium 24, Low 34, Info 4** — 70
+findings, none Critical.
 
-### 8. No read/write separation — fixed
+### Shard 01 — authorization, IDOR, tenant isolation
 
-Every MCP tool was available to any valid token, including the destructive bulk
-tools. When `MCP_READ_SCOPES`/`MCP_WRITE_SCOPES` are configured, `get*` tools
-require the read scope and every other tool requires the write scope; unknown
-tool names are treated as writes. Enforcement was optional when this audit was
-written; it is now fail-closed, so empty lists deny writes and leave reads
-available.
+| Id        | Finding                                                                   | Severity | Status                         |
+| --------- | ------------------------------------------------------------------------- | -------- | ------------------------------ |
+| AUD-01-1  | Refresh token and access token persisted in `localStorage`                 | Medium   | open #96                       |
+| AUD-01-2  | Account deletion not durable: the next request recreates the user          | Low      | open #103                      |
+| AUD-01-3  | 403-vs-404 existence oracle on every foreign resource id                   | Low      | open #104                      |
+| AUD-01-4  | Unbounded snapshot ids on `DELETE /snapshots/bulk`                         | Low      | open #98                       |
+| AUD-01-5  | Malformed path variable or unreadable body answered 500 with a trace       | Low      | fixed in #95 (f8c1c1e)         |
+| AUD-01-6  | Ownership helpers that silently widened when `userId` was null             | Low      | fixed in #95 (f8c1c1e) + #110  |
+| AUD-01-7  | `GET /users` serialised the JPA entity (`jwtId`, base64 picture)           | Low      | fixed in #95 (f8c1c1e)         |
+| AUD-01-8  | Swagger UI and `/v3/api-docs` public in production                         | Low      | fixed in this batch            |
+| AUD-01-9  | MCP read tools are scope-free when scopes are unconfigured                 | Info     | open #107                      |
+| AUD-01-10 | MCP audience boundary rested on an exact path match                        | Info     | open #107                      |
+| AUD-01-11 | First-request user creation could answer 401 under a race                  | Info     | accepted/info (suspected)      |
 
-### 9. Unbounded MCP bulk operations — fixed
+### Shard 02 — input validation, DTOs, uploads, resource exhaustion
 
-`bulkAdd*`/`bulkUpdate*` accepted arbitrary list sizes, so one tool call could
-allocate and persist unbounded data. They now reject lists over
-`mcp.max-batch-size` (default 500) and null lists.
+| Id        | Finding                                                                   | Severity | Status                            |
+| --------- | ------------------------------------------------------------------------- | -------- | --------------------------------- |
+| AUD-02-1  | Picture upload threw `ImagingOpException` for EXIF orientation 2–8         | High     | fixed in #95 (f8c1c1e)            |
+| AUD-02-2  | `GET /analytics/projections?years=` unbounded: single-request heap growth   | High     | fixed in #95 (f8c1c1e)            |
+| AUD-02-3  | Every non-coercible JSON value answered 500, not a field-level 400          | High     | fixed in #95 (f8c1c1e)            |
+| AUD-02-4  | Path/query conversion, missing parts, oversize uploads answered 500         | Medium   | fixed in #95 (f8c1c1e)            |
+| AUD-02-5  | Cash-flow updates accepted any month, any sign, any magnitude               | Medium   | fixed in #95 (f8c1c1e)            |
+| AUD-02-6  | Negative `initialValue` on asset creation bypassed the snapshot rule        | Medium   | fixed in #95 (f8c1c1e)            |
+| AUD-02-7  | Client-supplied exchange rate trusted without bounds                        | Medium   | fixed in #95 (f8c1c1e)            |
+| AUD-02-8  | Currency and locale setters accepted `null` and any ISO/BCP-47 value        | Medium   | fixed in #95 (f8c1c1e)            |
+| AUD-02-9  | Unbounded REST bodies; the only bulk REST endpoint had no batch cap         | Medium   | open #98                          |
+| AUD-02-10 | 40 megapixels per upload, no heap ceiling and no concurrency budget         | Low      | open #102                         |
+| AUD-02-11 | Numeric overflow answered 500; scale was silently rounded                   | Low      | fixed in #95 (f8c1c1e)            |
+| AUD-02-12 | `currentAmount` on targets accepted unvalidated                             | Low      | fixed in #95 (f8c1c1e) + #111     |
+| AUD-02-13 | MCP identifiers came from the body, unvalidated                             | Low      | fixed in #95 (f8c1c1e) + #116     |
+| AUD-02-14 | Unbounded reference dates for manual assets                                 | Low      | open #98                          |
+| AUD-02-15 | Log injection through user-controlled name and filename                     | Low      | fixed in #95 (f8c1c1e)            |
 
-### 10. Image upload decompression bomb — fixed
+### Shard 03 — injection, persistence integrity, query-level access control
 
-A 5 MB file was decoded before any dimension check, so a crafted image with
-hundreds of megapixels could exhaust the heap. Dimensions are now read from the
-image header and images over 40 megapixels are rejected before decoding.
+| Id        | Finding                                                                     | Severity | Status                            |
+| --------- | --------------------------------------------------------------------------- | -------- | --------------------------------- |
+| AUD-03-01 | Projections raised an unbounded `years` to a BigDecimal power                | High     | fixed in #95 (f8c1c1e)            |
+| AUD-03-02 | Bulk writes not atomic: a failing item left earlier ones committed           | Medium   | open #108                         |
+| AUD-03-03 | `User.locale` persisted as a JVM ordinal while every other enum is `STRING`  | Medium   | open #105                         |
+| AUD-03-04 | `Asset` had no `@Version`, so an edit racing the scheduler was lost          | Low      | fixed in #95 (f8c1c1e) + #113     |
+| AUD-03-05 | `deleteUser` made a network call inside its transaction                      | Low      | open #103 (description corrected) |
+| AUD-03-06 | Cash-flow `year`/`month` unvalidated; the DB constraint produced a 500        | Low      | fixed in #95 (f8c1c1e)            |
+| AUD-03-07 | Snapshot `referenceDate` unbounded, which drove the exchange-rate cache       | Low      | open #98                          |
 
-### 11. Tokens in `localStorage` — open
+### Shard 04 — XSS, CORS, headers, token storage, leaks, secrets
 
-`auth0Config.cacheLocation` is `localstorage` and refresh tokens are enabled, so
-an XSS can exfiltrate a long-lived refresh token. The chart tooltips that use
-`innerHTML` escape user-controlled labels, so this is not currently reachable
-through asset names, but the storage choice remains the largest XSS blast
-radius in the app. Moving to `memory` (with silent-auth/refresh fallback) is a
-UX trade-off that deserves its own change.
+| Id        | Finding                                                                   | Severity | Status                    |
+| --------- | ------------------------------------------------------------------------- | -------- | ------------------------- |
+| AUD-04-1  | Access and refresh tokens persist in `localStorage` — the XSS blast radius | High     | open #96                  |
+| AUD-04-2  | The SPA origin shipped no security headers at all                          | High     | fixed in this batch + #97 |
+| AUD-04-3  | CORS accepted `*` with `allowCredentials(true)`, unvalidated at startup     | Medium   | fixed in #95 (f8c1c1e)    |
+| AUD-04-4  | Swagger UI and `/v3/api-docs` public in production                         | Medium   | fixed in this batch       |
+| AUD-04-5  | `GET /users` returned the entity, two collections and the base64 picture    | Medium   | fixed in #95 (f8c1c1e)    |
+| AUD-04-6  | Two error handlers echoed the exception's own message to the client        | Low      | fixed in #95 (f8c1c1e)    |
+| AUD-04-7  | The Auth0 `sub` was logged at `INFO` in nine places                        | Low      | fixed in #95 (f8c1c1e)    |
+| AUD-04-8  | User-controlled strings reached the logs verbatim (log injection)          | Low      | fixed in #95 (f8c1c1e)    |
+| AUD-04-9  | Unhandled exceptions logged with SQL and row values in the cause chain     | Low      | open #102                 |
+| AUD-04-10 | Frontend build fell back to the production Auth0 tenant when `VITE_*` unset | Info     | open #109                 |
 
-### 12. End-of-life framework — fixed in `chore/spring-boot-4`
+### Shard 05 — MCP server, prompt injection, LLM-specific threats
 
-`spring-boot-starter-parent` was 3.4.4 and Spring AI was 1.1.3 (MCP Java SDK
-0.17, protocol 2025-06-18). The platform is now Spring Boot 4.1.2 + Spring AI
-2.0.2 (MCP Java SDK 2.1, protocol 2025-11-25), with springdoc 3.2.0, Lombok
-1.18.48 and JUnit 6. The suite was re-run and the application was started
-against the local database to validate Liquibase/Hibernate 7 schema checks.
+| Id        | Finding                                                                         | Severity | Status                    |
+| --------- | ------------------------------------------------------------------------------- | -------- | ------------------------- |
+| AUD-05-01 | User names reached model context unmarked and unfiltered (stored injection)      | Medium   | fixed in #95 + #106       |
+| AUD-05-02 | No confirmation boundary for writes; tools advertised no destructive hint        | Medium   | open #106                 |
+| AUD-05-03 | Read tools returned unbounded collections: context flooding, cost amplification  | Medium   | fixed in #95 (f8c1c1e)    |
+| AUD-05-04 | Tool errors returned verbatim: existence oracle and schema disclosure            | Low      | fixed in #95 (f8c1c1e)    |
+| AUD-05-05 | Origin validation was an exact match on the raw URI and could be skipped         | Low      | open #107                 |
+| AUD-05-06 | Nothing prevented `mcp.audience` from equalling the web audience                 | Low      | open #107                 |
+| AUD-05-07 | Reads failed open when scopes were unset, and nothing forced them to be set      | Low      | open #107                 |
+| AUD-05-08 | No body limit and no rate limit on `/mcp`; the batch cap ran after parsing       | Low      | open #98                  |
 
-### 13. CI supply chain — open
+### Shard 06 — dependencies, container, CI/CD, deployment
 
-Actions are pinned to mutable tags (`actions/checkout@v4`,
-`docker/build-push-action@v6`, `appleboy/*@v…`) and the deploy image is only
-tagged `latest`, so there is no digest pinning and no immutable rollback
-artifact. Pinning every action to a commit SHA and tagging images with the
-commit SHA is the fix.
+`npm audit` reports 7 moderate advisories, all one dev-only `minimatch` chain;
+`--omit=dev` reports zero. No CVE claim is made about the Maven versions.
 
-### 14. gitleaks allowlist was too broad — fixed
+| Id        | Finding                                                                    | Severity | Status                                |
+| --------- | -------------------------------------------------------------------------- | -------- | ------------------------------------- |
+| AUD-06-1  | Local `application-local.properties` baked into the jar: a real Auth0 Management credential inside the artefact | High | fixed in this batch |
+| AUD-06-2  | `workflow_dispatch` deployed any branch to production, bypassing protection  | High     | fixed in this batch                   |
+| AUD-06-3  | No `.dockerignore`: the local PostgreSQL data directory shipped as context   | Medium   | fixed in this batch                   |
+| AUD-06-4  | Deploy was neither verified nor reversible                                  | Medium   | fixed in this batch                   |
+| AUD-06-5  | Actions pinned to mutable tags; no provenance, SBOM or signature            | Medium   | open #100                             |
+| AUD-06-6  | SSH deploy without host-key verification, plus a long-lived PAT on the host  | Medium   | host key fixed in this batch; PAT #102 |
+| AUD-06-7  | The frontend had no security headers, and Caddy does not cover that origin    | Medium   | fixed in this batch + #97             |
+| AUD-06-8  | The application connects to PostgreSQL as the superuser                      | Medium   | open #99                              |
+| AUD-06-9  | Branch protection requires neither E2E nor a pull request                    | Medium   | open #101                             |
+| AUD-06-10 | Secret scanning, push protection and Dependabot updates disabled on a public repo | Medium | open #101                      |
+| AUD-06-11 | No automated dependency alerting or audit step in CI                         | Low      | fixed in this batch; setting #101     |
+| AUD-06-12 | Backup is one copy on the failing host, unencrypted, with no restore test    | Medium   | open #102                             |
+| AUD-06-13 | Runtime image is a full JDK on a floating tag, with `apt` and no healthcheck | Low      | open #102                             |
+| AUD-06-14 | `spring-boot-docker-compose` shipped on the runtime classpath                | Low      | fixed in this batch                   |
+| AUD-06-15 | No resource limits and no log rotation on either container                   | Low      | open #102                             |
+| AUD-06-16 | One flat network: the backend and the database have no boundary              | Low      | open #99                              |
+| AUD-06-17 | `swagger-ui` webjar still ships; its endpoints are no longer public          | Low      | fixed in this batch                   |
+| AUD-06-18 | gitleaks allowlist still covered a source file; the local hook silently skipped | Low   | open #101                             |
+| AUD-06-19 | `sed -i`/append of deploy variables into `.env` is newline-injectable        | Low      | open #102                             |
 
-`aurum-be/src/test/.*\.java$` and `.*\.spec\.ts$` were allowlisted wholesale,
-so any real secret committed in a test would have been ignored. The allowlist
-now names the three fixture files that actually need it; the full-history scan
-is clean.
+The first and third are why the batch existed: the guard was a `.gitignore`, which
+does not apply to `docker build`. CI now asserts the packaged jar holds no local
+properties file and no Docker Compose module.
 
-## Low and informational
+## Open issues
 
-| Finding                                                                                              | Status                                                                       |
-| ---------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| `cors.allowed-origins` can be configured as `*` while `allowCredentials(true)`                       | open — validate at startup                                                   |
-| Swagger UI and `/v3/api-docs` are public in production                                               | open — disable or protect outside development                                |
-| `GET /users` returns the JPA entity, including `jwtId` and the base64 picture                        | open — return a DTO                                                          |
-| `deleteUser` deletes the local row before Auth0, so an Auth0 failure leaves the account half-deleted | open                                                                         |
-| No CSP on the API or the Vercel app                                                                  | open — HSTS/Referrer-Policy added at Caddy                                   |
-| Backend publishes `8080:8080` on all interfaces                                                      | fixed — bound to `127.0.0.1`                                                 |
-| No rate limiting on `/mcp` (token brute force is impractical, DoS is not)                            | open                                                                         |
-| Auth0 Management API token was cached in non-volatile fields                                         | fixed — `volatile` + `synchronized`                                          |
-| `/opt/aurum/.env` was mode `644`                                                                     | fixed — `600` on the host and in the deploy workflow                         |
-| The backend image had no `curl`, so the Docker healthcheck always failed                             | fixed — `curl` installed in the runtime image                                |
-| No database backups                                                                                  | fixed — daily `pg_dump` with 7-day retention; offsite copy still recommended |
-| SSH password authentication enabled; `ufw` inactive                                                  | open — key-only SSH and a host/cloud firewall are recommended                |
-| Auth0 DCR, once enabled, is open registration                                                        | accepted — strict mode, default permissions, monitor/rotate                  |
-| MCP SDK 2.1 supports protocol 2025-11-25; 2026-07-28 is not in the SDK yet                           | info — stateless transport is the shape that revision requires               |
-| Historical `Co-Authored-By` trailers and the revoked Auth0 secret in history                         | info — not rewritten                                                         |
+The status columns above are the reverse map; each issue collects what it closes.
+
+| Issue | Title                                                                | What it closes                                                      |
+| ----- | -------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| #96   | `fix(auth)`: stop persisting Auth0 tokens in `localStorage`          | token storage, raised independently by shards 01 and 04              |
+| #97   | `chore(web)`: add a tested CSP to the SPA origin                     | what the new SPA headers still leave open                           |
+| #98   | `fix(api)`: bound request sizes, bulk lists and reference dates      | bulk ids, bodies, reference dates, `/mcp` body and rate limit        |
+| #99   | `chore(db)`: run the application as a least-privilege role           | superuser credentials and the flat network                          |
+| #100  | `chore(ci)`: pin actions, add provenance and deploy by digest        | mutable tags, no SBOM, `latest` with no digest                      |
+| #101  | `chore(repo)`: close the branch-protection and secret-scanning gaps  | protection, secret scanning, Dependabot, gitleaks allowlist          |
+| #102  | `chore(ops)`: offsite backups, container limits and log hygiene       | backups, image, limits, log chain, PAT lifetime, `.env` write       |
+| #103  | `fix(user)`: make account deletion durable                           | resurrection after deletion and the ghost-account path               |
+| #104  | `refactor(api)`: answer 404 for foreign resource ids                  | the 403-vs-404 existence oracle                                     |
+| #105  | `fix(persistence)`: store `User.locale` as a string                  | the ordinal persistence defect                                      |
+| #106  | `chore(mcp)`: mark untrusted content, require confirmation           | the structural rest of the injection findings                       |
+| #107  | `fix(mcp)`: fail closed on scopes, audience and origin checks         | read scopes, audience equality, origin filter, read fail-open       |
+| #108  | `fix(api)`: make bulk writes atomic                                  | partial commits in bulk operations                                  |
+| #109  | `fix(fe)`: fail the production build without Auth0 configuration      | the production-tenant fallback in the SPA build                     |
+| #110  | `fix(asset)`: reject a missing owner before the category lookup       | the remaining half of the null-owner hazard                         |
+| #111  | `fix(target)`: validate the target deadline                           | the one unvalidated target field                                    |
+| #113  | `fix(scheduler)`: surface a lost optimistic-lock race                 | the scheduler side of the lost update                               |
+| #116  | `fix(mcp)`: validate tool ids at the boundary                         | MCP identifiers taken from the body                                 |
+
+Batch 1's review also filed #112 (allocation keys), #114 (E2E export mock) and #115
+(test nits); they are not findings of the six shards.
+
+## Accepted and informational
+
+| Item                                                                      | Why it stands                                                                                                     |
+| ------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| CSRF disabled                                                             | All three chains are stateless and bearer-only; no cookie, no form login, no ambient credential to ride.            |
+| No rate limiting on the API and `/mcp`                                     | Brute force is impractical; the DoS half stays a body cap (#98) and an edge-proxy concern.                          |
+| Auth0 DCR, once enabled, is open registration                              | Accepted with strict mode and default permissions; a tenant setting, not repository code.                          |
+| CORS `allowedOriginPatterns` with credentials on the API                    | Bearer-only, no cookies, so a reflected origin buys nothing without the token. A bare `*` now fails startup (#95).  |
+| MCP SDK 2.1 supports protocol 2025-11-25                                   | Stateless transport is the shape that revision requires; the SDK cannot negotiate a newer one yet.                  |
+| Historical `Co-Authored-By` trailers and the revoked Auth0 secret           | Deliberately not rewritten; forks and old clones still hold the value, and the secret was revoked.                 |
+| A locally built image may have carried the local properties file            | The mechanism inside the jar was proven; whether such an image was ever pushed is not answerable from the repo.     |
+| First-user-creation race                                                   | Suspected, not reproduced. A bounded retry would close it; nothing else does today.                                |
 
 ## Not in scope
 
-- Auth0 tenant configuration itself (MFA policy, anomaly detection, session
-  lifetime, DCR hygiene). The setup checklist is in
-  [`mcp-auth0-setup.md`](mcp-auth0-setup.md).
-- Offsite backups, SSH/UFW hardening and the host/cloud firewall policy (local backups and HSTS are in place; see [`operations.md`](operations.md)).
-- Frontend dependency review (`npm audit`) — no dependency changes were made in
-  this branch.
+- **Auth0 tenant configuration** — MFA, anomaly detection, DCR hygiene, API
+  permissions, refresh-token rotation, token lifetime. Two findings depend on it and
+  could only be verified from the client side: [`mcp-auth0-setup.md`](mcp-auth0-setup.md).
+- **Host state** — the Caddyfile, the backup cron file, firewall and SSH
+  configuration. None is in the repository, so the HSTS and rate-limit claims could not
+  be checked.
+- **CVE status of the pinned Maven versions** — no scanner or advisory database
+  offline; versions are reported as resolved, not as advisory-free.
+- **MCP client rendering and runtime probing** — how a client renders tool text is
+  outside this boundary, and illegal-request behaviour is derived from code paths.
+
+## Operations
+
+Deploy, rollback, backup and restore, logs, migrations and host invariants are not
+repeated here; the authoritative document is [`operations.md`](operations.md).
+
+## History
+
+- **November 2026** — the first audit: the MCP authorization layer, the custom OAuth
+  proxy it replaced, and the frontend findings as they stood. Superseded by this
+  record; its open items were re-verified above and two of its claims corrected.
