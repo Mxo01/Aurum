@@ -115,7 +115,7 @@ findings, none Critical.
 
 | Id        | Finding                                                              | Severity | Status                        |
 | --------- | -------------------------------------------------------------------- | -------- | ----------------------------- |
-| AUD-01-1  | Refresh token and access token persisted in `localStorage`           | Medium   | open #137                     |
+| AUD-01-1  | Refresh token and access token persisted in `localStorage`           | Medium   | accepted                      |
 | AUD-01-2  | Account deletion not durable: the next request recreates the user    | Low      | open #140                     |
 | AUD-01-3  | 403-vs-404 existence oracle on every foreign resource id             | Low      | accepted, not tracked         |
 | AUD-01-4  | Unbounded snapshot ids on `DELETE /snapshots/bulk`                   | Low      | open #139                     |
@@ -140,7 +140,7 @@ findings, none Critical.
 | AUD-02-7  | Client-supplied exchange rate trusted without bounds                      | Medium   | fixed in #95 (f8c1c1e)        |
 | AUD-02-8  | Currency and locale setters accepted `null` and any ISO/BCP-47 value      | Medium   | fixed in #95 (f8c1c1e)        |
 | AUD-02-9  | Unbounded REST bodies; the only bulk REST endpoint had no batch cap       | Medium   | open #139                     |
-| AUD-02-10 | 40 megapixels per upload, no heap ceiling and no concurrency budget       | Low      | open #141                     |
+| AUD-02-10 | 40 megapixels per upload, no heap ceiling and no concurrency budget       | Low      | accepted                      |
 | AUD-02-11 | Numeric overflow answered 500; scale was silently rounded                 | Low      | fixed in #95 (f8c1c1e)        |
 | AUD-02-12 | `currentAmount` on targets accepted unvalidated                           | Low      | fixed in #95 (f8c1c1e) + #139 |
 | AUD-02-13 | MCP identifiers came from the body, unvalidated                           | Low      | fixed in #95 (f8c1c1e) + #138 |
@@ -161,18 +161,18 @@ findings, none Critical.
 
 ### Shard 04 — XSS, CORS, headers, token storage, leaks, secrets
 
-| Id        | Finding                                                                     | Severity | Status                     |
-| --------- | --------------------------------------------------------------------------- | -------- | -------------------------- |
-| AUD-04-1  | Access and refresh tokens persist in `localStorage` — the XSS blast radius  | High     | open #137                  |
-| AUD-04-2  | The SPA origin shipped no security headers at all                           | High     | fixed in this batch + #137 |
-| AUD-04-3  | CORS accepted `*` with `allowCredentials(true)`, unvalidated at startup     | Medium   | fixed in #95 (f8c1c1e)     |
-| AUD-04-4  | Swagger UI and `/v3/api-docs` public in production                          | Medium   | fixed in this batch        |
-| AUD-04-5  | `GET /users` returned the entity, two collections and the base64 picture    | Medium   | fixed in #95 (f8c1c1e)     |
-| AUD-04-6  | Two error handlers echoed the exception's own message to the client         | Low      | fixed in #95 (f8c1c1e)     |
-| AUD-04-7  | The Auth0 `sub` was logged at `INFO` in nine places                         | Low      | fixed in #95 (f8c1c1e)     |
-| AUD-04-8  | User-controlled strings reached the logs verbatim (log injection)           | Low      | fixed in #95 (f8c1c1e)     |
-| AUD-04-9  | Unhandled exceptions logged with SQL and row values in the cause chain      | Low      | open #141                  |
-| AUD-04-10 | Frontend build fell back to the production Auth0 tenant when `VITE_*` unset | Info     | open #137                  |
+| Id        | Finding                                                                     | Severity | Status                            |
+| --------- | --------------------------------------------------------------------------- | -------- | --------------------------------- |
+| AUD-04-1  | Access and refresh tokens persist in `localStorage` — the XSS blast radius  | High     | accepted                          |
+| AUD-04-2  | The SPA origin shipped no security headers at all                           | High     | fixed in this batch; CSP accepted |
+| AUD-04-3  | CORS accepted `*` with `allowCredentials(true)`, unvalidated at startup     | Medium   | fixed in #95 (f8c1c1e)            |
+| AUD-04-4  | Swagger UI and `/v3/api-docs` public in production                          | Medium   | fixed in this batch               |
+| AUD-04-5  | `GET /users` returned the entity, two collections and the base64 picture    | Medium   | fixed in #95 (f8c1c1e)            |
+| AUD-04-6  | Two error handlers echoed the exception's own message to the client         | Low      | fixed in #95 (f8c1c1e)            |
+| AUD-04-7  | The Auth0 `sub` was logged at `INFO` in nine places                         | Low      | fixed in #95 (f8c1c1e)            |
+| AUD-04-8  | User-controlled strings reached the logs verbatim (log injection)           | Low      | fixed in #95 (f8c1c1e)            |
+| AUD-04-9  | Unhandled exceptions logged with SQL and row values in the cause chain      | Low      | accepted                          |
+| AUD-04-10 | Frontend build fell back to the production Auth0 tenant when `VITE_*` unset | Info     | accepted                          |
 
 ### Shard 05 — MCP server, prompt injection, LLM-specific threats
 
@@ -192,27 +192,27 @@ findings, none Critical.
 `npm audit` reports 7 moderate advisories, all one dev-only `minimatch` chain;
 `--omit=dev` reports zero. No CVE claim is made about the Maven versions.
 
-| Id        | Finding                                                                                                         | Severity | Status                                |
-| --------- | --------------------------------------------------------------------------------------------------------------- | -------- | ------------------------------------- |
-| AUD-06-1  | Local `application-local.properties` baked into the jar: a real Auth0 Management credential inside the artefact | High     | fixed in this batch                   |
-| AUD-06-2  | `workflow_dispatch` deployed any branch to production, bypassing protection                                     | High     | fixed in this batch                   |
-| AUD-06-3  | No `.dockerignore`: the local PostgreSQL data directory shipped as context                                      | Medium   | fixed in this batch                   |
-| AUD-06-4  | Deploy was neither verified nor reversible                                                                      | Medium   | fixed in this batch                   |
-| AUD-06-5  | Actions pinned to mutable tags; no provenance, SBOM or signature                                                | Medium   | open #141                             |
-| AUD-06-6  | SSH deploy without host-key verification, plus a long-lived PAT on the host                                     | Medium   | open #141                             |
-| AUD-06-7  | The frontend had no security headers, and Caddy does not cover that origin                                      | Medium   | fixed in this batch + #137            |
-| AUD-06-8  | The application connects to PostgreSQL as the superuser                                                         | Medium   | open #141                             |
-| AUD-06-9  | Branch protection requires neither E2E nor a pull request                                                       | Medium   | open #141                             |
-| AUD-06-10 | Secret scanning, push protection and Dependabot updates disabled on a public repo                               | Medium   | open #141                             |
-| AUD-06-11 | No automated dependency alerting or audit step in CI                                                            | Low      | fixed in this batch; settings in #141 |
-| AUD-06-12 | Backup is one copy on the failing host, unencrypted, with no restore test                                       | Medium   | open #141                             |
-| AUD-06-13 | Runtime image is a full JDK on a floating tag, with `apt` and no healthcheck                                    | Low      | open #141                             |
-| AUD-06-14 | `spring-boot-docker-compose` shipped on the runtime classpath                                                   | Low      | fixed in this batch                   |
-| AUD-06-15 | No resource limits and no log rotation on either container                                                      | Low      | open #141                             |
-| AUD-06-16 | One flat network: the backend and the database have no boundary                                                 | Low      | open #141                             |
-| AUD-06-17 | `swagger-ui` webjar still ships; its endpoints are no longer public                                             | Low      | fixed in this batch                   |
-| AUD-06-18 | gitleaks allowlist still covered a source file; the local hook silently skipped                                 | Low      | open #141                             |
-| AUD-06-19 | `sed -i`/append of deploy variables into `.env` is newline-injectable                                           | Low      | open #141                             |
+| Id        | Finding                                                                                                         | Severity | Status                                 |
+| --------- | --------------------------------------------------------------------------------------------------------------- | -------- | -------------------------------------- |
+| AUD-06-1  | Local `application-local.properties` baked into the jar: a real Auth0 Management credential inside the artefact | High     | fixed in this batch                    |
+| AUD-06-2  | `workflow_dispatch` deployed any branch to production, bypassing protection                                     | High     | fixed in this batch                    |
+| AUD-06-3  | No `.dockerignore`: the local PostgreSQL data directory shipped as context                                      | Medium   | fixed in this batch                    |
+| AUD-06-4  | Deploy was neither verified nor reversible                                                                      | Medium   | fixed in this batch                    |
+| AUD-06-5  | Actions pinned to mutable tags; no provenance, SBOM or signature                                                | Medium   | accepted                               |
+| AUD-06-6  | SSH deploy without host-key verification, plus a long-lived PAT on the host                                     | Medium   | accepted                               |
+| AUD-06-7  | The frontend had no security headers, and Caddy does not cover that origin                                      | Medium   | fixed in this batch; CSP accepted      |
+| AUD-06-8  | The application connects to PostgreSQL as the superuser                                                         | Medium   | accepted                               |
+| AUD-06-9  | Branch protection requires neither E2E nor a pull request                                                       | Medium   | accepted                               |
+| AUD-06-10 | Secret scanning, push protection and Dependabot updates disabled on a public repo                               | Medium   | accepted                               |
+| AUD-06-11 | No automated dependency alerting or audit step in CI                                                            | Low      | fixed in this batch; settings accepted |
+| AUD-06-12 | Backup is one copy on the failing host, unencrypted, with no restore test                                       | Medium   | accepted                               |
+| AUD-06-13 | Runtime image is a full JDK on a floating tag, with `apt` and no healthcheck                                    | Low      | accepted                               |
+| AUD-06-14 | `spring-boot-docker-compose` shipped on the runtime classpath                                                   | Low      | fixed in this batch                    |
+| AUD-06-15 | No resource limits and no log rotation on either container                                                      | Low      | accepted                               |
+| AUD-06-16 | One flat network: the backend and the database have no boundary                                                 | Low      | accepted                               |
+| AUD-06-17 | `swagger-ui` webjar still ships; its endpoints are no longer public                                             | Low      | fixed in this batch                    |
+| AUD-06-18 | gitleaks allowlist still covered a source file; the local hook silently skipped                                 | Low      | accepted                               |
+| AUD-06-19 | `sed -i`/append of deploy variables into `.env` is newline-injectable                                           | Low      | accepted                               |
 
 The first and third are why the batch existed: the guard was a `.gitignore`, which
 does not apply to `docker build`. CI now asserts the packaged jar holds no local
@@ -221,17 +221,14 @@ properties file and no Docker Compose module.
 ## Open issues
 
 The status columns above are the reverse map. After the audit landed, the
-backlog was cut to six tasks: one per area that still has work, each carrying
-the findings it closes. Anything not listed here is either fixed or accepted
-below.
+backlog was cut to one task per area that still has work; two areas were
+accepted by the owner instead of tracked (see below).
 
 | Task | Title                                                                  | What it closes                                                                                   |
 | ---- | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| #137 | `fix(auth)`: keep tokens out of `localStorage`, enforce a CSP          | AUD-01-1, AUD-04-1, AUD-04-2 remainder, AUD-04-10                                                |
 | #138 | `chore(mcp)`: close the MCP authorization and injection gaps           | AUD-01-9, AUD-01-10, AUD-02-13 remainder, AUD-05-01 remainder, AUD-05-02, AUD-05-05 to AUD-05-07 |
 | #139 | `fix(api)`: bound the remaining request inputs                         | AUD-01-4, AUD-02-9, AUD-02-10, AUD-02-14, AUD-03-07, AUD-05-08                                   |
 | #140 | `fix(api)`: make writes atomic and account deletion durable            | AUD-01-2, AUD-01-6 remainder, AUD-03-02, AUD-03-03, AUD-03-04, AUD-03-05                         |
-| #141 | `chore(infra)`: host, pipeline and repository hardening                | AUD-04-9, AUD-06-5, AUD-06-6, AUD-06-8 to AUD-06-13, AUD-06-15, AUD-06-18, AUD-06-19             |
 | #142 | `chore(deps)`: upgrade the Auth0 Management SDK and metadata-extractor | the two stale dependencies called out by shard 06                                                |
 
 Two issues pre-date the audit and are unrelated to it: #61 (backend coverage)
@@ -239,18 +236,20 @@ and #94 (duplicate snapshots). They stay as they are.
 
 ## Accepted and informational
 
-| Item                                                              | Why it stands                                                                                                                                          |
-| ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| CSRF disabled                                                     | All three chains are stateless and bearer-only; no cookie, no form login, no ambient credential to ride.                                               |
-| No rate limiting on the API and `/mcp`                            | Brute force is impractical; the DoS half stays a body cap (#139) and an edge-proxy concern.                                                            |
-| Auth0 DCR, once enabled, is open registration                     | Accepted with strict mode and default permissions; a tenant setting, not repository code.                                                              |
-| CORS `allowedOriginPatterns` with credentials on the API          | Bearer-only, no cookies, so a reflected origin buys nothing without the token. A bare `*` now fails startup (#95).                                     |
-| MCP SDK 2.1 supports protocol 2025-11-25                          | Stateless transport is the shape that revision requires; the SDK cannot negotiate a newer one yet.                                                     |
-| Historical `Co-Authored-By` trailers and the revoked Auth0 secret | Deliberately not rewritten; forks and old clones still hold the value, and the secret was revoked.                                                     |
-| A locally built image may have carried the local properties file  | The mechanism inside the jar was proven; whether such an image was ever pushed is not answerable from the repo.                                        |
-| First-user-creation race                                          | Suspected, not reproduced. A bounded retry would close it; nothing else does today.                                                                    |
-| 403 vs 404 on a foreign id                                        | The mismatch exposes that an id exists, not its content; changing the semantics costs more than it returns. Recorded, not tracked.                     |
-| Reviewer nits from #95                                            | A weak Mockito matcher in `AssetServiceTest` and one synchronous assertion in a profile test. Fixed when those files are next touched, not as backlog. |
+| Item                                                              | Why it stands                                                                                                                                                                                                                                |
+| ----------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| CSRF disabled                                                     | All three chains are stateless and bearer-only; no cookie, no form login, no ambient credential to ride.                                                                                                                                     |
+| No rate limiting on the API and `/mcp`                            | Brute force is impractical; the DoS half stays a body cap (#139) and an edge-proxy concern.                                                                                                                                                  |
+| Auth0 DCR, once enabled, is open registration                     | Accepted with strict mode and default permissions; a tenant setting, not repository code.                                                                                                                                                    |
+| CORS `allowedOriginPatterns` with credentials on the API          | Bearer-only, no cookies, so a reflected origin buys nothing without the token. A bare `*` now fails startup (#95).                                                                                                                           |
+| MCP SDK 2.1 supports protocol 2025-11-25                          | Stateless transport is the shape that revision requires; the SDK cannot negotiate a newer one yet.                                                                                                                                           |
+| Historical `Co-Authored-By` trailers and the revoked Auth0 secret | Deliberately not rewritten; forks and old clones still hold the value, and the secret was revoked.                                                                                                                                           |
+| A locally built image may have carried the local properties file  | The mechanism inside the jar was proven; whether such an image was ever pushed is not answerable from the repo.                                                                                                                              |
+| First-user-creation race                                          | Suspected, not reproduced. A bounded retry would close it; nothing else does today.                                                                                                                                                          |
+| 403 vs 404 on a foreign id                                        | The mismatch exposes that an id exists, not its content; changing the semantics costs more than it returns. Recorded, not tracked.                                                                                                           |
+| Tokens in `localStorage` and no CSP                               | Accepted by the owner on 15 November 2026. The app renders no raw HTML today, and the cost — a possible login after every reload — was judged higher than the reduced blast radius. Revisit if a dependency starts rendering untrusted HTML. |
+| Host, pipeline and repository posture                             | Accepted by the owner on 15 November 2026: host-key verification, action pinning, the least-privilege database role, offsite backups, branch protection, secret scanning and Dependabot alerts stay as they are.                             |
+| Reviewer nits from #95                                            | A weak Mockito matcher in `AssetServiceTest` and one synchronous assertion in a profile test. Fixed when those files are next touched, not as backlog.                                                                                       |
 
 ## Not in scope
 
@@ -279,3 +278,6 @@ repeated here; the authoritative document is [`operations.md`](operations.md).
   the fix were consolidated into the six tasks above. Twenty were duplicates of each
   other by area, two were reviewer nits, one was accepted, and none carried
   information the findings here did not already hold.
+- **15 November 2026, backlog decision** — the owner accepted the token-storage/CSP
+  risk and the host/repository posture, and kept #138, #139, #140 and #142 as the
+  remaining work. #61 and #94 stay independent of this audit.
