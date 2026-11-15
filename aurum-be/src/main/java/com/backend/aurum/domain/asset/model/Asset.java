@@ -3,6 +3,7 @@ package com.backend.aurum.domain.asset.model;
 import com.backend.aurum.domain.user.enums.Currency;
 import com.backend.aurum.domain.user.model.User;
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -93,5 +94,14 @@ public class Asset {
 	@PrePersist
 	protected void onCreate() {
 		createdAt = LocalDateTime.now();
+	}
+
+	/**
+	 * A debt is what the scheduler selects on: `liability_type`. `category.type` is user-mutable, so
+	 * it cannot decide this. Ignored by Jackson to keep the entity's JSON shape unchanged.
+	 */
+	@JsonIgnore
+	public boolean isLiability() {
+		return liabilityType != null;
 	}
 }
