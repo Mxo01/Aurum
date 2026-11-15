@@ -321,9 +321,23 @@ export class ApiMock {
 	}
 }
 
-export async function setupPage(page: Page, api: ApiMock) {
+const CONSENT_KEY = "gdpr_consent_accepted";
+// The seed runs as an init script, so it would replay on every navigation and
+// resurrect the session that `logout()` just cleared. Once per tab, like a real one.
+const SESSION_SEEDED_KEY = "@e2e/session-seeded";
+
+interface SetupOptions {
+	signedIn: boolean;
+}
+
+export async function setupPage(page: Page, api: ApiMock, { signedIn }: SetupOptions) {
 	await page.addInitScript(
-		({ clientId, audience, scope, token }) => {
+		({ consentKey, seededKey, clientId, audience, scope, token, signedIn: authenticated }) => {
+			localStorage.setItem(consentKey, "true");
+
+			if (!authenticated || sessionStorage.getItem(seededKey)) return;
+			sessionStorage.setItem(seededKey, "true");
+
 			const decoded = {
 				user: { name: "E2E User", email: "e2e@example.com", picture: "" },
 				claims: { sub: "auth0|e2e" }
@@ -348,9 +362,16 @@ export async function setupPage(page: Page, api: ApiMock) {
 					expiresAt: Math.floor(Date.now() / 1000) + 86400
 				})
 			);
-			localStorage.setItem("gdpr_consent_accepted", "true");
 		},
-		{ clientId: CLIENT_ID, audience: AUDIENCE, scope: SCOPE, token: jwt }
+		{
+			consentKey: CONSENT_KEY,
+			seededKey: SESSION_SEEDED_KEY,
+			clientId: CLIENT_ID,
+			audience: AUDIENCE,
+			scope: SCOPE,
+			token: jwt,
+			signedIn
+		}
 	);
 
 	await page.route("**/oauth/token", route =>
@@ -371,13 +392,16 @@ export async function setupPage(page: Page, api: ApiMock) {
 	await page.route(`${API}/**`, route => api.handle(route));
 }
 
-type Fixtures = { api: ApiMock };
+type Fixtures = { api: ApiMock; signedIn: boolean };
 
 export const test = base.extend<Fixtures>({
+	// Opt a file or a describe block out of the seeded session with
+	// `test.use({ signedIn: false })`; the API and Auth0 stubs stay in place.
+	signedIn: [true, { option: true }],
 	api: [
-		async ({ page }, use) => {
+		async ({ page, signedIn }, use) => {
 			const api = new ApiMock();
-			await setupPage(page, api);
+			await setupPage(page, api, { signedIn });
 			await use(api);
 		},
 		{ auto: true }
