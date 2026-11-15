@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import type { Page, Request } from "@playwright/test";
 import { expect, test } from "./fixtures/aurum";
 
 const BASE_CURRENCY = "EUR";
@@ -11,6 +11,15 @@ const FIXED_NOW = new Date("2026-03-15T12:00:00");
 const TODAY = "2026-03-15";
 const FUTURE_DAY = "2026-04-15";
 const DATE_NOT_FUTURE = "The date cannot be in the future";
+
+const APARTMENT_NAME = "Apartment Berlin";
+const APARTMENT_DISPLAY_VALUE = "€430,000.00";
+const APARTMENT_RAISED_DISPLAY_VALUE = "€440,000.00";
+const APARTMENT_UNCHANGED_VALUE = "430000";
+const APARTMENT_RAISED_VALUE = "440000";
+const INLINE_EDIT_LABEL = `Edit ${APARTMENT_NAME} in ${BASE_CURRENCY}`;
+const SNAPSHOTS_PATH = "/snapshots";
+const SNAPSHOT_POST_METHOD = "POST";
 
 const AUTOMATIC_LIABILITY = {
 	name: "Car Loan",
@@ -47,6 +56,25 @@ async function addAutomaticLiability(page: Page) {
 
 function groupHeader(page: Page, name: string) {
 	return page.locator("button[aria-expanded]").filter({ hasText: name }).filter({ visible: true });
+}
+
+function apartmentValueControl(page: Page, displayValue: string) {
+	return page
+		.getByRole("button", { name: new RegExp(`Edit ${APARTMENT_NAME}, currently ${displayValue}`) })
+		.filter({ visible: true });
+}
+
+async function submitApartmentValue(page: Page, displayValue: string, value: string) {
+	await apartmentValueControl(page, displayValue).first().click();
+	const input = page.getByLabel(INLINE_EDIT_LABEL);
+	await input.fill(value);
+	await input.press("Enter");
+}
+
+function isSnapshotPost(request: Request) {
+	return (
+		request.method() === SNAPSHOT_POST_METHOD && new URL(request.url()).pathname === SNAPSHOTS_PATH
+	);
 }
 
 test("keeps the header actions at the same height", async ({ page }) => {
@@ -99,6 +127,40 @@ test("edits a value inline", async ({ page }) => {
 	await input.press("Enter");
 
 	await expect(page.getByText("€440,000.00").filter({ visible: true }).first()).toBeVisible();
+});
+
+test("writes no snapshot when the inline value is unchanged", async ({ page }) => {
+	await page.clock.install({ time: FIXED_NOW });
+	const snapshotRequests: string[] = [];
+	page.on("request", request => {
+		if (!isSnapshotPost(request)) return;
+		snapshotRequests.push(request.url());
+	});
+
+	await page.goto("/assets");
+
+	await submitApartmentValue(page, APARTMENT_DISPLAY_VALUE, APARTMENT_UNCHANGED_VALUE);
+	await expect(apartmentValueControl(page, APARTMENT_DISPLAY_VALUE)).toHaveCount(1);
+	await expect(apartmentValueControl(page, APARTMENT_DISPLAY_VALUE)).toHaveText(
+		APARTMENT_DISPLAY_VALUE
+	);
+
+	await submitApartmentValue(page, APARTMENT_DISPLAY_VALUE, APARTMENT_UNCHANGED_VALUE);
+	await expect(apartmentValueControl(page, APARTMENT_DISPLAY_VALUE)).toHaveCount(1);
+	await expect(apartmentValueControl(page, APARTMENT_DISPLAY_VALUE)).toHaveText(
+		APARTMENT_DISPLAY_VALUE
+	);
+	expect(snapshotRequests).toHaveLength(0);
+
+	await Promise.all([
+		page.waitForRequest(isSnapshotPost),
+		submitApartmentValue(page, APARTMENT_DISPLAY_VALUE, APARTMENT_RAISED_VALUE)
+	]);
+	await expect(apartmentValueControl(page, APARTMENT_RAISED_DISPLAY_VALUE)).toHaveCount(1);
+	await expect(apartmentValueControl(page, APARTMENT_RAISED_DISPLAY_VALUE)).toHaveText(
+		APARTMENT_RAISED_DISPLAY_VALUE
+	);
+	expect(snapshotRequests).toHaveLength(1);
 });
 
 test("filters the list with the search", async ({ page }) => {
