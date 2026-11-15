@@ -72,7 +72,7 @@ jobs:
       # client prefers rsa-sha2-*, so the RSA key is the one it verifies.
       # Re-derive before changing: ssh-keyscan -t rsa <host> | ssh-keygen -lf -
       - name: Copy compose file to server
-        uses: appleboy/scp-action@v0.1.7
+        uses: appleboy/scp-action@v1.0.0
         with:
           host: ${{ secrets.HETZNER_HOST }}
           username: ${{ secrets.HETZNER_USER }}
