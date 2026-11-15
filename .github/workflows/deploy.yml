@@ -60,7 +60,7 @@ jobs:
       # `latest` is what a human pulls; the SHA tag is the rollback target and
       # the one the host actually runs.
       - name: Build and push Docker image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: ./aurum-be
           push: true
