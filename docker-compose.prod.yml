@@ -40,6 +40,7 @@ services:
       MCP_WRITE_SCOPES: ${MCP_WRITE_SCOPES}
       MCP_ALLOWED_ORIGINS: ${MCP_ALLOWED_ORIGINS:-}
       MCP_MAX_BATCH_SIZE: ${MCP_MAX_BATCH_SIZE:-500}
+      SWAGGER_ENABLED: ${SWAGGER_ENABLED:-false}
     ports:
       - "127.0.0.1:8080:8080"
     networks:

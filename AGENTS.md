@@ -24,7 +24,7 @@ make stop     # Stop all services
 make restart  # Restart all services
 ```
 
-> `make start` passes `--spring.profiles.active=local` to the backend, which loads secrets from `aurum-be/src/main/resources/application-local.properties`. This file is gitignored and must be created locally with the required secret values (see Secret Variables below).
+> `make start` passes `--spring.profiles.active=local` to the backend, which loads secrets from `aurum-be/config/application-local.properties`. `spring-boot:run` reads `config/` from the module root when the working directory is `aurum-be`, so the file is never packaged into the jar. It is gitignored and must be created locally with the required secret values (see Secret Variables below).
 
 ### Frontend (`aurum-fe/`)
 ```bash
@@ -304,7 +304,7 @@ Backend endpoints are served **directly at the root** of `api.aurum-networth.com
 Secrets are never committed. They are managed via environment-specific config:
 
 ### Backend
-- Local: `aurum-be/src/main/resources/application-local.properties` (gitignored) — loaded when `spring.profiles.active=local` (i.e., via `make start`)
+- Local: `aurum-be/config/application-local.properties` (gitignored) — loaded when `spring.profiles.active=local` (i.e., via `make start`). `spring-boot:run` reads it from `config/` relative to the working directory (`aurum-be`), and it is never packaged into the jar
 - Production: set as environment variables on the Hetzner VPS
 
 Key secrets required:

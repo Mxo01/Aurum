@@ -9,8 +9,33 @@ on:
       - ".github/workflows/deploy.yml"
   workflow_dispatch:
 
+# One deploy at a time, and a queued deploy waits instead of cancelling the one
+# in flight: cancelling mid-`up` would leave the host half-rolled.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
 jobs:
+  guard:
+    name: Main-only guard
+    runs-on: ubuntu-latest
+    steps:
+      # `workflow_dispatch` can target any branch, so the ref is checked here
+      # instead of trusting the trigger.
+      - name: Refuse any ref other than main
+        run: |
+          if [ "$GITHUB_REF" != "refs/heads/main" ]; then
+            echo "::error::Deploy may run only from refs/heads/main, got ${GITHUB_REF}"
+            exit 1
+          fi
+
   build-and-deploy:
+    name: Build and deploy
+    needs: guard
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -19,8 +44,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set lowercase image name
-        run: echo "IMAGE=ghcr.io/$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')/aurum-be:latest" >> $GITHUB_ENV
+      - name: Set image names
+        run: |
+          owner="$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')"
+          echo "IMAGE=ghcr.io/${owner}/aurum-be" >> "$GITHUB_ENV"
+          echo "GHCR_IMAGE=ghcr.io/${owner}/aurum-be:${{ github.sha }}" >> "$GITHUB_ENV"
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
@@ -29,19 +57,26 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # `latest` is what a human pulls; the SHA tag is the rollback target and
+      # the one the host actually runs.
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
           context: ./aurum-be
           push: true
-          tags: ${{ env.IMAGE }}
+          tags: |
+            ${{ env.IMAGE }}:latest
+            ${{ env.IMAGE }}:${{ github.sha }}
 
+      # The fingerprint is the public ED25519 host key, not a secret. Re-derive
+      # it before changing it: ssh-keyscan -t ed25519 <host> | ssh-keygen -lf -
       - name: Copy compose file to server
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.HETZNER_HOST }}
           username: ${{ secrets.HETZNER_USER }}
           key: ${{ secrets.HETZNER_SSH_KEY }}
+          fingerprint: SHA256:Ii4jvYvpxCXbiP8B1isJd1BhzIVZys4o5lERjrU2cz4
           source: docker-compose.prod.yml
           target: /opt/aurum
 
@@ -50,6 +85,7 @@ jobs:
         env:
           GHCR_TOKEN: ${{ secrets.GHCR_PAT }}
           GITHUB_OWNER: ${{ github.repository_owner }}
+          DEPLOYED_IMAGE: ${{ env.GHCR_IMAGE }}
           MCP_RESOURCE_URL: ${{ vars.MCP_RESOURCE_URL }}
           MCP_AUDIENCE: ${{ vars.MCP_AUDIENCE }}
           MCP_READ_SCOPES: ${{ vars.MCP_READ_SCOPES }}
@@ -59,7 +95,8 @@ jobs:
           host: ${{ secrets.HETZNER_HOST }}
           username: ${{ secrets.HETZNER_USER }}
           key: ${{ secrets.HETZNER_SSH_KEY }}
-          envs: GHCR_TOKEN,GITHUB_OWNER,MCP_RESOURCE_URL,MCP_AUDIENCE,MCP_READ_SCOPES,MCP_WRITE_SCOPES,MCP_ALLOWED_ORIGINS
+          fingerprint: SHA256:Ii4jvYvpxCXbiP8B1isJd1BhzIVZys4o5lERjrU2cz4
+          envs: GHCR_TOKEN,GITHUB_OWNER,DEPLOYED_IMAGE,MCP_RESOURCE_URL,MCP_AUDIENCE,MCP_READ_SCOPES,MCP_WRITE_SCOPES,MCP_ALLOWED_ORIGINS
           script: |
             echo "$GHCR_TOKEN" | docker login ghcr.io -u "$(echo $GITHUB_OWNER | tr '[:upper:]' '[:lower:]')" --password-stdin
             cd /opt/aurum
@@ -70,8 +107,9 @@ jobs:
                 exit 1
                 ;;
             esac
-            sed -i '/^MCP_RESOURCE_URL=/d; /^MCP_AUDIENCE=/d; /^MCP_READ_SCOPES=/d; /^MCP_WRITE_SCOPES=/d; /^MCP_ALLOWED_ORIGINS=/d; /^MCP_AUTH0_CLIENT_ID=/d' .env
+            sed -i '/^GHCR_IMAGE=/d; /^MCP_RESOURCE_URL=/d; /^MCP_AUDIENCE=/d; /^MCP_READ_SCOPES=/d; /^MCP_WRITE_SCOPES=/d; /^MCP_ALLOWED_ORIGINS=/d; /^MCP_AUTH0_CLIENT_ID=/d' .env
             {
+              printf 'GHCR_IMAGE=%s\n' "$DEPLOYED_IMAGE"
               printf 'MCP_RESOURCE_URL=%s\n' "$MCP_RESOURCE_URL"
               printf 'MCP_AUDIENCE=%s\n' "$MCP_AUDIENCE"
               printf 'MCP_READ_SCOPES=%s\n' "$MCP_READ_SCOPES"
@@ -80,5 +118,8 @@ jobs:
             } >> .env
             chmod 600 .env
             docker compose -f docker-compose.prod.yml pull backend
-            docker compose -f docker-compose.prod.yml up -d --remove-orphans
-            docker image prune -f
+            docker compose -f docker-compose.prod.yml up -d --remove-orphans --wait --wait-timeout 180
+            curl -fsS --retry 12 --retry-delay 5 --retry-connrefused --max-time 10 http://127.0.0.1:8080/actuator/health
+            # Dangling layers older than two weeks only: the previous SHA tag is
+            # the rollback target and must survive the deploy that replaces it.
+            docker image prune -f --filter "until=336h"

@@ -133,7 +133,9 @@ gh variable set MCP_WRITE_SCOPES --body "mcp:write"
 # MCP_ALLOWED_ORIGINS is optional and empty by default
 ```
 
-For local development use the same keys in `application-local.properties`:
+For local development use the same keys in `config/application-local.properties`
+(read by `spring-boot:run` from `./config/` when started in `aurum-be`; the file
+is gitignored and never packaged):
 
 ```dotenv
 MCP_RESOURCE_URL=https://api.aurum-networth.com/mcp
@@ -222,8 +224,7 @@ client), opens the browser, and receives a token with
 
 Create a second Auth0 API whose identifier is `http://localhost:8080/mcp`, or
 set `MCP_RESOURCE_URL` to an identifier that exists in the tenant. The local
-`application-local.properties` in this repository points at
-`http://localhost:8080/mcp`.
+`config/application-local.properties` points at `http://localhost:8080/mcp`.
 
 ## Rollback
 

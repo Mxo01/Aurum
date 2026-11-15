@@ -37,4 +37,5 @@ node_modules/
 
 ### Local Data ###
 /postgres_data
-src/main/resources/application-local.properties
+/src/main/resources/application-local.properties
+/config/application-local.properties

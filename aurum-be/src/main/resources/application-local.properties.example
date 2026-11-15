@@ -1,5 +1,6 @@
-# Copia questo file in application-local.properties e compila i valori.
-# application-local.properties e' gitignored: NON deve mai essere committato.
+# Copia questo file in config/application-local.properties e compila i valori.
+# Il file vive accanto al pom (aurum-be/config/application-local.properties) ed e' gitignored:
+# NON deve mai essere committato e non viene incluso nel jar.
 # Caricato quando spring.profiles.active=local (cioe' via `make start`).
 
 # Database — i default sotto corrispondono al PostgreSQL di compose.yaml
