@@ -5,6 +5,7 @@ import com.backend.aurum.domain.asset.dto.CreateAssetDTO;
 import com.backend.aurum.domain.asset.dto.UpdateAssetDTO;
 import com.backend.aurum.domain.asset.mapper.AssetMapper;
 import com.backend.aurum.domain.asset.model.Asset;
+import com.backend.aurum.domain.asset.model.AssetUpdate;
 import com.backend.aurum.domain.asset.model.Snapshot;
 import com.backend.aurum.domain.asset.repository.SnapshotRepository;
 import com.backend.aurum.domain.asset.service.AssetService;
@@ -72,15 +73,15 @@ public class AssetFacade {
 
 	public AssetDTO updateAsset(UUID id, UpdateAssetDTO dto, UUID userId) {
 		validationService.validate(dto);
-		Asset assetDetails = mapper.toEntity(dto, userId);
-		Asset updated = assetService.update(id, assetDetails, userId);
+		AssetUpdate update = mapper.toUpdate(dto, userId);
+		Asset updated = assetService.update(id, update, userId);
 		return mapper.toDto(updated, bookFor(userId, List.of(updated)));
 	}
 
 	public AssetDTO updateAssetLight(UUID id, UpdateAssetDTO dto, UUID userId) {
 		validationService.validate(dto);
-		Asset assetDetails = mapper.toEntity(dto, userId);
-		Asset updated = assetService.update(id, assetDetails, userId);
+		AssetUpdate update = mapper.toUpdate(dto, userId);
+		Asset updated = assetService.update(id, update, userId);
 		List<Snapshot> latestTwo = snapshotRepository.findTop2ByAssetIdOrderByReferenceDateDesc(id);
 		LocalDate today = LocalDate.now(clock);
 		RateBook book = conversionService.book(

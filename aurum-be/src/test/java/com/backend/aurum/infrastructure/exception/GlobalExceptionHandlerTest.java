@@ -2,19 +2,29 @@ package com.backend.aurum.infrastructure.exception;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.backend.aurum.domain.asset.dto.UpdateAssetDTO;
 import com.backend.aurum.domain.shared.exception.AccessDeniedException;
 import com.backend.aurum.domain.shared.exception.ExchangeRateUnavailableException;
 import com.backend.aurum.domain.shared.exception.NotFoundException;
 import com.backend.aurum.domain.shared.exception.ValidationException;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.InjectMocks;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.core.MethodParameter;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.BeanPropertyBindingResult;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.server.ResponseStatusException;
 
 @ExtendWith(MockitoExtension.class)
@@ -28,6 +38,14 @@ class GlobalExceptionHandlerTest {
 		"Default categories cannot be deleted";
 	private static final String UNRECOGNIZED_STATUS_REASON = "Request failed";
 	private static final int UNRECOGNIZED_STATUS_CODE = 599;
+	private static final String INVALID_BODY_REASON = "Request body is invalid";
+	private static final String UPDATE_BODY_NAME = "updateAssetDTO";
+	private static final String NAME_FIELD = "name";
+	private static final String NAME_MESSAGE = "must not be blank";
+	private static final String PAYMENT_AMOUNT_FIELD = "paymentAmount";
+	private static final String PAYMENT_AMOUNT_MESSAGE = "must be greater than or equal to 0";
+	private static final String FIELD_MESSAGE_SEPARATOR = " ";
+	private static final String FIELD_ERROR_SEPARATOR = "; ";
 	private static final Set<String> RESPONSE_FIELDS = Set.of(
 		"status",
 		"error",
@@ -237,5 +255,94 @@ class GlobalExceptionHandlerTest {
 		assertThat(expectedResponse.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
 		assertThat(expectedResponse.getBody()).containsEntry("message", "An unexpected error occurred");
 		assertThat(expectedResponse.getBody()).containsEntry("status", 500);
+	}
+
+	@ParameterizedTest(name = "{0}")
+	@MethodSource("invalidBodyInputs")
+	void handleInvalidBody_answers400_withTheFieldErrorsJoinedIntoOneMessage(
+		String scenario,
+		List<FieldErrorSpec> mockFieldErrors,
+		String expectedMessage
+	) {
+		// GIVEN
+		MethodArgumentNotValidException mockException = invalidBodyException(mockFieldErrors);
+
+		// WHEN
+		ResponseEntity<Map<String, Object>> expectedResponse = testSubject.handleInvalidBody(
+			mockException
+		);
+
+		// THEN
+		assertThat(expectedResponse.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+		assertThat(expectedResponse.getBody()).containsOnlyKeys(RESPONSE_FIELDS);
+		assertThat(expectedResponse.getBody()).containsEntry("status", HttpStatus.BAD_REQUEST.value());
+		assertThat(expectedResponse.getBody()).containsEntry(
+			"error",
+			HttpStatus.BAD_REQUEST.getReasonPhrase()
+		);
+		assertThat(expectedResponse.getBody()).containsEntry("message", expectedMessage);
+		assertThat(expectedResponse.getBody()).doesNotContainValue(null);
+	}
+
+	static Stream<Arguments> invalidBodyInputs() {
+		return Stream.of(
+			Arguments.of(
+				"a single field error names its field",
+				List.of(new FieldErrorSpec(PAYMENT_AMOUNT_FIELD, PAYMENT_AMOUNT_MESSAGE)),
+				PAYMENT_AMOUNT_FIELD + FIELD_MESSAGE_SEPARATOR + PAYMENT_AMOUNT_MESSAGE
+			),
+			Arguments.of(
+				"two field errors are joined in the order they arrive",
+				List.of(
+					new FieldErrorSpec(NAME_FIELD, NAME_MESSAGE),
+					new FieldErrorSpec(PAYMENT_AMOUNT_FIELD, PAYMENT_AMOUNT_MESSAGE)
+				),
+				NAME_FIELD +
+					FIELD_MESSAGE_SEPARATOR +
+					NAME_MESSAGE +
+					FIELD_ERROR_SEPARATOR +
+					PAYMENT_AMOUNT_FIELD +
+					FIELD_MESSAGE_SEPARATOR +
+					PAYMENT_AMOUNT_MESSAGE
+			),
+			Arguments.of(
+				"no field error falls back to the generic reason",
+				List.<FieldErrorSpec>of(),
+				INVALID_BODY_REASON
+			)
+		);
+	}
+
+	private record FieldErrorSpec(String field, String message) {}
+
+	private static MethodArgumentNotValidException invalidBodyException(
+		List<FieldErrorSpec> fieldErrors
+	) {
+		BeanPropertyBindingResult bindingResult = new BeanPropertyBindingResult(
+			new UpdateAssetDTO(),
+			UPDATE_BODY_NAME
+		);
+		fieldErrors.forEach(fieldError ->
+			bindingResult.addError(
+				new FieldError(UPDATE_BODY_NAME, fieldError.field(), fieldError.message())
+			)
+		);
+		return new MethodArgumentNotValidException(updateBodyParameter(), bindingResult);
+	}
+
+	private static MethodParameter updateBodyParameter() {
+		try {
+			return new MethodParameter(
+				UpdateBodyEndpoint.class.getDeclaredMethod("update", UpdateAssetDTO.class),
+				0
+			);
+		} catch (NoSuchMethodException exception) {
+			throw new IllegalStateException(exception);
+		}
+	}
+
+	private static final class UpdateBodyEndpoint {
+
+		void update(UpdateAssetDTO dto) {}
 	}
 }

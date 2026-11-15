@@ -53,6 +53,7 @@ export function buildSnapshot(overrides: Partial<SnapshotDTO> = {}): SnapshotDTO
 		amountOriginalCurrency: faker.number.float({ min: 1000, max: 50000, fractionDigits: 2 }),
 		exchangeRateToBase: 1,
 		amountBaseCurrency: faker.number.float({ min: 1000, max: 50000, fractionDigits: 2 }),
+		source: "USER",
 		...overrides
 	};
 }

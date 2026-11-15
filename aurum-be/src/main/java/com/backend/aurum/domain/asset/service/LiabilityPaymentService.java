@@ -87,12 +87,22 @@ public class LiabilityPaymentService {
 			return LiabilityPaymentResult.skipped(SKIP_NO_OUTSTANDING_BALANCE);
 		}
 
-		int anchorDay = anchorDayOf(asset, latestSnapshot);
-		boolean scheduleDerived = asset.getNextDueDate() == null || asset.getPaymentAnchorDay() == null;
+		// A valuation dated in the future would push every derived period after it, and the asset
+		// would never come due again: the schedule origin is never later than the run date.
+		LocalDate valuationDate = latestSnapshot.getReferenceDate();
+		boolean valuationInTheFuture = valuationDate.isAfter(today);
+		LocalDate scheduleOrigin = valuationInTheFuture ? today : valuationDate;
+		int anchorDay = anchorDayOf(asset, scheduleOrigin);
+		// A run that persisted a due date derived from such a valuation froze the schedule on the
+		// same future date: that date is only trusted once it has arrived.
+		LocalDate persistedDueDate = asset.getNextDueDate();
+		boolean frozenDueDate =
+			valuationInTheFuture && persistedDueDate != null && persistedDueDate.isAfter(today);
+		boolean scheduleDerived = persistedDueDate == null || asset.getPaymentAnchorDay() == null;
 		LocalDate due =
-			asset.getNextDueDate() != null
-				? asset.getNextDueDate()
-				: advance(latestSnapshot.getReferenceDate(), anchorDay, frequency);
+			persistedDueDate != null && !frozenDueDate
+				? persistedDueDate
+				: firstDueDate(valuationDate, today, anchorDay, frequency);
 		asset.setPaymentAnchorDay((short) anchorDay);
 		asset.setNextDueDate(due);
 		if (due.isAfter(today)) {
@@ -105,8 +115,11 @@ public class LiabilityPaymentService {
 
 		Map<LocalDate, BigDecimal> balanceAfterPayment = new LinkedHashMap<>();
 		BigDecimal balance = outstanding;
+		BigDecimal appliedAmount = BigDecimal.ZERO;
 		while (!due.isAfter(today) && balance.signum() > 0) {
-			balance = balance.subtract(paymentAmount).max(BigDecimal.ZERO);
+			BigDecimal periodPayment = paymentAmount.min(balance);
+			balance = balance.subtract(periodPayment);
+			appliedAmount = appliedAmount.add(periodPayment);
 			balanceAfterPayment.put(due, balance);
 			due = advance(due, anchorDay, frequency);
 		}
@@ -119,7 +132,13 @@ public class LiabilityPaymentService {
 		} else {
 			assetRepository.save(asset);
 		}
-		return LiabilityPaymentResult.paid(balanceAfterPayment.size(), balance, asset.getNextDueDate());
+		return LiabilityPaymentResult.paid(
+			balanceAfterPayment.size(),
+			balance,
+			asset.getNextDueDate(),
+			appliedAmount,
+			paymentAmount
+		);
 	}
 
 	/**
@@ -162,14 +181,29 @@ public class LiabilityPaymentService {
 	 * The anchor day is what keeps "the 30th of every month" stable across February: a bare date plus
 	 * a month would drift to the 28th for good.
 	 */
-	private int anchorDayOf(Asset asset, Snapshot latestSnapshot) {
+	private int anchorDayOf(Asset asset, LocalDate scheduleOrigin) {
 		Short persisted = asset.getPaymentAnchorDay();
 		if (persisted != null) {
 			return persisted.intValue();
 		}
 		LocalDate lastKnownDate =
-			asset.getNextDueDate() != null ? asset.getNextDueDate() : latestSnapshot.getReferenceDate();
+			asset.getNextDueDate() != null ? asset.getNextDueDate() : scheduleOrigin;
 		return lastKnownDate.getDayOfMonth();
+	}
+
+	/**
+	 * The first period of a derived schedule: the period after the valuation, unless the valuation is
+	 * dated in the future, where there is no earlier period to be due — the schedule starts today so
+	 * the asset recovers on the run that finds it instead of waiting for a date that never arrives.
+	 * The same recovery date re-anchors a persisted due date that such a valuation produced.
+	 */
+	private LocalDate firstDueDate(
+		LocalDate valuationDate,
+		LocalDate today,
+		int anchorDay,
+		PaymentFrequency frequency
+	) {
+		return valuationDate.isAfter(today) ? today : advance(valuationDate, anchorDay, frequency);
 	}
 
 	private LocalDate advance(LocalDate from, int anchorDay, PaymentFrequency frequency) {

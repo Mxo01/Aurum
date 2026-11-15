@@ -432,11 +432,18 @@ export interface components {
 				| "USD"
 				| "ZAR";
 			isFavorite?: boolean;
-			/** @enum {string} */
-			liabilityType?: "MANUAL" | "AUTOMATIC";
-			/** @enum {string} */
-			paymentFrequency?: "WEEKLY" | "MONTHLY" | "YEARLY";
-			paymentAmount?: number;
+			/**
+			 * @description Omit to keep the stored liability; send null to clear the whole liability block
+			 * @enum {string|null}
+			 */
+			liabilityType?: "MANUAL" | "AUTOMATIC" | null;
+			/**
+			 * @description Only read when liabilityType is provided
+			 * @enum {string|null}
+			 */
+			paymentFrequency?: "WEEKLY" | "MONTHLY" | "YEARLY" | null;
+			/** @description Only read when liabilityType is provided */
+			paymentAmount?: number | null;
 		};
 		AssetDTO: {
 			/** Format: uuid */
@@ -506,6 +513,8 @@ export interface components {
 			amountOriginalCurrency: number;
 			exchangeRateToBase: number | null;
 			amountBaseCurrency: number | null;
+			/** @enum {string} */
+			source: "USER" | "SCHEDULER";
 		};
 		CreateTargetDTO: {
 			name?: string;
@@ -622,6 +631,12 @@ export interface components {
 			/** @enum {string} */
 			paymentFrequency?: "WEEKLY" | "MONTHLY" | "YEARLY";
 			paymentAmount?: number;
+			/** Format: date */
+			nextDueDate?: string;
+			/** Format: int32 */
+			paymentAnchorDay?: number;
+			/** Format: date-time */
+			settledAt?: string;
 			/** Format: date-time */
 			createdAt?: string;
 			snapshots?: components["schemas"]["Snapshot"][];
@@ -644,6 +659,8 @@ export interface components {
 			referenceDate?: string;
 			amountOriginalCurrency?: number;
 			exchangeRateToBase?: number;
+			/** @enum {string} */
+			source?: "USER" | "SCHEDULER";
 			amountInBaseCurrency?: number;
 		};
 		User: {
@@ -733,6 +750,7 @@ export interface components {
 			referenceDate?: string;
 			amountOriginalCurrency?: number;
 			exchangeRateToBase?: number;
+			source?: string;
 		};
 		TargetExport: {
 			/** Format: uuid */

@@ -6,6 +6,7 @@ import com.backend.aurum.domain.asset.dto.UpdateAssetDTO;
 import com.backend.aurum.domain.asset.facade.AssetFacade;
 import com.backend.aurum.domain.user.model.UserPrincipal;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -47,7 +48,7 @@ public class AssetController {
 
 	@PostMapping
 	public ResponseEntity<AssetDTO> createAsset(
-		@RequestBody CreateAssetDTO dto,
+		@Valid @RequestBody CreateAssetDTO dto,
 		@AuthenticationPrincipal UserPrincipal principal
 	) {
 		UUID userId = principal.user().getId();
@@ -63,7 +64,7 @@ public class AssetController {
 	@PutMapping("/{id}")
 	public ResponseEntity<AssetDTO> updateAsset(
 		@PathVariable UUID id,
-		@RequestBody UpdateAssetDTO dto,
+		@Valid @RequestBody UpdateAssetDTO dto,
 		@AuthenticationPrincipal UserPrincipal principal
 	) {
 		UUID userId = principal.user().getId();

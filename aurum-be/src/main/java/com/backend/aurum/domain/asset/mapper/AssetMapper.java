@@ -5,6 +5,8 @@ import com.backend.aurum.domain.asset.dto.CreateAssetDTO;
 import com.backend.aurum.domain.asset.dto.UpdateAssetDTO;
 import com.backend.aurum.domain.asset.model.Asset;
 import com.backend.aurum.domain.asset.model.AssetCategory;
+import com.backend.aurum.domain.asset.model.AssetUpdate;
+import com.backend.aurum.domain.asset.model.LiabilityConfiguration;
 import com.backend.aurum.domain.asset.model.Snapshot;
 import com.backend.aurum.domain.asset.repository.AssetCategoryRepository;
 import com.backend.aurum.domain.shared.currency.RateBook;
@@ -17,6 +19,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.function.BiFunction;
 import lombok.RequiredArgsConstructor;
@@ -50,56 +53,61 @@ public class AssetMapper {
 		}
 
 		if (dto.getCategoryId() != null) {
-			AssetCategory category = categoryRepository
-				.findById(Objects.requireNonNull(dto.getCategoryId()))
-				.orElseThrow(() -> new NotFoundException("Category not found"));
-
-			if (
-				category.getUser() != null && (userId == null || !category.getUser().getId().equals(userId))
-			) {
-				throw new AccessDeniedException("Category does not belong to the user");
-			}
-
-			asset.setCategory(category);
+			asset.setCategory(resolveCategory(dto.getCategoryId(), userId));
 		}
 
 		return asset;
 	}
 
-	public Asset toEntity(UpdateAssetDTO dto, UUID userId) {
+	public AssetUpdate toUpdate(UpdateAssetDTO dto, UUID userId) {
 		if (dto == null) return null;
-		Asset asset = new Asset();
-		asset.setName(dto.getName());
-		asset.setIsFavorite(dto.getIsFavorite() != null ? dto.getIsFavorite() : false);
-		asset.setOriginalCurrency(
-			dto.getOriginalCurrency() != null ? dto.getOriginalCurrency() : Currency.EUR
+		Optional<AssetCategory> category =
+			dto.getCategoryId() == null
+				? Optional.empty()
+				: Optional.of(resolveCategory(dto.getCategoryId(), userId));
+		return new AssetUpdate(
+			dto.getName(),
+			category,
+			dto.getOriginalCurrency(),
+			dto.getIsFavorite(),
+			liabilityOf(dto)
 		);
-		asset.setLiabilityType(dto.getLiabilityType());
-		asset.setPaymentFrequency(dto.getPaymentFrequency());
-		asset.setPaymentAmount(dto.getPaymentAmount());
+	}
 
-		if (userId != null) {
-			User user = userRepository
-				.findById(userId)
-				.orElseThrow(() -> new NotFoundException("User not found"));
-			asset.setUser(user);
+	/**
+	 * Any liability field in the body selects "replace the block"; the rule object then rejects a
+	 * frequency or an amount that arrives without its liabilityType instead of dropping it.
+	 */
+	private Optional<LiabilityConfiguration> liabilityOf(UpdateAssetDTO dto) {
+		if (
+			!dto.isLiabilityTypeProvided() &&
+			dto.getPaymentFrequency() == null &&
+			dto.getPaymentAmount() == null
+		) {
+			return Optional.empty();
 		}
 
-		if (dto.getCategoryId() != null) {
-			AssetCategory category = categoryRepository
-				.findById(Objects.requireNonNull(dto.getCategoryId()))
-				.orElseThrow(() -> new NotFoundException("Category not found"));
+		return Optional.of(
+			new LiabilityConfiguration(
+				dto.getLiabilityType(),
+				dto.getPaymentFrequency(),
+				dto.getPaymentAmount()
+			)
+		);
+	}
 
-			if (
-				category.getUser() != null && (userId == null || !category.getUser().getId().equals(userId))
-			) {
-				throw new AccessDeniedException("Category does not belong to the user");
-			}
+	private AssetCategory resolveCategory(UUID categoryId, UUID userId) {
+		AssetCategory category = categoryRepository
+			.findById(Objects.requireNonNull(categoryId))
+			.orElseThrow(() -> new NotFoundException("Category not found"));
 
-			asset.setCategory(category);
+		if (
+			category.getUser() != null && (userId == null || !category.getUser().getId().equals(userId))
+		) {
+			throw new AccessDeniedException("Category does not belong to the user");
 		}
 
-		return asset;
+		return category;
 	}
 
 	public AssetDTO toDto(Asset entity, RateBook book) {
