@@ -4,6 +4,9 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
   test-backend:
     name: Backend Tests
@@ -22,6 +25,25 @@ jobs:
       - name: Run backend tests
         working-directory: aurum-be
         run: ./mvnw test -Dtest="!AurumApplicationTests" --no-transfer-progress
+
+      # The jar ships to GHCR: nothing local-only may end up inside it.
+      - name: Assert packaged jar excludes local secrets
+        working-directory: aurum-be
+        run: |
+          ./mvnw -q -DskipTests package
+          jar_file="$(ls -1 target/*.jar 2>/dev/null | head -n 1)"
+          if [ -z "$jar_file" ]; then
+            echo "::error::No jar was produced by package"
+            exit 1
+          fi
+          if unzip -l "$jar_file" | grep -qE 'application-local\.properties$'; then
+            echo "::error::Packaged jar contains application-local.properties"
+            exit 1
+          fi
+          if unzip -l "$jar_file" | grep -q 'spring-boot-docker-compose'; then
+            echo "::error::Packaged jar contains spring-boot-docker-compose"
+            exit 1
+          fi
 
       - name: Upload backend coverage
         if: always()
@@ -48,6 +70,12 @@ jobs:
       - name: Install dependencies
         working-directory: aurum-fe
         run: npm ci
+
+      # Production dependencies only: a high advisory in a devDependency does
+      # not ship in the browser bundle.
+      - name: Audit production dependencies
+        working-directory: aurum-fe
+        run: npm audit --omit=dev --audit-level=high
 
       - name: Lint
         working-directory: aurum-fe
