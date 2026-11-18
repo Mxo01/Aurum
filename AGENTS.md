@@ -276,16 +276,12 @@ This applies to any route change, including lazy-loaded routes defined in `app.r
 
 ## Branching Rules
 
-**Never commit directly to `main`.** When starting any edit, check the current branch:
-
-- If on `main` → create a new branch before making any changes.
-- If already on a feature/fix branch (branched off `main`) → continue on that branch; do **not** create another branch even if the task or context changes.
-
-Branch naming:
-- Feature or enhancement → `feat/<short-name>`
-- Bug fix → `fix/<short-name>`
-
-Use a concise kebab-case short name that describes the change (e.g., `feat/target-progress-bar`, `fix/snapshot-currency-display`).
+The shared git rules apply. Branch from an up-to-date `main` using
+`<type>/<n>-<slug>`, where `<type>` is `feat`, `fix`, `chore`, `refactor` or
+`docs`, `<n>` is the issue number, and `<slug>` is a short kebab-case
+description (for example `feat/146-gitleaks-workflow`). One issue per branch:
+if the current branch is for a different task, create a new branch from
+`main`. Never commit or push to `main`.
 
 ## Hosting
 
